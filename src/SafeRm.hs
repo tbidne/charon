@@ -23,12 +23,11 @@ import Data.Char qualified as Ch
 import Data.HashMap.Strict qualified as HMap
 import Data.Text qualified as T
 import Effects.FileSystem.MonadHandleWriter (MonadHandleWriter (..))
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace, addNamespace)
 import Effects.MonadTerminal
   ( MonadTerminal (getChar),
     putTextLn,
   )
-import Effects.MonadTime (MonadTime (getSystemTime))
+import Effects.MonadTime (getSystemTime)
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.Index qualified as Index
@@ -66,14 +65,15 @@ delete ::
   ( HasCallStack,
     HasTrashHome env,
     MonadCallStack m,
+    MonadCatch m,
     MonadFileWriter m,
+    MonadIORef m,
     MonadLoggerNamespace m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    MonadUnliftIO m,
     MonadTime m
   ) =>
   UniqueSeq (PathI OriginalPath) ->
@@ -135,15 +135,16 @@ deletePermanently ::
   ( HasCallStack,
     HasTrashHome env,
     MonadCallStack m,
+    MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
+    MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadLoggerNamespace m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadUnliftIO m
+    MonadTerminal m
   ) =>
   Bool ->
   UniqueSeq (PathI TrashName) ->
@@ -259,16 +260,17 @@ getMetadata = addNamespace "getMetadata" $ do
 -- @since 0.1
 restore ::
   forall env m.
-  ( MonadPathReader m,
-    MonadPathWriter m,
-    HasCallStack,
+  ( HasCallStack,
     HasTrashHome env,
     MonadLoggerNamespace m,
     MonadCallStack m,
+    MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
-    MonadReader env m,
-    MonadUnliftIO m
+    MonadIORef m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadReader env m
   ) =>
   UniqueSeq (PathI TrashName) ->
   m ()

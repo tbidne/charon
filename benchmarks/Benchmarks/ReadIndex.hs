@@ -8,7 +8,6 @@ module Benchmarks.ReadIndex
 where
 
 import Benchmarks.Prelude
-import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as Char8
 import SafeRm qualified
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
@@ -47,13 +46,13 @@ setup testDir = do
     setupRead dir files = do
       clearDirectory dir
       clearDirectory trashDir
-      appendFile indexPath header
+      appendBinaryFile indexPath header
 
       for_ files $ \filename -> do
         let filepath = trashDir </> show filename
         clearDirectory trashDir
-        writeFile filepath ""
-        ppendFile indexPath (Char8.pack $ mkEntry dir filename)
+        writeBinaryFile filepath ""
+        appendBinaryFile indexPath (Char8.pack $ mkEntry dir filename)
       where
         trashDir = dir </> ".trash/"
         indexPath = trashDir </> ".index.csv"

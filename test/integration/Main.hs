@@ -3,12 +3,12 @@
 -- @since 0.1
 module Main (main) where
 
+import Effects.FileSystem.MonadPathReader qualified as Dir
 import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as T
 import Test.Tasty qualified as Tasty
-import UnliftIO.Directory qualified as Dir
 
 -- | Runs integration tests.
 --

@@ -22,6 +22,19 @@ import Control.Applicative as X
     (*>),
   )
 import Control.DeepSeq as X (NFData)
+import Control.Exception.Safe as X
+  ( Exception (displayException, fromException, toException),
+    MonadCatch,
+    MonadMask,
+    MonadThrow,
+    SomeException,
+    bracket,
+    bracket_,
+    finally,
+    throwIO,
+    throwString,
+  )
+import Control.Exception.Safe qualified as SafeEx
 import Control.Monad as X
   ( Monad ((>>=)),
     join,
@@ -85,10 +98,10 @@ import Data.String as X (IsString (fromString), String)
 import Data.Text as X (Text)
 import Data.Text qualified as T
 import Data.Traversable as X (traverse)
+import Data.Tuple as X (curry, uncurry)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
 #endif
-import Data.Tuple as X (curry, uncurry)
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
 import Effects.FileSystem.MonadFileReader as X
@@ -138,7 +151,17 @@ import Effects.MonadCallStack as X
     displayCallStack,
     try,
   )
+import Effects.MonadIORef as X
+  ( IORef,
+    MonadIORef,
+    modifyIORef',
+    newIORef,
+    readIORef,
+    writeIORef,
+  )
+import Effects.MonadLoggerNamespace as X (MonadLoggerNamespace, addNamespace)
 import Effects.MonadTerminal as X (MonadTerminal (putStr, putStrLn))
+import Effects.MonadTime as X (MonadTime)
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
 import GHC.Float as X (Double)
@@ -205,25 +228,6 @@ import System.IO as X
     IOMode (AppendMode),
   )
 import Text.Show as X (Show (show))
-import UnliftIO as X (MonadUnliftIO)
-import UnliftIO.Exception as X
-  ( Exception (displayException, fromException, toException),
-    SomeAsyncException (SomeAsyncException),
-    SomeException,
-    bracket,
-    bracket_,
-    finally,
-    throwIO,
-    throwString,
-  )
-import UnliftIO.Exception qualified as UE
-import UnliftIO.IORef as X
-  ( IORef,
-    modifyIORef',
-    newIORef,
-    readIORef,
-    writeIORef,
-  )
 
 -- | @since 0.1
 showt :: Show a => a -> Text
@@ -238,9 +242,9 @@ displayExceptiont = T.pack . displayException
 -- annotation e.g. we are catching an exception for logging purposes only.
 --
 -- @since 0.1
-catchAnyNoCS :: MonadUnliftIO m => m a -> (SomeException -> m a) -> m a
-catchAnyNoCS = UE.catchAny
+catchAnyNoCS :: MonadCatch m => m a -> (SomeException -> m a) -> m a
+catchAnyNoCS = SafeEx.catchAny
 
 -- | @since 0.1
-catchAny :: (HasCallStack, MonadUnliftIO m) => m a -> (SomeException -> m a) -> m a
+catchAny :: (HasCallStack, MonadCatch m) => m a -> (SomeException -> m a) -> m a
 catchAny = catch @SomeException

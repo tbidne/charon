@@ -5,12 +5,15 @@ module Main (main) where
 
 import Benchmarks.Prelude
 import Benchmarks.ReadIndex qualified as ReadIndex
+import Effects.FileSystem.MonadPathReader qualified as Dir
+import Effects.FileSystem.MonadPathWriter qualified as Dir
+import GHC.Conc.Sync (setUncaughtExceptionHandler)
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
-import System.IO (putStrLn)
-import UnliftIO.Directory qualified as Dir
 
 main :: IO ()
-main = bracket setup runBenchmarks teardown
+main = do
+  setUncaughtExceptionHandler (putStrLn . displayCallStack)
+  bracket setup runBenchmarks teardown
   where
     runBenchmarks testDir =
       defaultMain

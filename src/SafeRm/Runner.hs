@@ -15,9 +15,7 @@ module SafeRm.Runner
 where
 
 import Data.Text qualified as T
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace)
 import Effects.MonadTerminal (putTextLn)
-import Effects.MonadTime (MonadTime)
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
@@ -72,12 +70,14 @@ runSafeRm ::
   ( MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
+    MonadIO m,
+    MonadIORef m,
+    MonadMask m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
     HasCallStack,
     MonadCallStack m,
-    MonadUnliftIO m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -102,14 +102,15 @@ runCmd ::
     HasTrashHome env,
     MonadCallStack m,
     MonadLoggerNamespace m,
+    MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
+    MonadIORef m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
-    MonadUnliftIO m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -140,10 +141,10 @@ getEnv ::
   ( HasCallStack,
     MonadFileReader m,
     MonadHandleWriter m,
+    MonadIO m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadCallStack m,
-    MonadUnliftIO m
+    MonadCallStack m
   ) =>
   m (Env, Command)
 getEnv = do
@@ -223,9 +224,9 @@ configToEnv mergedConfig = do
 getConfiguration ::
   ( HasCallStack,
     MonadFileReader m,
+    MonadIO m,
     MonadPathReader m,
-    MonadCallStack m,
-    MonadUnliftIO m
+    MonadCallStack m
   ) =>
   m (TomlConfig, Command)
 getConfiguration = do

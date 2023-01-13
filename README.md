@@ -8,7 +8,6 @@
 
 [![nix](http://img.shields.io/github/actions/workflow/status/tbidne/safe-rm/nix.yaml?branch=main&label=nix&&logo=nixos&logoColor=85c5e7&labelColor=2f353c)](https://github.com/tbidne/safe-rm/actions/workflows/nix.yaml)
 [![cabal](http://img.shields.io/github/actions/workflow/status/tbidne/safe-rm/cabal.yaml?branch=main&label=cabal&labelColor=2f353c)](https://github.com/tbidne/safe-rm/actions/workflows/cabal.yaml)
-[![stack](http://img.shields.io/github/actions/workflow/status/tbidne/safe-rm/stack.yaml?branch=main&label=stack&logoColor=white&labelColor=2f353c)](https://github.com/tbidne/safe-rm/actions/workflows/stack.yaml)
 [![style](http://img.shields.io/github/actions/workflow/status/tbidne/safe-rm/style.yaml?branch=main&label=style&logoColor=white&labelColor=2f353c)](https://github.com/tbidne/safe-rm/actions/workflows/style.yaml)
 
 </div>
@@ -32,7 +31,6 @@
     - [Metadata](#metadata)
 - [Building](#building)
   - [Cabal](#cabal)
-  - [Stack](#stack)
   - [Nix](#nix)
 
 # Introduction
@@ -254,7 +252,6 @@ You will need one of:
 * [cabal-install 2.4+](https://www.haskell.org/cabal/download.html) and one of
   * [ghc 9.2](https://www.haskell.org/ghcup/)
   * [ghc 9.4](https://www.haskell.org/ghcup/)
-* [stack](https://docs.haskellstack.org/en/stable/README/#how-to-install)
 * [nix](https://nixos.org/download.html)
 
 If you have never built a haskell program before, `cabal` + `ghcup` is probably the best choice.
@@ -262,10 +259,6 @@ If you have never built a haskell program before, `cabal` + `ghcup` is probably 
 ## Cabal
 
 You will need `ghc` and `cabal-install`. From there `safe-rm` can be built with `cabal build` or installed globally (i.e. `~/.cabal/bin/`) with `cabal install`.
-
-## Stack
-
-Like `cabal`, `safe-rm` can be built locally or installed globally (e.g. `~/.local/bin/`) with `stack build` and `stack install`, respectively.
 
 ## Nix
 

@@ -12,8 +12,6 @@ import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace)
-import Effects.MonadTime (MonadTime)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Integration.Prelude
@@ -45,17 +43,19 @@ newtype IntIO a = MkIntIO (ReaderT Env IO a)
       Monad,
       MonadIO,
       MonadCallStack,
+      MonadCatch,
       MonadFileReader,
       MonadFileWriter,
       MonadHandleWriter,
+      MonadIORef,
       MonadPathReader,
       MonadPathWriter,
       MonadLogger,
       MonadLoggerNamespace,
       MonadReader Env,
+      MonadThrow,
       MonadTime,
-      MonadTerminal,
-      MonadUnliftIO
+      MonadTerminal
     )
     via (SafeRmT Env IO)
 

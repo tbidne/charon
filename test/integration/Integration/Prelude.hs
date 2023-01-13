@@ -28,7 +28,6 @@ import SafeRm.FileUtils as X
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, askOption, testGroup)
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
-import UnliftIO.Directory qualified as Dir
 
 -- | Asserts that files exist.
 --
@@ -36,7 +35,7 @@ import UnliftIO.Directory qualified as Dir
 assertFilesExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
 assertFilesExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ Dir.doesFileExist p
+    exists <- liftIO $ doesFileExist p
     annotate $ "Expected file to exist: " <> p
     assert exists
 
@@ -46,6 +45,6 @@ assertFilesExist paths =
 assertFilesDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
 assertFilesDoNotExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ Dir.doesFileExist p
+    exists <- liftIO $ doesFileExist p
     annotate $ "Expected file not to exist: " <> p
     assert (not exists)

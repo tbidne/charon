@@ -37,7 +37,6 @@ import Data.Csv.Streaming qualified as Csv.Streaming
 import Data.HashMap.Strict qualified as HMap
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace, addNamespace)
 import SafeRm.Data.PathData
   ( PathData,
     PathDataFormat (Multiline, Singleline),

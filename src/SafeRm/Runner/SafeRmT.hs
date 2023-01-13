@@ -8,9 +8,8 @@ module SafeRm.Runner.SafeRmT
   )
 where
 
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace, defaultLogFormatter)
+import Effects.MonadLoggerNamespace (defaultLogFormatter)
 import Effects.MonadLoggerNamespace qualified as Logger
-import Effects.MonadTime (MonadTime)
 import SafeRm.Prelude
 import SafeRm.Runner.Env (Env, LogFile, handle, logLevel)
 
@@ -29,11 +28,17 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       -- | @since 0.1
       MonadCallStack,
       -- | @since 0.1
+      MonadCatch,
+      -- | @since 0.1
       MonadFileReader,
       -- | @since 0.1
       MonadFileWriter,
       -- | @since 0.1
       MonadHandleWriter,
+      -- | @since 0.1
+      MonadIO,
+      -- | @since 0.1
+      MonadIORef,
       -- | @since 0.1
       MonadPathReader,
       -- | @since 0.1
@@ -43,13 +48,11 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       -- | @since 0.1
       MonadReader env,
       -- | @since 0.1
-      MonadIO,
-      -- | @since 0.1
       MonadTerminal,
       -- | @since 0.1
-      MonadTime,
+      MonadThrow,
       -- | @since 0.1
-      MonadUnliftIO
+      MonadTime
     )
     via (ReaderT env m)
 

@@ -15,7 +15,7 @@ import Data.Bytes qualified as Bytes
 import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.MonadLoggerNamespace (MonadLoggerNamespace, addNamespace)
+import GHC.Real (Integral)
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import Numeric.Literal.Rational (FromRational (afromRational))
 import PathSize (PathSizeResult (..), pathSizeRecursive)
@@ -166,7 +166,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
       !acc <- macc
       sz <- (MkBytes @B) <$> getFileSize f
       pure $ acc .+. sz
-    toDouble :: Bytes s Natural -> Bytes s Double
+    toDouble :: Integral a => Bytes s a -> Bytes s Double
     toDouble = fmap fromIntegral
     toNat :: Int -> Natural
     toNat = fromIntegral
@@ -179,9 +179,9 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
     skipFile fp = FP.takeFileName fp `L.elem` [".log", ".index.csv"]
 
 getAllFiles ::
-  ( MonadPathReader m,
-    HasCallStack,
-    MonadCallStack m
+  ( HasCallStack,
+    MonadCallStack m,
+    MonadPathReader m
   ) =>
   FilePath ->
   m [FilePath]

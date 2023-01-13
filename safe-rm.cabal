@@ -73,6 +73,7 @@ library
     , hashable                ^>=1.4.0.2
     , monad-callstack         ^>=0.1
     , monad-fs                ^>=0.1
+    , monad-ioref             ^>=0.1
     , monad-logger            ^>=0.3.30
     , monad-logger-namespace  ^>=0.1
     , monad-system-time       ^>=0.1
@@ -84,10 +85,10 @@ library
     , package-version         >=0.1.0.0   && <0.4
     , path-size               ^>=0.1
     , prettyprinter           ^>=1.7.1
+    , safe-exceptions         ^>=0.1.7.0
     , text                    >=1.2.4.0   && <2.1
     , time-compat             ^>=1.9.6.1
     , toml-reader             >=0.1.0.0   && <0.3
-    , unliftio                ^>=0.2.22.0
     , unordered-containers    ^>=0.2.14.0
     , vector                  >=0.12.3.0  && <0.14
 
@@ -138,7 +139,6 @@ test-suite unit
     , tasty-hedgehog        >=1.2.0.0  && <1.5
     , tasty-hunit           >=0.9      && <0.11
     , text
-    , unliftio
     , unordered-containers
 
   hs-source-dirs:   test/unit
@@ -154,18 +154,16 @@ test-suite integration
 
   build-depends:
     , base
-    , env-guard               ^>=0.2
+    , env-guard             ^>=0.2
     , file-utils
     , hedgehog
-    , monad-logger-namespace
-    , monad-system-time
+    , monad-fs
     , mtl
-    , nonempty-containers     >=0.3.4.2 && <0.4
+    , nonempty-containers   >=0.3.4.2 && <0.4
     , path-size
     , safe-rm
     , tasty
     , tasty-hedgehog
-    , unliftio
     , unordered-containers
 
   hs-source-dirs:   test/integration
@@ -190,7 +188,7 @@ test-suite functional
     , bytestring
     , env-guard               ^>=0.2
     , file-utils
-    , monad-callstack
+    , monad-fs
     , monad-logger-namespace
     , monad-system-time
     , monad-terminal
@@ -202,7 +200,6 @@ test-suite functional
     , tasty-hunit
     , text
     , time
-    , unliftio
 
   hs-source-dirs:   test/functional
   default-language: GHC2021
@@ -220,9 +217,9 @@ benchmark benchmarks
     , bytestring
     , env-guard
     , file-utils
+    , monad-fs
     , safe-rm
     , tasty-bench  ^>=0.3
-    , unliftio
 
   ghc-options:      -Wno-unused-packages
   hs-source-dirs:   benchmarks

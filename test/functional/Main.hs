@@ -3,6 +3,7 @@
 -- @since 0.1
 module Main (main) where
 
+import Effects.FileSystem.MonadPathReader qualified as Dir
 import Functional.Commands.D qualified as D
 import Functional.Commands.E qualified as E
 import Functional.Commands.L qualified as L
@@ -13,7 +14,6 @@ import Functional.Logging qualified as Logging
 import Functional.Prelude
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as Tasty
-import UnliftIO.Directory qualified as Dir
 
 -- | Runs functional tests.
 --

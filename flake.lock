@@ -134,14 +134,17 @@
         ],
         "nixpkgs": [
           "nixpkgs"
+        ],
+        "smart-math": [
+          "smart-math"
         ]
       },
       "locked": {
-        "lastModified": 1673123202,
-        "narHash": "sha256-1ERquLG+ei/cvruu5zj044QlUbQgzj6X41cdysmnK7o=",
+        "lastModified": 1673642447,
+        "narHash": "sha256-cDvazEfeWBkTF4x2IEmGlyED4+fnl8jz+22FyU4X6u4=",
         "owner": "tbidne",
         "repo": "monad-effects",
-        "rev": "82d1b943ce285bef14c8598d4401f80079baffb3",
+        "rev": "6a8e53ce774a327bd6e010110c65ef2fd050fa51",
         "type": "github"
       },
       "original": {
@@ -206,14 +209,17 @@
         ],
         "nixpkgs": [
           "nixpkgs"
+        ],
+        "smart-math": [
+          "smart-math"
         ]
       },
       "locked": {
-        "lastModified": 1673146392,
-        "narHash": "sha256-89u56oBA88ZhBcu+RHRXS0GzLTH4ySqqul/s3z+CmPE=",
+        "lastModified": 1673642529,
+        "narHash": "sha256-YlkjzYHeQ+8Ncip+z1tVE5n4GiJaFD4NU5t60GR5YDY=",
         "owner": "tbidne",
         "repo": "path-size",
-        "rev": "18a864f2ff5a56b918d952df7218f193649f39a7",
+        "rev": "791ada59660307ae5b0d618d228ffe426f390dbb",
         "type": "github"
       },
       "original": {
@@ -231,7 +237,40 @@
         "flake-parts": "flake-parts",
         "monad-effects": "monad-effects",
         "nixpkgs": "nixpkgs",
-        "path-size": "path-size"
+        "path-size": "path-size",
+        "smart-math": "smart-math"
+      }
+    },
+    "smart-math": {
+      "inputs": {
+        "algebra-simple": [
+          "algebra-simple"
+        ],
+        "bounds": [
+          "bounds"
+        ],
+        "flake-compat": [
+          "flake-compat"
+        ],
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1673569540,
+        "narHash": "sha256-jEftzNeJHm/Mix44tacP7cuZ3gpiyjD5OqSe5bbGZn0=",
+        "owner": "tbidne",
+        "repo": "smart-math",
+        "rev": "0a8a6a741c999be1183b810ea8b1cd9438cb0d8e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tbidne",
+        "repo": "smart-math",
+        "type": "github"
       }
     }
   },

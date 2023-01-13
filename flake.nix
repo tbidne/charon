@@ -39,6 +39,7 @@
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
+      inputs.smart-math.follows = "smart-math";
     };
     path-size = {
       url = "github:tbidne/path-size";
@@ -50,6 +51,16 @@
       inputs.bounds.follows = "bounds";
       inputs.byte-types.follows = "byte-types";
       inputs.monad-effects.follows = "monad-effects";
+      inputs.smart-math.follows = "smart-math";
+    };
+    smart-math = {
+      url = "github:tbidne/smart-math";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.nixpkgs.follows = "nixpkgs";
+
+      inputs.algebra-simple.follows = "algebra-simple";
+      inputs.bounds.follows = "bounds";
     };
   };
   outputs =
@@ -62,6 +73,7 @@
     , nixpkgs
     , path-size
     , self
+    , smart-math
     }:
     flake-parts.lib.mkFlake { inherit self; } {
       perSystem = { pkgs, ... }:
@@ -99,6 +111,10 @@
                 byte-types =
                   final.callCabal2nix "byte-types" byte-types { };
                 hedgehog = prev.hedgehog_1_2;
+                monad-async =
+                  final.callCabal2nix
+                    "monad-async" "${monad-effects}/monad-async"
+                    { };
                 monad-callstack =
                   final.callCabal2nix
                     "monad-callstack" "${monad-effects}/monad-callstack"
@@ -107,13 +123,25 @@
                   final.callCabal2nix
                     "monad-fs" "${monad-effects}/monad-fs"
                     { };
+                monad-ioref =
+                  final.callCabal2nix
+                    "monad-ioref" "${monad-effects}/monad-ioref"
+                    { };
                 monad-logger-namespace =
                   final.callCabal2nix "monad-logger-namespace"
                     "${monad-effects}/monad-logger-namespace"
                     { };
+                monad-stm =
+                  final.callCabal2nix "monad-stm"
+                    "${monad-effects}/monad-stm"
+                    { };
                 monad-terminal =
                   final.callCabal2nix
                     "monad-terminal" "${monad-effects}/monad-terminal"
+                    { };
+                monad-thread =
+                  final.callCabal2nix
+                    "monad-thread" "${monad-effects}/monad-thread"
                     { };
                 monad-system-time =
                   final.callCabal2nix
@@ -121,6 +149,7 @@
                     { };
                 package-version = pkgs.haskell.lib.doJailbreak prev.package-version;
                 path-size = final.callCabal2nix "path-size" path-size { };
+                smart-math = final.callCabal2nix "smart-math" smart-math { };
                 tasty-hedgehog = prev.tasty-hedgehog_1_4_0_0;
               };
             };

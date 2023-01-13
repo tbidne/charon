@@ -48,7 +48,6 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
-import Effects.MonadCallStack (MonadCallStack (getCallStack))
 import Effects.MonadLoggerNamespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -58,7 +57,7 @@ import Effects.MonadLoggerNamespace
 import Effects.MonadLoggerNamespace qualified as Logger
 import Effects.MonadTerminal (MonadTerminal (..))
 import Effects.MonadTime
-  ( MonadTime (getMonotonicTime, getSystemTime, getSystemZonedTime),
+  ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
 import GHC.Stack.Types (CallStack (PushCallStack), SrcLoc (..))
 import PathSize qualified
@@ -68,6 +67,7 @@ import SafeRm.FileUtils as X
 import SafeRm.Prelude as X
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
+import System.Environment qualified as SysEnv
 import System.Exit (die)
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.Golden as X (goldenVsString, goldenVsStringDiff)
@@ -78,7 +78,6 @@ import Test.Tasty.HUnit as X
     testCase,
     (@=?),
   )
-import UnliftIO.Environment qualified as SysEnv
 
 -- | Infinite stream of chars.
 data CharStream = Char :> CharStream
@@ -111,21 +110,22 @@ deriving anyclass instance HasTrashHome FuncEnv
 newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
   deriving
     ( Applicative,
+      Functor,
+      Monad,
+      MonadCatch,
       MonadFileReader,
       MonadFileWriter,
       MonadHandleWriter,
+      MonadIO,
+      MonadIORef,
       MonadPathReader,
       MonadPathWriter,
-      Functor,
-      Monad,
-      MonadIO,
-      MonadReader env,
-      MonadUnliftIO
+      MonadThrow,
+      MonadReader env
     )
     via (ReaderT env IO)
 
 instance MonadCallStack (FuncIO env) where
-  getCallStack = liftIO getCallStack
   throwWithCallStack = throwIO
   addCallStack = id
 
@@ -162,7 +162,6 @@ instance
   getContents' = error "getContents unimplemented"
 
 instance MonadTime (FuncIO env) where
-  getSystemTime = pure (LocalTime (toEnum 59_000) midday)
   getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
   getMonotonicTime = pure 0
 

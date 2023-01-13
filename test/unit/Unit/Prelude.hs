@@ -34,10 +34,9 @@ import Test.Tasty.HUnit as X
     (@=?),
   )
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
-import UnliftIO.Directory qualified as Dir
 
 getDefaultTrash :: IO FilePath
-getDefaultTrash = (</> ".trash") <$> Dir.getHomeDirectory
+getDefaultTrash = (</> ".trash") <$> getHomeDirectory
 
 diff :: FilePath -> FilePath -> [FilePath]
 diff ref new = ["diff", "-u", ref, new]
