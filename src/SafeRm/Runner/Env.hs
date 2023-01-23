@@ -11,7 +11,7 @@ module SafeRm.Runner.Env
   )
 where
 
-import Effects.MonadLoggerNamespace (Namespace)
+import Effects.LoggerNamespace (Namespace)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
 import SafeRm.Prelude
@@ -61,7 +61,7 @@ data Env = MkEnv
     --
     -- @since 0.1
     trashHome :: !(PathI TrashHome),
-    -- The logging environment.
+    -- | The logging environment.
     --
     -- @since 0.1
     logEnv :: !LogEnv

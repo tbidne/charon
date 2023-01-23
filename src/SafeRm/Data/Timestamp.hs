@@ -15,7 +15,7 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.Csv (FromField (parseField), ToField (toField))
 import Data.Text qualified as T
 import Data.Time.LocalTime.Compat (LocalTime)
-import Effects.MonadTime (formatLocalTime, parseLocalTime)
+import Effects.Time (formatLocalTime, parseLocalTime)
 import SafeRm.Prelude
 
 -- NOTE: We currently do not include any timezone information. We started

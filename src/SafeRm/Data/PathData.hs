@@ -60,9 +60,9 @@ import Data.Csv
 import Data.Csv qualified as Csv
 import Data.HashMap.Strict qualified as Map
 import Data.Text qualified as T
+import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
-import PathSize (PathSizeResult (..), pathSizeRecursive)
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -197,11 +197,11 @@ headerNames = ["Type", "Name", "Original", "Size", "Created"]
 -- @since 0.1
 toPathData ::
   ( HasCallStack,
-    MonadCallStack m,
     MonadLogger m,
     MonadPathReader m,
     MonadPathSize m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   Timestamp ->
   PathI TrashHome ->
@@ -218,7 +218,24 @@ toPathData currTime trashHome origPath = do
   let fileName = Paths.liftPathI' FP.takeFileName originalPath
   uniqPath <- mkUniqPath (trashHome <//> fileName)
   let uniqName = Paths.liftPathI' FP.takeFileName uniqPath
+
   isFile <- Paths.applyPathI doesFileExist originalPath
+  (fileName', originalPath', pathType) <-
+    if isFile
+      then pure (uniqName, originalPath, PathTypeFile)
+      else do
+        isDir <- Paths.applyPathI doesDirectoryExist originalPath
+        if isDir
+          then
+            pure
+              ( -- NOTE: ensure paths do not have trailing slashes so that we can
+                -- ensure later lookups succeed (requires string equality)
+                Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
+                Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
+                PathTypeDirectory
+              )
+          else throwWithCallStack $ MkPathNotFoundE (originalPath ^. #unPathI)
+
   size <-
     fmap (MkBytes @B) $
       pathSizeRecursive (originalPath ^. #unPathI) >>= \case
@@ -228,39 +245,15 @@ toPathData currTime trashHome origPath = do
           putStrLn "Encountered errors retrieving size. See logs."
           for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
           pure n
-        PathSizeFailure errs -> do
-          -- Received error, no value.
-          putStrLn "Could not retrieve size, defaulting to 0. See logs."
-          for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
-          pure 0
 
-  if isFile
-    then
-      pure
-        MkPathData
-          { fileName = uniqName,
-            originalPath,
-            pathType = PathTypeFile,
-            size,
-            created = currTime
-          }
-    else do
-      isDir <- Paths.applyPathI doesDirectoryExist originalPath
-      if isDir
-        then
-          pure
-            -- NOTE: ensure paths do not have trailing slashes so that we can
-            -- ensure later lookups succeed (requires string equality)
-            MkPathData
-              { fileName =
-                  Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
-                originalPath =
-                  Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
-                pathType = PathTypeDirectory,
-                size,
-                created = currTime
-              }
-        else throwWithCallStack $ MkPathNotFoundE (originalPath ^. #unPathI)
+  pure $
+    MkPathData
+      { fileName = fileName',
+        originalPath = originalPath',
+        pathType,
+        size,
+        created = currTime
+      }
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
@@ -274,8 +267,8 @@ toPathData currTime trashHome origPath = do
 mkUniqPath ::
   forall m.
   ( HasCallStack,
-    MonadCallStack m,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadThrow m
   ) =>
   PathI TrashName ->
   m (PathI TrashName)
@@ -347,9 +340,9 @@ mapOrd f x y = f x `compare` f y
 -- @since 0.1
 mvTrashToOriginal ::
   ( HasCallStack,
-    MonadCallStack m,
     MonadPathReader m,
-    MonadPathWriter m
+    MonadPathWriter m,
+    MonadThrow m
   ) =>
   PathI TrashHome ->
   PathData ->

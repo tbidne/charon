@@ -16,6 +16,7 @@ module SafeRm.Data.Paths
 
     -- ** General
     -- $general
+    showPaths,
     reindex,
     (<//>),
     applyPathI,
@@ -27,6 +28,7 @@ module SafeRm.Data.Paths
 where
 
 import Data.Csv (FromField, ToField)
+import Data.List qualified as L
 import SafeRm.Prelude
 import System.FilePath qualified as FP
 
@@ -158,6 +160,15 @@ indexToHome (MkPathI fp) = MkPathI $ FP.takeDirectory fp
 MkPathI x <//> MkPathI y = MkPathI (x </> y)
 
 infixr 5 <//>
+
+-- | Pretty-print a list of paths.
+--
+-- >>> showPaths ["one", "two"]
+-- "one, two"
+--
+-- @since 0.1
+showPaths :: [PathI a] -> String
+showPaths = L.intercalate ", " . fmap (view #unPathI)
 
 -- $general
 -- These functions allows for lifting arbitrary 'FilePath' functions onto our

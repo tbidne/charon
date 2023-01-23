@@ -1,3 +1,7 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
+
 -- | Property tests for the SafeRm API.
 --
 -- @since 0.1
@@ -12,6 +16,7 @@ import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
+import Data.Text qualified as T
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Integration.Prelude
@@ -21,7 +26,7 @@ import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
-import SafeRm.Exception (Exceptions (MkExceptions))
+import SafeRm.Env (HasTrashHome (getTrashHome))
 import SafeRm.Runner.Env
   ( Env (MkEnv),
     LogEnv (MkLogEnv),
@@ -35,29 +40,36 @@ import SafeRm.Runner.SafeRmT (SafeRmT (..))
 -- do not spam the console logs (i.e. retrieving the size for a bad path).
 -- We could use this to later verify logs, if we wished.
 
+data IntEnv = MkIntEnv
+  { coreEnv :: Env,
+    termLogsRef :: IORef [Text]
+  }
+
+makeFieldLabelsNoPrefix ''IntEnv
+
+instance HasTrashHome IntEnv where
+  getTrashHome = view (#coreEnv % #trashHome)
+
 -- | Type for running integration tests.
-newtype IntIO a = MkIntIO (ReaderT Env IO a)
+newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
   deriving
     ( Applicative,
       Functor,
       Monad,
       MonadIO,
-      MonadCallStack,
       MonadCatch,
+      MonadExit,
       MonadFileReader,
       MonadFileWriter,
       MonadHandleWriter,
       MonadIORef,
       MonadPathReader,
       MonadPathWriter,
-      MonadLogger,
-      MonadLoggerNamespace,
-      MonadReader Env,
+      MonadReader IntEnv,
       MonadThrow,
-      MonadTime,
-      MonadTerminal
+      MonadTime
     )
-    via (SafeRmT Env IO)
+    via (SafeRmT IntEnv IO)
 
 instance MonadPathSize IntIO where
   findLargestPaths _ _ =
@@ -72,7 +84,20 @@ instance MonadPathSize IntIO where
                 PathSize.numDirectories = 20
               }
 
-usingIntIO :: Env -> IntIO a -> IO a
+instance MonadLogger IntIO where
+  monadLoggerLog _ _ _ _ = pure ()
+
+instance MonadLoggerNamespace IntIO where
+  getNamespace = pure "integration"
+  localNamespace _ = id
+
+-- Wno-missing-methods
+instance MonadTerminal IntIO where
+  putStr s =
+    asks (view #termLogsRef)
+      >>= \ref -> modifyIORef' ref ((:) . T.pack $ s)
+
+usingIntIO :: IntEnv -> IntIO a -> IO a
 usingIntIO env (MkIntIO rdr) = runReaderT rdr env
 
 tests :: IO FilePath -> TestTree
@@ -151,19 +176,20 @@ deleteSome mtestDir =
 
       caughtEx <-
         liftIO $
-          try @Exceptions $
+          tryWithCallStack @ExitCode $
             usingIntIO env (SafeRm.delete (USeq.map MkPathI toDelete))
 
-      (MkExceptions exs) <-
+      ex <-
         either
           pure
           (\_ -> annotate "Expected exceptions, received none" *> failure)
           caughtEx
 
-      annotateShow exs
+      annotateShow ex
 
-      -- should have received exactly 1 exception for each bad filename
-      length exs === length β
+      -- should have printed exactly 1 message for each bad filename
+      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
+      length termLogs === length β
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -260,16 +286,16 @@ deleteSomePermanently mtestDir =
 
       caughtEx <-
         liftIO $
-          try @Exceptions $
+          tryWithCallStack @ExitCode $
             usingIntIO env (SafeRm.deletePermanently True toPermDelete)
 
-      (MkExceptions exs) <-
+      ex <-
         either
           pure
           (\_ -> annotate "Expected exceptions, received none" *> failure)
           caughtEx
 
-      annotateShow exs
+      annotateShow ex
 
       -- get index
       index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
@@ -367,16 +393,16 @@ restoreSome mtestDir =
 
       caughtEx <-
         liftIO $
-          try @Exceptions $
+          tryWithCallStack @ExitCode $
             usingIntIO env (SafeRm.restore toRestore)
 
-      (MkExceptions exs) <-
+      ex <-
         either
           pure
           (\_ -> annotate "Expected exceptions, received none" *> failure)
           caughtEx
 
-      annotateShow exs
+      annotateShow ex
 
       -- get index
       index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
@@ -516,10 +542,15 @@ genChar = Gen.filterT (not . badChars) Gen.unicode
 toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 
-mkEnv :: FilePath -> IO Env
+mkEnv :: FilePath -> IO IntEnv
 mkEnv fp = do
+  termLogsRef <- newIORef []
   pure $
-    MkEnv
-      { trashHome = MkPathI fp,
-        logEnv = MkLogEnv Nothing ""
+    MkIntEnv
+      { coreEnv =
+          MkEnv
+            { trashHome = MkPathI fp,
+              logEnv = MkLogEnv Nothing ""
+            },
+        termLogsRef
       }

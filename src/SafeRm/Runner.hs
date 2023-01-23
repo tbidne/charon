@@ -15,7 +15,6 @@ module SafeRm.Runner
 where
 
 import Data.Text qualified as T
-import Effects.MonadTerminal (putTextLn)
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
@@ -58,7 +57,7 @@ import SafeRm.Runner.Env
     logNamespace,
   )
 import SafeRm.Runner.SafeRmT (runSafeRmT)
-import SafeRm.Runner.Toml (TomlConfig, mergeConfigs)
+import SafeRm.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
 import TOML qualified
 
 -- | Entry point for running SafeRm. Does everything: reads CLI args,
@@ -67,7 +66,9 @@ import TOML qualified
 --
 -- @since 0.1
 runSafeRm ::
-  ( MonadFileReader m,
+  ( HasCallStack,
+    MonadExit m,
+    MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
     MonadIO m,
@@ -76,8 +77,6 @@ runSafeRm ::
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
-    HasCallStack,
-    MonadCallStack m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -98,11 +97,12 @@ runSafeRm = do
 -- 'getConfiguration' as an alternative 'runSafeRm', when we want to use a
 -- custom env.
 runCmd ::
+  forall m env.
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadLoggerNamespace m,
     MonadCatch m,
+    MonadExit m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -116,7 +116,11 @@ runCmd ::
   ) =>
   Command ->
   m ()
-runCmd cmd = runCmd' cmd `catchAnyNoCS` logEx
+runCmd cmd =
+  -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
+  -- This is what we want, as it similar to what we will get once GHC
+  -- natively supports exceptions with callstacks.
+  runCmd' cmd `catchWithCallStack` logEx
   where
     runCmd' = \case
       Delete paths -> SafeRm.delete paths
@@ -129,9 +133,10 @@ runCmd cmd = runCmd' cmd `catchAnyNoCS` logEx
         printMetadata
       Metadata -> printMetadata
 
+    logEx :: SomeException -> m a
     logEx ex = do
-      $(logError) (T.pack $ displayCallStack ex)
-      throwIO ex
+      $(logError) (T.pack $ displayNoCallStack ex)
+      throwWithCallStack ex
 
 -- | Parses CLI 'Args' and optional 'TomlConfig' to produce the final Env used
 -- by SafeRm.
@@ -144,7 +149,7 @@ getEnv ::
     MonadIO m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadCallStack m
+    MonadThrow m
   ) =>
   m (Env, Command)
 getEnv = do
@@ -179,7 +184,6 @@ getEnv = do
 
 configToEnv ::
   ( HasCallStack,
-    MonadCallStack m,
     MonadHandleWriter m,
     MonadPathReader m,
     MonadPathWriter m
@@ -226,7 +230,7 @@ getConfiguration ::
     MonadFileReader m,
     MonadIO m,
     MonadPathReader m,
-    MonadCallStack m
+    MonadThrow m
   ) =>
   m (TomlConfig, Command)
 getConfiguration = do
@@ -246,9 +250,9 @@ getConfiguration = do
         then -- 2. config exists at default path: read
           readConfig defPath
         else -- 3. no config exists: return default (empty)
-          pure mempty
+          pure defaultTomlConfig
     -- 4. toml explicitly disabled
-    TomlNone -> pure mempty
+    TomlNone -> pure defaultTomlConfig
 
   -- merge shared CLI and toml values
   pure $ mergeConfigs args tomlConfig
@@ -262,12 +266,12 @@ getConfiguration = do
 printIndex ::
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNamespace m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   PathDataFormat ->
   Sort ->
@@ -279,15 +283,15 @@ printIndex style sort revSort =
       . Index.formatIndex style sort revSort
 
 printMetadata ::
-  ( MonadPathReader m,
-    HasCallStack,
+  ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadFileReader m,
     MonadLoggerNamespace m,
+    MonadPathReader m,
     MonadPathSize m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   m ()
 printMetadata = SafeRm.getMetadata >>= prettyDel

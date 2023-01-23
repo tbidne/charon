@@ -13,17 +13,13 @@ Size:         0.00B
 
 
 EXCEPTION RESTORE
-Exceptions:
-
-- Cannot restore the trash file 'f1' as one exists at the original location: <dir>/r4/f1
+ExitFailure 1
 
 LOGS RESTORE
 [2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: <dir>/r4/.trash
 [2020-05-31 12:00:00][functional.restore.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/r4/.trash/.index.csv
 [2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r4/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r4/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r4/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] Cannot restore the trash file 'f1' as one exists at the original location: <dir>/r4/f1
-[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored: 
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Exceptions:
-
-- Cannot restore the trash file 'f1' as one exists at the original location: <dir>/r4/f1
+[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored from index: 
+[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1

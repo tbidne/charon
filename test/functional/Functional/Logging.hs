@@ -14,16 +14,12 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Text.Encoding.Error qualified as TEncError
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TLEnc
-import Effects.MonadLoggerNamespace
+import Effects.LoggerNamespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter),
-    MonadLoggerNamespace
-      ( getNamespace,
-        localNamespace
-      ),
     Namespace,
   )
-import Effects.MonadLoggerNamespace qualified as Logger
+import Effects.LoggerNamespace qualified as Logger
 import Functional.Prelude
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
@@ -141,7 +137,7 @@ transformEnv env = do
   terminalRef <- newIORef ""
   charStream <- newIORef altAnswers
   (logHandle, logFinalizer, logLevel) <- case env ^. #logEnv % #logFile of
-    Nothing -> throwString ""
+    Nothing -> error "no log env"
     Just lf -> pure (lf ^. #handle, lf ^. #finalizer, lf ^. #logLevel)
   pure $
     MkLoggerEnv

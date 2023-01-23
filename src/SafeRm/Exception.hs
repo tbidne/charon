@@ -1,13 +1,8 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 -- | Provides exceptions used by SafeRm.
 --
 -- @since 0.1
 module SafeRm.Exception
-  ( -- * Types
-
-    -- ** Specific
-    PathNotFoundE (..),
+  ( PathNotFoundE (..),
     RenameDuplicateE (..),
     ReadIndexE (..),
     DuplicateIndexPathE (..),
@@ -15,9 +10,6 @@ module SafeRm.Exception
     RestoreCollisionE (..),
     IndexSizeMismatchE (..),
     TomlDecodeE (..),
-
-    -- ** Aggregating
-    Exceptions (..),
   )
 where
 
@@ -193,30 +185,3 @@ instance Exception TomlDecodeE where
       [ "Error decoding toml: ",
         T.unpack (renderTOMLError err)
       ]
-
--- | Aggregates multiple exceptions.
---
--- @since 0.1
-newtype Exceptions = MkExceptions
-  { -- | @since 0.1
-    unExceptions :: NonEmpty SomeException
-  }
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
-  deriving
-    ( -- | @since 0.1
-      Semigroup
-    )
-    via NonEmpty SomeException
-
--- | @since 0.1
-instance Exception Exceptions where
-  displayException (MkExceptions es) =
-    mconcat
-      [ "Exceptions:",
-        foldl' foldExs "" es
-      ]
-    where
-      foldExs acc ex = ("\n\n- " <> displayCallStack ex) <> acc

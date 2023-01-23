@@ -3,7 +3,7 @@
 -- @since 0.1
 module Main (main) where
 
-import Effects.FileSystem.MonadPathReader qualified as Dir
+import Effects.FileSystem.PathReader qualified as Dir
 import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')

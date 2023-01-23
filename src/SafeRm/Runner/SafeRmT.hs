@@ -8,8 +8,8 @@ module SafeRm.Runner.SafeRmT
   )
 where
 
-import Effects.MonadLoggerNamespace (defaultLogFormatter)
-import Effects.MonadLoggerNamespace qualified as Logger
+import Effects.LoggerNamespace (defaultLogFormatter)
+import Effects.LoggerNamespace qualified as Logger
 import SafeRm.Prelude
 import SafeRm.Runner.Env (Env, LogFile, handle, logLevel)
 
@@ -26,9 +26,9 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       -- | @since 0.1
       Monad,
       -- | @since 0.1
-      MonadCallStack,
-      -- | @since 0.1
       MonadCatch,
+      -- | @since 0.1
+      MonadExit,
       -- | @since 0.1
       MonadFileReader,
       -- | @since 0.1
@@ -58,7 +58,7 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
 
 -- | @since 0.1
 instance
-  (MonadCallStack m, MonadHandleWriter m, MonadTime m) =>
+  (MonadHandleWriter m, MonadTime m) =>
   MonadLogger (SafeRmT Env m)
   where
   monadLoggerLog loc _src lvl msg = do
@@ -79,7 +79,7 @@ instance
 
 -- | @since 0.1
 instance
-  (MonadCallStack m, MonadHandleWriter m, MonadTime m) =>
+  (MonadHandleWriter m, MonadTime m) =>
   MonadLoggerNamespace (SafeRmT Env m)
   where
   getNamespace = asks (view (#logEnv % #logNamespace))

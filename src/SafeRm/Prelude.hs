@@ -6,10 +6,6 @@
 module SafeRm.Prelude
   ( module X,
 
-    -- * Exceptions
-    catchAny,
-    catchAnyNoCS,
-
     -- * Text
     showt,
     displayExceptiont,
@@ -22,19 +18,6 @@ import Control.Applicative as X
     (*>),
   )
 import Control.DeepSeq as X (NFData)
-import Control.Exception.Safe as X
-  ( Exception (displayException, fromException, toException),
-    MonadCatch,
-    MonadMask,
-    MonadThrow,
-    SomeException,
-    bracket,
-    bracket_,
-    finally,
-    throwIO,
-    throwString,
-  )
-import Control.Exception.Safe qualified as SafeEx
 import Control.Monad as X
   ( Monad ((>>=)),
     join,
@@ -104,16 +87,35 @@ import Data.Type.Equality as X (type (~))
 #endif
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
-import Effects.FileSystem.MonadFileReader as X
+import Effects.Exception as X
+  ( Exception (..),
+    MonadCatch,
+    MonadMask,
+    MonadThrow,
+    SomeException,
+    addCallStack,
+    bracket,
+    catch,
+    catchAny,
+    catchWithCallStack,
+    displayCallStack,
+    displayNoCallStack,
+    finally,
+    throwM,
+    throwWithCallStack,
+    try,
+    tryWithCallStack,
+  )
+import Effects.FileSystem.FileReader as X
   ( MonadFileReader (readBinaryFile),
     decodeUtf8Lenient,
     readFileUtf8ThrowM,
   )
-import Effects.FileSystem.MonadFileWriter as X
+import Effects.FileSystem.FileWriter as X
   ( MonadFileWriter (appendBinaryFile, writeBinaryFile),
     encodeUtf8,
   )
-import Effects.FileSystem.MonadHandleWriter as X
+import Effects.FileSystem.HandleWriter as X
   ( MonadHandleWriter
       ( hClose,
         hFlush,
@@ -121,7 +123,7 @@ import Effects.FileSystem.MonadHandleWriter as X
         openBinaryFile
       ),
   )
-import Effects.FileSystem.MonadPathReader as X
+import Effects.FileSystem.PathReader as X
   ( MonadPathReader
       ( canonicalizePath,
         doesDirectoryExist,
@@ -133,7 +135,8 @@ import Effects.FileSystem.MonadPathReader as X
       ),
     getXdgConfig,
   )
-import Effects.FileSystem.MonadPathWriter as X
+import Effects.FileSystem.PathSize as X (MonadPathSize (findLargestPaths))
+import Effects.FileSystem.PathWriter as X
   ( MonadPathWriter
       ( createDirectoryIfMissing,
         removeDirectoryRecursive,
@@ -142,16 +145,7 @@ import Effects.FileSystem.MonadPathWriter as X
         renameFile
       ),
   )
-import Effects.MonadCallStack as X
-  ( MonadCallStack
-      ( addCallStack,
-        throwWithCallStack
-      ),
-    catch,
-    displayCallStack,
-    try,
-  )
-import Effects.MonadIORef as X
+import Effects.IORef as X
   ( IORef,
     MonadIORef,
     modifyIORef',
@@ -159,9 +153,16 @@ import Effects.MonadIORef as X
     readIORef,
     writeIORef,
   )
-import Effects.MonadLoggerNamespace as X (MonadLoggerNamespace, addNamespace)
-import Effects.MonadTerminal as X (MonadTerminal (putStr, putStrLn))
-import Effects.MonadTime as X (MonadTime)
+import Effects.LoggerNamespace as X
+  ( MonadLoggerNamespace (getNamespace, localNamespace),
+    addNamespace,
+  )
+import Effects.System.Exit as X (ExitCode (..), MonadExit, exitFailure)
+import Effects.System.Terminal as X
+  ( MonadTerminal (putStr, putStrLn),
+    putTextLn,
+  )
+import Effects.Time as X (MonadTime)
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
 import GHC.Float as X (Double)
@@ -208,7 +209,6 @@ import Optics.Core as X
     _Just,
   )
 import Optics.TH as X (makeFieldLabelsNoPrefix, makePrisms)
-import PathSize as X (MonadPathSize (findLargestPaths))
 import Prettyprinter as X
   ( Doc,
     Pretty (pretty),
@@ -218,7 +218,6 @@ import Prettyprinter as X
     (<+>),
   )
 import Prettyprinter.Render.Text as X (renderStrict)
-import System.Exit as X (exitFailure)
 import System.FilePath as X ((</>))
 import System.IO as X
   ( BufferMode (NoBuffering),
@@ -236,15 +235,3 @@ showt = T.pack . show
 -- | @since 0.1
 displayExceptiont :: Exception e => e -> Text
 displayExceptiont = T.pack . displayException
-
--- | Like 'catchAny', except it ignores the CallStack (i.e. it behaves like
--- normal catch). This is useful when we do not want to add a new CallStack
--- annotation e.g. we are catching an exception for logging purposes only.
---
--- @since 0.1
-catchAnyNoCS :: MonadCatch m => m a -> (SomeException -> m a) -> m a
-catchAnyNoCS = SafeEx.catchAny
-
--- | @since 0.1
-catchAny :: (HasCallStack, MonadCatch m) => m a -> (SomeException -> m a) -> m a
-catchAny = catch @SomeException

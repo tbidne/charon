@@ -7,7 +7,6 @@ module Functional.Commands.D
 where
 
 import Functional.Prelude
-import SafeRm.Exception (Exceptions)
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
@@ -101,7 +100,7 @@ deleteUnknownError args = goldenVsStringDiff desc diff gpath $ do
 
   (ex, logs) <-
     captureSafeRmExceptionLogs
-      @Exceptions
+      @ExitCode
       tmpDir
       "DELETE"
       argList
@@ -159,7 +158,7 @@ deletesSome args = goldenVsStringDiff desc diff gpath $ do
 
   (ex, logs) <-
     captureSafeRmExceptionLogs
-      @Exceptions
+      @ExitCode
       tmpDir
       "DELETE"
       argList
@@ -196,7 +195,7 @@ deletesNoTrace args = goldenVsStringDiff desc diff gpath $ do
 
   (ex, _) <-
     captureSafeRmExceptionLogs
-      @Exceptions
+      @ExitCode
       tmpDir
       "DELETE"
       argList

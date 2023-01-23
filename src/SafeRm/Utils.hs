@@ -12,6 +12,8 @@ module SafeRm.Utils
     normalizedFormat,
     readLogLevel,
     logLevelStrings,
+    mergeAlt,
+    merge,
   )
 where
 
@@ -129,3 +131,23 @@ readLogLevel other =
 -- @since 0.1
 logLevelStrings :: String
 logLevelStrings = "[none|error|warn|info|debug]"
+
+-- | @since 0.1
+mergeAlt ::
+  (Alternative f) =>
+  Lens' s (f a) ->
+  Lens' t (f a) ->
+  s ->
+  t ->
+  f a
+mergeAlt = merge (<|>)
+
+-- | @since 0.1
+merge ::
+  (a -> a -> a) ->
+  Lens' s a ->
+  Lens' t a ->
+  s ->
+  t ->
+  a
+merge f sLens tLens s t = (s ^. sLens) `f` (t ^. tLens)

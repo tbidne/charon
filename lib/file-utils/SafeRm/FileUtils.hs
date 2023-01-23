@@ -43,7 +43,7 @@ createFileContents ::
 createFileContents paths = for_ paths $
   \(p, c) ->
     writeBinaryFile p c
-      `catchAny` \ex -> do
+      `catchWithCallStack` \(ex :: SomeException) -> do
         putStrLn $
           mconcat
             [ "[SafeRm.FileUtils.createFileContents] Exception for file '",

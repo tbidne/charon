@@ -22,12 +22,11 @@ where
 import Data.Char qualified as Ch
 import Data.HashMap.Strict qualified as HMap
 import Data.Text qualified as T
-import Effects.FileSystem.MonadHandleWriter (MonadHandleWriter (..))
-import Effects.MonadTerminal
+import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
+import Effects.System.Terminal
   ( MonadTerminal (getChar),
-    putTextLn,
   )
-import Effects.MonadTime (getSystemTime)
+import Effects.Time (getSystemTime)
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.Index qualified as Index
@@ -47,10 +46,6 @@ import SafeRm.Env
     getTrashIndex,
     getTrashPaths,
   )
-import SafeRm.Exception
-  ( Exceptions (MkExceptions),
-    PathNotFoundE (MkPathNotFoundE),
-  )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
 import System.IO qualified as IO
@@ -64,8 +59,8 @@ delete ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadCatch m,
+    MonadExit m,
     MonadFileWriter m,
     MonadIORef m,
     MonadLoggerNamespace m,
@@ -84,8 +79,8 @@ delete paths = addNamespace "delete" $ do
 
   Paths.applyPathI (createDirectoryIfMissing False) trashHome
 
+  anyFailedRef <- newIORef False
   deletedPathsRef <- newIORef HMap.empty
-  exceptionsRef <- newIORef Nothing
   currTime <- MkTimestamp <$> getSystemTime
 
   -- move path to trash, saving any exceptions
@@ -95,10 +90,18 @@ delete paths = addNamespace "delete" $ do
         $(logDebug) (showt pd)
         PathData.mvOriginalToTrash trashHome pd
         modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
+        $(logDebug) ("Deleted: " <> showt pd)
     )
-      `catchAny` \ex -> do
-        $(logWarn) (T.pack $ displayCallStack ex)
-        modifyIORef' exceptionsRef (Utils.prependMNonEmpty ex)
+      `catchWithCallStack` \(ex :: SomeException) -> do
+        $(logWarn) (T.pack $ displayNoCallStack ex)
+        putStrLn $
+          mconcat
+            [ "Error deleting path '",
+              fp ^. #unPathI,
+              "': ",
+              displayNoCallStack ex
+            ]
+        writeIORef anyFailedRef True
 
   -- override old index
   deletedPaths <- readIORef deletedPathsRef
@@ -111,21 +114,10 @@ delete paths = addNamespace "delete" $ do
     then Index.appendIndex indexPath (MkIndex deletedPaths)
     else Index.writeIndex indexPath (MkIndex deletedPaths)
 
-  $(logInfo) ("Deleted: " <> showMapOrigPaths deletedPaths)
+  $(logInfo) ("Written to index: " <> showMapOrigPaths deletedPaths)
 
-  exceptions <- readIORef exceptionsRef
-  Utils.whenJust exceptions $
-    -- NOTE: We do not log these exceptions. In general, the only exceptions
-    -- we log in the SafeRm API are those that are non-fatal i.e. ones we
-    -- catch. Unhandled ones are left to bubble up, where the runner can
-    -- catch and log them.
-    --
-    -- Also notice that we use throwIO here and not throwWithCallStack. The
-    -- Exceptions type is uses solely to aggregate exceptions encountered here,
-    -- deletePermanently, and restore. All the exceptions it wraps should have
-    -- their own call stack data, so adding more clutters the output for little
-    -- gain.
-    throwIO . MkExceptions
+  anyFailed <- readIORef anyFailedRef
+  when anyFailed exitFailure
 
 -- | Permanently deletes the paths from the trash.
 --
@@ -134,8 +126,8 @@ deletePermanently ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadCatch m,
+    MonadExit m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -156,18 +148,34 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
   index <- Index.readIndex indexPath
   let indexMap = index ^. #unIndex
       (searchFailures, toDelete) = Index.searchIndex paths index
+
   deletedPathsRef <- newIORef HMap.empty
-  exceptionsRef <- newIORef Nothing
+  anyFailedRef <- newIORef False
+
+  -- report errors
+  unless (null searchFailures) $ do
+    let failureStr = Paths.showPaths searchFailures
+    $(logWarn) (T.pack failureStr)
+    putStrLn $ "Could not find paths in trash: " <> failureStr
+    writeIORef anyFailedRef True
 
   let deleteFn pd =
         ( do
-            $(logDebug) (showt pd)
+            $(logDebug) ("Deleting: " <> showt pd)
             PathData.deletePathData trashHome pd
             modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
+            $(logDebug) ("Permanently deleted: " <> showt pd)
         )
-          `catchAny` \ex -> do
-            $(logWarn) (T.pack $ displayCallStack ex)
-            modifyIORef' exceptionsRef (Utils.prependMNonEmpty ex)
+          `catchWithCallStack` \(ex :: SomeException) -> do
+            $(logWarn) (T.pack $ displayNoCallStack ex)
+            putStrLn $
+              mconcat
+                [ "Error permanently deleting path '",
+                  show pd,
+                  "': ",
+                  displayNoCallStack ex
+                ]
+            writeIORef anyFailedRef True
 
   -- permanently delete paths
   addNamespace "deleting" $
@@ -197,12 +205,10 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
   deletedPaths <- readIORef deletedPathsRef
   Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap deletedPaths)
 
-  $(logInfo) ("Deleted: " <> showMapTrashPaths deletedPaths)
+  $(logInfo) ("Deleted from index: " <> showMapTrashPaths deletedPaths)
 
-  exceptions <- readIORef exceptionsRef
-  let searchExs = pathsToException searchFailures
-  Utils.whenJust (Utils.concatMNonEmpty searchExs exceptions) $
-    throwIO . MkExceptions
+  anyFailed <- readIORef anyFailedRef
+  when anyFailed exitFailure
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -211,12 +217,12 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
 getIndex ::
   forall env m.
   ( HasCallStack,
-    MonadCallStack m,
     MonadFileReader m,
     MonadPathReader m,
     HasTrashHome env,
     MonadLoggerNamespace m,
-    MonadReader env m
+    MonadReader env m,
+    MonadThrow m
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
@@ -235,13 +241,13 @@ getMetadata ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadFileReader m,
     MonadLoggerNamespace m,
     MonadPathReader m,
     MonadPathSize m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
@@ -250,7 +256,7 @@ getMetadata = addNamespace "getMetadata" $ do
   Paths.applyPathI doesFileExist indexPath >>= \case
     True -> Metadata.toMetadata paths
     False -> do
-      $(logDebug) "Index does not exist."
+      $(logInfo) "Index does not exist."
       pure mempty
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
@@ -262,15 +268,16 @@ restore ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
-    MonadLoggerNamespace m,
-    MonadCallStack m,
     MonadCatch m,
+    MonadExit m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
+    MonadLoggerNamespace m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m
+    MonadReader env m,
+    MonadTerminal m
   ) =>
   UniqueSeq (PathI TrashName) ->
   m ()
@@ -282,29 +289,42 @@ restore paths = addNamespace "restore" $ do
       (searchFailures, toRestore) = Index.searchIndex paths index
 
   restoredPathsRef <- newIORef HMap.empty
-  exceptionsRef <- newIORef Nothing
+  anyFailedRef <- newIORef False
+
+  -- report errors
+  unless (null searchFailures) $ do
+    let failureStr = Paths.showPaths searchFailures
+    $(logWarn) (T.pack failureStr)
+    putStrLn $ "Could not find paths in trash: " <> failureStr
+    writeIORef anyFailedRef True
 
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ toRestore $ \pd ->
     ( do
-        $(logDebug) (showt pd)
+        $(logDebug) ("Restoring: " <> showt pd)
         PathData.mvTrashToOriginal trashHome pd
         modifyIORef' restoredPathsRef (HMap.insert (pd ^. #fileName) pd)
+        $(logDebug) ("Restored: " <> showt pd)
     )
-      `catchAny` \ex -> do
-        $(logWarn) (T.pack $ displayCallStack ex)
-        modifyIORef' exceptionsRef (Utils.prependMNonEmpty ex)
+      `catchWithCallStack` \(ex :: SomeException) -> do
+        $(logWarn) (T.pack $ displayNoCallStack ex)
+        putStrLn $
+          mconcat
+            [ "Error restoring path '",
+              show pd,
+              "': ",
+              displayNoCallStack ex
+            ]
+        writeIORef anyFailedRef True
 
   -- override old index
   restoredPaths <- readIORef restoredPathsRef
   Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap restoredPaths)
 
-  $(logInfo) ("Restored: " <> showMapOrigPaths restoredPaths)
+  $(logInfo) ("Restored from index: " <> showMapOrigPaths restoredPaths)
 
-  exceptions <- readIORef exceptionsRef
-  let searchExs = pathsToException searchFailures
-  Utils.whenJust (Utils.concatMNonEmpty searchExs exceptions) $
-    throwIO . MkExceptions
+  anyFailed <- readIORef anyFailedRef
+  when anyFailed exitFailure
 
 -- | Empties the trash. Deletes the index file.
 --
@@ -313,7 +333,6 @@ emptyTrash ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
-    MonadCallStack m,
     MonadHandleWriter m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -360,18 +379,7 @@ showMapElems toPathI =
     . fmap (T.pack . view (toPathI % #unPathI))
     . HMap.elems
 
-noBuffering :: (HasCallStack, MonadCallStack m, MonadHandleWriter m) => m ()
-noBuffering = addCallStack $ buffOff IO.stdin *> buffOff IO.stdout
+noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
+noBuffering = buffOff IO.stdin *> buffOff IO.stdout
   where
     buffOff h = hSetBuffering h NoBuffering
-
-pathsToException ::
-  Foldable t =>
-  t (PathI 'TrashName) ->
-  [SomeException]
-pathsToException = foldr go []
-  where
-    go fp acc = pathToException fp : acc
-
-pathToException :: PathI TrashName -> SomeException
-pathToException (MkPathI p) = toException $ MkPathNotFoundE p

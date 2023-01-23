@@ -2,6 +2,7 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Prelude for functional test suite.
 --
@@ -48,15 +49,14 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
-import Effects.MonadLoggerNamespace
+import Effects.LoggerNamespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
-    MonadLoggerNamespace (getNamespace, localNamespace),
     Namespace,
   )
-import Effects.MonadLoggerNamespace qualified as Logger
-import Effects.MonadTerminal (MonadTerminal (..))
-import Effects.MonadTime
+import Effects.LoggerNamespace qualified as Logger
+import Effects.System.Terminal (MonadTerminal (..))
+import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
 import GHC.Stack.Types (CallStack (PushCallStack), SrcLoc (..))
@@ -113,6 +113,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       Functor,
       Monad,
       MonadCatch,
+      MonadExit,
       MonadFileReader,
       MonadFileWriter,
       MonadHandleWriter,
@@ -124,10 +125,6 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadReader env
     )
     via (ReaderT env IO)
-
-instance MonadCallStack (FuncIO env) where
-  throwWithCallStack = throwIO
-  addCallStack = id
 
 instance MonadPathSize (FuncIO env) where
   findLargestPaths _ _ =
@@ -151,15 +148,11 @@ instance
   MonadTerminal (FuncIO env)
   where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
-  putStrLn = putStr . (<> "\n")
   getChar = do
     charStream <- asks (view #charStream)
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure c
-  getTerminalSize = error "getTerminalSize: unimplemented"
-  getLine = error "getLine unimplemented"
-  getContents' = error "getContents unimplemented"
 
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
@@ -270,11 +263,11 @@ captureSafeRmExceptionLogs testDir title argList = do
   (toml, cmd) <- getConfig
   env <- mkFuncEnv toml logsRef terminalRef
 
-  result <- try @e $ runFuncIO (Runner.runCmd cmd) env
+  result <- tryWithCallStack @e $ runFuncIO (Runner.runCmd cmd) env
 
   case result of
     Right _ ->
-      throwString
+      error
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
       logs <- replaceDir testDir <$> readIORef logsRef

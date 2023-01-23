@@ -12,4 +12,4 @@ LOGS LIST
 [2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/l1/.trash/.index.csv
 [2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index does not exist.
 [2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/l1/.trash
-[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Index does not exist.
+[2020-05-31 12:00:00][functional.getMetadata][Info][src/SafeRm.hs] Index does not exist.

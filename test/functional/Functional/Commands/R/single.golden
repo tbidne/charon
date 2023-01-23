@@ -16,8 +16,9 @@ LOGS RESTORE
 [2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: <dir>/r1/.trash
 [2020-05-31 12:00:00][functional.restore.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/r1/.trash/.index.csv
 [2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored: <dir>/r1/f1
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored from index: <dir>/r1/f1
 
 
 TERMINAL LIST 2

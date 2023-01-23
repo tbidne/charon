@@ -7,6 +7,7 @@
 module SafeRm.Runner.Toml
   ( TomlConfig (..),
     mergeConfigs,
+    defaultTomlConfig,
   )
 where
 
@@ -17,7 +18,6 @@ import SafeRm.Runner.Args (Args, CommandArg (..), _ListArg)
 import SafeRm.Runner.Command
 import SafeRm.Runner.Config (CmdListCfg (..), ListFormatCfg (..))
 import SafeRm.Utils qualified as U
-import SafeRm.Utils qualified as Utils
 import TOML
   ( DecodeTOML (..),
     getFieldOpt,
@@ -52,20 +52,8 @@ data TomlConfig = MkTomlConfig
 makeFieldLabelsNoPrefix ''TomlConfig
 
 -- | @since 0.1
-instance Semigroup TomlConfig where
-  MkTomlConfig a b c <> MkTomlConfig a' b' c' =
-    MkTomlConfig
-      -- Simple args, take the (left-biased) Just.
-      (a <|> a')
-      (b <|> b')
-      -- For list config, use the semigroup instance because we want decisions
-      -- at the _field_ level. The mere fact that the LHS is Just should
-      -- _not_ cause it to completely overwrite the RHS.
-      (c <> c')
-
--- | @since 0.1
-instance Monoid TomlConfig where
-  mempty = MkTomlConfig Nothing Nothing Nothing
+defaultTomlConfig :: TomlConfig
+defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing
 
 -- | @since 0.5
 instance DecodeTOML TomlConfig where
@@ -77,7 +65,7 @@ instance DecodeTOML TomlConfig where
     where
       decodeTrashHome = fmap MkPathI <$> getFieldOpt "trash-home"
       decodeLogLevel =
-        getFieldOptWith (tomlDecoder >>= Utils.readLogLevel) "log-level"
+        getFieldOptWith (tomlDecoder >>= U.readLogLevel) "log-level"
 
 -- | Merges the args and toml config into a single toml config. If some field
 -- F is specified by both args and toml config, then args takes precedence.
@@ -89,16 +77,15 @@ mergeConfigs :: Args -> TomlConfig -> (TomlConfig, Command)
 mergeConfigs args toml = (mergedConfig, newCmd)
   where
     cmd = args ^. #command
-    mergedConfig = argsToTomlConfig args <> toml
+    mergedConfig =
+      MkTomlConfig
+        { trashHome = U.mergeAlt #trashHome #trashHome args toml,
+          logLevel = U.mergeAlt #logLevel #logLevel args toml,
+          -- Get the list config from the args, if it exists, and then
+          -- combine it with the toml config
+          listCommand = args ^? (#command % _ListArg) <> toml ^. #listCommand
+        }
     newCmd = cmdFromToml mergedConfig cmd
-
-argsToTomlConfig :: Args -> TomlConfig
-argsToTomlConfig args =
-  MkTomlConfig
-    { trashHome = args ^. #trashHome,
-      logLevel = args ^. #logLevel,
-      listCommand = args ^? (#command % _ListArg)
-    }
 
 -- Returns the new command after possibly updating the old command from the
 -- toml configuration.

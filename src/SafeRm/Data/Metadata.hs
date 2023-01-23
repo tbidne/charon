@@ -15,10 +15,10 @@ import Data.Bytes qualified as Bytes
 import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text qualified as T
+import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Real (Integral)
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import Numeric.Literal.Rational (FromRational (afromRational))
-import PathSize (PathSizeResult (..), pathSizeRecursive)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -94,12 +94,12 @@ instance Pretty Metadata where
 -- @since 0.1
 toMetadata ::
   ( HasCallStack,
-    MonadCallStack m,
     MonadFileReader m,
     MonadPathReader m,
     MonadPathSize m,
     MonadLoggerNamespace m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   (PathI TrashHome, PathI TrashIndex, PathI TrashLog) ->
   m Metadata
@@ -128,11 +128,6 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
                 putStrLn "Encountered errors retrieving size. See logs."
                 for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
                 pure n
-              PathSizeFailure errs -> do
-                -- Received error, no value.
-                putStrLn "Could not retrieve size, defaulting to 0. See logs."
-                for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
-                pure 0
         else do
           $(logDebug) "Log does not exist"
           pure (afromRational 0)
@@ -152,7 +147,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
     -- trash state.
     when (numEntries /= numIndex) $
       throwWithCallStack $
-        MkIndexSizeMismatchE trashHome numFiles numIndex
+        MkIndexSizeMismatchE trashHome numEntries numIndex
 
     pure $
       MkMetadata
@@ -180,8 +175,8 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
 
 getAllFiles ::
   ( HasCallStack,
-    MonadCallStack m,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadThrow m
   ) =>
   FilePath ->
   m [FilePath]

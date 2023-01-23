@@ -115,9 +115,13 @@
                   final.callCabal2nix
                     "monad-async" "${monad-effects}/monad-async"
                     { };
-                monad-callstack =
+                monad-exceptions =
                   final.callCabal2nix
-                    "monad-callstack" "${monad-effects}/monad-callstack"
+                    "monad-exceptions" "${monad-effects}/monad-exceptions"
+                    { };
+                monad-exit =
+                  final.callCabal2nix
+                    "monad-exit" "${monad-effects}/monad-exit"
                     { };
                 monad-fs =
                   final.callCabal2nix

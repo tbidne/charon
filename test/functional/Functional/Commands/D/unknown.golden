@@ -1,12 +1,8 @@
 EXCEPTION DELETE
-Exceptions:
-
-- Path not found: <dir>/d3/bad file
+ExitFailure 1
 
 LOGS DELETE
 [2020-05-31 12:00:00][functional.delete][Debug][src/SafeRm.hs] Trash home: <dir>/d3/.trash
 [2020-05-31 12:00:00][functional.delete.deleting][Warn][src/SafeRm.hs] Path not found: <dir>/d3/bad file
-[2020-05-31 12:00:00][functional.delete][Info][src/SafeRm.hs] Deleted: 
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Exceptions:
-
-- Path not found: <dir>/d3/bad file
+[2020-05-31 12:00:00][functional.delete][Info][src/SafeRm.hs] Written to index: 
+[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1

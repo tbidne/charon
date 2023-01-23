@@ -25,11 +25,7 @@ Size:         0.00B
 
 
 EXCEPTION PERM DELETE
-Exceptions:
-
-- Path not found: f4
-
-- Path not found: f3
+ExitFailure 1
 
 LOGS PERM DELETE
 [2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: <dir>/x5/.trash
@@ -37,15 +33,15 @@ LOGS PERM DELETE
 [2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/x5/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/x5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/x5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/x5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/x5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/x5/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently][Info][src/SafeRm.hs] Deleted: f5, f2, f1
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Exceptions:
-
-- Path not found: f4
-
-- Path not found: f3
+[2020-05-31 12:00:00][functional.deletePermanently][Warn][src/SafeRm.hs] f3, f4
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/x5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Permanently deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/x5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/x5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Permanently deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/x5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/x5/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Permanently deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/x5/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently][Info][src/SafeRm.hs] Deleted from index: f5, f2, f1
+[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1
 
 
 TERMINAL LIST 2

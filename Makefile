@@ -5,39 +5,39 @@
 
 # dev
 
-ARGS = ""
+T = ""
 
 build:
-	if [ -z "$(ARGS)" ]; then \
+	if [ -z "$(T)" ]; then \
 		cabal build; \
 	else \
-		cabal build $(ARGS); \
+		cabal build $(T); \
 	fi
 
 clean:
 	cabal clean
 
 repl:
-	if [ -z "$(ARGS)" ]; then \
+	if [ -z "$(T)" ]; then \
 		cabal repl safe-rm; \
 	else \
-		cabal repl $(ARGS); \
+		cabal repl $(T); \
 	fi
 
 watch:
-	if [ -z "$(ARGS)" ]; then \
+	if [ -z "$(T)" ]; then \
 		ghcid --command "cabal repl safe-rm"; \
 	else \
-		ghcid --command "cabal repl $(ARGS)"; \
+		ghcid --command "cabal repl $(T)"; \
 	fi
 
 # testing
 
 test:
-	if [ -z "$(ARGS)" ]; then \
+	if [ -z "$(T)" ]; then \
 		cabal test; \
 	else \
-		cabal test $(ARGS); \
+		cabal test $(T); \
 	fi
 
 unit:
@@ -87,7 +87,7 @@ haddockc:
 	. \
 	-m SafeRm.Data.PathData 85 \
 	-m SafeRm.Data.Index 90 \
-	-m SafeRm.Prelude 85 \
+	-m SafeRm.Prelude 80 \
 	-m SafeRm.Runner.Command 20 \
 	-m SafeRm.Runner.Args 40
 

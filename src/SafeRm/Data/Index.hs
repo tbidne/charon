@@ -103,10 +103,10 @@ instance Pretty Index where
 -- @since 0.1
 readIndex ::
   ( HasCallStack,
-    MonadCallStack m,
     MonadFileReader m,
     MonadPathReader m,
-    MonadLoggerNamespace m
+    MonadLoggerNamespace m,
+    MonadThrow m
   ) =>
   PathI TrashIndex ->
   m Index
@@ -132,10 +132,10 @@ searchIndex ::
   UniqueSeq (PathI TrashName) ->
   -- | The trash index.
   Index ->
-  -- | The trash data matching the input keys.
+  -- | The first (left) element is the given paths which do not exist
+  -- in the Index; the second (right) element is the found trash data.
   ([PathI TrashName], UniqueSeq PathData)
-searchIndex keys (MkIndex index) =
-  foldr foldKeys mempty trashKeys
+searchIndex keys (MkIndex index) = foldr foldKeys mempty trashKeys
   where
     -- NOTE: drop trailing slashes to match our index's schema
     trashKeys = USeq.map (Paths.liftPathI' FP.dropTrailingPathSeparator) keys
@@ -157,9 +157,9 @@ searchIndex keys (MkIndex index) =
 readIndexWithFold ::
   forall m a.
   ( HasCallStack,
-    MonadCallStack m,
     MonadFileReader m,
     MonadLoggerNamespace m,
+    MonadThrow m,
     Monoid a
   ) =>
   -- | Fold function.
@@ -216,7 +216,7 @@ readIndexWithFold foldFn indexPath@(MkPathI fp) =
 -- @since 0.1
 throwIfDuplicates ::
   ( HasCallStack,
-    MonadCallStack m
+    MonadThrow m
   ) =>
   PathI TrashIndex ->
   HashMap (PathI TrashName) PathData ->
@@ -234,8 +234,8 @@ throwIfDuplicates indexPath trashMap pd =
 -- @since 0.1
 throwIfTrashNonExtant ::
   ( HasCallStack,
-    MonadCallStack m,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadThrow m
   ) =>
   PathI TrashHome ->
   PathData ->
