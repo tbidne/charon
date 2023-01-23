@@ -177,19 +177,23 @@ $ sr r foo baz
 **Usage:**
 
 ```
-Usage: sr l [--format ([m]ulti | [s]ingle)] [-n|--name-trunc NAT]
+Usage: sr l [--format (a[uto] | [t]abular | m[ulti]] [-n|--name-trunc NAT]
             [-o|--orig-trunc NAT] [-s|--sort (name|size)] [-r|--reverse-sort]
   Lists all trash contents and metadata.
 
 Available options:
-  --format ([m]ulti | [s]ingle)
-                           Determines the output format. Defaults to 'single'
-                           i.e. each trash entry is printed in a single line, in
-                           tabular form.
-  -n,--name-trunc NAT      Truncates the name to NAT chars. Multiline option is
-                           unaffected.
-  -o,--orig-trunc NAT      Truncates the original path to NAT chars. Multiline
-                           option is unaffected.
+  --format (a[uto] | [t]abular | m[ulti]
+                           Determines the output format. The 'tabular' option
+                           prints each trash entry on a single line, in tabular
+                           form. The 'multi' option prints each entry across
+                           multiple lines. Finally, 'auto', the default, has the
+                           same structure as 'tabular', except it attempts to
+                           choose the best name/path column sizes automatically
+                           based on the data and terminal width.
+  -n,--name-trunc NAT      Truncates the name to NAT chars. Only affects the
+                           'tabular' format.
+  -o,--orig-trunc NAT      Truncates the original path to NAT chars. Only
+                           affects the 'tabular' format.
   -s,--sort (name|size)    How to sort the list. Defaults to name.
   -r,--reverse-sort        Sorts in the reverse order.
   -h,--help                Show this help text

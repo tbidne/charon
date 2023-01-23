@@ -156,8 +156,8 @@ makeFieldLabelsNoPrefix ''Args
 -- | Retrieves CLI args.
 --
 -- @since 0.1
-getArgs :: IO Args
-getArgs = OA.execParser parserInfoArgs
+getArgs :: MonadOptparse m => m Args
+getArgs = execParser parserInfoArgs
 
 parserInfoArgs :: ParserInfo Args
 parserInfoArgs =
@@ -289,30 +289,35 @@ listFormatParser =
     OA.option (OA.str >>= parseListFormat) $
       mconcat
         [ OA.long "format",
-          OA.metavar "([m]ulti | [s]ingle)",
+          OA.metavar "(a[uto] | [t]abular | m[ulti]",
           OA.help helpTxt
         ]
   where
     helpTxt =
       mconcat
-        [ "Determines the output format. Defaults to 'single' i.e. each ",
-          "trash entry is printed in a single line, in tabular form."
+        [ "Determines the output format. The 'tabular' option prints each ",
+          "trash entry on a single line, in tabular form. The 'multi' option ",
+          "prints each entry across multiple lines. Finally, 'auto', the ",
+          "default, has the same structure as 'tabular', except it attempts ",
+          "to choose the best name/path column sizes automatically based on ",
+          "the data and terminal width."
         ]
 
-nameTruncParser :: Parser (Maybe Word8)
-nameTruncParser = word8Parser fields
+nameTruncParser :: Parser (Maybe Natural)
+nameTruncParser = natParser fields
   where
     fields =
       mconcat
         [ OA.long "name-trunc",
           OA.short 'n',
           OA.metavar "NAT",
-          OA.help
-            "Truncates the name to NAT chars. Multiline option is unaffected."
+          OA.help $
+            "Truncates the name to NAT chars. Only affects the 'tabular' "
+              <> "format."
         ]
 
-origTruncParser :: Parser (Maybe Word8)
-origTruncParser = word8Parser fields
+origTruncParser :: Parser (Maybe Natural)
+origTruncParser = natParser fields
   where
     fields =
       mconcat
@@ -320,12 +325,12 @@ origTruncParser = word8Parser fields
           OA.short 'o',
           OA.metavar "NAT",
           OA.help $
-            "Truncates the original path to NAT chars. Multiline option is "
-              <> "unaffected."
+            "Truncates the original path to NAT chars. Only affects the 'tabular' "
+              <> "format."
         ]
 
-word8Parser :: Mod OptionFields Word8 -> Parser (Maybe Word8)
-word8Parser = A.optional . OA.option OA.auto
+natParser :: Mod OptionFields Natural -> Parser (Maybe Natural)
+natParser = A.optional . OA.option OA.auto
 
 sortParser :: Parser (Maybe Sort)
 sortParser =

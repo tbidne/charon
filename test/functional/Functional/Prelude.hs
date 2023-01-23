@@ -153,6 +153,7 @@ instance
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure c
+  getTerminalSize = liftIO getTerminalSize
 
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc

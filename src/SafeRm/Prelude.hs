@@ -88,7 +88,8 @@ import Data.Type.Equality as X (type (~))
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
 import Effects.Exception as X
-  ( Exception (..),
+  ( AnnotatedException (..),
+    Exception (..),
     MonadCatch,
     MonadMask,
     MonadThrow,
@@ -102,6 +103,7 @@ import Effects.Exception as X
     displayNoCallStack,
     finally,
     throwM,
+    throwString,
     throwWithCallStack,
     try,
     tryWithCallStack,
@@ -157,6 +159,7 @@ import Effects.LoggerNamespace as X
   ( MonadLoggerNamespace (getNamespace, localNamespace),
     addNamespace,
   )
+import Effects.Optparse as X (MonadOptparse (execParser))
 import Effects.System.Exit as X (ExitCode (..), MonadExit, exitFailure)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
@@ -169,7 +172,7 @@ import GHC.Float as X (Double)
 import GHC.Generics as X (Generic)
 import GHC.Integer as X (Integer)
 import GHC.Natural as X (Natural)
-import GHC.Num as X (Num ((+), (-)))
+import GHC.Num as X (Num ((*), (+), (-)))
 import GHC.Real as X (even, fromIntegral)
 import GHC.Stack as X
   ( CallStack,

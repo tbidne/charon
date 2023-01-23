@@ -135,6 +135,10 @@
                   final.callCabal2nix "monad-logger-namespace"
                     "${monad-effects}/monad-logger-namespace"
                     { };
+                monad-optparse =
+                  final.callCabal2nix "monad-optparse"
+                    "${monad-effects}/monad-optparse"
+                    { };
                 monad-stm =
                   final.callCabal2nix "monad-stm"
                     "${monad-effects}/monad-stm"

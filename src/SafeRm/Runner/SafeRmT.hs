@@ -59,7 +59,7 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
 -- | @since 0.1
 instance
   (MonadHandleWriter m, MonadTime m) =>
-  MonadLogger (SafeRmT Env m)
+  MonadLogger (SafeRmT (Env m) m)
   where
   monadLoggerLog loc _src lvl msg = do
     mhandle <- asks (preview (#logEnv % #logFile %? handleAndLevel))
@@ -71,7 +71,7 @@ instance
           let bs = Logger.logStrToBs formatted
           hPut handle bs
     where
-      handleAndLevel :: Lens' LogFile (Handle, LogLevel)
+      handleAndLevel :: Lens' (LogFile m) (Handle, LogLevel)
       handleAndLevel =
         lens
           (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
@@ -80,7 +80,7 @@ instance
 -- | @since 0.1
 instance
   (MonadHandleWriter m, MonadTime m) =>
-  MonadLoggerNamespace (SafeRmT Env m)
+  MonadLoggerNamespace (SafeRmT (Env m) m)
   where
   getNamespace = asks (view (#logEnv % #logNamespace))
   localNamespace = local . over' (#logEnv % #logNamespace)

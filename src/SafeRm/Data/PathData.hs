@@ -35,10 +35,10 @@ module SafeRm.Data.PathData
 
     -- * Formatting
     PathDataFormat (..),
-    formatPathData,
     formatMultiLine,
     formatSingleHeader,
     formatSingleLine,
+    reservedLineLen,
 
     -- * Miscellaneous
     headerNames,
@@ -432,11 +432,16 @@ data PathDataFormat
   = -- | Formats each file on its own line.
     --
     -- @since 0.1
-    Multiline
+    FormatMultiline
   | -- | Formats all fields on the same line.
     --
     -- @since 0.1
-    Singleline Word8 Word8
+    FormatTabular Natural Natural
+  | -- | Like 'FormatTabular', except it attempts to detect the best
+    -- column widths automatically.
+    --
+    -- @since 0.1
+    FormatTabularAuto
   deriving stock
     ( -- | @since 0.1
       Eq,
@@ -446,23 +451,15 @@ data PathDataFormat
 
 -- | @since 0.1
 instance Semigroup PathDataFormat where
-  Multiline <> _ = Multiline
-  _ <> Multiline = Multiline
-  Singleline 10 22 <> r = r
-  l <> Singleline 10 22 = l
+  FormatMultiline <> _ = FormatMultiline
+  _ <> FormatMultiline = FormatMultiline
+  FormatTabular 10 22 <> r = r
+  l <> FormatTabular 10 22 = l
   l <> _ = l
 
 -- | @since 0.1
 instance Monoid PathDataFormat where
-  mempty = Singleline 10 22
-
--- | Formats the 'PathData'.
---
--- @since 0.1
-formatPathData :: PathDataFormat -> PathData -> Text
-formatPathData Multiline pd = formatMultiLine pd
-formatPathData (Singleline nameLen origLen) pd =
-  formatSingleLine nameLen origLen pd
+  mempty = FormatTabular 10 22
 
 -- | @since 0.1
 formatMultiLine :: PathData -> Text
@@ -482,7 +479,7 @@ typeToText PathTypeFile = "File"
 typeToText PathTypeDirectory = "Directory"
 
 -- | @since 0.1
-formatSingleHeader :: Word8 -> Word8 -> Text
+formatSingleHeader :: Natural -> Natural -> Text
 formatSingleHeader nameLen origLen =
   mconcat
     [ fixLen nameLen "Name",
@@ -499,11 +496,19 @@ formatSingleHeader nameLen origLen =
     ]
   where
     -- extra 12 is from the separators
-    totalLen = nameLen + 10 + 7 + origLen + 19 + 12
+    totalLen = nameLen + origLen + reservedLineLen
     titleLen = T.replicate (fromIntegral totalLen) "-"
 
+-- | For single-line formatting, this is the space necessary to render the
+-- non-configurable columns i.e. type (10), size (7), created (19) and
+-- separators (12).
+--
+-- @since 0.1
+reservedLineLen :: Natural
+reservedLineLen = 10 + 7 + 19 + 12
+
 -- | @since 0.1
-formatSingleLine :: Word8 -> Word8 -> PathData -> Text
+formatSingleLine :: Natural -> Natural -> PathData -> Text
 formatSingleLine nameLen origLen pd =
   mconcat
     [ fixLen' nameLen (pd ^. #fileName % #unPathI),
@@ -523,11 +528,11 @@ formatSingleLine nameLen origLen pd =
 sep :: Text
 sep = " | "
 
-fixLen' :: Word8 -> String -> Text
+fixLen' :: Natural -> String -> Text
 fixLen' w s = fixLen w (T.pack s)
 
 -- | @since 0.1
-fixLen :: Word8 -> Text -> Text
+fixLen :: Natural -> Text -> Text
 fixLen w t
   | w' < T.length t = T.take (w' - 3) t <> "..."
   | otherwise = t <> T.replicate (w' - T.length t) " "

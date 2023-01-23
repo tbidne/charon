@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-missing-methods #-}
+
 -- | Unit tests for Data.Index
 module Unit.Data.Index
   ( tests,
@@ -5,16 +7,22 @@ module Unit.Data.Index
 where
 
 import Data.ByteString.Lazy qualified as BSL
+import Data.List qualified as L
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TLEnc
+import Effects.System.Terminal
+  ( MonadTerminal (getTerminalSize),
+    Window (Window, height, width),
+  )
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData
   ( PathData (MkPathData),
-    PathDataFormat (Multiline, Singleline),
+    PathDataFormat (FormatMultiline, FormatTabular, FormatTabularAuto),
   )
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import Unit.Prelude
 
@@ -36,80 +44,168 @@ formattingTests =
       format5,
       format6,
       format7,
-      format8
+      format8,
+      formatAuto,
+      formatAutoLargeApprox,
+      formatAutoFail
     ]
 
 format1 :: TestTree
 format1 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex Multiline Name False
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex FormatMultiline Name False idx
+    pure $ toBS formatted
   where
     desc = "Multiline, name, asc"
     gpath = goldenPath </> "multi-name-asc.golden"
 
 format2 :: TestTree
 format2 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex Multiline Name True
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex FormatMultiline Name True idx
+    pure $ toBS formatted
   where
     desc = "Multiline, name, desc"
     gpath = goldenPath </> "multi-name-desc.golden"
 
 format3 :: TestTree
 format3 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex Multiline Size False
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex FormatMultiline Size False idx
+    pure $ toBS formatted
   where
     desc = "Multiline, size, asc"
     gpath = goldenPath </> "multi-size-asc.golden"
 
 format4 :: TestTree
 format4 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex Multiline Size True
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex FormatMultiline Size True idx
+    pure $ toBS formatted
   where
     desc = "Multiline, size, desc"
     gpath = goldenPath </> "multi-size-desc.golden"
 
 format5 :: TestTree
 format5 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex (Singleline 10 22) Name False
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex (FormatTabular 10 22) Name False idx
+    pure $ toBS formatted
   where
-    desc = "Singeline, name, asc"
-    gpath = goldenPath </> "single-name-asc.golden"
+    desc = "Tabular, name, asc"
+    gpath = goldenPath </> "tabular-name-asc.golden"
 
 format6 :: TestTree
 format6 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex (Singleline 10 22) Name True
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex (FormatTabular 10 22) Name True idx
+    pure $ toBS formatted
   where
-    desc = "Singeline, name, desc"
-    gpath = goldenPath </> "single-name-desc.golden"
+    desc = "Tabular, name, desc"
+    gpath = goldenPath </> "tabular-name-desc.golden"
 
 format7 :: TestTree
 format7 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex (Singleline 10 22) Size False
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex (FormatTabular 10 22) Size False idx
+    pure $ toBS formatted
   where
-    desc = "Singeline, size, asc"
-    gpath = goldenPath </> "single-size-asc.golden"
+    desc = "Tabular, size, asc"
+    gpath = goldenPath </> "tabular-size-asc.golden"
 
 format8 :: TestTree
 format8 =
-  goldenVsStringDiff desc diff gpath $
-    toBS . Index.formatIndex (Singleline 10 22) Size True
-      <$> mkIndex
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <- Index.formatIndex (FormatTabular 10 22) Size True idx
+    pure $ toBS formatted
   where
-    desc = "Singeline, size, desc"
-    gpath = goldenPath </> "single-size-desc.golden"
+    desc = "Tabular, size, desc"
+    gpath = goldenPath </> "tabular-size-desc.golden"
+
+newtype ConfigIO a = MkConfigIO (ReaderT Natural IO a)
+  deriving
+    ( Applicative,
+      Functor,
+      Monad,
+      MonadReader Natural,
+      MonadThrow
+    )
+    via ReaderT Natural IO
+
+runConfigIO :: ConfigIO a -> Natural -> IO a
+runConfigIO (MkConfigIO x) = runReaderT x
+
+instance MonadTerminal ConfigIO where
+  getTerminalSize =
+    ask >>= \n ->
+      pure $
+        Window
+          { height = 50,
+            width = n
+          }
+
+formatAuto :: TestTree
+formatAuto =
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <-
+      runConfigIO
+        (Index.formatIndex FormatTabularAuto Name False idx)
+        100
+    pure $ toBS formatted
+  where
+    desc = "Auto tabular format"
+    gpath = goldenPath </> "auto-normal.golden"
+
+formatAutoLargeApprox :: TestTree
+formatAutoLargeApprox =
+  goldenVsStringDiff desc diff gpath $ do
+    ts <- fromText "2020-05-31 12:00:00"
+    let idx =
+          MkIndex $
+            Index.fromList
+              [ MkPathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
+                MkPathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
+              ]
+    formatted <-
+      runConfigIO
+        (Index.formatIndex FormatTabularAuto Name False idx)
+        100
+    pure $ toBS formatted
+  where
+    desc = "Auto tabular falls back to estimates for large paths"
+    gpath = goldenPath </> "auto-large-approx.golden"
+
+formatAutoFail :: TestTree
+formatAutoFail = testCase desc $ do
+  let idx = MkIndex $ Index.fromList []
+  eformatted <-
+    tryWithCallStack $
+      runConfigIO
+        (Index.formatIndex FormatTabularAuto Name False idx)
+        20
+  case eformatted of
+    Right result ->
+      assertFailure $
+        "Expected exception, received result: " <> show result
+    Left (ex :: SomeException) ->
+      assertBool (displayException ex) (expected `L.isPrefixOf` displayException ex)
+  where
+    desc = "Auto tabular throws error for small terminal width"
+    expected =
+      mconcat
+        [ "Control.Exception.Safe.throwString called with:\n\nTerminal size (20)",
+          " is less than minimum size (48) for automatic single line display. ",
+          "Perhaps try multiline."
+        ]
 
 mkIndex :: MonadFail f => f Index
 mkIndex = do

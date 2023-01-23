@@ -19,7 +19,7 @@ import SafeRm.Prelude
 -- | Data for file logging.
 --
 -- @since 0.1
-data LogFile = MkLogFile
+data LogFile m = MkLogFile
   { -- | File handle.
     --
     -- @since 0.1
@@ -31,7 +31,7 @@ data LogFile = MkLogFile
     -- Finalizer to run e.g. flush/close.
     --
     -- @since 0.1
-    finalizer :: IO ()
+    finalizer :: m ()
   }
 
 makeFieldLabelsNoPrefix ''LogFile
@@ -39,11 +39,11 @@ makeFieldLabelsNoPrefix ''LogFile
 -- | Holds logging env data.
 --
 -- @since 0.1
-data LogEnv = MkLogEnv
+data LogEnv m = MkLogEnv
   { -- | Data for file logging.
     --
     -- @since 0.1
-    logFile :: !(Maybe LogFile),
+    logFile :: !(Maybe (LogFile m)),
     -- | The current logging namespace.
     --
     -- @since 0.1
@@ -56,7 +56,7 @@ makeFieldLabelsNoPrefix ''LogEnv
 -- functions.
 --
 -- @since 0.1
-data Env = MkEnv
+data Env m = MkEnv
   { -- | Trash home.
     --
     -- @since 0.1
@@ -64,10 +64,10 @@ data Env = MkEnv
     -- | The logging environment.
     --
     -- @since 0.1
-    logEnv :: !LogEnv
+    logEnv :: !(LogEnv m)
   }
 
 makeFieldLabelsNoPrefix ''Env
 
 -- | @since 0.1
-deriving anyclass instance HasTrashHome Env
+deriving anyclass instance HasTrashHome (Env m)

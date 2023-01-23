@@ -19,9 +19,11 @@ import TOML (DecodeTOML (..), getFieldOpt, getFieldOptWith)
 -- | @since 0.1
 data ListFormatCfg
   = -- | @since 0.1
-    MultilineCfg
+    FormatMultilineCfg
   | -- | @since 0.1
-    SinglelineCfg
+    FormatTabularCfg
+  | -- | @since 0.1
+    FormatAutoCfg
   deriving stock
     ( -- | @since 0.1
       Eq,
@@ -35,10 +37,12 @@ instance DecodeTOML ListFormatCfg where
 
 -- | @since 0.1
 parseListFormat :: MonadFail m => Text -> m ListFormatCfg
-parseListFormat "multi" = pure MultilineCfg
-parseListFormat "m" = pure MultilineCfg
-parseListFormat "single" = pure SinglelineCfg
-parseListFormat "s" = pure SinglelineCfg
+parseListFormat "multi" = pure FormatMultilineCfg
+parseListFormat "m" = pure FormatMultilineCfg
+parseListFormat "tabular" = pure FormatTabularCfg
+parseListFormat "t" = pure FormatTabularCfg
+parseListFormat "auto" = pure FormatAutoCfg
+parseListFormat "a" = pure FormatAutoCfg
 parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 
 -- | Configuration for the list command.
@@ -53,11 +57,11 @@ data CmdListCfg = MkCmdListCfg
     -- | Truncates the name length.
     --
     -- @since 0.1
-    nameTrunc :: !(Maybe Word8),
+    nameTrunc :: !(Maybe Natural),
     -- | Truncates the original path length.
     --
     -- @since 0.1
-    origTrunc :: !(Maybe Word8),
+    origTrunc :: !(Maybe Natural),
     -- | How to sort the list.
     --
     -- @since 0.1

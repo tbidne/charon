@@ -9,7 +9,7 @@ module Unit.Runner
 where
 
 import SafeRm.Data.Index (Sort (Name, Size))
-import SafeRm.Data.PathData (PathDataFormat (Multiline, Singleline))
+import SafeRm.Data.PathData (PathDataFormat (FormatMultiline, FormatTabular, FormatTabularAuto))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
   ( ListCommand (MkListCommand, format, revSort, sort),
@@ -29,7 +29,7 @@ import SafeRm.Runner.Config
         revSort,
         sort
       ),
-    ListFormatCfg (MultilineCfg),
+    ListFormatCfg (FormatMultilineCfg),
   )
 import System.Environment qualified as SysEnv
 import Unit.Prelude
@@ -121,7 +121,7 @@ list = testCase "Parses list" $ do
     argList = ["l", "-c", "none"]
     defList =
       MkListCommand
-        { format = Singleline 10 22,
+        { format = FormatTabularAuto,
           sort = Name,
           revSort = False
         }
@@ -133,12 +133,20 @@ listNonDefaults = testCase "List non-default args" $ do
   Nothing @=? cfg ^. #trashHome
   Just defList @=? cmd ^? _List
   where
-    -- even though format is not specifed, we still want truncation args
-    -- to be used
-    argList = ["-c", "none", "l", "--name-trunc", "80", "--orig-trunc", "100"]
+    argList =
+      [ "-c",
+        "none",
+        "l",
+        "--format",
+        "t",
+        "--name-trunc",
+        "80",
+        "--orig-trunc",
+        "100"
+      ]
     defList =
       MkListCommand
-        { format = Singleline 80 100,
+        { format = FormatTabular 80 100,
           sort = Name,
           revSort = False
         }
@@ -158,7 +166,7 @@ tomlTests =
     "Toml"
     [ parsesExample,
       usesListCfg,
-      usesListCfgSingle,
+      usesListCfgTabular,
       argsOverridesToml,
       argsOverridesTomlList,
       defaultConfig
@@ -175,7 +183,7 @@ parsesExample = testCase "Parses Example" $ do
     argList = ["-c", "examples/config.toml", "d", "foo"]
     listCfg =
       MkCmdListCfg
-        { format = Just MultilineCfg,
+        { format = Just FormatMultilineCfg,
           nameTrunc = Just 80,
           origTrunc = Just 100,
           sort = Just Size,
@@ -186,17 +194,17 @@ usesListCfg :: TestTree
 usesListCfg = testCase "Toml config copied into list cmd" $ do
   (_, cmd) <- SysEnv.withArgs argList getConfiguration
 
-  Just Multiline @=? cmd ^? (_List % #format)
+  Just FormatMultiline @=? cmd ^? (_List % #format)
   Just Size @=? cmd ^? (_List % #sort)
   Just True @=? cmd ^? (_List % #revSort)
   where
     argList = ["-c", "examples/config.toml", "l"]
 
-usesListCfgSingle :: TestTree
-usesListCfgSingle = testCase "Toml singleline config copied into list cmd" $ do
+usesListCfgTabular :: TestTree
+usesListCfgTabular = testCase "Toml tabular config copied into list cmd" $ do
   (_, cmd) <- SysEnv.withArgs argList getConfiguration
 
-  Just (Singleline 25 75) @=? cmd ^? (_List % #format)
+  Just (FormatTabular 25 75) @=? cmd ^? (_List % #format)
   where
     argList = ["-c", "test/unit/config.toml", "l"]
 
@@ -222,7 +230,7 @@ argsOverridesTomlList :: TestTree
 argsOverridesTomlList = testCase "Args overrides Toml list cmd" $ do
   (_, cmd) <- SysEnv.withArgs argList getConfiguration
 
-  Just (Singleline 30 40) @=? cmd ^? (_List % #format)
+  Just (FormatTabular 30 40) @=? cmd ^? (_List % #format)
   Just Name @=? cmd ^? (_List % #sort)
   where
     argList =
@@ -230,7 +238,7 @@ argsOverridesTomlList = testCase "Args overrides Toml list cmd" $ do
         "examples/config.toml",
         "l",
         "--format",
-        "single",
+        "tabular",
         "--name-trunc",
         "30",
         "--orig-trunc",

@@ -32,11 +32,12 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/monad-effects.git
-    tag: 1670dc684197376a8be7d59ca6d1204bb1b1f361
+    tag: 51b4558340f61b9bafe327d45b629833640258b3
     subdir:
         monad-async
         monad-exceptions
         monad-exit
+        monad-optparse
         monad-fs
         monad-ioref
         monad-logger-namespace

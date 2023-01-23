@@ -1,5 +1,6 @@
 # Configuration for the List (l) command
 [list]
+format = "tabular"
 # Character limit on displayed trash name. Defaults to 10. This option is
 # only used with format = "single".
 name-trunc = 25

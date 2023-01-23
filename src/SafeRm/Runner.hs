@@ -71,9 +71,9 @@ runSafeRm ::
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
-    MonadIO m,
     MonadIORef m,
     MonadMask m,
+    MonadOptparse m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
@@ -89,9 +89,10 @@ runSafeRm = do
     closeLogging
     (runSafeRmT (runCmd cmd))
   where
+    closeLogging :: Monad m => Env m -> m ()
     closeLogging env = do
       let mFinalizer = env ^? #logEnv % #logFile %? #finalizer
-      liftIO $ addCallStack $ fromMaybe (pure ()) mFinalizer
+      fromMaybe (pure ()) mFinalizer
 
 -- | Runs SafeRm in the given environment. This is useful in conjunction with
 -- 'getConfiguration' as an alternative 'runSafeRm', when we want to use a
@@ -146,12 +147,12 @@ getEnv ::
   ( HasCallStack,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadIO m,
+    MonadMask m,
+    MonadOptparse m,
     MonadPathReader m,
-    MonadPathWriter m,
-    MonadThrow m
+    MonadPathWriter m
   ) =>
-  m (Env, Command)
+  m (Env m, Command)
 getEnv = do
   (mergedConfig, command) <- getConfiguration
 
@@ -185,11 +186,12 @@ getEnv = do
 configToEnv ::
   ( HasCallStack,
     MonadHandleWriter m,
+    MonadMask m,
     MonadPathReader m,
     MonadPathWriter m
   ) =>
   TomlConfig ->
-  m Env
+  m (Env m)
 configToEnv mergedConfig = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
   -- NOTE: Needed so below openFile command does not fail
@@ -228,14 +230,14 @@ configToEnv mergedConfig = do
 getConfiguration ::
   ( HasCallStack,
     MonadFileReader m,
-    MonadIO m,
+    MonadOptparse m,
     MonadPathReader m,
     MonadThrow m
   ) =>
   m (TomlConfig, Command)
 getConfiguration = do
   -- get CLI args
-  args <- liftIO getArgs
+  args <- getArgs
 
   -- get toml config
   tomlConfig <- case args ^. #tomlConfigPath of
@@ -277,10 +279,10 @@ printIndex ::
   Sort ->
   Bool ->
   m ()
-printIndex style sort revSort =
-  SafeRm.getIndex
-    >>= putTextLn
-      . Index.formatIndex style sort revSort
+printIndex style sort revSort = do
+  index <- SafeRm.getIndex
+  formatted <- Index.formatIndex style sort revSort index
+  putTextLn formatted
 
 printMetadata ::
   ( HasCallStack,

@@ -41,7 +41,7 @@ import SafeRm.Runner.SafeRmT (SafeRmT (..))
 -- We could use this to later verify logs, if we wished.
 
 data IntEnv = MkIntEnv
-  { coreEnv :: Env,
+  { coreEnv :: Env IO,
     termLogsRef :: IORef [Text]
   }
 

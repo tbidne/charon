@@ -11,7 +11,13 @@ module SafeRm.Runner.Toml
   )
 where
 
-import SafeRm.Data.PathData (PathDataFormat (Multiline, Singleline))
+import SafeRm.Data.PathData
+  ( PathDataFormat
+      ( FormatMultiline,
+        FormatTabular,
+        FormatTabularAuto
+      ),
+  )
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
 import SafeRm.Runner.Args (Args, CommandArg (..), _ListArg)
@@ -100,10 +106,13 @@ cmdFromToml toml = \case
   -- NOTE: The toml param contains config for the following explicitly listed
   -- commands. For these, use the toml rather than the command as it will
   -- have the most up-to-date config data (merged args + toml)
-  (ListArg _) -> List $ U.maybeMonoid listCfgToCmd (toml ^. #listCommand)
+  (ListArg _) ->
+    case toml ^. #listCommand of
+      Nothing -> List mempty
+      Just cfg -> List $ listCfgToCmd cfg
 
 listCfgToCmd :: CmdListCfg -> ListCommand
-listCfgToCmd listCfg =
+listCfgToCmd listCfg = do
   MkListCommand
     { format,
       sort,
@@ -113,9 +122,11 @@ listCfgToCmd listCfg =
     sort = U.fromMaybeMonoid (listCfg ^. #sort)
     revSort = fromMaybe False (listCfg ^. #revSort)
     format = case listCfg ^. #format of
-      Just MultilineCfg -> Multiline
-      -- default to singleline
-      _ ->
-        Singleline
+      Just FormatMultilineCfg -> FormatMultiline
+      Just FormatTabularCfg ->
+        FormatTabular
           (fromMaybe 10 (listCfg ^. #nameTrunc))
           (fromMaybe 22 (listCfg ^. #origTrunc))
+      Just FormatAutoCfg -> FormatTabularAuto
+      -- default to SinglelineAuto
+      Nothing -> FormatTabularAuto

@@ -132,7 +132,7 @@ excludesMetadata args = goldenVsStringDiff desc diff gpath $ do
 goldenPath :: FilePath
 goldenPath = "test/functional/Functional/Logging"
 
-transformEnv :: Env -> IO LoggerEnv
+transformEnv :: Env IO -> IO LoggerEnv
 transformEnv env = do
   terminalRef <- newIORef ""
   charStream <- newIORef altAnswers
