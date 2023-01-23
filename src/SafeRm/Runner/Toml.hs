@@ -108,6 +108,13 @@ cmdFromToml toml = \case
   -- have the most up-to-date config data (merged args + toml)
   (ListArg _) ->
     case toml ^. #listCommand of
+      -- HACK: This Nothing -> mempty case is needed for the types to work,
+      -- but it is technically never used and should be removed.
+      --
+      -- If we are here then listCommand is definitely Just, as toml is the
+      -- "merged config" thus getting it from the Args at the very least.
+      --
+      -- Is there a less fragile way to do this?
       Nothing -> List mempty
       Just cfg -> List $ listCfgToCmd cfg
 
