@@ -55,7 +55,7 @@ import Effects.LoggerNamespace
     Namespace,
   )
 import Effects.LoggerNamespace qualified as Logger
-import Effects.System.Terminal (MonadTerminal (..))
+import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
@@ -153,7 +153,12 @@ instance
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure c
-  getTerminalSize = liftIO getTerminalSize
+  getTerminalSize =
+    pure $
+      Window
+        { height = 50,
+          width = 100
+        }
 
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
