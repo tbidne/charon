@@ -25,7 +25,6 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env (HasTrashHome)
-import SafeRm.Exception (TomlDecodeE (MkTomlDecodeE))
 import SafeRm.Prelude
 import SafeRm.Runner.Args
   ( TomlConfigPath
@@ -263,7 +262,7 @@ getConfiguration = do
       contents <- readFileUtf8ThrowM fp
       case TOML.decode contents of
         Right cfg -> pure cfg
-        Left tomlErr -> throwWithCallStack $ MkTomlDecodeE tomlErr
+        Left tomlErr -> throwWithCallStack tomlErr
 
 printIndex ::
   ( HasCallStack,

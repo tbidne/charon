@@ -89,7 +89,7 @@ library
     , prettyprinter           ^>=1.7.1
     , text                    >=1.2.4.0   && <2.1
     , time-compat             ^>=1.9.6.1
-    , toml-reader             >=0.1.0.0   && <0.3
+    , toml-reader             >=0.2.0.0   && <0.3
     , unordered-containers    ^>=0.2.14.0
     , vector                  >=0.12.3.0  && <0.14
 

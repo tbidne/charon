@@ -9,17 +9,14 @@ module SafeRm.Exception
     TrashPathNotFoundE (..),
     RestoreCollisionE (..),
     IndexSizeMismatchE (..),
-    TomlDecodeE (..),
   )
 where
 
-import Data.Text qualified as T
 import SafeRm.Data.Paths
   ( PathI,
     PathIndex (OriginalPath, TrashHome, TrashIndex, TrashName),
   )
 import SafeRm.Prelude
-import TOML (TOMLError, renderTOMLError)
 
 -- | Path is not found.
 --
@@ -167,21 +164,4 @@ instance Exception IndexSizeMismatchE where
         show numEntries,
         ") in trash: ",
         f ^. #unPathI
-      ]
-
--- | Error decoding TOML file.
---
--- @since 0.1
-newtype TomlDecodeE = MkTomlDecodeE TOMLError
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
-
--- | @since 0.1
-instance Exception TomlDecodeE where
-  displayException (MkTomlDecodeE err) =
-    mconcat
-      [ "Error decoding toml: ",
-        T.unpack (renderTOMLError err)
       ]
