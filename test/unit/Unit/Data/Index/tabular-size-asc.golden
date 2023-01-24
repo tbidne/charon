@@ -1,4 +1,4 @@
-Name       | Type       | Size    | Original               | Created            
+Name       | Type       | Size    | Original               | Created
 --------------------------------------------------------------------------------
 foo        | File       | 70.00B  | /path/foo              | 2020-05-31 12:00:00
 bazzz      | File       | 5.00K   | /path/bar/bazzz        | 2020-05-31 12:00:00

@@ -478,7 +478,8 @@ formatTabularHeader nameLen origLen =
       sep,
       fixLen origLen "Original",
       sep,
-      fixLen 19 "Created",
+      -- No need to fix the length here as Created is the last column
+      "Created",
       "\n",
       titleLen
     ]

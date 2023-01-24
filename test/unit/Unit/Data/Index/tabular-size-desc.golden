@@ -1,4 +1,4 @@
-Name       | Type       | Size    | Original               | Created            
+Name       | Type       | Size    | Original               | Created
 --------------------------------------------------------------------------------
 d          | Directory  | 5000... | /d                     | 2020-05-31 12:00:00
 f          | File       | 13.07M  | /foo/path/f            | 2020-05-31 12:00:00
