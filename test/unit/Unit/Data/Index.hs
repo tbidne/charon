@@ -46,7 +46,9 @@ formattingTests =
       format7,
       format8,
       formatAuto,
+      formatAutoMin,
       formatAutoLargeApprox,
+      formatAutoEmpty,
       formatAutoFail
     ]
 
@@ -135,6 +137,7 @@ newtype ConfigIO a = MkConfigIO (ReaderT Natural IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadIO,
       MonadReader Natural,
       MonadThrow
     )
@@ -151,6 +154,7 @@ instance MonadTerminal ConfigIO where
           { height = 50,
             width = n
           }
+  putStr = liftIO . putStr
 
 formatAuto :: TestTree
 formatAuto =
@@ -164,6 +168,19 @@ formatAuto =
   where
     desc = "Auto tabular format"
     gpath = goldenPath </> "auto-normal.golden"
+
+formatAutoMin :: TestTree
+formatAutoMin =
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <-
+      runConfigIO
+        (Index.formatIndex FormatTabularAuto Name False idx)
+        60
+    pure $ toBS formatted
+  where
+    desc = "Auto tabular formats minimum terminal size"
+    gpath = goldenPath </> "auto-min.golden"
 
 formatAutoLargeApprox :: TestTree
 formatAutoLargeApprox =
@@ -184,14 +201,27 @@ formatAutoLargeApprox =
     desc = "Auto tabular falls back to estimates for large paths"
     gpath = goldenPath </> "auto-large-approx.golden"
 
+formatAutoEmpty :: TestTree
+formatAutoEmpty =
+  goldenVsStringDiff desc diff gpath $ do
+    let idx = MkIndex $ Index.fromList []
+    formatted <-
+      runConfigIO
+        (Index.formatIndex FormatTabularAuto Name False idx)
+        100
+    pure $ toBS formatted
+  where
+    desc = "Auto tabular empty"
+    gpath = goldenPath </> "auto-empty.golden"
+
 formatAutoFail :: TestTree
 formatAutoFail = testCase desc $ do
   let idx = MkIndex $ Index.fromList []
   eformatted <-
-    tryWithCallStack $
+    tryWithCallStack @SomeException $
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
-        20
+        59
   case eformatted of
     Right result ->
       assertFailure $
@@ -202,8 +232,8 @@ formatAutoFail = testCase desc $ do
     desc = "Auto tabular throws error for small terminal width"
     expected =
       mconcat
-        [ "Control.Exception.Safe.throwString called with:\n\nTerminal size (20)",
-          " is less than minimum size (48) for automatic single line display. ",
+        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (59)",
+          " is less than minimum width (60) for automatic tabular display. ",
           "Perhaps try multiline."
         ]
 
@@ -214,7 +244,7 @@ mkIndex = do
     MkIndex $
       Index.fromList
         [ MkPathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
-          MkPathData PathTypeFile "baz" "/path/bar/baz" (afromInteger 5_000) ts,
+          MkPathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
           MkPathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
           MkPathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
           MkPathData PathTypeDirectory "d" "/d" largeFile ts,

@@ -39,7 +39,7 @@ import Data.List qualified as L
 import Data.Ord (Ord (max))
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
-import GHC.Real (ceiling)
+import GHC.Real (RealFrac (..))
 import SafeRm.Data.PathData
   ( PathData,
     PathDataFormat (FormatMultiline, FormatTabular, FormatTabularAuto),
@@ -332,36 +332,46 @@ formatIndex ::
 formatIndex style sort revSort idx = case style of
   FormatMultiline -> pure $ multiline (sortFn revSort sort) idx
   FormatTabular nameLen origLen ->
-    pure $ singleline (sortFn revSort sort) nameLen origLen idx
+    pure $ tabular (sortFn revSort sort) nameLen origLen idx
   FormatTabularAuto -> do
+    -- The name and original path columns fields are dynamic, so we attempt
+    -- to size the table intelligently.
+    --
     -- Basic idea:
     --
-    -- 1. Get the max name and orig. If these are within the total term size,
-    --    use those.
+    -- 1. Get the max length name and orig. If these are within the total
+    --    terminal width, use those for the column lengths.
     --
-    -- 2. If not, use the max term size to calculate col sizes.
-    width <- getTerminalWidth
+    -- 2. If not, calculate fixed column sizes within the max terminal width.
+    terminalWidth <- getTerminalWidth
+    -- min_width = reservedLineLen (fixed columns) + min_name (4) + min_original (8)
+    --
+    -- This is the minimum width the terminal needs to be for proper
+    -- rendering.
+    let minWidthNeeded = PathData.reservedLineLen + 4 + 8
+
+    -- maxLen is the maximum length our dynamic columns can be.
     maxLen <-
+      -- Verify: terminal_width >= min_width
+      --
       -- NOTE: Obviously this subtraction is unsafe. If the terminal size
       -- is less than our min requirement (reserved + name/col) then there
       -- isn't really anything we can do anyway, so dying with an error
       -- message seems fine.
-      if width < PathData.reservedLineLen
+      if terminalWidth < minWidthNeeded
         then
           throwString $
             mconcat
-              [ "Terminal size (",
-                show width,
-                ") is less than minimum size (",
-                show PathData.reservedLineLen,
-                ") for automatic single line display.",
+              [ "Terminal width (",
+                show terminalWidth,
+                ") is less than minimum width (",
+                show minWidthNeeded,
+                ") for automatic tabular display.",
                 " Perhaps try multiline."
               ]
-        else pure $ width - PathData.reservedLineLen
+        else pure $ terminalWidth - PathData.reservedLineLen
 
-    let -- Some of the total columns are reserved i.e. non-optional. These
-        -- are the fixed columns + separators
-        maxLenD = fromIntegral @_ @Double maxLen
+    let maxLenD = fromIntegral @_ @Double maxLen
 
     let (nameLen, origLen) =
           if maxName + maxOrig <= maxLen
@@ -370,15 +380,20 @@ formatIndex style sort revSort idx = case style of
             else -- Our found maxes are too large; in this case, instead use the
             -- actual terminal width, giving 80% to the orig paths and
             -- 20% to the names.
+            --
+            -- nameApprox needs to be _at least_ the required minimum
 
-              let origApprox = ceiling $ maxLenD * 0.8
-                  nameApprox = maxLen - origLen
+              let nameApprox = max 4 (floor $ maxLenD * 0.2)
+                  origApprox = maxLen - nameApprox
                in (nameApprox, origApprox)
 
-    pure $ singleline (sortFn revSort sort) nameLen origLen idx
+    pure $ tabular (sortFn revSort sort) nameLen origLen idx
   where
     -- Search the index; find the longest name and orig path
-    (maxName, maxOrig) = HMap.foldl' foldMap (0, 0) (idx ^. #unIndex)
+    --
+    -- The (4, 8) starting points comes from the header names
+    -- (name, original)
+    (maxName, maxOrig) = HMap.foldl' foldMap (4, 8) (idx ^. #unIndex)
     foldMap :: (Natural, Natural) -> PathData -> (Natural, Natural)
     foldMap (!maxNameSoFar, !maxOrigSoFar) pd =
       ( max maxNameSoFar (pathLen $ pd ^. #fileName),
@@ -393,16 +408,16 @@ multiline sort =
     . fmap PathData.formatMultiLine
     . getElems sort
 
-singleline ::
+tabular ::
   (PathData -> PathData -> Ordering) ->
   Natural ->
   Natural ->
   Index ->
   Text
-singleline sort nameLen origLen =
-  ((PathData.formatSingleHeader nameLen origLen <> "\n") <>)
+tabular sort nameLen origLen =
+  ((PathData.formatTabularHeader nameLen origLen <> "\n") <>)
     . T.intercalate "\n"
-    . fmap (PathData.formatSingleLine nameLen origLen)
+    . fmap (PathData.formatTabularRow nameLen origLen)
     . getElems sort
 
 getElems :: (PathData -> PathData -> Ordering) -> Index -> [PathData]

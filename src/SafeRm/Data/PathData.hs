@@ -36,8 +36,8 @@ module SafeRm.Data.PathData
     -- * Formatting
     PathDataFormat (..),
     formatMultiLine,
-    formatSingleHeader,
-    formatSingleLine,
+    formatTabularHeader,
+    formatTabularRow,
     reservedLineLen,
 
     -- * Miscellaneous
@@ -467,8 +467,8 @@ typeToText PathTypeFile = "File"
 typeToText PathTypeDirectory = "Directory"
 
 -- | @since 0.1
-formatSingleHeader :: Natural -> Natural -> Text
-formatSingleHeader nameLen origLen =
+formatTabularHeader :: Natural -> Natural -> Text
+formatTabularHeader nameLen origLen =
   mconcat
     [ fixLen nameLen "Name",
       sep,
@@ -487,17 +487,27 @@ formatSingleHeader nameLen origLen =
     totalLen = nameLen + origLen + reservedLineLen
     titleLen = T.replicate (fromIntegral totalLen) "-"
 
--- | For single-line formatting, this is the space necessary to render the
--- non-configurable columns i.e. type (10), size (7), created (19) and
--- separators (12).
+-- | For tabular formatting, this is the necessary width for the fixed
+-- columns:
+--
+-- type: 10
+-- size: 7
+-- created: 19
+-- separators: 12
+--
+-- NOTE: The separators includes the adjacent whitespace i.e. one separator
+-- ' | ' counts for 3, and since we have 4 that makes 12.
+--
+-- This does not include the minimum necessary total space (i.e. minimum
+-- 4 for name and 8 for original).
 --
 -- @since 0.1
 reservedLineLen :: Natural
 reservedLineLen = 10 + 7 + 19 + 12
 
 -- | @since 0.1
-formatSingleLine :: Natural -> Natural -> PathData -> Text
-formatSingleLine nameLen origLen pd =
+formatTabularRow :: Natural -> Natural -> PathData -> Text
+formatTabularRow nameLen origLen pd =
   mconcat
     [ fixLen' nameLen (pd ^. #fileName % #unPathI),
       sep,
