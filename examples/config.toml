@@ -5,34 +5,3 @@ trash-home = "./tmp"
 # File log level. Can be one of none, error, warn, info, or debug.
 # Defaults to none.
 log-level = "info"
-
-# Configuration for the List (l) command
-[list]
-# Controls how the output is formatted. There are three options:
-#
-# "tabular": Produces a table where each entry is on a single line. This option
-#            can be used with the 'name-trunc' and 'orig-trunc' to control how
-#            wide the name and original-path columns are.
-#
-# "multi": Each entry is written across multiple lines, with each column
-#          given its own line.
-#
-# "auto": Like tabular, except we automatically try to detect the 'best'
-#         name/originl-path column sizes, based on the terminal size and trash
-#         data. This is the default.
-#
-format = "multi"
-
-# Character limit on displayed trash name. Defaults to 10. This option is
-# only used with format = "single".
-name-trunc = 80
-
-# Character limit on displayed original path. Defaults to 10. This option is
-# only used with format = "single".
-orig-trunc = 100
-
-# Sorting method. Possible choices are "size", and "name". Defaults to "name".
-sort = "size"
-
-# Whether to reverse the sort. Defaults to false.
-reverse-sort = true

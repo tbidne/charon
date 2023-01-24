@@ -20,8 +20,8 @@ import SafeRm.Data.PathData
   )
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
-import SafeRm.Runner.Args (Args, CommandArg (..), _ListArg)
-import SafeRm.Runner.Command
+import SafeRm.Runner.Args (Args, CommandArg (..))
+import SafeRm.Runner.Command (Command (..), ListCommand (..))
 import SafeRm.Runner.Config (CmdListCfg (..), ListFormatCfg (..))
 import SafeRm.Utils qualified as U
 import TOML
@@ -41,11 +41,7 @@ data TomlConfig = MkTomlConfig
     -- | Log level.
     --
     -- @since 0.1
-    logLevel :: !(Maybe (Maybe LogLevel)),
-    -- | List command configuration.
-    --
-    -- @since 0.1
-    listCommand :: !(Maybe CmdListCfg)
+    logLevel :: !(Maybe (Maybe LogLevel))
   }
   deriving stock
     ( -- | @since 0.1
@@ -59,7 +55,7 @@ makeFieldLabelsNoPrefix ''TomlConfig
 
 -- | @since 0.1
 defaultTomlConfig :: TomlConfig
-defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing
+defaultTomlConfig = MkTomlConfig Nothing Nothing
 
 -- | @since 0.5
 instance DecodeTOML TomlConfig where
@@ -67,7 +63,6 @@ instance DecodeTOML TomlConfig where
     MkTomlConfig
       <$> decodeTrashHome
       <*> decodeLogLevel
-      <*> getFieldOptWith tomlDecoder "list"
     where
       decodeTrashHome = fmap MkPathI <$> getFieldOpt "trash-home"
       decodeLogLevel =
@@ -76,47 +71,28 @@ instance DecodeTOML TomlConfig where
 -- | Merges the args and toml config into a single toml config. If some field
 -- F is specified by both args and toml config, then args takes precedence.
 --
--- Also updates the args' command with possible toml configuration.
---
 -- @since 0.1
 mergeConfigs :: Args -> TomlConfig -> (TomlConfig, Command)
-mergeConfigs args toml = (mergedConfig, newCmd)
+mergeConfigs args toml = (mergedConfig, mkCommand cmd)
   where
     cmd = args ^. #command
     mergedConfig =
       MkTomlConfig
         { trashHome = U.mergeAlt #trashHome #trashHome args toml,
-          logLevel = U.mergeAlt #logLevel #logLevel args toml,
-          -- Get the list config from the args, if it exists, and then
-          -- combine it with the toml config
-          listCommand = args ^? (#command % _ListArg) <> toml ^. #listCommand
+          logLevel = U.mergeAlt #logLevel #logLevel args toml
         }
-    newCmd = cmdFromToml mergedConfig cmd
 
 -- Returns the new command after possibly updating the old command from the
 -- toml configuration.
-cmdFromToml :: TomlConfig -> CommandArg -> Command
-cmdFromToml toml = \case
+mkCommand :: CommandArg -> Command
+mkCommand = \case
   -- simple translations
   DeleteArg paths -> Delete paths
   DeletePermArg b paths -> DeletePerm b paths
   EmptyArg b -> Empty b
   RestoreArg paths -> Restore paths
   MetadataArg -> Metadata
-  -- NOTE: The toml param contains config for the following explicitly listed
-  -- commands. For these, use the toml rather than the command as it will
-  -- have the most up-to-date config data (merged args + toml)
-  (ListArg _) ->
-    case toml ^. #listCommand of
-      -- HACK: This Nothing -> mempty case is needed for the types to work,
-      -- but it is technically never used and should be removed.
-      --
-      -- If we are here then listCommand is definitely Just, as toml is the
-      -- "merged config" thus getting it from the Args at the very least.
-      --
-      -- Is there a less fragile way to do this?
-      Nothing -> List mempty
-      Just cfg -> List $ listCfgToCmd cfg
+  (ListArg cfg) -> List $ listCfgToCmd cfg
 
 listCfgToCmd :: CmdListCfg -> ListCommand
 listCfgToCmd listCfg = do
@@ -135,5 +111,5 @@ listCfgToCmd listCfg = do
           (fromMaybe 10 (listCfg ^. #nameTrunc))
           (fromMaybe 22 (listCfg ^. #origTrunc))
       Just FormatAutoCfg -> FormatTabularAuto
-      -- default to SinglelineAuto
+      -- default to FormatTabularAuto
       Nothing -> FormatTabularAuto

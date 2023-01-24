@@ -52,15 +52,6 @@ data ListCommand = MkListCommand
 -- | @since 0.1
 makeFieldLabelsNoPrefix ''ListCommand
 
--- | @since 0.1
-instance Semigroup ListCommand where
-  MkListCommand a b c <> MkListCommand a' b' c' =
-    MkListCommand (a <> a') (b <> b') (c || c')
-
--- | @since 0.1
-instance Monoid ListCommand where
-  mempty = MkListCommand mempty mempty False
-
 -- | Action to run.
 --
 -- @since 0.1

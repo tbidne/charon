@@ -8,8 +8,8 @@ module Unit.Runner
   )
 where
 
-import SafeRm.Data.Index (Sort (Name, Size))
-import SafeRm.Data.PathData (PathDataFormat (FormatMultiline, FormatTabular, FormatTabularAuto))
+import SafeRm.Data.Index (Sort (Name))
+import SafeRm.Data.PathData (PathDataFormat (FormatTabular, FormatTabularAuto))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
   ( ListCommand (MkListCommand, format, revSort, sort),
@@ -19,17 +19,6 @@ import SafeRm.Runner.Command
     _List,
     _Metadata,
     _Restore,
-  )
-import SafeRm.Runner.Config
-  ( CmdListCfg
-      ( MkCmdListCfg,
-        format,
-        nameTrunc,
-        origTrunc,
-        revSort,
-        sort
-      ),
-    ListFormatCfg (FormatMultilineCfg),
   )
 import System.Environment qualified as SysEnv
 import Unit.Prelude
@@ -165,48 +154,18 @@ tomlTests =
   testGroup
     "Toml"
     [ parsesExample,
-      usesListCfg,
-      usesListCfgTabular,
       argsOverridesToml,
-      argsOverridesTomlList,
       defaultConfig
     ]
 
 parsesExample :: TestTree
-parsesExample = testCase "Parses Example" $ do
+parsesExample = testCase "Parses example" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
   Just "./tmp" @=? cfg ^. #trashHome
   Just (Just LevelInfo) @=? cfg ^. #logLevel
-  Just listCfg @=? cfg ^. #listCommand
   where
     argList = ["-c", "examples/config.toml", "d", "foo"]
-    listCfg =
-      MkCmdListCfg
-        { format = Just FormatMultilineCfg,
-          nameTrunc = Just 80,
-          origTrunc = Just 100,
-          sort = Just Size,
-          revSort = Just True
-        }
-
-usesListCfg :: TestTree
-usesListCfg = testCase "Toml config copied into list cmd" $ do
-  (_, cmd) <- SysEnv.withArgs argList getConfiguration
-
-  Just FormatMultiline @=? cmd ^? (_List % #format)
-  Just Size @=? cmd ^? (_List % #sort)
-  Just True @=? cmd ^? (_List % #revSort)
-  where
-    argList = ["-c", "examples/config.toml", "l"]
-
-usesListCfgTabular :: TestTree
-usesListCfgTabular = testCase "Toml tabular config copied into list cmd" $ do
-  (_, cmd) <- SysEnv.withArgs argList getConfiguration
-
-  Just (FormatTabular 25 75) @=? cmd ^? (_List % #format)
-  where
-    argList = ["-c", "test/unit/config.toml", "l"]
 
 argsOverridesToml :: TestTree
 argsOverridesToml = testCase "Args overrides Toml" $ do
@@ -226,34 +185,12 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "foo"
       ]
 
-argsOverridesTomlList :: TestTree
-argsOverridesTomlList = testCase "Args overrides Toml list cmd" $ do
-  (_, cmd) <- SysEnv.withArgs argList getConfiguration
-
-  Just (FormatTabular 30 40) @=? cmd ^? (_List % #format)
-  Just Name @=? cmd ^? (_List % #sort)
-  where
-    argList =
-      [ "-c",
-        "examples/config.toml",
-        "l",
-        "--format",
-        "tabular",
-        "--name-trunc",
-        "30",
-        "--orig-trunc",
-        "40",
-        "--sort",
-        "name"
-      ]
-
 defaultConfig :: TestTree
 defaultConfig = testCase "Default config" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
   Nothing @=? cfg ^. #logLevel
-  Nothing @=? cfg ^. #listCommand
   where
     argList =
       [ "-c",

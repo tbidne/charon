@@ -450,18 +450,6 @@ data PathDataFormat
     )
 
 -- | @since 0.1
-instance Semigroup PathDataFormat where
-  FormatMultiline <> _ = FormatMultiline
-  _ <> FormatMultiline = FormatMultiline
-  FormatTabular 10 22 <> r = r
-  l <> FormatTabular 10 22 = l
-  l <> _ = l
-
--- | @since 0.1
-instance Monoid PathDataFormat where
-  mempty = FormatTabular 10 22
-
--- | @since 0.1
 formatMultiLine :: PathData -> Text
 formatMultiLine pd = T.intercalate "\n" strs
   where
