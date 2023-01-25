@@ -213,7 +213,7 @@ configParser =
       [ OA.value TomlDefault,
         OA.long "config",
         OA.short 'c',
-        OA.metavar "[none|PATH]",
+        OA.metavar "(none|PATH)",
         OA.help helpTxt
       ]
   where
@@ -284,7 +284,7 @@ listFormatParser =
     OA.option (OA.str >>= parseListFormat) $
       mconcat
         [ OA.long "format",
-          OA.metavar "(a[uto] | [t]abular | m[ulti]",
+          OA.metavar "(a[uto] | t[abular] | m[ulti])",
           OA.help helpTxt
         ]
   where
@@ -389,16 +389,6 @@ logLevelParser =
         [ OA.long "log-level",
           OA.metavar Utils.logLevelStrings,
           OA.help "The file level in which to log. Defaults to none."
-        ]
-
-consoleLogLevelParser :: Parser (Maybe (Maybe LogLevel))
-consoleLogLevelParser =
-  A.optional $
-    OA.option (OA.str >>= Utils.readLogLevel) $
-      mconcat
-        [ OA.long "console-log",
-          OA.metavar Utils.logLevelStrings,
-          OA.help "The console level in which to log. Defaults to error."
         ]
 
 pathsParser :: (Hashable a, IsString a) => Parser (UniqueSeq a)

@@ -3,8 +3,6 @@
 -- @since 0.1
 module SafeRm.Utils
   ( whenJust,
-    concatMNonEmpty,
-    prependMNonEmpty,
     allM1,
     fromMaybeMonoid,
     maybeMonoid,
@@ -32,21 +30,6 @@ import Text.Printf (PrintfArg)
 whenJust :: Applicative f => Maybe t -> (t -> f ()) -> f ()
 whenJust Nothing _ = pure ()
 whenJust (Just x) f = f x
-
--- | Concats the list with the non-empty.
---
--- @since 0.1
-concatMNonEmpty :: [a] -> Maybe (NonEmpty a) -> Maybe (NonEmpty a)
-concatMNonEmpty [] ne = ne
-concatMNonEmpty (x : xs) Nothing = Just $ x :| xs
-concatMNonEmpty (x : xs) (Just (y :| ys)) = Just $ x :| xs <> (y : ys)
-
--- | Prepends a value to the non-empty, turning it into a Just.
---
--- @since 0.1
-prependMNonEmpty :: a -> Maybe (NonEmpty a) -> Maybe (NonEmpty a)
-prependMNonEmpty x Nothing = Just (x :| [])
-prependMNonEmpty x (Just (y :| ys)) = Just (x :| y : ys)
 
 -- | 'allM' that must have at least one 'True'.
 --
@@ -130,7 +113,7 @@ readLogLevel other =
 --
 -- @since 0.1
 logLevelStrings :: String
-logLevelStrings = "[none|error|warn|info|debug]"
+logLevelStrings = "(none|error|warn|info|debug)"
 
 -- | @since 0.1
 mergeAlt ::

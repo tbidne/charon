@@ -43,13 +43,13 @@
 ```
 Safe-rm: A tool for deleting files to a trash directory.
 
-Usage: sr [-c|--config [none|PATH]] [-t|--trash-home PATH]
-          [--log-level [none|error|warn|info|debug]] COMMAND [--version]
+Usage: sr [-c|--config (none|PATH)] [-t|--trash-home PATH]
+          [--log-level (none|error|warn|info|debug)] COMMAND [--version]
 
 Safe-rm moves files to a trash directory, so they can later be restored or permanently deleted. It is intended as a safer alternative to rm. See github.com/tbidne/safe-rm#readme for full documentation.
 
 Available options:
-  -c,--config [none|PATH]  Path to the toml config file. Can be the string
+  -c,--config (none|PATH)  Path to the toml config file. Can be the string
                            'none' -- in which case no toml config is used -- or
                            a path to the config file. If not specified then we
                            look in the xdg config directory e.g.
@@ -57,7 +57,7 @@ Available options:
   -t,--trash-home PATH     Path to the trash directory. This overrides the toml
                            config, if it exists. If neither is given then we use
                            the xdg home directory e.g. ~/.trash
-  --log-level [none|error|warn|info|debug]
+  --log-level (none|error|warn|info|debug)
                            The file level in which to log. Defaults to none.
   -h,--help                Show this help text
 
@@ -81,7 +81,7 @@ Version: 0.1
 
 `safe-rm` can be configured by either CLI args or a `toml` config file. A path to the config file can be given with the `-c` option. Otherwise we search in the xdg config e.g. `~/.config/safe-rm/config.toml`. In general, if an option can be specified in both the config file and on the CLI (e.g. `--trash-home`), then the CLI takes priority.
 
-See [default.toml](./examples/config.toml) for a description of the `toml` file.
+See [config.toml](./examples/config.toml) for a description of the `toml` file.
 
 # Commands
 
@@ -177,12 +177,12 @@ $ sr r foo baz
 **Usage:**
 
 ```
-Usage: sr l [--format (a[uto] | [t]abular | m[ulti]] [-n|--name-trunc NAT]
+Usage: sr l [--format (a[uto] | t[abular] | m[ulti])] [-n|--name-trunc NAT]
             [-o|--orig-trunc NAT] [-s|--sort (name|size)] [-r|--reverse-sort]
   Lists all trash contents and metadata.
 
 Available options:
-  --format (a[uto] | [t]abular | m[ulti]
+  --format (a[uto] | t[abular] | m[ulti])
                            Determines the output format. The 'tabular' option
                            prints each trash entry on a single line, in tabular
                            form. The 'multi' option prints each entry across
