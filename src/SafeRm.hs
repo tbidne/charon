@@ -50,7 +50,26 @@ import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
 import System.IO qualified as IO
 
--- TODO: Rethink force / prompt + permissions logic
+-- TODO: Rethink force / prompt + permissions logic. That is, there are two
+-- considerations:
+--
+-- 1. Right now we do not seem to need any permissions to both move paths to
+--    the trash (renames) and then actually removing them from the file-system.
+--    This seems wrong, especially since the directory package mentions that
+--    all of these operations can fail with permission errors.
+--
+--    It would be nice if, say, a user tries to delete a file -- one they do
+--    not own or has the wrong mode -- and is greeted with an error.
+--
+-- 2. If we have 1 then we can rethink the current 'force' parameter. That is,
+--    'force' currently means 'do not prompt before deletion'. But if we had
+--    actual permissions, then force should really mean 'override permissions'
+--    (i.e. directory's removePathForcibly). Then we could add a separate
+--    argument for the prompt behavior (e.g. rm's -i flag).
+--
+-- We would also probably want to add permissions to the PathData so we
+-- could report them to the user before deleting and also when listing the
+-- table.
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
