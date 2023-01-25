@@ -159,6 +159,17 @@
                 path-size = final.callCabal2nix "path-size" path-size { };
                 smart-math = final.callCabal2nix "smart-math" smart-math { };
                 tasty-hedgehog = prev.tasty-hedgehog_1_4_0_0;
+
+                # Until we can upgrade nixpkgs. Current problems:
+                # - flake-parts warning on deps
+                # - ghcid broken thus deps not upgraded yet
+                toml-reader = final.callHackageDirect
+                  {
+                    pkg = "toml-reader";
+                    ver = "0.2.0.0";
+                    sha256 = "sha256-/A40+3QFwWq0Q6KOfB+9tgEiQBWWgW2zutpaz4RmjeQ=";
+                  }
+                  { };
               };
             };
         in
