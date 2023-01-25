@@ -50,6 +50,8 @@ import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
 import System.IO qualified as IO
 
+-- TODO: Rethink force / prompt + permissions logic
+
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
 -- defaults to @~\/.trash@.
@@ -345,6 +347,7 @@ emptyTrash ::
 emptyTrash force = addNamespace "emptyTrash" $ do
   trashHome@(MkPathI th) <- asks getTrashHome
   $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+
   exists <- doesDirectoryExist th
   if not exists
     then do

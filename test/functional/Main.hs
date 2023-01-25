@@ -12,6 +12,7 @@ import Functional.Commands.R qualified as R
 import Functional.Commands.X qualified as X
 import Functional.Logging qualified as Logging
 import Functional.Prelude
+import GHC.Conc (setUncaughtExceptionHandler)
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as Tasty
 
@@ -19,7 +20,9 @@ import Test.Tasty qualified as Tasty
 --
 -- @since 0.1
 main :: IO ()
-main =
+main = do
+  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayCallStack ex)
+
   Tasty.defaultMain $
     Tasty.withResource setup teardown $ \args ->
       testGroup

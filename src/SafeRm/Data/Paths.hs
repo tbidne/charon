@@ -13,6 +13,8 @@ module SafeRm.Data.Paths
 
     -- ** Specific
     indexToHome,
+    isRoot,
+    isRoot',
 
     -- ** General
     -- $general
@@ -29,6 +31,7 @@ where
 
 import Data.Csv (FromField, ToField)
 import Data.List qualified as L
+import Data.Text qualified as T
 import SafeRm.Prelude
 import System.FilePath qualified as FP
 
@@ -160,6 +163,18 @@ indexToHome (MkPathI fp) = MkPathI $ FP.takeDirectory fp
 MkPathI x <//> MkPathI y = MkPathI (x </> y)
 
 infixr 5 <//>
+
+-- | Returns true if the path is the root.
+--
+-- @since 0.1
+isRoot :: PathI i -> Bool
+isRoot = isRoot' . view #unPathI
+
+-- | Returns true if the path is the root.
+--
+-- @since 0.1
+isRoot' :: FilePath -> Bool
+isRoot' = (== "/") . T.strip . T.pack
 
 -- | Pretty-print a list of paths.
 --

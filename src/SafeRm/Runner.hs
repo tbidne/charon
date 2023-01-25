@@ -133,7 +133,7 @@ runCmd cmd =
         printMetadata
       Metadata -> printMetadata
 
-    logEx :: SomeException -> m a
+    logEx :: HasCallStack => SomeException -> m a
     logEx ex = do
       $(logError) (T.pack $ displayNoCallStack ex)
       throwWithCallStack ex

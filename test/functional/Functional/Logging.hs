@@ -96,7 +96,7 @@ logging args = goldenVsStringDiff desc diff gpath $ do
 
   -- Test logging. In particular, test that startup does not fail when the
   -- log file does not already exist.
-  replaceDir testDir <$> BS.readFile (trashDir </> ".log")
+  replaceDirBS testDir <$> BS.readFile (trashDir </> ".log")
   where
     desc = "Logging is successful"
     gpath = goldenPath </> "logs.golden"
@@ -124,7 +124,7 @@ excludesMetadata args = goldenVsStringDiff desc diff gpath $ do
   runLogging listArgList
   runLogging metadataArgList
 
-  replaceDir testDir <$> BS.readFile (trashDir </> ".log")
+  replaceDirBS testDir <$> BS.readFile (trashDir </> ".log")
   where
     desc = "Log file is excluded from metadata entries count"
     gpath = goldenPath </> "log-metadata-excluded.golden"
@@ -153,8 +153,8 @@ transformEnv env = do
 -- HACK: See the note on Functional.Prelude.replaceDir. Note that we cannot
 -- reuse that function directly since that operates on Text, whereas we have
 -- to use ByteString here. Thus we implement the same idea here.
-replaceDir :: FilePath -> ByteString -> BSL.ByteString
-replaceDir fp =
+replaceDirBS :: FilePath -> ByteString -> BSL.ByteString
+replaceDirBS fp =
   TLEnc.encodeUtf8
     . TL.replace (TL.pack fp) "<dir>"
     . TLEnc.decodeUtf8With TEncError.lenientDecode

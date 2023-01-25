@@ -19,11 +19,6 @@ module Functional.Prelude
 
     -- * Running SafeRm
 
-    -- ** Capturing output
-    CapturedOutput (..),
-    capturedToBs,
-    diff,
-
     -- ** Runners
     runSafeRm,
     captureSafeRm,
@@ -35,16 +30,11 @@ module Functional.Prelude
     assertFilesDoNotExist,
     assertDirectoriesExist,
     assertDirectoriesDoNotExist,
-
-    -- * Misc
-    fixCallStack,
   )
 where
 
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as Builder
-import Data.ByteString.Lazy qualified as BSL
-import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
@@ -59,7 +49,6 @@ import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
-import GHC.Stack.Types (CallStack (PushCallStack), SrcLoc (..))
 import PathSize qualified
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
@@ -185,36 +174,6 @@ instance MonadLoggerNamespace (FuncIO FuncEnv) where
 runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
--- | Represents captured input of some kind. Different constructors are
--- to make golden tests easier to understand (i.e. included labels)
-data CapturedOutput
-  = MonadTerminal Builder Builder
-  | Logs Builder Builder
-  | Exception Builder Builder
-  deriving stock (Show)
-
--- | Transforms a list of 'CapturedOutput' into a lazy bytestring to be used
--- with golden tests.
-capturedToBs :: [CapturedOutput] -> BSL.ByteString
-capturedToBs =
-  Builder.toLazyByteString
-    . mconcat
-    . L.intersperse "\n\n"
-    . foldr go []
-  where
-    go (MonadTerminal title bs) acc = fmt "TERMINAL " title bs acc
-    go (Logs title bs) acc = fmt "LOGS " title bs acc
-    go (Exception title bs) acc = fmt "EXCEPTION " title bs acc
-    fmt :: Builder -> Builder -> Builder -> [Builder] -> [Builder]
-    fmt cons title bs acc =
-      mconcat
-        [ cons,
-          title,
-          "\n",
-          bs
-        ]
-        : acc
-
 -- | Runs safe-rm.
 runSafeRm :: FilePath -> [String] -> IO ()
 runSafeRm testDir = void . captureSafeRm testDir ""
@@ -277,7 +236,7 @@ captureSafeRmExceptionLogs testDir title argList = do
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
       logs <- replaceDir testDir <$> readIORef logsRef
-      let exceptionBs = exToBuilder testDir ex
+      let exceptionBs = exToBuilder (Just testDir) ex
           logsBs = txtToBuilder logs
       pure (Exception title exceptionBs, Logs title logsBs)
   where
@@ -328,51 +287,3 @@ mkFuncEnv toml logsRef terminalRef = do
     getTrashHome = case toml ^. #trashHome of
       Nothing -> die "Setup error, no trash home on config"
       Just th -> pure th
-
--- HACK: Our naive golden tests require exact string quality, which is a
--- problem since the full paths are non-deterministic, depending on the
--- environment. Here are some possible remedies:
---
--- 1. Don't use golden tests, or use the function that allows us to pass a
---    custom comparator.
---    R: Golden tests make updating the output extremely convenient, we're
---       not ready to give up on an easy diff.
--- 2. Use a typeclass to mock the directory so it can be deterministic.
---    R: The main problem here is that we need a _real_ path since we are
---       interacting with the actual filesystem. We would need to somehow
---       separate the "logged path" vs. the "used path" which sounds very
---       complicated.
--- 3. Search the output text for the non-deterministic path, and replace it
---    it with a fixed substitute.
---    R. This is something of a "hack", though it is simple and easy to
---       implement.
---
--- We currently use option 3.
-replaceDir :: FilePath -> Text -> Text
-replaceDir fp = T.replace (T.pack fp) "<dir>"
-
-diff :: FilePath -> FilePath -> [FilePath]
-diff ref new = ["diff", "-u", ref, new]
-
-txtToBuilder :: Text -> Builder
-txtToBuilder = Builder.byteString . encodeUtf8
-
-exToBuilder :: Exception e => FilePath -> e -> Builder
-exToBuilder fp = txtToBuilder . replaceDir fp . T.pack . displayCallStack
-
--- | Fixes several fields on the CallStack that are either non-deterministic
--- (package name) or extremely brittle (line/col numbers). This eases testing.
-fixCallStack :: CallStack -> CallStack
-fixCallStack (PushCallStack a src cs) =
-  PushCallStack a (fixSrcLoc src) (fixCallStack cs)
-fixCallStack other = other
-
-fixSrcLoc :: SrcLoc -> SrcLoc
-fixSrcLoc loc =
-  loc
-    { srcLocPackage = "<package>",
-      srcLocStartLine = 0,
-      srcLocEndLine = 0,
-      srcLocStartCol = 0,
-      srcLocEndCol = 0
-    }

@@ -255,7 +255,7 @@ throwIfTrashNonExtant trashHome pd = do
 -- | Appends the path data to the trash index. The header is not included.
 --
 -- @since 0.1
-appendIndex :: MonadFileWriter m => PathI TrashIndex -> Index -> m ()
+appendIndex :: (HasCallStack, MonadFileWriter m) => PathI TrashIndex -> Index -> m ()
 appendIndex (MkPathI indexPath) =
   appendBinaryFile indexPath
     . BSL.toStrict
@@ -267,7 +267,7 @@ appendIndex (MkPathI indexPath) =
 -- exists. The header is included.
 --
 -- @since 0.1
-writeIndex :: MonadFileWriter m => PathI TrashIndex -> Index -> m ()
+writeIndex :: (HasCallStack, MonadFileWriter m) => PathI TrashIndex -> Index -> m ()
 writeIndex (MkPathI indexPath) =
   writeBinaryFile indexPath
     . BSL.toStrict

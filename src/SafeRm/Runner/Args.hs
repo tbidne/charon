@@ -91,9 +91,7 @@ data CommandArg
   | -- | Permanently deletes a path from the trash.
     --
     -- @since 0.1
-    DeletePermArg
-      !Bool
-      !(UniqueSeq (PathI TrashName))
+    DeletePermArg !Bool !(UniqueSeq (PathI TrashName))
   | -- | Empties the trash.
     --
     -- @since 0.1
@@ -267,10 +265,7 @@ commandParser =
     metadataTxt = OA.progDesc "Prints trash metadata."
 
     delParser = DeleteArg <$> pathsParser
-    permDelParser =
-      DeletePermArg
-        <$> forceParser
-        <*> pathsParser
+    permDelParser = DeletePermArg <$> forceParser <*> pathsParser
     emptyParser = EmptyArg <$> forceParser
     restoreParser = RestoreArg <$> pathsParser
     listParser =

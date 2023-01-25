@@ -88,7 +88,7 @@ mkCommand :: CommandArg -> Command
 mkCommand = \case
   -- simple translations
   DeleteArg paths -> Delete paths
-  DeletePermArg b paths -> DeletePerm b paths
+  DeletePermArg force paths -> DeletePerm force paths
   EmptyArg b -> Empty b
   RestoreArg paths -> Restore paths
   MetadataArg -> Metadata

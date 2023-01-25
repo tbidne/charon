@@ -100,8 +100,10 @@ library file-utils
   import:           common-exts
   exposed-modules:  SafeRm.FileUtils
   build-depends:
+    , base
     , bytestring
     , safe-rm
+    , text
 
   hs-source-dirs:   lib/file-utils
   default-language: GHC2021
@@ -124,6 +126,7 @@ test-suite unit
   main-is:          Main.hs
   other-modules:
     Unit.Data.Index
+    Unit.Data.PathData
     Unit.Data.UniqueSeq
     Unit.Prelude
     Unit.Runner
@@ -151,22 +154,28 @@ test-suite integration
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
+    Integration.Commands.D
     Integration.Prelude
     Integration.SafeRm
 
   build-depends:
     , base
+    , bytestring
     , env-guard             ^>=0.2
     , file-utils
     , hedgehog
     , monad-fs
+    , monad-system-time
+    , monad-terminal
     , mtl
     , nonempty-containers   >=0.3.4.2 && <0.4
     , path-size
     , safe-rm
     , tasty
+    , tasty-golden
     , tasty-hedgehog
     , text
+    , time
     , unordered-containers
 
   hs-source-dirs:   test/integration

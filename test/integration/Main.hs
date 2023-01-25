@@ -4,6 +4,8 @@
 module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
+import GHC.Conc (setUncaughtExceptionHandler)
+import Integration.Commands.D qualified as D
 import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
@@ -14,12 +16,18 @@ import Test.Tasty qualified as Tasty
 --
 -- @since 0.1
 main :: IO ()
-main =
+main = do
+  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayCallStack ex)
+
   T.defaultMain $
     Tasty.withResource setup teardown $ \args ->
       testGroup
         "Integration Tests"
-        [ SafeRm.tests args
+        [ SafeRm.tests args,
+          testGroup
+            "Root Tests"
+            [ D.tests
+            ]
         ]
 
 setup :: IO FilePath

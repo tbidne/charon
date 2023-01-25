@@ -61,6 +61,7 @@ import Data.Csv qualified as Csv
 import Data.HashMap.Strict qualified as Map
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
+import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
@@ -75,6 +76,7 @@ import SafeRm.Exception
   ( PathNotFoundE (MkPathNotFoundE),
     RenameDuplicateE (MkRenameDuplicateE),
     RestoreCollisionE (MkRestoreCollisionE),
+    RootE (MkRootE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -365,23 +367,28 @@ mvTrashToOriginal (MkPathI trashHome) pd = do
 --
 -- @since 0.1
 deletePathData ::
-  MonadPathWriter m =>
+  (HasCallStack, MonadPathWriter m) =>
   PathI TrashHome ->
   PathData ->
   m ()
-deletePathData (MkPathI trashHome) pd = removePathForcibly trashPath
+deletePathData (MkPathI trashHome) pd = removeFn trashPath
   where
     trashPath = trashHome </> (pd ^. #fileName % #unPathI)
+    removeFn = case pd ^. #pathType of
+      PathTypeFile -> removeFile
+      PathTypeDirectory -> removeDirectoryRecursive
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 --
 -- @since 0.1
 mvOriginalToTrash ::
-  (MonadPathWriter m, HasCallStack) =>
+  (HasCallStack, MonadPathWriter m, MonadThrow m) =>
   PathI TrashHome ->
   PathData ->
   m ()
-mvOriginalToTrash trashHome pd =
+mvOriginalToTrash trashHome pd = do
+  throwIfRoot pd
+
   renameFn (pd ^. #originalPath % #unPathI) trashPath
   where
     MkPathI trashPath = pathDataToTrashPath trashHome pd
@@ -537,3 +544,14 @@ fixLen w t
   | otherwise = t <> T.replicate (w' - T.length t) " "
   where
     w' = fromIntegral w
+
+throwIfRoot :: (HasCallStack, MonadThrow m) => PathData -> m ()
+throwIfRoot pd = when (isRoot pd) (throwWithCallStack MkRootE)
+
+isRoot :: PathData -> Bool
+isRoot pd =
+  -- NOTE: Probably overly paranoid to check the file name too, but might as
+  -- well...if root somehow ends up as the file name then something has likely
+  -- gone wrong, so let's abort so the user can figure it out.
+  Paths.isRoot (pd ^. #originalPath)
+    || Paths.isRoot (pd ^. #fileName)

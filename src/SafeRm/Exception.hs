@@ -9,6 +9,7 @@ module SafeRm.Exception
     TrashPathNotFoundE (..),
     RestoreCollisionE (..),
     IndexSizeMismatchE (..),
+    RootE (..),
   )
 where
 
@@ -165,3 +166,16 @@ instance Exception IndexSizeMismatchE where
         ") in trash: ",
         f ^. #unPathI
       ]
+
+-- | Exception for deleting the root.
+--
+-- @since 0.1
+data RootE = MkRootE
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception RootE where
+  displayException _ = "Attempted to delete root! This is not allowed."
