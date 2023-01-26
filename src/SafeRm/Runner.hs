@@ -66,7 +66,6 @@ import TOML qualified
 -- @since 0.1
 runSafeRm ::
   ( HasCallStack,
-    MonadExit m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -102,7 +101,6 @@ runCmd ::
     HasTrashHome env,
     MonadLoggerNamespace m,
     MonadCatch m,
-    MonadExit m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,

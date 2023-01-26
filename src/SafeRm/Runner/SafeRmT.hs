@@ -28,8 +28,6 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       -- | @since 0.1
       MonadCatch,
       -- | @since 0.1
-      MonadExit,
-      -- | @since 0.1
       MonadFileReader,
       -- | @since 0.1
       MonadFileWriter,

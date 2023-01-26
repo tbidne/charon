@@ -90,6 +90,7 @@ import Data.Word as X (Word16, Word8)
 import Effects.Exception as X
   ( Exception (..),
     ExceptionCS (..),
+    ExitCode (..),
     MonadCatch,
     MonadMask,
     MonadThrow,
@@ -101,6 +102,7 @@ import Effects.Exception as X
     catchAnyWithCS,
     catchWithCS,
     displayNoCS,
+    exitFailure,
     finally,
     throwM,
     throwString,
@@ -161,7 +163,6 @@ import Effects.LoggerNamespace as X
     addNamespace,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
-import Effects.System.Exit as X (ExitCode (..), MonadExit, exitFailure)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
     putTextLn,

@@ -95,7 +95,6 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
       Functor,
       Monad,
       MonadCatch,
-      MonadExit,
       MonadIORef,
       MonadPathReader,
       MonadThrow,

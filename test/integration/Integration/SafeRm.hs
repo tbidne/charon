@@ -58,7 +58,6 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       Monad,
       MonadIO,
       MonadCatch,
-      MonadExit,
       MonadFileReader,
       MonadFileWriter,
       MonadHandleWriter,
