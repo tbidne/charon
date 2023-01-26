@@ -236,7 +236,7 @@ toPathData currTime trashHome origPath = do
                 Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
                 PathTypeDirectory
               )
-          else throwWithCallStack $ MkPathNotFoundE (originalPath ^. #unPathI)
+          else throwWithCS $ MkPathNotFoundE (originalPath ^. #unPathI)
 
   size <-
     fmap (MkBytes @B) $
@@ -245,7 +245,7 @@ toPathData currTime trashHome origPath = do
         PathSizePartial errs n -> do
           -- We received a value but had some errors.
           putStrLn "Encountered errors retrieving size. See logs."
-          for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
+          for_ errs $ \e -> $(logError) (T.pack $ displayException e)
           pure n
 
   pure $
@@ -283,7 +283,7 @@ mkUniqPath fp = do
     go :: HasCallStack => Word16 -> m (PathI TrashName)
     go !counter
       | counter == maxBound =
-          throwWithCallStack $ MkRenameDuplicateE fp
+          throwWithCS $ MkRenameDuplicateE fp
       | otherwise = do
           let fp' = fp <> MkPathI (mkSuffix counter)
           b <- Paths.applyPathI doesPathExist fp'
@@ -352,7 +352,7 @@ mvTrashToOriginal ::
 mvTrashToOriginal (MkPathI trashHome) pd = do
   exists <- originalPathExists pd
   when exists $
-    throwWithCallStack $
+    throwWithCS $
       MkRestoreCollisionE fileName originalPath
   renameFn trashPath (pd ^. #originalPath % #unPathI)
   where
@@ -546,7 +546,7 @@ fixLen w t
     w' = fromIntegral w
 
 throwIfRoot :: (HasCallStack, MonadThrow m) => PathData -> m ()
-throwIfRoot pd = when (isRoot pd) (throwWithCallStack MkRootE)
+throwIfRoot pd = when (isRoot pd) (throwWithCS MkRootE)
 
 isRoot :: PathData -> Bool
 isRoot pd =

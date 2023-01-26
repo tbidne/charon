@@ -92,14 +92,14 @@ delete paths = addNamespace "delete" $ do
         modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
         $(logDebug) ("Deleted: " <> showt pd)
     )
-      `catchWithCallStack` \(ex :: SomeException) -> do
-        $(logWarn) (T.pack $ displayNoCallStack ex)
+      `catchAnyWithCS` \ex -> do
+        $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
           mconcat
             [ "Error deleting path '",
               fp ^. #unPathI,
               "': ",
-              displayNoCallStack ex
+              displayNoCS ex
             ]
         writeIORef anyFailedRef True
 
@@ -166,14 +166,14 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
             modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
             $(logDebug) ("Permanently deleted: " <> showt pd)
         )
-          `catchWithCallStack` \(ex :: SomeException) -> do
-            $(logWarn) (T.pack $ displayNoCallStack ex)
+          `catchAnyWithCS` \ex -> do
+            $(logWarn) (T.pack $ displayNoCS ex)
             putStrLn $
               mconcat
                 [ "Error permanently deleting path '",
                   show pd,
                   "': ",
-                  displayNoCallStack ex
+                  displayNoCS ex
                 ]
             writeIORef anyFailedRef True
 
@@ -306,14 +306,14 @@ restore paths = addNamespace "restore" $ do
         modifyIORef' restoredPathsRef (HMap.insert (pd ^. #fileName) pd)
         $(logDebug) ("Restored: " <> showt pd)
     )
-      `catchWithCallStack` \(ex :: SomeException) -> do
-        $(logWarn) (T.pack $ displayNoCallStack ex)
+      `catchAnyWithCS` \ex -> do
+        $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
           mconcat
             [ "Error restoring path '",
               show pd,
               "': ",
-              displayNoCallStack ex
+              displayNoCS ex
             ]
         writeIORef anyFailedRef True
 

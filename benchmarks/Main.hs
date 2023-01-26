@@ -12,7 +12,7 @@ import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 
 main :: IO ()
 main = do
-  setUncaughtExceptionHandler (putStrLn . displayCallStack)
+  setUncaughtExceptionHandler (putStrLn . displayException)
   bracket setup runBenchmarks teardown
   where
     runBenchmarks testDir =

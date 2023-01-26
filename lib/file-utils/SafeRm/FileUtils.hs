@@ -61,7 +61,7 @@ createFileContents ::
 createFileContents paths = for_ paths $
   \(p, c) ->
     writeBinaryFile p c
-      `catchWithCallStack` \(ex :: SomeException) -> do
+      `catchAnyWithCS` \ex -> do
         putStrLn $
           mconcat
             [ "[SafeRm.FileUtils.createFileContents] Exception for file '",
@@ -69,9 +69,9 @@ createFileContents paths = for_ paths $
               "' and contents '",
               Char8.unpack c,
               "': ",
-              displayCallStack ex
+              displayException ex
             ]
-        throwWithCallStack ex
+        throwWithCS ex
 
 -- | Creates empty files at the specified paths.
 --
@@ -153,8 +153,8 @@ txtToBuilder = Builder.byteString . encodeUtf8
 
 -- | Exception to ByteString Builder. If a filepath is given, replaces it.
 exToBuilder :: Exception e => Maybe FilePath -> e -> Builder
-exToBuilder Nothing = txtToBuilder . T.pack . displayCallStack
-exToBuilder (Just fp) = txtToBuilder . replaceDir fp . T.pack . displayCallStack
+exToBuilder Nothing = txtToBuilder . T.pack . displayException
+exToBuilder (Just fp) = txtToBuilder . replaceDir fp . T.pack . displayException
 
 -- | String to ByteString Builder
 strToBuilder :: String -> Builder

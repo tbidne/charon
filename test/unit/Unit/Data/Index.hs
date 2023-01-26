@@ -218,7 +218,7 @@ formatAutoFail :: TestTree
 formatAutoFail = testCase desc $ do
   let idx = MkIndex $ Index.fromList []
   eformatted <-
-    tryWithCallStack @SomeException $
+    tryAnyWithCS $
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
         59
@@ -226,7 +226,7 @@ formatAutoFail = testCase desc $ do
     Right result ->
       assertFailure $
         "Expected exception, received result: " <> show result
-    Left (ex :: SomeException) ->
+    Left ex ->
       assertBool (displayException ex) (expected `L.isPrefixOf` displayException ex)
   where
     desc = "Auto tabular throws error for small terminal width"

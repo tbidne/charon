@@ -120,7 +120,7 @@ runCmd cmd =
   -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
   -- This is what we want, as it similar to what we will get once GHC
   -- natively supports exceptions with callstacks.
-  runCmd' cmd `catchWithCallStack` logEx
+  runCmd' cmd `catchWithCS` logEx
   where
     runCmd' = \case
       Delete paths -> SafeRm.delete paths
@@ -135,8 +135,8 @@ runCmd cmd =
 
     logEx :: HasCallStack => SomeException -> m a
     logEx ex = do
-      $(logError) (T.pack $ displayNoCallStack ex)
-      throwWithCallStack ex
+      $(logError) (T.pack $ displayNoCS ex)
+      throwWithCS ex
 
 -- | Parses CLI 'Args' and optional 'TomlConfig' to produce the final Env used
 -- by SafeRm.
@@ -262,7 +262,7 @@ getConfiguration = do
       contents <- readFileUtf8ThrowM fp
       case TOML.decode contents of
         Right cfg -> pure cfg
-        Left tomlErr -> throwWithCallStack tomlErr
+        Left tomlErr -> throwWithCS tomlErr
 
 printIndex ::
   ( HasCallStack,

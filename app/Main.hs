@@ -5,20 +5,20 @@ module Main (main) where
 
 import GHC.Conc.Sync (setUncaughtExceptionHandler)
 import SafeRm.Prelude
-  ( AnnotatedException (..),
-    catchWithCallStack,
-    displayCallStack,
-    throwWithCallStack,
+  ( ExceptionCS (..),
+    catchWithCS,
+    displayException,
+    throwWithCS,
   )
 import SafeRm.Runner (runSafeRm)
 import System.Exit (ExitCode (..))
 
 main :: IO ()
 main = do
-  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayCallStack ex)
+  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
   runSafeRm
-    `catchWithCallStack` \case
+    `catchWithCS` \case
       -- For optparse applicative
-      (AnnotatedException _ ExitSuccess) -> pure ()
-      other -> throwWithCallStack other
+      (MkExceptionCS ExitSuccess _) -> pure ()
+      other -> throwWithCS other

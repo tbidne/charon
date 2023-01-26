@@ -80,7 +80,7 @@ mvTrash = goldenVsStringDiff desc diff gpath $ do
 mvTrashRootOriginalPathError :: TestTree
 mvTrashRootOriginalPathError = goldenVsStringDiff desc diff gpath $ do
   eformatted <-
-    tryWithCallStack @RootE $
+    tryWithCS @_ @RootE $
       runPathDataT (PathData.mvOriginalToTrash trashHome pd)
   case eformatted of
     Right result ->
@@ -101,7 +101,7 @@ mvTrashRootOriginalPathError = goldenVsStringDiff desc diff gpath $ do
 mvTrashRootNamePathError :: TestTree
 mvTrashRootNamePathError = goldenVsStringDiff desc diff gpath $ do
   eformatted <-
-    tryWithCallStack @RootE $
+    tryWithCS @_ @RootE $
       runPathDataT (PathData.mvOriginalToTrash trashHome pd)
   case eformatted of
     Right result ->

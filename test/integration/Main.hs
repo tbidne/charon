@@ -17,7 +17,7 @@ import Test.Tasty qualified as Tasty
 -- @since 0.1
 main :: IO ()
 main = do
-  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayCallStack ex)
+  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
   T.defaultMain $
     Tasty.withResource setup teardown $ \args ->

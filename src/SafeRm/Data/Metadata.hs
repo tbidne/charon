@@ -126,7 +126,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
               PathSizePartial errs n -> do
                 -- We received a value but had some errors.
                 putStrLn "Encountered errors retrieving size. See logs."
-                for_ errs $ \e -> $(logError) (T.pack $ displayCallStack e)
+                for_ errs $ \e -> $(logError) (T.pack $ displayException e)
                 pure n
         else do
           $(logDebug) "Log does not exist"
@@ -146,7 +146,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
     -- trash path, this guarantees that the index exactly corresponds to the
     -- trash state.
     when (numEntries /= numIndex) $
-      throwWithCallStack $
+      throwWithCS $
         MkIndexSizeMismatchE trashHome numEntries numIndex
 
     pure $
@@ -189,4 +189,4 @@ getAllFiles fp =
           listDirectory fp
             >>= fmap join
               . traverse (getAllFiles . (fp </>))
-        False -> throwWithCallStack $ MkPathNotFoundE fp
+        False -> throwWithCS $ MkPathNotFoundE fp

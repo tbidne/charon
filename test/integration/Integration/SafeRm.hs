@@ -176,7 +176,7 @@ deleteSome mtestDir =
 
       caughtEx <-
         liftIO $
-          tryWithCallStack @ExitCode $
+          tryWithCS @_ @ExitCode $
             usingIntIO env (SafeRm.delete (USeq.map MkPathI toDelete))
 
       ex <-
@@ -286,7 +286,7 @@ deleteSomePermanently mtestDir =
 
       caughtEx <-
         liftIO $
-          tryWithCallStack @ExitCode $
+          tryWithCS @_ @ExitCode $
             usingIntIO env (SafeRm.deletePermanently True toPermDelete)
 
       ex <-
@@ -393,7 +393,7 @@ restoreSome mtestDir =
 
       caughtEx <-
         liftIO $
-          tryWithCallStack @ExitCode $
+          tryWithCS @_ @ExitCode $
             usingIntIO env (SafeRm.restore toRestore)
 
       ex <-
