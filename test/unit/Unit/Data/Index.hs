@@ -218,7 +218,7 @@ formatAutoFail :: TestTree
 formatAutoFail = testCase desc $ do
   let idx = MkIndex $ Index.fromList []
   eformatted <-
-    tryAnyWithCS $
+    tryAnyCS $
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
         59

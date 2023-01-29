@@ -6,9 +6,9 @@ module Main (main) where
 import GHC.Conc.Sync (setUncaughtExceptionHandler)
 import SafeRm.Prelude
   ( ExceptionCS (..),
-    catchWithCS,
+    catchCS,
     displayException,
-    throwWithCS,
+    throwCS,
   )
 import SafeRm.Runner (runSafeRm)
 import System.Exit (ExitCode (..))
@@ -18,7 +18,7 @@ main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
   runSafeRm
-    `catchWithCS` \case
+    `catchCS` \case
       -- For optparse applicative
       (MkExceptionCS ExitSuccess _) -> pure ()
-      other -> throwWithCS other
+      other -> throwCS other

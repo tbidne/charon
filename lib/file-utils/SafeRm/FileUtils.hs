@@ -61,7 +61,7 @@ createFileContents ::
 createFileContents paths = for_ paths $
   \(p, c) ->
     writeBinaryFile p c
-      `catchAnyWithCS` \ex -> do
+      `catchAnyCS` \ex -> do
         putStrLn $
           mconcat
             [ "[SafeRm.FileUtils.createFileContents] Exception for file '",
@@ -71,7 +71,7 @@ createFileContents paths = for_ paths $
               "': ",
               displayException ex
             ]
-        throwWithCS ex
+        throwCS ex
 
 -- | Creates empty files at the specified paths.
 --

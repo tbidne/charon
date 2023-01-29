@@ -227,7 +227,7 @@ captureSafeRmExceptionLogs testDir title argList = do
   (toml, cmd) <- getConfig
   env <- mkFuncEnv toml logsRef terminalRef
 
-  result <- tryWithCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
+  result <- tryCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
 
   case result of
     Right _ ->

@@ -236,7 +236,7 @@ toPathData currTime trashHome origPath = do
                 Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
                 PathTypeDirectory
               )
-          else throwWithCS $ MkPathNotFoundE (originalPath ^. #unPathI)
+          else throwCS $ MkPathNotFoundE (originalPath ^. #unPathI)
 
   size <-
     fmap (MkBytes @B) $
@@ -283,7 +283,7 @@ mkUniqPath fp = do
     go :: HasCallStack => Word16 -> m (PathI TrashName)
     go !counter
       | counter == maxBound =
-          throwWithCS $ MkRenameDuplicateE fp
+          throwCS $ MkRenameDuplicateE fp
       | otherwise = do
           let fp' = fp <> MkPathI (mkSuffix counter)
           b <- Paths.applyPathI doesPathExist fp'
@@ -352,7 +352,7 @@ mvTrashToOriginal ::
 mvTrashToOriginal (MkPathI trashHome) pd = do
   exists <- originalPathExists pd
   when exists $
-    throwWithCS $
+    throwCS $
       MkRestoreCollisionE fileName originalPath
   renameFn trashPath (pd ^. #originalPath % #unPathI)
   where
@@ -546,7 +546,7 @@ fixLen w t
     w' = fromIntegral w
 
 throwIfRoot :: (HasCallStack, MonadThrow m) => PathData -> m ()
-throwIfRoot pd = when (isRoot pd) (throwWithCS MkRootE)
+throwIfRoot pd = when (isRoot pd) (throwCS MkRootE)
 
 isRoot :: PathData -> Bool
 isRoot pd =

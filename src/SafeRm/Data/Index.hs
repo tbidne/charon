@@ -186,7 +186,7 @@ readIndexWithFold foldFn indexPath@(MkPathI fp) =
     -- End of stream w/ an error.
     runFold _ (Nil (Just err) rest) = do
       $(logError) ("Error end of stream: " <> T.pack err)
-      throwWithCS $
+      throwCS $
         MkReadIndexE
           indexPath
           ( mconcat
@@ -200,14 +200,14 @@ readIndexWithFold foldFn indexPath@(MkPathI fp) =
     -- but just to cover all cases...
     runFold _ (Nil _ rest) = do
       $(logError) ("Unconsumed input: " <> lbsToTxt rest)
-      throwWithCS $
+      throwCS $
         MkReadIndexE
           indexPath
           ("Unconsumed input: " <> lbsToStr rest)
     -- Encountered an error.
     runFold _ (Cons (Left err) _) = do
       $(logError) ("Error reading stream: " <> T.pack err)
-      throwWithCS $ MkReadIndexE indexPath err
+      throwCS $ MkReadIndexE indexPath err
     -- Inductive case, run fold and recurse
     runFold macc (Cons (Right x) rest) = runFold (foldFn macc x) rest
 
@@ -228,7 +228,7 @@ throwIfDuplicates ::
   m ()
 throwIfDuplicates indexPath trashMap pd =
   when (fileName `HMap.member` trashMap) $
-    throwWithCS $
+    throwCS $
       MkDuplicateIndexPathE indexPath fileName
   where
     fileName = pd ^. #fileName
@@ -247,7 +247,7 @@ throwIfTrashNonExtant ::
 throwIfTrashNonExtant trashHome pd = do
   exists <- PathData.trashPathExists trashHome pd
   unless exists $
-    throwWithCS $
+    throwCS $
       MkTrashPathNotFoundE trashHome filePath
   where
     filePath = pd ^. #fileName

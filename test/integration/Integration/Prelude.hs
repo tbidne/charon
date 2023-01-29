@@ -206,7 +206,7 @@ captureSafeRmIntExceptionPure title argList = do
   (toml, cmd) <- getConfig
   env <- mkIntPureEnv toml terminalRef deletedPathsRef
 
-  result <- tryWithCS @_ @e $ runIntPure (Runner.runCmd cmd) env
+  result <- tryCS @_ @e $ runIntPure (Runner.runCmd cmd) env
 
   case result of
     Right _ ->

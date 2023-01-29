@@ -146,7 +146,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
     -- trash path, this guarantees that the index exactly corresponds to the
     -- trash state.
     when (numEntries /= numIndex) $
-      throwWithCS $
+      throwCS $
         MkIndexSizeMismatchE trashHome numEntries numIndex
 
     pure $
@@ -189,4 +189,4 @@ getAllFiles fp =
           listDirectory fp
             >>= fmap join
               . traverse (getAllFiles . (fp </>))
-        False -> throwWithCS $ MkPathNotFoundE fp
+        False -> throwCS $ MkPathNotFoundE fp

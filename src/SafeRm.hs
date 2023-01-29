@@ -91,7 +91,7 @@ delete paths = addNamespace "delete" $ do
         modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
         $(logDebug) ("Deleted: " <> showt pd)
     )
-      `catchAnyWithCS` \ex -> do
+      `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
           mconcat
@@ -164,7 +164,7 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
             modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
             $(logDebug) ("Permanently deleted: " <> showt pd)
         )
-          `catchAnyWithCS` \ex -> do
+          `catchAnyCS` \ex -> do
             $(logWarn) (T.pack $ displayNoCS ex)
             putStrLn $
               mconcat
@@ -303,7 +303,7 @@ restore paths = addNamespace "restore" $ do
         modifyIORef' restoredPathsRef (HMap.insert (pd ^. #fileName) pd)
         $(logDebug) ("Restored: " <> showt pd)
     )
-      `catchAnyWithCS` \ex -> do
+      `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
           mconcat
