@@ -17,7 +17,7 @@ module SafeRm.FileUtils
     capturedToBs,
 
     -- * Misc
-    replaceDir,
+    unsafeReplaceDir,
     txtToBuilder,
     exToBuilder,
     strToBuilder,
@@ -140,8 +140,56 @@ capturedToBs =
 --       implement.
 --
 -- We currently use option 3.
-replaceDir :: FilePath -> Text -> Text
-replaceDir fp = T.replace (T.pack fp) "<dir>"
+--
+-- NOTE: We have a complication. /tmp is a likely temporary directory
+-- (e.g. CI), which will call
+--
+--     T.replace "/tmp" "<dir>"
+--
+-- replacing all occurrences of /tmp, as expected. But safe-rm/tmp is an
+-- actual path that is used and logged (i.e. in permanent delete), so that
+-- will be replaced with "safe-rm/<dir>", which will break our tests. For
+-- example, X/single.golden has the following line:
+--
+--    [2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Tmp dir: <dir>/safe-rm/tmp
+--
+-- Thus, if the environment happens have the temporary directory /tmp,
+-- this line will be changed to <dir>/safe-rm/<dir>, hence a test failure.
+--
+-- The solution is to first split the string on the path we want to preserve,
+-- "safe-rm/tmp". We then replace the temp dir (possibly "/tmp") on each
+-- substring, before finally concatenating everything together, adding
+-- "safe-rm/tmp" back.
+--
+-- __WARNING:__ This function is not total! It calls error for multiple
+-- matches on "safe-rm/tmp". This should never happen and is definitely an
+-- error.
+unsafeReplaceDir :: HasCallStack => FilePath -> Text -> Text
+unsafeReplaceDir fp txt = case T.splitOn "safe-rm/tmp" txt of
+  -- Expected case 1: We have exactly one match, thus we split into two
+  -- elements.
+  [first, second] ->
+    mconcat
+      [ replaceFn first,
+        "safe-rm/tmp",
+        replaceFn second
+      ]
+  -- Expected cases 2,3: No matches
+  [x] -> replaceFn x
+  [] -> ""
+  -- Unexpected case: We should _never_ have multiple matches for safe-rm/tmp.
+  -- Technically we could write this function in a total way i.e. match on
+  -- (first : second : rest) and add a 'mconcat (replaceFn <$> rest)' line.
+  --
+  -- But this way ensures we get a more informative error immediately.
+  (_ : _ : _) ->
+    error $
+      mconcat
+        [ "FileUtils.unsafeReplaceDir: found multiple matches for 'safe-rm/tmp' in: ",
+          T.unpack txt
+        ]
+  where
+    replaceFn = T.replace (T.pack fp) "<dir>"
 
 -- | Diff algorithm
 diff :: FilePath -> FilePath -> [FilePath]
@@ -154,7 +202,7 @@ txtToBuilder = Builder.byteString . encodeUtf8
 -- | Exception to ByteString Builder. If a filepath is given, replaces it.
 exToBuilder :: Exception e => Maybe FilePath -> e -> Builder
 exToBuilder Nothing = txtToBuilder . T.pack . displayException
-exToBuilder (Just fp) = txtToBuilder . replaceDir fp . T.pack . displayException
+exToBuilder (Just fp) = txtToBuilder . unsafeReplaceDir fp . T.pack . displayException
 
 -- | String to ByteString Builder
 strToBuilder :: String -> Builder

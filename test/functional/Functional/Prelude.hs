@@ -200,8 +200,8 @@ captureSafeRmLogs title argList = do
 
   tmpDir <- getTemporaryDirectory
 
-  terminal <- replaceDir tmpDir <$> readIORef terminalRef
-  logs <- replaceDir tmpDir <$> readIORef logsRef
+  terminal <- unsafeReplaceDir tmpDir <$> readIORef terminalRef
+  logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
   let terminalBs = Builder.byteString $ encodeUtf8 terminal
       logsBs = Builder.byteString $ encodeUtf8 logs
 
@@ -235,7 +235,7 @@ captureSafeRmExceptionLogs title argList = do
       error
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
-      logs <- replaceDir tmpDir <$> readIORef logsRef
+      logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
       let exceptionBs = exToBuilder (Just tmpDir) ex
           logsBs = txtToBuilder logs
       pure (Exception title exceptionBs, Logs title logsBs)

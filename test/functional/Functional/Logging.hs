@@ -11,6 +11,7 @@ where
 
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
+import Data.Text.Encoding qualified as TEnc
 import Data.Text.Encoding.Error qualified as TEncError
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TLEnc
@@ -150,15 +151,15 @@ transformEnv env = do
         charStream
       }
 
--- HACK: See the note on Functional.Prelude.replaceDir. Note that we cannot
+-- HACK: See the note on Functional.Prelude.unsafeReplaceDir. Note that we cannot
 -- reuse that function directly since that operates on Text, whereas we have
 -- to use ByteString here. Thus we implement the same idea here.
 replaceDirBS :: FilePath -> ByteString -> BSL.ByteString
 replaceDirBS fp =
   TLEnc.encodeUtf8
-    . TL.replace (TL.pack fp) "<dir>"
-    . TLEnc.decodeUtf8With TEncError.lenientDecode
-    . BSL.fromStrict
+    . TL.fromStrict
+    . unsafeReplaceDir fp
+    . TEnc.decodeUtf8With TEncError.lenientDecode
 
 runLogging :: [String] -> IO ()
 runLogging argList = bracket mkEnv closeLog run
