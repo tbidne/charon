@@ -20,6 +20,10 @@ module SafeRm.Data.PathData
     mvTrashToOriginal,
     deletePathData,
 
+    -- * Misc moves
+    mvTrashToDest,
+    mvPathDataToTrash,
+
     -- * Sorting
 
     -- ** High level
@@ -60,6 +64,7 @@ import Data.Csv
 import Data.Csv qualified as Csv
 import Data.HashMap.Strict qualified as Map
 import Data.Text qualified as T
+import Effects.FileSystem.Path (Path)
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import GHC.Exts (IsList)
@@ -354,11 +359,56 @@ mvTrashToOriginal (MkPathI trashHome) pd = do
   when exists $
     throwCS $
       MkRestoreCollisionE fileName originalPath
-  renameFn trashPath (pd ^. #originalPath % #unPathI)
+  mvPathData pd trashPath (pd ^. #originalPath % #unPathI)
   where
     originalPath = pd ^. #originalPath
     fileName = pd ^. #fileName
     trashPath = trashHome </> (fileName ^. #unPathI)
+
+-- | Moves the 'PathData' from the trash to the dest.
+--
+-- @since 0.1
+mvTrashToDest ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathI TrashHome ->
+  Path ->
+  PathData ->
+  m ()
+mvTrashToDest trashHome destDir pd = mvPathData pd trashPath dest
+  where
+    dest = destDir </> (fileName ^. #unPathI)
+    fileName = pd ^. #fileName
+    MkPathI trashPath = pathDataToTrashPath trashHome pd
+
+-- | Moves the 'PathData' from the source to the trash.
+--
+-- @since 0.1
+mvPathDataToTrash ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathI TrashHome ->
+  Path ->
+  PathData ->
+  m ()
+mvPathDataToTrash trashHome srcDir pd = mvPathData pd src dest
+  where
+    fileName = pd ^. (#fileName % #unPathI)
+    src = srcDir </> fileName
+    MkPathI dest = pathDataToTrashPath trashHome pd
+
+mvPathData ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathData ->
+  Path ->
+  Path ->
+  m ()
+mvPathData pd = renameFn
+  where
     renameFn = case pd ^. #pathType of
       PathTypeFile -> renameFile
       PathTypeDirectory -> renameDirectory
@@ -389,12 +439,9 @@ mvOriginalToTrash ::
 mvOriginalToTrash trashHome pd = do
   throwIfRoot pd
 
-  renameFn (pd ^. #originalPath % #unPathI) trashPath
+  mvPathData pd (pd ^. #originalPath % #unPathI) trashPath
   where
     MkPathI trashPath = pathDataToTrashPath trashHome pd
-    renameFn = case pd ^. #pathType of
-      PathTypeFile -> renameFile
-      PathTypeDirectory -> renameDirectory
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.

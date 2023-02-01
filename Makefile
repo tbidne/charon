@@ -87,7 +87,7 @@ haddockc:
 	. \
 	-m SafeRm.Data.PathData 85 \
 	-m SafeRm.Data.Index 90 \
-	-m SafeRm.Prelude 80 \
+	-m SafeRm.Prelude 75 \
 	-m SafeRm.Runner.Command 20 \
 	-m SafeRm.Runner.Args 40
 

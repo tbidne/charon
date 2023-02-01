@@ -36,10 +36,10 @@ deletesOne args = goldenVsStringDiff desc diff gpath $ do
   assertFilesExist [f1]
 
   -- delete to trash first
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
@@ -49,10 +49,10 @@ deletesOne args = goldenVsStringDiff desc diff gpath $ do
   -- PERMANENT DELETE
 
   let permDelArgList = ["x", "f1", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs tmpDir "PERM DELETE" permDelArgList
+  (_, logs) <- captureSafeRmLogs "PERM DELETE" permDelArgList
 
   -- list output assertions
-  permDelResult <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  permDelResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist [trashDir </> ".index.csv"]
@@ -81,10 +81,10 @@ deletesMany args = goldenVsStringDiff desc diff gpath $ do
   assertFilesExist filesToDelete
   assertDirectoriesExist dirsToDelete
 
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -100,10 +100,10 @@ deletesMany args = goldenVsStringDiff desc diff gpath $ do
   let permDelArgList =
         -- leave f2 alone
         ["x", "f1", "f3", "dir1", "dir2", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs tmpDir "PERM DELETE" permDelArgList
+  (_, logs) <- captureSafeRmLogs "PERM DELETE" permDelArgList
 
   -- list output assertions
-  permDelResult <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  permDelResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist ((trashDir </>) <$> filesToDelete)
@@ -135,10 +135,10 @@ deleteUnknownError args = goldenVsStringDiff desc diff gpath $ do
   assertFilesExist [f1]
 
   -- delete to trash first
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
@@ -151,7 +151,6 @@ deleteUnknownError args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "PERM DELETE"
       permDelArgList
 
@@ -177,10 +176,10 @@ deletesSome args = goldenVsStringDiff desc diff gpath $ do
   assertFilesExist realFiles
 
   -- delete to trash first
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist ((trashDir </>) <$> ["f1", "f2", "f5"])
@@ -193,12 +192,11 @@ deletesSome args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "PERM DELETE"
       permDelArgList
 
   -- list output assertions
-  resultList <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist ((trashDir </>) <$> filesTryPermDelete)
@@ -222,10 +220,10 @@ deletesSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   assertFilesExist realFiles
 
   -- delete to trash first
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist ((trashDir </>) <$> ["f1", "f2", "f5"])
@@ -238,12 +236,11 @@ deletesSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "PERM DELETE"
       permDelArgList
 
   -- list output assertions
-  resultList <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist ((trashDir </>) <$> filesTryPermDelete)
@@ -266,7 +263,7 @@ deletesNoForce args = goldenVsStringDiff desc diff gpath $ do
   createFiles fileDeletePaths
   assertFilesExist fileDeletePaths
 
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- file assertions
   assertFilesExist ((trashDir </>) <$> ".index.csv" : fileDeleteNames)
@@ -275,10 +272,10 @@ deletesNoForce args = goldenVsStringDiff desc diff gpath $ do
   -- PERMANENT DELETE
 
   let permDelArgList = ["-t", trashDir, "x"] <> fileDeleteNames
-  (permDelResult, logs) <- captureSafeRmLogs tmpDir "PERM DELETE" permDelArgList
+  (permDelResult, logs) <- captureSafeRmLogs "PERM DELETE" permDelArgList
 
   -- list output assertions
-  listResult <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  listResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   -- Our mock FuncIO alternates returning 'n' and 'y' to getChar, so without

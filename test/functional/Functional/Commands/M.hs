@@ -35,10 +35,10 @@ metadata args = goldenVsStringDiff "Prints metadata" diff gpath $ do
   assertFilesExist filesToDelete
   assertDirectoriesExist dirsToDelete
 
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -52,7 +52,7 @@ metadata args = goldenVsStringDiff "Prints metadata" diff gpath $ do
   -- METADATA
 
   let metaArgList = ["m", "-t", trashDir]
-  (metadataResult, logs) <- captureSafeRmLogs tmpDir "METADATA" metaArgList
+  (metadataResult, logs) <- captureSafeRmLogs "METADATA" metaArgList
 
   -- assert nothing changed
   assertFilesExist
@@ -78,7 +78,7 @@ empty args = goldenVsStringDiff "Prints empty metadata" diff gpath $ do
   createFiles [trashDir </> ".log"]
 
   let metaArgList = ["m", "-t", trashDir]
-  (result, logs) <- captureSafeRmLogs tmpDir "METADATA" metaArgList
+  (result, logs) <- captureSafeRmLogs "METADATA" metaArgList
 
   pure $ capturedToBs [result, logs]
   where

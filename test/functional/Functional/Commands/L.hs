@@ -35,7 +35,7 @@ emptySucceeds args = goldenVsStringDiff desc diff gpath $ do
   tmpDir <- args
   let argList = ["-t", tmpDir </> "l1/.trash", "l", "--format", "m"]
 
-  (result, logs) <- captureSafeRmLogs tmpDir "LIST" argList
+  (result, logs) <- captureSafeRmLogs "LIST" argList
   pure $ capturedToBs [result, logs]
   where
     desc = "List on empty directory succeeds"
@@ -56,7 +56,6 @@ readIndexError args = goldenVsStringDiff "Read Index Error" diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ReadIndexE
-      tmpDir
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
@@ -89,7 +88,6 @@ indexEntryNonExtantError args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @TrashPathNotFoundE
-      tmpDir
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
@@ -126,7 +124,6 @@ indexDuplicatesError args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @DuplicateIndexPathE
-      tmpDir
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
@@ -162,7 +159,6 @@ indexSizeMismatchError args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @IndexSizeMismatchE
-      tmpDir
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
@@ -185,7 +181,6 @@ readIndexErrorNoTrace args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ReadIndexE
-      tmpDir
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]

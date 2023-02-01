@@ -1,8 +1,8 @@
 EXCEPTION LIST
-Error reading index at '<dir>/l2/.trash/.index.csv': parse error (not enough input) at ""
+Error reading index at '<dir>/safe-rm/functional/l2/.trash/.index.csv': parse error (not enough input) at ""
 
 LOGS LIST
-[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/l2/.trash/.index.csv
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/l2/.trash/.index.csv
+[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/safe-rm/functional/l2/.trash/.index.csv
+[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/l2/.trash/.index.csv
 [2020-05-31 12:00:00][functional.getIndex.readIndex.readIndexWithFold][Error][src/SafeRm/Data/Index.hs] Error end of stream: parse error (not enough input)
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Error reading index at '<dir>/l2/.trash/.index.csv': parse error (not enough input) at ""
+[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Error reading index at '<dir>/safe-rm/functional/l2/.trash/.index.csv': parse error (not enough input) at ""

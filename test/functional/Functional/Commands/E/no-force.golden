@@ -3,38 +3,38 @@ Permanently delete all contents (y/n)?
 
 
 LOGS EMPTY
-[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: <dir>/e3/.trash
+[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/e3/.trash
 [2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Not deleting contents.
 
 
 TERMINAL LIST
 Type:     File
 Name:     1
-Original: <dir>/e3/1
+Original: <dir>/safe-rm/functional/e3/1
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     2
-Original: <dir>/e3/2
+Original: <dir>/safe-rm/functional/e3/2
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     3
-Original: <dir>/e3/3
+Original: <dir>/safe-rm/functional/e3/3
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     4
-Original: <dir>/e3/4
+Original: <dir>/safe-rm/functional/e3/4
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     5
-Original: <dir>/e3/5
+Original: <dir>/safe-rm/functional/e3/5
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 

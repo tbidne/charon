@@ -7,8 +7,8 @@ Size:         0.00B
 
 
 LOGS METADATA
-[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/m2/.trash
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/m2/.trash/.index.csv
+[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/m2/.trash
+[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/m2/.trash/.index.csv
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 0
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 0
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 0

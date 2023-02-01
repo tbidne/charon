@@ -39,10 +39,10 @@ deletesOne args = goldenVsStringDiff "Deletes a single file" diff gpath $ do
   createFiles [f1]
   assertFilesExist [f1]
 
-  (_, logs) <- captureSafeRmLogs tmpDir "DELETE" argList
+  (_, logs) <- captureSafeRmLogs "DELETE" argList
 
   -- list output assertions
-  result <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
@@ -70,10 +70,10 @@ deletesMany args = goldenVsStringDiff "Deletes many paths" diff gpath $ do
   assertFilesExist filesToDelete
   assertDirectoriesExist dirsToDelete
 
-  (_, logs) <- captureSafeRmLogs tmpDir "DELETE" argList
+  (_, logs) <- captureSafeRmLogs "DELETE" argList
 
   -- list output assertions
-  result <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -101,7 +101,6 @@ deleteUnknownError args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "DELETE"
       argList
 
@@ -124,13 +123,13 @@ deleteDuplicateFile args = goldenVsStringDiff desc diff gpath $ do
   -- create and delete twice
   createFiles [file]
   assertFilesExist [file]
-  (_, logs1) <- captureSafeRmLogs tmpDir "LOGS1" argList
+  (_, logs1) <- captureSafeRmLogs "LOGS1" argList
 
   createFiles [file]
   assertFilesExist [file]
-  (_, logs2) <- captureSafeRmLogs tmpDir "LOGS2" argList
+  (_, logs2) <- captureSafeRmLogs "LOGS2" argList
 
-  result <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -159,12 +158,11 @@ deletesSome args = goldenVsStringDiff desc diff gpath $ do
   (ex, logs) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "DELETE"
       argList
 
   -- list output assertions
-  resultList <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  resultList <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -196,7 +194,6 @@ deletesNoTrace args = goldenVsStringDiff desc diff gpath $ do
   (ex, _) <-
     captureSafeRmExceptionLogs
       @ExitCode
-      tmpDir
       "DELETE"
       argList
 

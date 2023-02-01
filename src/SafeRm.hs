@@ -23,6 +23,7 @@ import Data.Char qualified as Ch
 import Data.HashMap.Strict qualified as HMap
 import Data.Text qualified as T
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
+import Effects.FileSystem.PathReader (MonadPathReader (getTemporaryDirectory))
 import Effects.System.Terminal
   ( MonadTerminal (getChar),
   )
@@ -86,10 +87,10 @@ delete paths = addNamespace "delete" $ do
   addNamespace "deleting" $ for_ paths $ \fp ->
     ( do
         pd <- PathData.toPathData currTime trashHome fp
-        $(logDebug) (showt pd)
+        $(logDebug) ("Deleting: " <> showt pd)
         PathData.mvOriginalToTrash trashHome pd
         modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
-        $(logDebug) ("Deleted: " <> showt pd)
+        $(logDebug) ("Moved to trash: " <> showt pd)
     )
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
@@ -109,11 +110,28 @@ delete paths = addNamespace "delete" $ do
       [ Paths.applyPathI doesFileExist indexPath,
         Paths.applyPathI (fmap (> afromInteger 0) . getFileSize) indexPath
       ]
-  if nonEmpty
-    then Index.appendIndex indexPath (MkIndex deletedPaths)
-    else Index.writeIndex indexPath (MkIndex deletedPaths)
 
-  $(logInfo) ("Written to index: " <> showMapOrigPaths deletedPaths)
+  saveResult <-
+    tryAny $
+      if nonEmpty
+        then Index.appendIndex indexPath (MkIndex deletedPaths)
+        else Index.writeIndex indexPath (MkIndex deletedPaths)
+
+  -- rollback if save failed
+  case saveResult of
+    Left ex -> do
+      let msg =
+            mconcat
+              [ "Saving index failed:\n\n",
+                displayExceptiont ex,
+                "\n\nAttempting to roll back deletes."
+              ]
+      $(logError) msg
+      putTextLn msg
+      writeIORef anyFailedRef True
+      for_ deletedPaths (PathData.mvTrashToOriginal trashHome)
+    Right _ ->
+      $(logInfo) ("Written to index: " <> showMapOrigPaths deletedPaths)
 
   anyFailed <- readIORef anyFailedRef
   when anyFailed exitFailure
@@ -157,12 +175,21 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
     putStrLn $ "Could not find paths in trash: " <> failureStr
     writeIORef anyFailedRef True
 
+  -- move to temp dir first so we can rollback in case of errors
+  tmpDir <- (</> "safe-rm/tmp") <$> getTemporaryDirectory
+  $(logDebug) ("Tmp dir: " <> T.pack tmpDir)
+  tmpDirExists <- doesDirectoryExist tmpDir
+
+  -- clear directory
+  when tmpDirExists (removeDirectoryRecursive tmpDir)
+  createDirectoryIfMissing True tmpDir
+
   let deleteFn pd =
         ( do
             $(logDebug) ("Deleting: " <> showt pd)
-            PathData.deletePathData trashHome pd
+            PathData.mvTrashToDest trashHome tmpDir pd
             modifyIORef' deletedPathsRef (HMap.insert (pd ^. #fileName) pd)
-            $(logDebug) ("Permanently deleted: " <> showt pd)
+            $(logDebug) ("Moved to tmp dir: " <> showt pd)
         )
           `catchAnyCS` \ex -> do
             $(logWarn) (T.pack $ displayNoCS ex)
@@ -201,9 +228,24 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
 
   -- override old index
   deletedPaths <- readIORef deletedPathsRef
-  Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap deletedPaths)
 
-  $(logInfo) ("Deleted from index: " <> showMapTrashPaths deletedPaths)
+  saveResult <- tryAny $ Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap deletedPaths)
+  case saveResult of
+    Left ex -> do
+      let msg =
+            mconcat
+              [ "Saving index failed:\n\n",
+                displayExceptiont ex,
+                "\n\nAttempting to roll back deletes."
+              ]
+      $(logError) msg
+      putTextLn msg
+      writeIORef anyFailedRef True
+
+      for_ deletedPaths (PathData.mvPathDataToTrash trashHome tmpDir)
+    Right _ -> do
+      $(logInfo) ("Deleted from index: " <> showMapTrashPaths deletedPaths)
+      removeDirectoryRecursive tmpDir
 
   anyFailed <- readIORef anyFailedRef
   when anyFailed exitFailure
@@ -316,9 +358,23 @@ restore paths = addNamespace "restore" $ do
 
   -- override old index
   restoredPaths <- readIORef restoredPathsRef
-  Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap restoredPaths)
 
-  $(logInfo) ("Restored from index: " <> showMapOrigPaths restoredPaths)
+  saveResult <- tryAny $ Index.writeIndex indexPath (MkIndex $ HMap.difference indexMap restoredPaths)
+  case saveResult of
+    Left ex -> do
+      let msg =
+            mconcat
+              [ "Saving index failed:\n\n",
+                displayExceptiont ex,
+                "\n\nAttempting to roll back restores."
+              ]
+      $(logError) msg
+      putTextLn msg
+
+      writeIORef anyFailedRef True
+      for_ restoredPaths (PathData.mvOriginalToTrash trashHome)
+    Right _ ->
+      $(logInfo) ("Restored from index: " <> showMapOrigPaths restoredPaths)
 
   anyFailed <- readIORef anyFailedRef
   when anyFailed exitFailure

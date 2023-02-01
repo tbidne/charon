@@ -36,10 +36,10 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   assertFilesExist filesToDelete
   assertDirectoriesExist dirsToDelete
 
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- list output assertions
-  resultDel <- captureSafeRm tmpDir "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  resultDel <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist
@@ -53,10 +53,10 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   -- EMPTY
 
   let emptyArgList = ["e", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs tmpDir "EMPTY" emptyArgList
+  (_, logs) <- captureSafeRmLogs "EMPTY" emptyArgList
 
   -- list output assertions
-  result <- captureSafeRm tmpDir "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  result <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist
@@ -77,9 +77,9 @@ emptyTrashTwice args = goldenVsStringDiff desc diff gpath $ do
   let testDir = tmpDir </> "e2"
       trashDir = testDir </> ".trash"
 
-  (_, logs1) <- captureSafeRmLogs tmpDir "EMPTY 1" ["e", "-f", "-t", trashDir]
+  (_, logs1) <- captureSafeRmLogs "EMPTY 1" ["e", "-f", "-t", trashDir]
 
-  (_, logs2) <- captureSafeRmLogs tmpDir "EMPTY 2" ["e", "-f", "-t", trashDir]
+  (_, logs2) <- captureSafeRmLogs "EMPTY 2" ["e", "-f", "-t", trashDir]
   pure $ capturedToBs [logs1, logs2]
   where
     desc = "Calling empty twice does not error"
@@ -100,7 +100,7 @@ emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
   createFiles fileDeletePaths
   assertFilesExist fileDeletePaths
 
-  runSafeRm tmpDir delArgList
+  runSafeRm delArgList
 
   -- file assertions
   assertFilesExist ((trashDir </>) <$> ".index.csv" : fileDeleteNames)
@@ -110,10 +110,10 @@ emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
 
   let emptyArgList = ["-t", trashDir, "e"]
   (emptyResult, emptyLogs) <-
-    captureSafeRmLogs tmpDir "EMPTY" emptyArgList
+    captureSafeRmLogs "EMPTY" emptyArgList
 
   -- list output assertions
-  listResult <- captureSafeRm tmpDir "LIST" ["-t", trashDir, "l", "--format", "m"]
+  listResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   -- First getChar response was 'n', so files should still exist

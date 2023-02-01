@@ -39,6 +39,7 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
+import Effects.FileSystem.PathReader (MonadPathReader (getTemporaryDirectory))
 import Effects.LoggerNamespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -174,23 +175,21 @@ runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
 -- | Runs safe-rm.
-runSafeRm :: FilePath -> [String] -> IO ()
-runSafeRm testDir = void . captureSafeRm testDir ""
+runSafeRm :: [String] -> IO ()
+runSafeRm = void . captureSafeRm ""
 
 -- | Runs safe-rm and captures terminal output.
-captureSafeRm :: FilePath -> Builder -> [String] -> IO CapturedOutput
-captureSafeRm testDir title = fmap (view _1) . captureSafeRmLogs testDir title
+captureSafeRm :: Builder -> [String] -> IO CapturedOutput
+captureSafeRm title = fmap (view _1) . captureSafeRmLogs title
 
 -- | Runs safe-rm and captures (terminal output, logs).
 captureSafeRmLogs ::
-  -- | Test dir. Used to strip dir from output to make paths deterministic.
-  FilePath ->
   -- | Title to add to captured output.
   Builder ->
   -- Args.
   [String] ->
   IO (CapturedOutput, CapturedOutput)
-captureSafeRmLogs testDir title argList = do
+captureSafeRmLogs title argList = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -199,8 +198,10 @@ captureSafeRmLogs testDir title argList = do
 
   runFuncIO (Runner.runCmd cmd) env
 
-  terminal <- replaceDir testDir <$> readIORef terminalRef
-  logs <- replaceDir testDir <$> readIORef logsRef
+  tmpDir <- getTemporaryDirectory
+
+  terminal <- replaceDir tmpDir <$> readIORef terminalRef
+  logs <- replaceDir tmpDir <$> readIORef logsRef
   let terminalBs = Builder.byteString $ encodeUtf8 terminal
       logsBs = Builder.byteString $ encodeUtf8 logs
 
@@ -213,16 +214,16 @@ captureSafeRmLogs testDir title argList = do
 captureSafeRmExceptionLogs ::
   forall e.
   Exception e =>
-  -- | Test dir. Used to strip dir from output to make paths deterministic.
-  FilePath ->
   -- | Title to add to captured output.
   Builder ->
   -- Args.
   [String] ->
   IO (CapturedOutput, CapturedOutput)
-captureSafeRmExceptionLogs testDir title argList = do
+captureSafeRmExceptionLogs title argList = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
+
+  tmpDir <- getTemporaryDirectory
 
   (toml, cmd) <- getConfig
   env <- mkFuncEnv toml logsRef terminalRef
@@ -234,8 +235,8 @@ captureSafeRmExceptionLogs testDir title argList = do
       error
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
-      logs <- replaceDir testDir <$> readIORef logsRef
-      let exceptionBs = exToBuilder (Just testDir) ex
+      logs <- replaceDir tmpDir <$> readIORef logsRef
+      let exceptionBs = exToBuilder (Just tmpDir) ex
           logsBs = txtToBuilder logs
       pure (Exception title exceptionBs, Logs title logsBs)
   where

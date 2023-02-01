@@ -1,31 +1,31 @@
 TERMINAL LIST 1
 Type:     Directory
 Name:     dir1
-Original: <dir>/r2/dir1
+Original: <dir>/safe-rm/functional/r2/dir1
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     Directory
 Name:     dir2
-Original: <dir>/r2/dir2
+Original: <dir>/safe-rm/functional/r2/dir2
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     f1
-Original: <dir>/r2/f1
+Original: <dir>/safe-rm/functional/r2/f1
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     f2
-Original: <dir>/r2/f2
+Original: <dir>/safe-rm/functional/r2/f2
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
 Type:     File
 Name:     f3
-Original: <dir>/r2/f3
+Original: <dir>/safe-rm/functional/r2/f3
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
@@ -37,28 +37,28 @@ Size:         0.00B
 
 
 LOGS RESTORE
-[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: <dir>/r2/.trash
-[2020-05-31 12:00:00][functional.restore.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/r2/.trash/.index.csv
-[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/r2/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored from index: <dir>/r2/dir2, <dir>/r2/dir1, <dir>/r2/f3, <dir>/r2/f1
+[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/r2/.trash
+[2020-05-31 12:00:00][functional.restore.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/r2/.trash/.index.csv
+[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = "dir1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/dir1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restoring: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore.restoring][Debug][src/SafeRm.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r2/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.restore][Info][src/SafeRm.hs] Restored from index: <dir>/safe-rm/functional/r2/dir2, <dir>/safe-rm/functional/r2/dir1, <dir>/safe-rm/functional/r2/f3, <dir>/safe-rm/functional/r2/f1
 
 
 TERMINAL LIST 2
 Type:     File
 Name:     f2
-Original: <dir>/r2/f2
+Original: <dir>/safe-rm/functional/r2/f2
 Size:     5.00B
 Created:  2020-05-31 12:00:00
 
