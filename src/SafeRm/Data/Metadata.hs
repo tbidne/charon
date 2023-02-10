@@ -12,7 +12,6 @@ where
 
 import Data.Bytes (SomeSize)
 import Data.Bytes qualified as Bytes
-import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
@@ -22,11 +21,11 @@ import Numeric.Literal.Rational (FromRational (afromRational))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashHome, TrashIndex, TrashLog),
+    PathIndex (TrashHome, TrashLog),
   )
+import SafeRm.Env qualified as Env
 import SafeRm.Exception
-  ( IndexSizeMismatchE (MkIndexSizeMismatchE),
-    PathNotFoundE (MkPathNotFoundE),
+  ( PathNotFoundE (MkPathNotFoundE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -101,17 +100,17 @@ toMetadata ::
     MonadTerminal m,
     MonadThrow m
   ) =>
-  (PathI TrashHome, PathI TrashIndex, PathI TrashLog) ->
+  (PathI TrashHome, PathI TrashLog) ->
   m Metadata
-toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
+toMetadata (trashHome, trashLog) =
   addNamespace "toMetadata" $ do
     -- Index size
-    index <- view #unIndex <$> Index.readIndex trashIndex
-    let numIndex = Map.size index
+    index <- view #unIndex <$> Index.readIndex trashHome
+    let numIndex = length index
     $(logDebug) ("Index size: " <> showt numIndex)
 
     -- Num entries
-    numEntries <- foldl' countFiles 0 <$> listDirectory th
+    numEntries <- foldl' countFiles 0 <$> listDirectory trashPathsDir
     $(logDebug) ("Num entries: " <> showt numEntries)
 
     -- Log size
@@ -133,7 +132,7 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
           pure (afromRational 0)
 
     -- Summed size
-    allFiles <- filter (not . skipFile) <$> getAllFiles th
+    allFiles <- filter (not . skipFile) <$> getAllFiles trashPathsDir
     allSizes <- toDouble <$> foldl' sumFileSizes (pure zero) allFiles
     let numFiles = length allFiles
         size = Bytes.normalize allSizes
@@ -141,13 +140,8 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
     $(logDebug) ("Num all files: " <> showt numFiles)
     $(logDebug) ("Total size: " <> showt size)
 
-    -- NOTE: Verify that sizes are the same. Because reading the index verifies
-    -- that there are no duplicate entries and each entry corresponds to a real
-    -- trash path, this guarantees that the index exactly corresponds to the
-    -- trash state.
-    when (numEntries /= numIndex) $
-      throwCS $
-        MkIndexSizeMismatchE trashHome numEntries numIndex
+    -- NOTE: If the index is successfully read then we have verified that
+    -- all invariants are preserved i.e. bijection between /paths and /info.
 
     pure $
       MkMetadata
@@ -157,6 +151,8 @@ toMetadata (trashHome@(MkPathI th), trashIndex, trashLog) =
           size
         }
   where
+    MkPathI trashPathsDir = Env.getTrashPathDir trashHome
+
     sumFileSizes macc f = do
       !acc <- macc
       sz <- (MkBytes @B) <$> getFileSize f

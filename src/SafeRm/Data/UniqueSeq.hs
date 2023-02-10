@@ -91,7 +91,7 @@ union (UnsafeUniqueSeq xseq _) (UnsafeUniqueSeq yseq _) =
     (newSeq, newSet) = foldr go ([], HSet.empty) (xseq <> yseq)
     go :: a -> (Seq a, HashSet a) -> (Seq a, HashSet a)
     go z (accSeq, accSet)
-      | notHSetMember z accSet = (z <| accSeq, HSet.insert z accSet)
+      | notHSetMember z accSet = (z :<| accSeq, HSet.insert z accSet)
       | otherwise = (accSeq, accSet)
 
 -- | @since 0.1
@@ -100,11 +100,11 @@ member x (UnsafeUniqueSeq _ set) = HSet.member x set
 
 -- | @since 0.1
 append :: Hashable a => UniqueSeq a -> a -> UniqueSeq a
-append = flip (insertSeq (flip (|>)))
+append = flip (insertSeq (flip (:|>)))
 
 -- | @since 0.1
 prepend :: Hashable a => a -> UniqueSeq a -> UniqueSeq a
-prepend = insertSeq (<|)
+prepend = insertSeq (:<|)
 
 -- | @since 0.1
 map :: Hashable b => (a1 -> b) -> UniqueSeq a1 -> UniqueSeq b
@@ -112,7 +112,7 @@ map f (UnsafeUniqueSeq seq _) = UnsafeUniqueSeq newSeq newSet
   where
     (newSeq, newSet) = foldr go ([], HSet.empty) seq
     go x (accSeq, accSet)
-      | notHSetMember y accSet = (y <| accSeq, HSet.insert y accSet)
+      | notHSetMember y accSet = (y :<| accSeq, HSet.insert y accSet)
       | otherwise = (accSeq, accSet)
       where
         y = f x
@@ -137,7 +137,7 @@ fromFoldable = foldr prepend (UnsafeUniqueSeq [] HSet.empty)
 fromSet :: HashSet a -> UniqueSeq a
 fromSet set = UnsafeUniqueSeq seq set
   where
-    seq = foldr (flip (|>)) [] set
+    seq = foldr (flip (:|>)) [] set
 
 notHSetMember :: Hashable a => a -> HashSet a -> Bool
 notHSetMember x = not . HSet.member x

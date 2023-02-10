@@ -3,6 +3,7 @@
 -- @since 0.1
 module SafeRm.Utils
   ( whenJust,
+    whenLeft,
     allM1,
     fromMaybeMonoid,
     maybeMonoid,
@@ -30,6 +31,13 @@ import Text.Printf (PrintfArg)
 whenJust :: Applicative f => Maybe t -> (t -> f ()) -> f ()
 whenJust Nothing _ = pure ()
 whenJust (Just x) f = f x
+
+-- | Applies the function when we have a Left.
+--
+-- @since 0.1
+whenLeft :: Applicative f => Either e a -> (e -> f ()) -> f ()
+whenLeft (Right _) _ = pure ()
+whenLeft (Left x) f = f x
 
 -- | 'allM' that must have at least one 'True'.
 --

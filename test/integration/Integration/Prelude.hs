@@ -86,6 +86,8 @@ makeFieldLabelsNoPrefix ''IntPureEnv
 
 deriving anyclass instance HasTrashHome IntPureEnv
 
+-- TODO: Replace the below IO w/ Identity
+
 -- | Type for running integration tests via a pure file-system. As this is
 -- used to test protecting against root, it is VERY important that it cannot
 -- actually write to the file system!!!

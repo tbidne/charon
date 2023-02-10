@@ -42,13 +42,12 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   resultDel <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
+  assertFilesExist $ mkTrashInfoPaths trashDir ["dir2"]
+  assertDirectoriesExist $ mkTrashPaths trashDir ["dir2"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- EMPTY
 
@@ -59,14 +58,11 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   result <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesDoNotExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
+  assertDirectoriesDoNotExist $ mkAllTrashPaths trashDir ["dir2"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesDoNotExist
-    ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
   pure $ capturedToBs [resultDel, logs, result]
   where
     gpath = goldenPath </> "empties.golden"
@@ -103,7 +99,7 @@ emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- file assertions
-  assertFilesExist ((trashDir </>) <$> ".index.csv" : fileDeleteNames)
+  assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
   assertFilesDoNotExist fileDeletePaths
 
   -- EMPTY
@@ -117,7 +113,7 @@ emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
 
   -- file assertions
   -- First getChar response was 'n', so files should still exist
-  assertFilesExist ((trashDir </>) <$> ".index.csv" : fileDeleteNames)
+  assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
   pure $
     capturedToBs
       [ emptyResult,

@@ -5,12 +5,13 @@ module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
 import GHC.Conc (setUncaughtExceptionHandler)
+import Integration.AsciiOnly (AsciiOnly)
 import Integration.Commands.D qualified as D
 import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as T
-import Test.Tasty qualified as Tasty
+import Test.Tasty.Options (OptionDescription (..))
 
 -- | Runs integration tests.
 --
@@ -19,8 +20,8 @@ main :: IO ()
 main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
-  T.defaultMain $
-    Tasty.withResource setup teardown $ \args ->
+  T.defaultMainWithIngredients ingredients $
+    T.withResource setup teardown $ \args ->
       testGroup
         "Integration Tests"
         [ SafeRm.tests args,
@@ -29,6 +30,9 @@ main = do
             [ D.tests
             ]
         ]
+  where
+    ingredients =
+      T.includingOptions [Option @AsciiOnly Proxy] : T.defaultIngredients
 
 setup :: IO FilePath
 setup = do

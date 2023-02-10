@@ -9,9 +9,9 @@ where
 import Data.ByteString.Char8 qualified as Char8
 import Functional.Prelude
 import SafeRm.Exception
-  ( DuplicateIndexPathE,
-    IndexSizeMismatchE,
-    ReadIndexE,
+  ( TrashInfoDirNotFoundE,
+    TrashInfoNotFoundE,
+    TrashPathDirNotFoundE,
     TrashPathNotFoundE,
   )
 
@@ -23,11 +23,10 @@ tests args =
   testGroup
     "List (l)"
     [ emptySucceeds args,
-      readIndexError args,
-      indexEntryNonExtantError args,
-      indexDuplicatesError args,
-      indexSizeMismatchError args,
-      readIndexErrorNoTrace args
+      noPathsError args,
+      noInfoError args,
+      missingPathError args,
+      missingInfoError args
     ]
 
 emptySucceeds :: IO FilePath -> TestTree
@@ -41,8 +40,8 @@ emptySucceeds args = goldenVsStringDiff desc diff gpath $ do
     desc = "List on empty directory succeeds"
     gpath = goldenPath </> "empty.golden"
 
-readIndexError :: IO FilePath -> TestTree
-readIndexError args = goldenVsStringDiff "Read Index Error" diff gpath $ do
+noPathsError :: IO FilePath -> TestTree
+noPathsError args = goldenVsStringDiff "No Paths Error" diff gpath $ do
   tmpDir <- args
   let testDir = tmpDir </> "l2"
       trashDir = testDir </> ".trash"
@@ -51,39 +50,67 @@ readIndexError args = goldenVsStringDiff "Read Index Error" diff gpath $ do
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  createFileContents [(trashDir </> ".index.csv", "bad index")]
 
   (ex, logs) <-
     captureSafeRmExceptionLogs
-      @ReadIndexE
+      @TrashPathDirNotFoundE
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
   where
-    gpath = goldenPath </> "read-error.golden"
+    gpath = goldenPath </> "no-paths-error.golden"
 
-indexEntryNonExtantError :: IO FilePath -> TestTree
-indexEntryNonExtantError args = goldenVsStringDiff desc diff gpath $ do
+noInfoError :: IO FilePath -> TestTree
+noInfoError args = goldenVsStringDiff "No Info Error" diff gpath $ do
+  tmpDir <- args
+  let testDir = tmpDir </> "l2"
+      trashDir = testDir </> ".trash"
+      argList = ["-t", trashDir, "l", "--format", "m"]
+
+  -- setup
+  clearDirectory testDir
+  clearDirectory trashDir
+  clearDirectory (trashDir </> "paths")
+
+  (ex, logs) <-
+    captureSafeRmExceptionLogs
+      @TrashInfoDirNotFoundE
+      "LIST"
+      argList
+  pure $ capturedToBs [ex, logs]
+  where
+    gpath = goldenPath </> "no-info-error.golden"
+
+missingPathError :: IO FilePath -> TestTree
+missingPathError args = goldenVsStringDiff desc diff gpath $ do
   tmpDir <- args
   let testDir = tmpDir </> "l3"
       trashDir = testDir </> ".trash"
       argList = ["-t", trashDir, "l", "--format", "m"]
-      badFileLine =
-        mconcat
-          [ "file,foo,",
-            Char8.pack (trashDir </> "foo"),
-            ",0,2022-09-28 02:58:33"
-          ]
-      badIndex =
+      missingInfo =
         Char8.unlines
-          [ "type,name,original,size,created",
-            badFileLine
+          [ "{",
+            "\"created\":",
+            "\"2020-05-31 12:00:00\",",
+            "\"original\":",
+            Char8.pack ("\"" <> testDir </> "missing\","),
+            "\"size\":",
+            "5,",
+            "\"type\":",
+            "\"f\"",
+            "}"
           ]
 
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  createFileContents [(trashDir </> ".index.csv", badIndex)]
+  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "info")
+  createFileContents [(trashDir </> "info" </> "missing.info", missingInfo)]
+
+  -- Creating empty file so that we don't get the "size mismatch" error.
+  -- We specifically want the "missing.info has no corresponding missing" error.
+  createFiles [trashDir </> "paths" </> "blah"]
 
   (ex, logs) <-
     captureSafeRmExceptionLogs
@@ -92,101 +119,32 @@ indexEntryNonExtantError args = goldenVsStringDiff desc diff gpath $ do
       argList
   pure $ capturedToBs [ex, logs]
   where
-    desc = "Index Entry Non-Extant Error"
-    gpath = goldenPath </> "index-entry-error.golden"
+    desc = "Entry Missing Path"
+    gpath = goldenPath </> "missing-path-error.golden"
 
-indexDuplicatesError :: IO FilePath -> TestTree
-indexDuplicatesError args = goldenVsStringDiff desc diff gpath $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "l4"
-      trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
-      dupFile = trashDir </> "foo"
-      dupFileLine =
-        mconcat
-          [ "file,foo,",
-            Char8.pack dupFile,
-            ",0,2022-09-28 02:58:33"
-          ]
-      badIndex =
-        Char8.unlines
-          [ "type,name,original,size,created",
-            dupFileLine,
-            dupFileLine
-          ]
-
-  -- setup
-  clearDirectory testDir
-  clearDirectory trashDir
-  createFiles [dupFile]
-  createFileContents [(trashDir </> ".index.csv", badIndex)]
-
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @DuplicateIndexPathE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
-  where
-    desc = "Index Duplicates Error"
-    gpath = goldenPath </> "duplicate-error.golden"
-
-indexSizeMismatchError :: IO FilePath -> TestTree
-indexSizeMismatchError args = goldenVsStringDiff desc diff gpath $ do
+missingInfoError :: IO FilePath -> TestTree
+missingInfoError args = goldenVsStringDiff desc diff gpath $ do
   tmpDir <- args
   let testDir = tmpDir </> "l5"
       trashDir = testDir </> ".trash"
       argList = ["-t", trashDir, "l", "--format", "m"]
-      file = trashDir </> "foo"
-      fileLine =
-        mconcat
-          [ "file,foo,",
-            Char8.pack file,
-            ",0,2022-09-28 02:58:33"
-          ]
-      badIndex =
-        Char8.unlines
-          [ "type,name,original,size,created",
-            fileLine
-          ]
 
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  createFiles [trashDir </> "bar", file]
-  createFileContents [(trashDir </> ".index.csv", badIndex)]
+  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "info")
+  createFiles [trashDir </> "paths" </> "bar"]
 
   (ex, logs) <-
     captureSafeRmExceptionLogs
-      @IndexSizeMismatchE
+      @TrashInfoNotFoundE
       "LIST"
       argList
   pure $ capturedToBs [ex, logs]
   where
-    desc = "Index Size Mismatch Error"
-    gpath = goldenPath </> "index-size-error.golden"
-
-readIndexErrorNoTrace :: IO FilePath -> TestTree
-readIndexErrorNoTrace args = goldenVsStringDiff desc diff gpath $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "l6"
-      trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
-
-  -- setup
-  clearDirectory testDir
-  clearDirectory trashDir
-  createFileContents [(trashDir </> ".index.csv", "bad index")]
-
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @ReadIndexE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
-  where
-    desc = "Read index error no trace"
-    gpath = goldenPath </> "no-trace.golden"
+    desc = "Entry Missing Info"
+    gpath = goldenPath </> "missing-info-error.golden"
 
 goldenPath :: FilePath
 goldenPath = "test/functional/Functional/Commands/L"

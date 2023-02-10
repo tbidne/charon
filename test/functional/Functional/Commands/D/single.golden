@@ -1,8 +1,7 @@
 LOGS DELETE
 [2020-05-31 12:00:00][functional.delete][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/d1/.trash
-[2020-05-31 12:00:00][functional.delete.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/d1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.delete.deleting][Debug][src/SafeRm.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/d1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.delete][Info][src/SafeRm.hs] Written to index: <dir>/safe-rm/functional/d1/f1
+[2020-05-31 12:00:00][functional.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/d1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/d1/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 
 
 TERMINAL LIST

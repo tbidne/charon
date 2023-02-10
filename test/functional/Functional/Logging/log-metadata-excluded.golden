@@ -1,30 +1,44 @@
 [2020-05-31 12:00:00][logging-tests.delete][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete.deleting][Debug][src/SafeRm.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.delete][Info][src/SafeRm.hs] Written to index: <dir>/f2, <dir>/f3, <dir>/f1
-[2020-05-31 12:00:00][logging-tests.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/.trash/.index.csv
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/.trash/.index.csv
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.getIndex][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f1","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f2","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f3","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
 [2020-05-31 12:00:00][logging-tests.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/.trash/.index.csv
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f1","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f2","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f3","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)
 [2020-05-31 12:00:00][logging-tests.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/.trash/.index.csv
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f1","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f2","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/f3","size":5,"type":"f"}
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 3

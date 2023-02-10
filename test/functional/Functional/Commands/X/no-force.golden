@@ -1,24 +1,8 @@
 TERMINAL PERM DELETE
 
 Type:      File
-Name:      5
-Original:  <dir>/safe-rm/functional/x6/5
-Size:      5.00B
-Created:   2020-05-31 12:00:00 
-
-Permanently delete (y/n)? 
-
-Type:      File
-Name:      4
-Original:  <dir>/safe-rm/functional/x6/4
-Size:      5.00B
-Created:   2020-05-31 12:00:00 
-
-Permanently delete (y/n)? 
-
-Type:      File
-Name:      3
-Original:  <dir>/safe-rm/functional/x6/3
+Name:      1
+Original:  <dir>/safe-rm/functional/x6/1
 Size:      5.00B
 Created:   2020-05-31 12:00:00 
 
@@ -33,8 +17,24 @@ Created:   2020-05-31 12:00:00
 Permanently delete (y/n)? 
 
 Type:      File
-Name:      1
-Original:  <dir>/safe-rm/functional/x6/1
+Name:      3
+Original:  <dir>/safe-rm/functional/x6/3
+Size:      5.00B
+Created:   2020-05-31 12:00:00 
+
+Permanently delete (y/n)? 
+
+Type:      File
+Name:      4
+Original:  <dir>/safe-rm/functional/x6/4
+Size:      5.00B
+Created:   2020-05-31 12:00:00 
+
+Permanently delete (y/n)? 
+
+Type:      File
+Name:      5
+Original:  <dir>/safe-rm/functional/x6/5
 Size:      5.00B
 Created:   2020-05-31 12:00:00 
 
@@ -43,18 +43,13 @@ Permanently delete (y/n)?
 
 LOGS PERM DELETE
 [2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/x6/.trash
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/x6/.trash/.index.csv
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "5"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "4"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/4"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "3"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Tmp dir: <dir>/safe-rm/tmp
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "4"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/4"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Moved to tmp dir: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "4"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/4"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Deleting: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Debug][src/SafeRm.hs] Moved to tmp dir: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently][Info][src/SafeRm.hs] Deleted from index: 4, 2
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 1
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 2
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 3
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 4
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "4"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x6/4"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 5
 
 
 TERMINAL LIST 2

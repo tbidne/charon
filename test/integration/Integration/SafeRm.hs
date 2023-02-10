@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
@@ -12,13 +13,17 @@ where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Char qualified as Ch
-import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
+import Effects.LoggerNamespace (defaultLogFormatter)
+import Effects.LoggerNamespace qualified as Logger
+import GHC.Exts (IsList (Item, fromList))
+import Hedgehog (PropertyT)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Integration.AsciiOnly (AsciiOnly (..))
 import Integration.Prelude
 import PathSize qualified
 import SafeRm qualified
@@ -42,7 +47,8 @@ import SafeRm.Runner.SafeRmT (SafeRmT (..))
 
 data IntEnv = MkIntEnv
   { coreEnv :: Env IO,
-    termLogsRef :: IORef [Text]
+    termLogsRef :: IORef [Text],
+    logsRef :: IORef [Text]
   }
 
 makeFieldLabelsNoPrefix ''IntEnv
@@ -84,7 +90,11 @@ instance MonadPathSize IntIO where
               }
 
 instance MonadLogger IntIO where
-  monadLoggerLog _ _ _ _ = pure ()
+  monadLoggerLog loc _ lvl msg = do
+    formatted <- Logger.formatLog (defaultLogFormatter loc) lvl msg
+    let txt = Logger.logStrToText formatted
+    logsRef <- asks (view #logsRef)
+    modifyIORef' logsRef (txt :)
 
 instance MonadLoggerNamespace IntIO where
   getNamespace = pure "integration"
@@ -96,8 +106,27 @@ instance MonadTerminal IntIO where
     asks (view #termLogsRef)
       >>= \ref -> modifyIORef' ref ((:) . T.pack $ s)
 
-usingIntIO :: IntEnv -> IntIO a -> IO a
-usingIntIO env (MkIntIO rdr) = runReaderT rdr env
+-- | Default way to run integration tests. Ensures uncaught exceptions do not
+-- mess with annotations
+usingIntIO :: IntEnv -> IntIO a -> PropertyT IO a
+usingIntIO env rdr = do
+  -- NOTE: Evidently annotations do not work with uncaught exceptions.
+  -- Therefore we catch any exceptions here, print out any relevant data,
+  -- then use Hedgehog's failure to die.
+  usingIntIONoCatch env rdr `catchAny` \ex -> do
+    termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
+    logs <- liftIO $ readIORef (env ^. #logsRef)
+    annotate "TERMINAL LOGS"
+    for_ termLogs (annotate . T.unpack)
+    annotate "FILE LOGS"
+    for_ (L.reverse logs) (annotate . T.unpack)
+    annotate $ displayException ex
+    failure
+
+-- | Use this for when we are expecting an exception and want to specifically
+-- handle it in the test
+usingIntIONoCatch :: IntEnv -> IntIO a -> PropertyT IO a
+usingIntIONoCatch env (MkIntIO rdr) = liftIO $ runReaderT rdr env
 
 tests :: IO FilePath -> TestTree
 tests testDir =
@@ -114,14 +143,14 @@ tests testDir =
     ]
 
 delete :: IO FilePath -> TestTree
-delete mtestDir =
+delete mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "All paths are deleted" "delete" $ do
     property $ do
       testDir <- (</> "d1") <$> liftIO mtestDir
-      α <- forAll genFileNameSet
+      α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
-          αTrash = USeq.map (trashDir </>) α
+          αTrash = mkTrashPaths trashDir α
       env <- liftIO $ mkEnv trashDir
 
       annotateShow αTest
@@ -133,7 +162,7 @@ delete mtestDir =
       assertFilesExist αTest
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -142,23 +171,25 @@ delete mtestDir =
       assertFilesDoNotExist αTest
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
 
-      let indexOrigPaths = HMap.foldl' toOrigPath HSet.empty index
+      let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
       αTest ^. #set === indexOrigPaths
 
 deleteSome :: IO FilePath -> TestTree
-deleteSome mtestDir =
+deleteSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
       testDir <- (</> "d2") <$> liftIO mtestDir
-      (α, β) <- forAll gen2FileNameSets
+      (α, β) <- forAll (gen2FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
           αTest = toTestDir α
           trashDir = testDir </> ".trash"
+          αTrash = mkTrashPaths trashDir α
+          βTrash = mkTrashPaths trashDir β
       env <- liftIO $ mkEnv trashDir
 
       annotateShow αTest
@@ -174,9 +205,8 @@ deleteSome mtestDir =
       let toDelete = αTest `USeq.union` toTestDir β
 
       caughtEx <-
-        liftIO $
-          tryCS @_ @ExitCode $
-            usingIntIO env (SafeRm.delete (USeq.map MkPathI toDelete))
+        tryCS @_ @ExitCode $
+          usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
 
       ex <-
         either
@@ -192,28 +222,28 @@ deleteSome mtestDir =
 
       -- assert original files moved to trash
       annotate "Assert files exist"
-      assertFilesExist (USeq.map (trashDir </>) α)
+      assertFilesExist αTrash
       annotate "Assert files do not exist"
-      assertFilesDoNotExist (USeq.map (trashDir </>) β)
+      assertFilesDoNotExist βTrash
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
 
-      let indexOrigPaths = HMap.foldl' toOrigPath HSet.empty index
+      let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
       -- index should exactly match α
       αTest ^. #set === indexOrigPaths
 
 deletePermanently :: IO FilePath -> TestTree
-deletePermanently mtestDir =
+deletePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deletePermanently" $ do
     property $ do
       testDir <- (</> "x1") <$> liftIO mtestDir
-      α <- forAll genFileNameSet
+      α <- forAll (genFileNameSet b)
       let trashDir = testDir </> ".trash"
           αTest = USeq.map (testDir </>) α
-          αTrash = USeq.map (trashDir </>) α
+          αTrash = mkTrashPaths trashDir α
       env <- liftIO $ mkEnv trashDir
 
       annotateShow αTest
@@ -225,7 +255,7 @@ deletePermanently mtestDir =
       assertFilesExist αTest
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -235,29 +265,31 @@ deletePermanently mtestDir =
 
       -- permanently delete files
       let toPermDelete = USeq.map MkPathI α
-      liftIO $ usingIntIO env $ SafeRm.deletePermanently True toPermDelete
+      usingIntIO env $ SafeRm.deletePermanently True toPermDelete
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
 
-      HMap.empty === index
+      [] === index
       assertFilesDoNotExist (αTest `USeq.union` αTrash)
   where
     desc = "All trash entries are permanently deleted"
 
 deleteSomePermanently :: IO FilePath -> TestTree
-deleteSomePermanently mtestDir =
+deleteSomePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deleteSomePermanently" $ do
     property $ do
       testDir <- (</> "x2") <$> liftIO mtestDir
-      (α, β, γ) <- forAll gen3FileNameSets
+      (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
-          toTrashDir = USeq.map (trashDir </>)
 
           toDelete = toTestDir (α `USeq.union` γ)
           trashDir = testDir </> ".trash"
-          trashSet = toTrashDir (α `USeq.union` γ)
+          trashSet = mkTrashPaths trashDir (α `USeq.union` γ)
+          αTrash = mkTrashPaths trashDir α
+          βTrash = mkTrashPaths trashDir β
+          γTrash = mkTrashPaths trashDir γ
       env <- liftIO $ mkEnv trashDir
 
       annotateShow testDir
@@ -270,7 +302,7 @@ deleteSomePermanently mtestDir =
       assertFilesExist toDelete
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -284,9 +316,8 @@ deleteSomePermanently mtestDir =
       annotateShow toPermDelete
 
       caughtEx <-
-        liftIO $
-          tryCS @_ @ExitCode $
-            usingIntIO env (SafeRm.deletePermanently True toPermDelete)
+        tryCS @_ @ExitCode $
+          usingIntIONoCatch env (SafeRm.deletePermanently True toPermDelete)
 
       ex <-
         either
@@ -297,29 +328,29 @@ deleteSomePermanently mtestDir =
       annotateShow ex
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
-      let indexOrigPaths = HMap.foldl' toOrigPath HSet.empty index
+      let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
       -- γ should still exist in the trash index
       toTestDir γ ^. #set === indexOrigPaths
 
       annotate "Assert files do not exist"
-      assertFilesDoNotExist (USeq.map (trashDir </>) (α `USeq.union` β))
+      assertFilesDoNotExist (αTrash `USeq.union` βTrash)
       annotate "Assert files exist"
-      assertFilesExist (USeq.map (trashDir </>) γ)
+      assertFilesExist γTrash
   where
     desc = "Some trash entries are permanently deleted, others error"
 
 restore :: IO FilePath -> TestTree
-restore mtestDir =
+restore mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
       testDir <- (</> "r1") <$> liftIO mtestDir
-      α <- forAll genFileNameSet
+      α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
-          αTrash = USeq.map (trashDir </>) α
+          αTrash = mkTrashPaths trashDir α
       env <- liftIO $ mkEnv trashDir
 
       annotateShow αTest
@@ -331,7 +362,7 @@ restore mtestDir =
       assertFilesExist αTest
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -341,30 +372,30 @@ restore mtestDir =
 
       -- restore files
       let toRestore = USeq.map MkPathI α
-      liftIO $ usingIntIO env $ SafeRm.restore toRestore
+      usingIntIO env $ SafeRm.restore toRestore
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
 
-      HMap.empty === index
+      [] === index
       annotate "Assert files exist"
       assertFilesExist αTest
       annotate "Assert files do not exist"
       assertFilesDoNotExist αTrash
 
 restoreSome :: IO FilePath -> TestTree
-restoreSome mtestDir =
+restoreSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
       testDir <- (</> "r2") <$> liftIO mtestDir
-      (α, β, γ) <- forAll gen3FileNameSets
+      (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
-          toTrashDir = USeq.map (trashDir </>)
 
           toDelete = toTestDir (α `USeq.union` γ)
           trashDir = testDir </> ".trash"
-          trashSet = toTrashDir α
+          αTrash = mkTrashPaths trashDir α
+          γTrash = mkTrashPaths trashDir γ
       env <- liftIO $ mkEnv trashDir
 
       annotateShow testDir
@@ -377,11 +408,11 @@ restoreSome mtestDir =
       assertFilesExist toDelete
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
-      assertFilesExist trashSet
+      assertFilesExist αTrash
       annotate "Assert files do not exist"
       assertFilesDoNotExist toDelete
 
@@ -391,9 +422,8 @@ restoreSome mtestDir =
       annotateShow toRestore
 
       caughtEx <-
-        liftIO $
-          tryCS @_ @ExitCode $
-            usingIntIO env (SafeRm.restore toRestore)
+        tryCS @_ @ExitCode $
+          usingIntIONoCatch env (SafeRm.restore toRestore)
 
       ex <-
         either
@@ -404,29 +434,29 @@ restoreSome mtestDir =
       annotateShow ex
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
-      let indexOrigPaths = HMap.foldl' toOrigPath HSet.empty index
+      let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
       -- γ should still exist in the trash index
       toTestDir γ ^. #set === indexOrigPaths
 
       annotate "Assert files exist"
-      assertFilesExist (toTestDir α `USeq.union` toTrashDir γ)
+      assertFilesExist (toTestDir α `USeq.union` γTrash)
       annotate "Assert files do not exist"
-      assertFilesDoNotExist (toTrashDir α)
+      assertFilesDoNotExist αTrash
   where
     desc = "Some trash entries are restored, others error"
 
 emptyTrash :: IO FilePath -> TestTree
-emptyTrash mtestDir =
+emptyTrash mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
       testDir <- (</> "e1") <$> liftIO mtestDir
-      α <- forAll genFileNameSet
+      α <- forAll (genFileNameSet b)
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
-          aTrash = USeq.map (trashDir </>) α
+          aTrash = mkTrashPaths trashDir α
       env <- liftIO $ mkEnv trashDir
 
       annotateShow testDir
@@ -439,7 +469,7 @@ emptyTrash mtestDir =
       assertFilesExist aTest
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI aTest)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI aTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -448,25 +478,25 @@ emptyTrash mtestDir =
       assertFilesDoNotExist aTest
 
       -- empty trash
-      liftIO $ usingIntIO env $ SafeRm.emptyTrash True
+      usingIntIO env $ SafeRm.emptyTrash True
 
       -- get index
-      index <- liftIO $ view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
       annotateShow index
 
-      HMap.empty === index
+      [] === index
       annotate "Assert files do not exist"
       assertFilesDoNotExist (aTest `USeq.union` aTrash)
 
 metadata :: IO FilePath -> TestTree
-metadata mtestDir =
+metadata mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
       testDir <- (</> "m1") <$> liftIO mtestDir
-      α <- forAll genFileNameSet
+      α <- forAll (genFileNameSet b)
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
-          aTrash = USeq.map (trashDir </>) α
+          aTrash = mkTrashPaths trashDir α
       env <- liftIO $ mkEnv trashDir
 
       annotateShow testDir
@@ -479,7 +509,7 @@ metadata mtestDir =
       assertFilesExist aTest
 
       -- delete files
-      liftIO $ usingIntIO env $ SafeRm.delete (USeq.map MkPathI aTest)
+      usingIntIO env $ SafeRm.delete (USeq.map MkPathI aTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -487,8 +517,8 @@ metadata mtestDir =
       annotate "Assert files do not exist"
       assertFilesDoNotExist aTest
 
-      -- empty trash
-      metadata' <- liftIO $ usingIntIO env SafeRm.getMetadata
+      -- get metadata
+      metadata' <- usingIntIO env SafeRm.getMetadata
 
       length α === natToInt (metadata' ^. #numEntries)
       length α === natToInt (metadata' ^. #numFiles)
@@ -500,43 +530,46 @@ natToInt i
   where
     intMax = fromIntegral (maxBound :: Int)
 
-genFileNameSet :: Gen (UniqueSeq FilePath)
-genFileNameSet = fromFoldable <$> Gen.list range genFileName
+genFileNameSet :: Bool -> Gen (UniqueSeq FilePath)
+genFileNameSet asciiOnly = fromFoldable <$> Gen.list range (genFileName asciiOnly)
   where
     range = Range.linear 0 100
 
-gen2FileNameSets :: Gen (UniqueSeq FilePath, UniqueSeq FilePath)
-gen2FileNameSets = do
-  α <- fromFoldable <$> Gen.list range genFileName
-  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes α)
+gen2FileNameSets :: Bool -> Gen (UniqueSeq FilePath, UniqueSeq FilePath)
+gen2FileNameSets asciiOnly = do
+  α <- fromFoldable <$> Gen.list range (genFileName asciiOnly)
+  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly α)
   pure (α, β)
   where
     range = Range.linear 1 100
 
-gen3FileNameSets :: Gen (UniqueSeq FilePath, UniqueSeq FilePath, UniqueSeq FilePath)
-gen3FileNameSets = do
-  α <- fromFoldable <$> Gen.list range genFileName
-  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes α)
-  γ <- fromFoldable <$> Gen.list range (genFileNameNoDupes (α `USeq.union` β))
+gen3FileNameSets :: Bool -> Gen (UniqueSeq FilePath, UniqueSeq FilePath, UniqueSeq FilePath)
+gen3FileNameSets asciiOnly = do
+  α <- fromFoldable <$> Gen.list range (genFileName asciiOnly)
+  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly α)
+  γ <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly (α `USeq.union` β))
   pure (α, β, γ)
   where
     range = Range.linear 1 100
 
-genFileName :: Gen FilePath
-genFileName = genFileNameNoDupes USeq.empty
+genFileName :: Bool -> Gen FilePath
+genFileName asciiOnly = genFileNameNoDupes asciiOnly USeq.empty
 
-genFileNameNoDupes :: UniqueSeq FilePath -> Gen FilePath
-genFileNameNoDupes paths =
+genFileNameNoDupes :: Bool -> UniqueSeq FilePath -> Gen FilePath
+genFileNameNoDupes asciiOnly paths =
   Gen.filter
     (not . (`USeq.member` paths))
-    (Gen.string range genChar)
+    (Gen.string range (genChar asciiOnly))
   where
     range = Range.linear 1 20
 
-genChar :: Gen Char
-genChar = Gen.filterT (not . badChars) Gen.unicode
+genChar :: Bool -> Gen Char
+genChar asciiOnly = Gen.filterT (not . badChars) gen
   where
-    badChars c = Ch.isControl c || L.elem c ['/', '.']
+    gen
+      | asciiOnly = Gen.ascii
+      | otherwise = Gen.unicode
+    badChars c = Ch.isControl c || L.elem @[] c ['/', '.']
 
 toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
@@ -544,6 +577,7 @@ toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 mkEnv :: FilePath -> IO IntEnv
 mkEnv fp = do
   termLogsRef <- newIORef []
+  logsRef <- newIORef []
   pure $
     MkIntEnv
       { coreEnv =
@@ -551,5 +585,20 @@ mkEnv fp = do
             { trashHome = MkPathI fp,
               logEnv = MkLogEnv Nothing ""
             },
-        termLogsRef
+        termLogsRef,
+        logsRef
       }
+
+mkTrashPaths ::
+  ( Foldable f,
+    IsList (f FilePath),
+    Item (f FilePath) ~ FilePath
+  ) =>
+  FilePath ->
+  f FilePath ->
+  f FilePath
+mkTrashPaths trashHome =
+  fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
+  where
+    mkTrashPath p = trashHome </> "paths" </> p
+    mkTrashInfoPath p = trashHome </> "info" </> p <> ".info"

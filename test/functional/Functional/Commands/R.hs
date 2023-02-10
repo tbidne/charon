@@ -42,7 +42,7 @@ restoreOne args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertFilesDoNotExist [f1]
   assertDirectoriesExist [trashDir]
 
@@ -55,8 +55,8 @@ restoreOne args = goldenVsStringDiff desc diff gpath $ do
   restoreResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [f1, trashDir </> ".index.csv"]
-  assertFilesDoNotExist [trashDir </> "f1"]
+  assertFilesExist [f1]
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1"]
   assertDirectoriesExist [trashDir]
   pure $ capturedToBs [delResult, logs, restoreResult]
   where
@@ -88,11 +88,8 @@ restoreMany args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
-  assertDirectoriesExist ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
+  assertDirectoriesExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
 
@@ -107,11 +104,10 @@ restoreMany args = goldenVsStringDiff desc diff gpath $ do
   restoreResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [trashDir </> "f2", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f2"]
   assertDirectoriesExist [trashDir]
-  assertFilesDoNotExist ((trashDir </>) <$> ["f1", "f3"])
-  assertDirectoriesDoNotExist
-    ((trashDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f3"]
+  assertDirectoriesDoNotExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
   pure $ capturedToBs [delResult, logs, restoreResult]
   where
     desc = "Restores several paths"
@@ -141,7 +137,7 @@ restoreUnknownError args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertFilesDoNotExist [f1]
   assertDirectoriesExist [trashDir]
 
@@ -153,7 +149,7 @@ restoreUnknownError args = goldenVsStringDiff desc diff gpath $ do
       "RESTORE"
       restoreArgList
 
-  assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   pure $ capturedToBs [delResult, ex, logs]
   where
     desc = "Restore unknown prints error"
@@ -180,7 +176,7 @@ restoreCollisionError args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [trashDir </> "f1", f1, trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertDirectoriesExist [trashDir]
 
   -- RESTORE
@@ -191,7 +187,7 @@ restoreCollisionError args = goldenVsStringDiff desc diff gpath $ do
       "RESTORE"
       restoreArgList
 
-  assertFilesExist [trashDir </> "f1", f1, trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   pure $ capturedToBs [delResult, ex, logs]
   where
     desc = "Restore collision prints error"
@@ -218,7 +214,7 @@ restoresSome args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist ((trashDir </>) <$> ["f1", "f2", "f5"])
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist realFiles
   assertDirectoriesExist [trashDir]
 
@@ -235,7 +231,7 @@ restoresSome args = goldenVsStringDiff desc diff gpath $ do
   resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesDoNotExist ((trashDir </>) <$> ["f1", "f2", "f5"])
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist ((testDir </>) <$> ["f3", "f4"])
   assertFilesExist ((testDir </>) <$> ["f1", "f2", "f5"])
   pure $ capturedToBs [delResult, ex, logs, resultList]
@@ -264,7 +260,7 @@ restoresSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist ((trashDir </>) <$> ["f1", "f2", "f5"])
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist realFiles
   assertDirectoriesExist [trashDir]
 
@@ -281,7 +277,7 @@ restoresSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesDoNotExist ((trashDir </>) <$> ["f1", "f2", "f5"])
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist ((testDir </>) <$> ["f3", "f4"])
   assertFilesExist ((testDir </>) <$> ["f1", "f2", "f5"])
   pure $ capturedToBs [delResult, ex, logs, resultList]

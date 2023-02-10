@@ -12,7 +12,6 @@ module SafeRm.Data.Paths
     -- * Functions
 
     -- ** Specific
-    indexToHome,
     isRoot,
     isRoot',
 
@@ -21,6 +20,8 @@ module SafeRm.Data.Paths
     showPaths,
     reindex,
     (<//>),
+    (<//),
+    (//>),
     applyPathI,
     liftPathI,
     liftPathI',
@@ -29,11 +30,9 @@ module SafeRm.Data.Paths
   )
 where
 
-import Data.Csv (FromField, ToField)
 import Data.List qualified as L
 import Data.Text qualified as T
 import SafeRm.Prelude
-import System.FilePath qualified as FP
 
 -- | Types of filepaths used in SafeRm.
 --
@@ -43,10 +42,6 @@ data PathIndex
     --
     -- @since 0.1
     TrashHome
-  | -- | The trash index file.
-    --
-    -- @since 0.1
-    TrashIndex
   | -- | The name corresponding to some file/directory in the trash directory.
     --
     -- @since 0.1
@@ -55,14 +50,26 @@ data PathIndex
     --
     -- @since 0.1
     OriginalPath
-  | -- | The full trash path i.e. @'TrashHome' '</>' 'TrashName'@
+  | -- | The full trash path i.e. @\<trash-home\>\/paths\/'\<trash-name\>@.
     --
     -- @since 0.1
     TrashPath
+  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.info@.
+    --
+    -- @since 0.1
+    TrashInfoPath
   | -- | The trash log file.
     --
     -- @since 0.1
     TrashLog
+  | -- | The directory to the trash files themselves i.e. <trash>/paths.
+    --
+    -- @since 0.1
+    TrashPathDir
+  | -- | The directory to the trash info files i.e. <trash>/info.
+    --
+    -- @since 0.1
+    TrashInfoDir
 
 -- | Indexed 'FilePath' so that we can prevent mixing up different filepaths.
 --
@@ -89,15 +96,15 @@ newtype PathI (i :: PathIndex) = MkPathI
     )
   deriving
     ( -- | @since 0.1
-      FromField,
+      FromJSON,
       -- | @since 0.1
       IsString,
       -- | @since 0.1
+      ToJSON,
+      -- | @since 0.1
       Monoid,
       -- | @since 0.1
-      Semigroup,
-      -- | @since 0.1
-      ToField
+      Semigroup
     )
     via FilePath
 
@@ -150,12 +157,6 @@ liftPathIF' = liftPathIF
 applyPathI :: HasCallStack => (HasCallStack => FilePath -> a) -> PathI i -> a
 applyPathI f = f . view #unPathI
 
--- | Returns the trash index's home directory.
---
--- @since 0.1
-indexToHome :: PathI TrashIndex -> PathI TrashHome
-indexToHome (MkPathI fp) = MkPathI $ FP.takeDirectory fp
-
 -- | '(</>)' lifted to 'PathI'. Notice the index can change, so take care.
 --
 -- @since 0.1
@@ -163,6 +164,18 @@ indexToHome (MkPathI fp) = MkPathI $ FP.takeDirectory fp
 MkPathI x <//> MkPathI y = MkPathI (x </> y)
 
 infixr 5 <//>
+
+-- | @since 0.1
+(<//) :: PathI i1 -> Path -> PathI i2
+MkPathI x <// y = MkPathI (x </> y)
+
+infixl 5 <//
+
+-- | @since 0.1
+(//>) :: Path -> PathI i1 -> PathI i2
+(//>) = flip (<//)
+
+infixl 5 //>
 
 -- | Returns true if the path is the root.
 --

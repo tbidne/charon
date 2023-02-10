@@ -45,7 +45,7 @@ deletesOne args = goldenVsStringDiff "Deletes a single file" diff gpath $ do
   result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist [trashDir </> "f1", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertFilesDoNotExist [f1]
   assertDirectoriesExist [trashDir]
   pure $ capturedToBs [logs, result]
@@ -76,13 +76,10 @@ deletesMany args = goldenVsStringDiff "Deletes many paths" diff gpath $ do
   result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertDirectoriesExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
   pure $ capturedToBs [logs, result]
   where
     gpath = goldenPath </> "many.golden"
@@ -132,8 +129,7 @@ deleteDuplicateFile args = goldenVsStringDiff desc diff gpath $ do
   result <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    [trashDir </> "f1 (1)", trashDir </> "f1", trashDir </> ".index.csv"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1 (1)", "f1"]
   assertFilesDoNotExist [file]
   assertDirectoriesExist [trashDir]
   pure $ capturedToBs [logs1, logs2, result]
@@ -165,11 +161,8 @@ deletesSome args = goldenVsStringDiff desc diff gpath $ do
   resultList <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f5"]
-    )
-  assertFilesDoNotExist ((trashDir </>) <$> ["f3", "f4"])
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
+  assertFilesDoNotExist $ mkTrashPaths trashDir ["f3", "f4"]
   pure $ capturedToBs [ex, logs, resultList]
   where
     desc = "Deletes some files with errors"
@@ -198,7 +191,7 @@ deletesNoTrace args = goldenVsStringDiff desc diff gpath $ do
       argList
 
   -- file assertions
-  assertFilesExist ((trashDir </>) <$> toDeleteNames)
+  assertFilesExist $ mkTrashPaths trashDir toDeleteNames
   assertFilesDoNotExist toDelete
   pure $ capturedToBs [ex]
   where

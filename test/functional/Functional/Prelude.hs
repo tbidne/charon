@@ -30,11 +30,17 @@ module Functional.Prelude
     assertFilesDoNotExist,
     assertDirectoriesExist,
     assertDirectoriesDoNotExist,
+
+    -- * Misc
+    mkAllTrashPaths,
+    mkTrashPaths,
+    mkTrashInfoPaths,
   )
 where
 
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as Builder
+import Data.List ((++))
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
@@ -50,6 +56,7 @@ import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
+import GHC.Exts (IsList (Item, fromList, toList))
 import PathSize qualified
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
@@ -197,6 +204,13 @@ captureSafeRmLogs title argList = do
   env <- mkFuncEnv toml logsRef terminalRef
 
   runFuncIO (Runner.runCmd cmd) env
+    `catchAny` \ex -> do
+      putStrLn "TERMINAL"
+      readIORef terminalRef >>= putStrLn . T.unpack
+      putStrLn "\n\nLOGS"
+      readIORef logsRef >>= putStrLn . T.unpack
+      putStrLn ""
+      throwCS ex
 
   tmpDir <- getTemporaryDirectory
 
@@ -228,17 +242,28 @@ captureSafeRmExceptionLogs title argList = do
   (toml, cmd) <- getConfig
   env <- mkFuncEnv toml logsRef terminalRef
 
-  result <- tryCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
+  let runCatch = do
+        result <- tryCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
 
-  case result of
-    Right _ ->
-      error
-        "captureSafeRmExceptionLogs: Expected exception, received none"
-    Left ex -> do
-      logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
-      let exceptionBs = exToBuilder (Just tmpDir) ex
-          logsBs = txtToBuilder logs
-      pure (Exception title exceptionBs, Logs title logsBs)
+        case result of
+          Right _ ->
+            error
+              "captureSafeRmExceptionLogs: Expected exception, received none"
+          Left ex -> do
+            logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
+            let exceptionBs = exToBuilder (Just tmpDir) ex
+                logsBs = txtToBuilder logs
+            pure (Exception title exceptionBs, Logs title logsBs)
+
+  runCatch
+    `catchAny` \ex -> do
+      -- Handle any uncaught exceptions
+      putStrLn "TERMINAL"
+      readIORef terminalRef >>= putStrLn . T.unpack
+      putStrLn "\n\nLOGS"
+      readIORef logsRef >>= putStrLn . T.unpack
+      putStrLn ""
+      throwCS ex
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
@@ -287,3 +312,37 @@ mkFuncEnv toml logsRef terminalRef = do
     getTrashHome = case toml ^. #trashHome of
       Nothing -> die "Setup error, no trash home on config"
       Just th -> pure th
+
+mkAllTrashPaths ::
+  ( Functor f,
+    IsList (f FilePath),
+    Item (f FilePath) ~ FilePath
+  ) =>
+  FilePath ->
+  f FilePath ->
+  f FilePath
+mkAllTrashPaths trashHome paths =
+  fromList (toList trashPaths ++ toList trashInfoPaths)
+  where
+    trashPaths = mkTrashPaths trashHome paths
+    trashInfoPaths = mkTrashInfoPaths trashHome paths
+
+mkTrashInfoPaths ::
+  ( Functor f
+  ) =>
+  FilePath ->
+  f FilePath ->
+  f FilePath
+mkTrashInfoPaths trashHome = fmap mkTrashInfoPath
+  where
+    mkTrashInfoPath p = trashHome </> "info" </> p <> ".info"
+
+mkTrashPaths ::
+  ( Functor f
+  ) =>
+  FilePath ->
+  f FilePath ->
+  f FilePath
+mkTrashPaths trashHome = fmap mkTrashPath
+  where
+    mkTrashPath p = trashHome </> "paths" </> p

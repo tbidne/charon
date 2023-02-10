@@ -2,20 +2,34 @@
 --
 -- @since 0.1
 module SafeRm.Exception
-  ( PathNotFoundE (..),
-    RenameDuplicateE (..),
-    ReadIndexE (..),
-    DuplicateIndexPathE (..),
+  ( -- * General
+    PathNotFoundE (..),
+
+    -- * Trash Dir
+
+    -- ** General
+    TrashEntryNotFoundE (..),
+
+    -- ** Partial success
     TrashPathNotFoundE (..),
+    TrashInfoNotFoundE (..),
+
+    -- ** Directories
+    TrashPathDirNotFoundE (..),
+    TrashInfoDirNotFoundE (..),
+
+    -- * Misc
+    RenameDuplicateE (..),
     RestoreCollisionE (..),
-    IndexSizeMismatchE (..),
     RootE (..),
+    AesonDecodeE (..),
   )
 where
 
+import Data.ByteString.Char8 qualified as Char8
 import SafeRm.Data.Paths
   ( PathI,
-    PathIndex (OriginalPath, TrashHome, TrashIndex, TrashName),
+    PathIndex (..),
   )
 import SafeRm.Prelude
 
@@ -39,7 +53,7 @@ instance Exception PathNotFoundE where
 -- | Could not rename file due to duplicate names.
 --
 -- @since 0.1
-newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashName)
+newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashPath)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -53,49 +67,33 @@ instance Exception RenameDuplicateE where
         n ^. #unPathI
       ]
 
--- | Error reading the index.
+-- | Trash path not found error. Distinct from 'TrashPathNotFoundE' in that
+-- the latter indicates that the entry exists in trash/paths but not
+-- trash/info, whereas this exception is less specific i.e. we found nothing in
+-- trash/info but did not look in trash/paths.
 --
 -- @since 0.1
-data ReadIndexE = MkReadIndexE !(PathI TrashIndex) !String
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
-
--- | @since 0.1
-instance Exception ReadIndexE where
-  displayException (MkReadIndexE f err) =
-    mconcat
-      [ "Error reading index at '",
-        f ^. #unPathI,
-        "': ",
-        err
-      ]
-
--- | Duplicate paths found in index file.
---
--- @since 0.1
-data DuplicateIndexPathE
-  = MkDuplicateIndexPathE
-      !(PathI TrashIndex)
+data TrashEntryNotFoundE
+  = MkTrashEntryNotFoundE
       !(PathI TrashName)
+      !(PathI TrashInfoPath)
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception DuplicateIndexPathE where
-  displayException (MkDuplicateIndexPathE f n) =
+instance Exception TrashEntryNotFoundE where
+  displayException (MkTrashEntryNotFoundE name path) =
     mconcat
-      [ "Trash paths should be unique, but found multiple entries in the ",
-        "trash index '",
-        f ^. #unPathI,
-        "' for the following path: ",
-        n ^. #unPathI
+      [ "No entry for '",
+        name ^. #unPathI,
+        "'; did not find '",
+        path ^. #unPathI,
+        "'"
       ]
 
--- | Path not found in trash error.
+-- | Path found in trash/info but not trash/paths error.
 --
 -- @since 0.1
 data TrashPathNotFoundE
@@ -109,15 +107,84 @@ data TrashPathNotFoundE
 
 -- | @since 0.1
 instance Exception TrashPathNotFoundE where
-  displayException (MkTrashPathNotFoundE f n) =
+  displayException (MkTrashPathNotFoundE thome name) =
     mconcat
       [ "The path '",
-        n ^. #unPathI,
-        "' was not found in the trash directory '",
-        f ^. #unPathI,
-        "' despite being listed in the trash index. This can be fixed by ",
-        "manually deleting the entry from the index or deleting everything ",
+        name ^. #unPathI,
+        "' was not found in '",
+        thome ^. #unPathI,
+        "/paths",
+        "' despite being listed in '",
+        thome ^. #unPathI,
+        "/info'. This can be fixed by ",
+        "manually deleting the .info file or deleting everything ",
         "(i.e. sr e)."
+      ]
+
+-- | Path found in trash/paths but not trash/info error
+--
+-- @since 0.1
+data TrashInfoNotFoundE
+  = MkTrashInfoNotFoundE
+      !(PathI TrashHome)
+      !(PathI TrashName)
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception TrashInfoNotFoundE where
+  displayException (MkTrashInfoNotFoundE thome name) =
+    mconcat
+      [ "The path '",
+        name ^. #unPathI,
+        ".info' was not found in '",
+        thome ^. #unPathI,
+        "/info",
+        "' despite being listed in '",
+        thome ^. #unPathI,
+        "/paths'. This can be fixed by ",
+        "manually deleting the /paths entry or deleting everything ",
+        "(i.e. sr e)."
+      ]
+
+-- | Trash path dir not found error.
+--
+-- @since 0.1
+newtype TrashPathDirNotFoundE = MkTrashPathDirNotFoundE (PathI TrashHome)
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception TrashPathDirNotFoundE where
+  displayException (MkTrashPathDirNotFoundE th) =
+    mconcat
+      [ "The trash paths directory was not found at '",
+        th ^. #unPathI,
+        "/paths' despite the trash home existing. This can be fixed by ",
+        "manually creating the directory or resetting everything (i.e. sr e)."
+      ]
+
+-- | Trash info dir not found error.
+--
+-- @since 0.1
+newtype TrashInfoDirNotFoundE = MkTrashInfoDirNotFoundE (PathI TrashHome)
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception TrashInfoDirNotFoundE where
+  displayException (MkTrashInfoDirNotFoundE th) =
+    mconcat
+      [ "The trash info directory was not found at '",
+        th ^. #unPathI,
+        "/info' despite the trash home existing. This can be fixed by ",
+        "manually creating the directory or resetting everything (i.e. sr e)."
       ]
 
 -- | Collision with existing file when attempting a restore.
@@ -142,31 +209,6 @@ instance Exception RestoreCollisionE where
         o ^. #unPathI
       ]
 
--- | Index size did not match the trash directory.
---
--- @since 0.1
-data IndexSizeMismatchE
-  = MkIndexSizeMismatchE
-      !(PathI TrashHome)
-      !Int
-      !Int
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
-
--- | @since 0.1
-instance Exception IndexSizeMismatchE where
-  displayException (MkIndexSizeMismatchE f numEntries numIndex) =
-    mconcat
-      [ "Size mismatch between index size (",
-        show numIndex,
-        ") and number of entries (",
-        show numEntries,
-        ") in trash: ",
-        f ^. #unPathI
-      ]
-
 -- | Exception for deleting the root.
 --
 -- @since 0.1
@@ -179,3 +221,23 @@ data RootE = MkRootE
 -- | @since 0.1
 instance Exception RootE where
   displayException _ = "Attempted to delete root! This is not allowed."
+
+-- | Exception for aeson. decoding.
+--
+-- @since 0.1
+data AesonDecodeE = MkAesonDecodeE ByteString String
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception AesonDecodeE where
+  displayException (MkAesonDecodeE bs str) =
+    mconcat
+      -- TODO: improve
+      [ "Could not decode aeson contents \n",
+        Char8.unpack bs,
+        "\n: ",
+        str
+      ]

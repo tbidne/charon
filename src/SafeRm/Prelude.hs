@@ -45,6 +45,7 @@ import Control.Monad.Reader as X
     local,
     runReaderT,
   )
+import Data.Aeson as X (FromJSON (..), ToJSON (..))
 import Data.Bifunctor as X (Bifunctor (bimap))
 import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
@@ -76,12 +77,13 @@ import Data.Ord as X
   )
 import Data.Proxy as X (Proxy (Proxy))
 import Data.Semigroup as X (Semigroup ((<>)))
-import Data.Sequence as X (Seq, (<|), (|>))
+import Data.Sequence as X (Seq ((:<|), (:|>)))
 import Data.String as X (IsString (fromString), String)
 import Data.Text as X (Text)
 import Data.Text qualified as T
 import Data.Traversable as X (traverse)
 import Data.Tuple as X (curry, uncurry)
+import Effects.FileSystem.Path as X (Path)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
 #endif

@@ -89,10 +89,8 @@ logging args = goldenVsStringDiff desc diff gpath $ do
   runLogging delArgList
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", ".log"]
-    )
+  assertFilesExist [trashDir </> ".log"]
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
 
   -- Test logging. In particular, test that startup does not fail when the

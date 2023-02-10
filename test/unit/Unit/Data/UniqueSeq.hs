@@ -5,7 +5,7 @@ module Unit.Data.UniqueSeq
 where
 
 import Data.HashSet qualified as HSet
-import Data.Sequence (Seq (Empty, (:<|)))
+import Data.Sequence (Seq (Empty))
 import GHC.Exts (IsList (fromList, toList))
 import Hedgehog (PropertyT)
 import Hedgehog.Gen qualified as Gen

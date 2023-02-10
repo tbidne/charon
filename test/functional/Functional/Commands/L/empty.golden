@@ -9,7 +9,7 @@ Size:         0.00B
 
 
 LOGS LIST
-[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/safe-rm/functional/l1/.trash/.index.csv
-[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index does not exist.
+[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/l1/.trash
+[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist.
 [2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/l1/.trash
-[2020-05-31 12:00:00][functional.getMetadata][Info][src/SafeRm.hs] Index does not exist.
+[2020-05-31 12:00:00][functional.getMetadata][Info][src/SafeRm.hs] Trash does not exist.

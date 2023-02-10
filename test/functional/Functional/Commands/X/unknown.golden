@@ -17,9 +17,6 @@ ExitFailure 1
 
 LOGS PERM DELETE
 [2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/x3/.trash
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/x3/.trash/.index.csv
-[2020-05-31 12:00:00][functional.deletePermanently.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f1"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x3/f1"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
-[2020-05-31 12:00:00][functional.deletePermanently][Warn][src/SafeRm.hs] bad file
-[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Tmp dir: <dir>/safe-rm/tmp
-[2020-05-31 12:00:00][functional.deletePermanently][Info][src/SafeRm.hs] Deleted from index: 
+[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: bad file
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'bad file'; did not find '<dir>/safe-rm/functional/x3/.trash/info/bad file.info'
 [2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1

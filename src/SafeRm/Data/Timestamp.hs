@@ -11,10 +11,8 @@ module SafeRm.Data.Timestamp
   )
 where
 
-import Data.ByteString.Char8 qualified as Char8
-import Data.Csv (FromField (parseField), ToField (toField))
 import Data.Text qualified as T
-import Data.Time.LocalTime.Compat (LocalTime)
+import Data.Time.LocalTime (LocalTime)
 import Effects.Time (formatLocalTime, parseLocalTime)
 import SafeRm.Prelude
 
@@ -61,12 +59,13 @@ instance Pretty Timestamp where
   pretty = fromString . formatLocalTime . view #unTimestamp
 
 -- | @since 0.1
-instance FromField Timestamp where
-  parseField = fmap MkTimestamp . parseLocalTime . bs2Str
+instance FromJSON Timestamp where
+  parseJSON = fmap MkTimestamp . parseLocalTime <=< parseJSON
 
 -- | @since 0.1
-instance ToField Timestamp where
-  toField = str2Bs . formatLocalTime . view #unTimestamp
+instance ToJSON Timestamp where
+  toJSON = toJSON . formatLocalTime . view #unTimestamp
+  toEncoding = toEncoding . formatLocalTime . view #unTimestamp
 
 -- | Formats the time.
 --
@@ -77,9 +76,3 @@ toText = T.pack . formatLocalTime . view #unTimestamp
 -- | @since 0.1
 fromText :: MonadFail f => Text -> f Timestamp
 fromText = fmap MkTimestamp . parseLocalTime . T.unpack
-
-bs2Str :: ByteString -> String
-bs2Str = Char8.unpack . Char8.strip
-
-str2Bs :: String -> ByteString
-str2Bs = Char8.strip . Char8.pack

@@ -41,13 +41,10 @@ metadata args = goldenVsStringDiff "Prints metadata" diff gpath $ do
   delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- METADATA
 
@@ -55,13 +52,11 @@ metadata args = goldenVsStringDiff "Prints metadata" diff gpath $ do
   (metadataResult, logs) <- captureSafeRmLogs "METADATA" metaArgList
 
   -- assert nothing changed
-  assertFilesExist
-    ( (trashDir </>)
-        <$> [".index.csv", "f1", "f2", "f3", "dir2/dir3/foo"]
-    )
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
+  assertDirectoriesExist $ mkTrashPaths trashDir ["dir2/dir3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist ((trashDir </>) <$> ["", "dir1", "dir2", "dir2/dir3"])
+  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   pure $ capturedToBs [delResult, metadataResult, logs]
   where
@@ -73,8 +68,7 @@ empty args = goldenVsStringDiff "Prints empty metadata" diff gpath $ do
   let testDir = tmpDir </> "m2"
       trashDir = testDir </> ".trash"
 
-  createDirectories [testDir, trashDir]
-  createFileContents [(trashDir </> ".index.csv", "Type,Name,Original,Created\n")]
+  createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "paths"]
   createFiles [trashDir </> ".log"]
 
   let metaArgList = ["m", "-t", trashDir]

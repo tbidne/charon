@@ -1,9 +1,0 @@
-EXCEPTION LIST
-Trash paths should be unique, but found multiple entries in the trash index '<dir>/safe-rm/functional/l4/.trash/.index.csv' for the following path: foo
-
-LOGS LIST
-[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Index path: <dir>/safe-rm/functional/l4/.trash/.index.csv
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Index path: <dir>/safe-rm/functional/l4/.trash/.index.csv
-[2020-05-31 12:00:00][functional.getIndex.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "foo"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/l4/.trash/foo"}, size = MkBytes 0, created = MkTimestamp {unTimestamp = 2022-09-28 02:58:33}}
-[2020-05-31 12:00:00][functional.getIndex.readIndex.readIndexWithFold][Debug][src/SafeRm/Data/Index.hs] Found: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "foo"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/l4/.trash/foo"}, size = MkBytes 0, created = MkTimestamp {unTimestamp = 2022-09-28 02:58:33}}
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] Trash paths should be unique, but found multiple entries in the trash index '<dir>/safe-rm/functional/l4/.trash/.index.csv' for the following path: foo

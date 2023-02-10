@@ -6,11 +6,7 @@ module SafeRm.Data.PathType
   )
 where
 
-import Data.Csv
-  ( FromField,
-    ToField,
-  )
-import Data.Csv qualified as Csv
+import Data.Aeson qualified as Asn
 import Data.Text qualified as T
 import SafeRm.Prelude
 
@@ -47,19 +43,13 @@ instance Pretty PathType where
   pretty PathTypeDirectory = "Directory"
 
 -- | @since 0.1
-instance FromField PathType where
-  parseField s
-    | s == "file" = pure PathTypeFile
-    | s == "directory" = pure PathTypeDirectory
-    | otherwise = fail $ "Expected 'file' or 'directory'. Received: " <> bsToStr s
+instance FromJSON PathType where
+  parseJSON = Asn.withText "PathType" $ \case
+    "f" -> pure PathTypeFile
+    "d" -> pure PathTypeDirectory
+    bad -> fail $ "Expected path type 'f' or 'd', found: " <> T.unpack bad
 
 -- | @since 0.1
-instance ToField PathType where
-  toField PathTypeFile = "file"
-  toField PathTypeDirectory = "directory"
-
--- | Converts UTF8 'ByteString' to 'String'. Decoding is lenient.
---
--- @since 0.1
-bsToStr :: ByteString -> String
-bsToStr = T.unpack . decodeUtf8Lenient
+instance ToJSON PathType where
+  toJSON PathTypeFile = "f"
+  toJSON PathTypeDirectory = "d"

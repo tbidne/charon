@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Unit tests for Data.Index
@@ -188,10 +189,9 @@ formatAutoLargeApprox =
     ts <- fromText "2020-05-31 12:00:00"
     let idx =
           MkIndex $
-            Index.fromList
-              [ MkPathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
-                MkPathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
-              ]
+            [ MkPathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
+              MkPathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
+            ]
     formatted <-
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
@@ -204,7 +204,7 @@ formatAutoLargeApprox =
 formatAutoEmpty :: TestTree
 formatAutoEmpty =
   goldenVsStringDiff desc diff gpath $ do
-    let idx = MkIndex $ Index.fromList []
+    let idx = MkIndex []
     formatted <-
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
@@ -216,7 +216,7 @@ formatAutoEmpty =
 
 formatAutoFail :: TestTree
 formatAutoFail = testCase desc $ do
-  let idx = MkIndex $ Index.fromList []
+  let idx = MkIndex []
   eformatted <-
     tryAnyCS $
       runConfigIO
@@ -242,14 +242,13 @@ mkIndex = do
   ts <- ts'
   pure $
     MkIndex $
-      Index.fromList
-        [ MkPathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
-          MkPathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
-          MkPathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
-          MkPathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
-          MkPathData PathTypeDirectory "d" "/d" largeFile ts,
-          MkPathData PathTypeFile "z" "/z" (afromInteger 200_120) ts
-        ]
+      [ MkPathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
+        MkPathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
+        MkPathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
+        MkPathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
+        MkPathData PathTypeDirectory "d" "/d" largeFile ts,
+        MkPathData PathTypeFile "z" "/z" (afromInteger 200_120) ts
+      ]
   where
     -- 5,000 Y
     largeFile = afromInteger 5_000_000_000_000_000_000_000_000_000

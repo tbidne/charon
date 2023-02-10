@@ -10,19 +10,20 @@ module SafeRm.Data.PathData
 
     -- * Creation
     toPathData,
-    mvOriginalToTrash,
+    decode,
+
+    -- * Elimination
+    encode,
 
     -- * Existence
     trashPathExists,
     originalPathExists,
 
-    -- * Deletion
-    mvTrashToOriginal,
-    deletePathData,
-
-    -- * Misc moves
-    mvTrashToDest,
-    mvPathDataToTrash,
+    -- * Misc
+    throwIfRoot,
+    getRenameFn,
+    getDeleteFn,
+    getExistsFn,
 
     -- * Sorting
 
@@ -47,45 +48,96 @@ module SafeRm.Data.PathData
     -- * Miscellaneous
     headerNames,
     pathDataToTrashPath,
+    pathDataToTrashInfoPath,
   )
 where
 
+import Data.Aeson qualified as Asn
+import Data.ByteString.Lazy qualified as BSL
 import Data.Bytes (_MkBytes)
-import Data.Csv
-  ( DefaultOrdered (headerOrder),
-    FromNamedRecord,
-    FromRecord,
-    ToNamedRecord,
-    ToRecord,
-    (.!),
-    (.:),
-    (.=),
-  )
-import Data.Csv qualified as Csv
-import Data.HashMap.Strict qualified as Map
 import Data.Text qualified as T
-import Effects.FileSystem.Path (Path)
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
-import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
+import Effects.FileSystem.PathWriter (removeFile)
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
-import SafeRm.Data.Paths
-  ( PathI (MkPathI),
-    PathIndex (OriginalPath, TrashHome, TrashName, TrashPath),
-    (<//>),
-  )
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Timestamp (Timestamp, toText)
+import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( PathNotFoundE (MkPathNotFoundE),
     RenameDuplicateE (MkRenameDuplicateE),
-    RestoreCollisionE (MkRestoreCollisionE),
     RootE (MkRootE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 import System.FilePath qualified as FP
+
+-- | Provides the Aeson instances for PathData.
+--
+-- The goal is to serialize PathData, but we do not want to include fileName,
+-- as that should be derived from the filename itself. Here are some ideas:
+--
+-- 1. Use a custom type (e.g. PathDataJson) for the Aeson instance which leaves
+-- out the fileName field.
+--
+-- Pro: Simple, does not change anything to the PathData type, entirely
+--      internal.
+-- Con: Duplicated fields.
+--
+-- 2. Same as 1, except have PathData directly depend on PathDataJson.
+--
+-- Pro: Simple, no duplicated fields.
+-- Con: Changes PathData, code that depends on PathData details (e.g. tests)
+--      will have to change. Will want manual optics instance so lens still
+--      work (e.g. pathData ^. #size).
+--
+-- 3. Change PathData to Maybe and ignore it in (de)serialization.
+--
+-- Pro: Simple
+-- Con: Code that relies on PathName being present now has to deal with
+--      possible failures.
+--
+-- 4. Higher-kinded data i.e. PathData has field: fileName :: f Path. f will
+--    be Maybe for serialization and reduce to Path for main code. Export
+--    type PathData = PathDataF (Decoded).
+--
+-- Pro: Mostly not change PathData. No field duplication.
+-- Con: Complex, details leak through (PathData now a type synonym to a more
+--      complicated type).
+--
+-- We choose 1.
+--
+-- @since 0.1
+data PathDataJson = MkPathDataJson
+  { pathType :: !PathType,
+    originalPath :: !(PathI OriginalPath),
+    size :: !(Bytes B Natural),
+    created :: !Timestamp
+  }
+
+-- | @since 0.1
+makeFieldLabelsNoPrefix ''PathDataJson
+
+-- | @since 0.1
+instance FromJSON PathDataJson where
+  parseJSON = Asn.withObject "PathData" $ \pd ->
+    MkPathDataJson
+      <$> pd Asn..: "type"
+      <*> pd Asn..: "original"
+      <*> (MkBytes <$> pd Asn..: "size")
+      <*> pd Asn..: "created"
+
+-- | @since 0.1
+instance ToJSON PathDataJson where
+  toJSON pd =
+    Asn.object
+      [ "type" Asn..= (pd ^. #pathType),
+        "original" Asn..= (pd ^. #originalPath),
+        "size" Asn..= (pd ^. #size % _MkBytes),
+        "created" Asn..= (pd ^. #created)
+      ]
 
 -- | Data for a path.
 --
@@ -129,52 +181,6 @@ data PathData = MkPathData
 
 -- | @since 0.1
 makeFieldLabelsNoPrefix ''PathData
-
--- | @since 0.1
-instance FromRecord PathData where
-  parseRecord m =
-    MkPathData
-      <$> m .! 0
-      <*> m .! 1
-      <*> m .! 2
-      <*> (MkBytes <$> m .! 3)
-      <*> m .! 4
-
--- | @since 0.1
-instance FromNamedRecord PathData where
-  parseNamedRecord m =
-    MkPathData
-      <$> m .: "type"
-      <*> m .: "fileName"
-      <*> m .: "original"
-      <*> (MkBytes <$> m .: "size")
-      <*> m .: "created"
-
--- | @since 0.1
-instance ToRecord PathData where
-  toRecord pd =
-    [ Csv.toField (pd ^. #pathType),
-      Csv.toField (pd ^. #fileName),
-      Csv.toField (pd ^. #originalPath),
-      Csv.toField (pd ^. #size % _MkBytes),
-      Csv.toField (pd ^. #created)
-    ]
-
--- | @since 0.1
-instance ToNamedRecord PathData where
-  toNamedRecord pd = Map.fromList $ zipWith (flip ($)) headerNames labelFn
-    where
-      labelFn =
-        [ \x -> x .= (pd ^. #pathType),
-          \x -> x .= (pd ^. #fileName),
-          \x -> x .= (pd ^. #originalPath),
-          \x -> x .= (pd ^. #size % _MkBytes),
-          \x -> x .= (pd ^. #created)
-        ]
-
--- | @since 0.1
-instance DefaultOrdered PathData where
-  headerOrder _ = headerNames
 
 -- | @since 0.1
 instance Pretty PathData where
@@ -223,8 +229,8 @@ toPathData currTime trashHome origPath = do
   -- This works for directories too because canonicalizePath drops the
   -- trailing slashes.
   let fileName = Paths.liftPathI' FP.takeFileName originalPath
-  uniqPath <- mkUniqPath (trashHome <//> fileName)
-  let uniqName = Paths.liftPathI' FP.takeFileName uniqPath
+  uniqPath <- mkUniqPath (Env.getTrashPath trashHome (Paths.reindex fileName))
+  let uniqName = Paths.liftPathI FP.takeFileName uniqPath
 
   isFile <- Paths.applyPathI doesFileExist originalPath
   (fileName', originalPath', pathType) <-
@@ -262,6 +268,38 @@ toPathData currTime trashHome origPath = do
         created = currTime
       }
 
+-- | Encodes the 'PathData' to a JSON bytestring, ignoring the 'fieldName'
+-- field.
+--
+-- @since 0.1
+encode :: PathData -> BSL.ByteString
+encode = Asn.encode . fromPD
+  where
+    fromPD pd =
+      MkPathDataJson
+        { pathType = pd ^. #pathType,
+          originalPath = pd ^. #originalPath,
+          size = pd ^. #size,
+          created = pd ^. #created
+        }
+
+-- | Decodes the JSON bytestring to the 'PathData', using the passed trashName
+-- as the 'fieldName'.
+--
+-- @since 0.1
+decode :: PathI TrashName -> BSL.ByteString -> Either String PathData
+decode name = fmap toPD . Asn.eitherDecode'
+  where
+    toPD :: PathDataJson -> PathData
+    toPD pdJson =
+      MkPathData
+        { fileName = name,
+          pathType = pdJson ^. #pathType,
+          originalPath = pdJson ^. #originalPath,
+          size = pdJson ^. #size,
+          created = pdJson ^. #created
+        }
+
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
 -- For example, for duplicate "file", we will try
@@ -277,15 +315,15 @@ mkUniqPath ::
     MonadPathReader m,
     MonadThrow m
   ) =>
-  PathI TrashName ->
-  m (PathI TrashName)
+  PathI TrashPath ->
+  m (PathI TrashPath)
 mkUniqPath fp = do
   b <- Paths.applyPathI doesPathExist fp
   if b
     then go 1
     else pure fp
   where
-    go :: HasCallStack => Word16 -> m (PathI TrashName)
+    go :: HasCallStack => Word16 -> m (PathI TrashPath)
     go !counter
       | counter == maxBound =
           throwCS $ MkRenameDuplicateE fp
@@ -342,107 +380,6 @@ sortSize = mapOrd (view #size)
 mapOrd :: Ord b => (a -> b) -> a -> a -> Ordering
 mapOrd f x y = f x `compare` f y
 
--- | Moves the 'PathData'\'s @fileName@ back to its @originalPath@.
---
--- @since 0.1
-mvTrashToOriginal ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadThrow m
-  ) =>
-  PathI TrashHome ->
-  PathData ->
-  m ()
-mvTrashToOriginal (MkPathI trashHome) pd = do
-  exists <- originalPathExists pd
-  when exists $
-    throwCS $
-      MkRestoreCollisionE fileName originalPath
-  mvPathData pd trashPath (pd ^. #originalPath % #unPathI)
-  where
-    originalPath = pd ^. #originalPath
-    fileName = pd ^. #fileName
-    trashPath = trashHome </> (fileName ^. #unPathI)
-
--- | Moves the 'PathData' from the trash to the dest.
---
--- @since 0.1
-mvTrashToDest ::
-  ( HasCallStack,
-    MonadPathWriter m
-  ) =>
-  PathI TrashHome ->
-  Path ->
-  PathData ->
-  m ()
-mvTrashToDest trashHome destDir pd = mvPathData pd trashPath dest
-  where
-    dest = destDir </> (fileName ^. #unPathI)
-    fileName = pd ^. #fileName
-    MkPathI trashPath = pathDataToTrashPath trashHome pd
-
--- | Moves the 'PathData' from the source to the trash.
---
--- @since 0.1
-mvPathDataToTrash ::
-  ( HasCallStack,
-    MonadPathWriter m
-  ) =>
-  PathI TrashHome ->
-  Path ->
-  PathData ->
-  m ()
-mvPathDataToTrash trashHome srcDir pd = mvPathData pd src dest
-  where
-    fileName = pd ^. (#fileName % #unPathI)
-    src = srcDir </> fileName
-    MkPathI dest = pathDataToTrashPath trashHome pd
-
-mvPathData ::
-  ( HasCallStack,
-    MonadPathWriter m
-  ) =>
-  PathData ->
-  Path ->
-  Path ->
-  m ()
-mvPathData pd = renameFn
-  where
-    renameFn = case pd ^. #pathType of
-      PathTypeFile -> renameFile
-      PathTypeDirectory -> renameDirectory
-
--- | Permanently deletes the 'PathData'.
---
--- @since 0.1
-deletePathData ::
-  (HasCallStack, MonadPathWriter m) =>
-  PathI TrashHome ->
-  PathData ->
-  m ()
-deletePathData (MkPathI trashHome) pd = removeFn trashPath
-  where
-    trashPath = trashHome </> (pd ^. #fileName % #unPathI)
-    removeFn = case pd ^. #pathType of
-      PathTypeFile -> removeFile
-      PathTypeDirectory -> removeDirectoryRecursive
-
--- | Moves the 'PathData'\'s @originalPath@ to the trash.
---
--- @since 0.1
-mvOriginalToTrash ::
-  (HasCallStack, MonadPathWriter m, MonadThrow m) =>
-  PathI TrashHome ->
-  PathData ->
-  m ()
-mvOriginalToTrash trashHome pd = do
-  throwIfRoot pd
-
-  mvPathData pd (pd ^. #originalPath % #unPathI) trashPath
-  where
-    MkPathI trashPath = pathDataToTrashPath trashHome pd
-
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.
 --
@@ -452,9 +389,9 @@ trashPathExists ::
   PathI TrashHome ->
   PathData ->
   m Bool
-trashPathExists (MkPathI trashHome) pd = existsFn trashPath
+trashPathExists trashHome pd = existsFn trashPath'
   where
-    trashPath = trashHome </> (pd ^. #fileName % #unPathI)
+    MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
     existsFn = case pd ^. #pathType of
       PathTypeFile -> doesFileExist
       PathTypeDirectory -> doesDirectoryExist
@@ -477,7 +414,13 @@ originalPathExists pd = existsFn (pd ^. #originalPath % #unPathI)
 --
 -- @since 0.1
 pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashPath
-pathDataToTrashPath trashHome = (trashHome <//>) . view #fileName
+pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
+
+-- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
+--
+-- @since 0.1
+pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashInfoPath
+pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
 
 -- | Determines how to format a textual 'PathData'.
 --
@@ -592,8 +535,27 @@ fixLen w t
   where
     w' = fromIntegral w
 
+-- | @since 0.1
 throwIfRoot :: (HasCallStack, MonadThrow m) => PathData -> m ()
 throwIfRoot pd = when (isRoot pd) (throwCS MkRootE)
+
+-- | @since 0.1
+getRenameFn :: MonadPathWriter m => PathData -> Path -> Path -> m ()
+getRenameFn pd = case pd ^. #pathType of
+  PathTypeFile -> renameFile
+  PathTypeDirectory -> renameDirectory
+
+-- | @since 0.1
+getDeleteFn :: MonadPathWriter m => PathData -> Path -> m ()
+getDeleteFn pd = case pd ^. #pathType of
+  PathTypeFile -> removeFile
+  PathTypeDirectory -> removeDirectoryRecursive
+
+-- | @since 0.1
+getExistsFn :: MonadPathReader m => PathData -> Path -> m Bool
+getExistsFn pd = case pd ^. #pathType of
+  PathTypeFile -> doesFileExist
+  PathTypeDirectory -> doesDirectoryExist
 
 isRoot :: PathData -> Bool
 isRoot pd =
