@@ -6,15 +6,4 @@ LOGS LIST
 [2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/safe-rm/functional/l3/.trash/info
 [2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["missing.info"]
 [2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/l3/.trash/info/missing.info
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {
-"created":
-"2020-05-31 12:00:00",
-"original":
-"<dir>/safe-rm/functional/l3/missing",
-"size":
-5,
-"type":
-"f"
-}
-
 [2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'missing' was not found in '<dir>/safe-rm/functional/l3/.trash/paths' despite being listed in '<dir>/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .info file or deleting everything (i.e. sr e).

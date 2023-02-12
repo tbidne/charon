@@ -24,14 +24,12 @@ module SafeRm.Data.Index
   )
 where
 
-import Data.ByteString qualified as BSL
 import Data.Foldable (toList)
 import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as HSet
 import Data.Ord (Ord (max))
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
-import Effects.FileSystem.FileReader (decodeUtf8ThrowM)
 import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (..))
 import SafeRm.Data.PathData
@@ -44,7 +42,7 @@ import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
-  ( AesonDecodeE (MkAesonDecodeE),
+  ( InfoDecodeE (MkInfoDecodeE),
     TrashInfoNotFoundE (..),
     TrashPathNotFoundE (MkTrashPathNotFoundE),
   )
@@ -89,6 +87,11 @@ instance Pretty Index where
       . Seq.sortBy sortCreatedName
       . view #unIndex
 
+-- | Reads the trash directory into the 'Index'. If this succeeds then
+-- everything is 'well-formed' i.e. there is a bijection between trash/paths
+-- and trash/info.
+--
+-- @since 0.1
 readIndex ::
   forall m.
   ( HasCallStack,
@@ -113,13 +116,11 @@ readIndex trashHome = addNamespace "readIndex" $ do
         $(logDebug) ("Path: " <> T.pack path)
 
         contents <- readBinaryFile path
-        utf8Contents <- decodeUtf8ThrowM contents
-        $(logDebug) ("Contents: " <> utf8Contents)
         let -- NOTE: 'dropExtension' removes the '.info' suffix
             fileName = FP.dropExtension $ FP.takeFileName path
-            decoded = PathData.decode (MkPathI fileName) (BSL.fromStrict contents)
+            decoded = PathData.decode (MkPathI fileName) contents
         case decoded of
-          Left err -> throwCS $ MkAesonDecodeE contents err
+          Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
           Right pd -> do
             throwIfTrashNonExtant trashHome pd
             (accSeq, accSet) <- macc
@@ -206,12 +207,18 @@ sortFn b = \case
       | b = PathData.sortReverse
       | otherwise = id
 
--- | @since 0.1
+-- | Formats the 'Index' in a pretty way.
+--
+-- @since 0.1
 formatIndex ::
   (HasCallStack, MonadTerminal m, MonadThrow m) =>
+  -- | Format to use
   PathDataFormat ->
+  -- | How to sort
   Sort ->
+  -- | If true, reverses the sort
   Bool ->
+  -- | The index to format
   Index ->
   m Text
 formatIndex style sort revSort idx = case style of

@@ -49,15 +49,10 @@ LOGS METADATA
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/safe-rm/functional/m1/.trash/info
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","dir2.info","f2.info","f3.info","dir1.info"]
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/m1/.trash/info/f1.info
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/safe-rm/functional/m1/f1","size":5,"type":"f"}
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/m1/.trash/info/dir2.info
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/safe-rm/functional/m1/dir2","size":5,"type":"d"}
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/m1/.trash/info/f2.info
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/safe-rm/functional/m1/f2","size":5,"type":"f"}
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/m1/.trash/info/f3.info
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/safe-rm/functional/m1/f3","size":5,"type":"f"}
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/safe-rm/functional/m1/.trash/info/dir1.info
-[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Contents: {"created":"2020-05-31 12:00:00","original":"<dir>/safe-rm/functional/m1/dir1","size":5,"type":"d"}
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","dir2","dir1","f1"]
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 5
 [2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 5

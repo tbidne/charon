@@ -14,16 +14,16 @@ module SafeRm.Data.PathData
 
     -- * Elimination
     encode,
+    getRenameFn,
+    getDeleteFn,
 
     -- * Existence
     trashPathExists,
     originalPathExists,
-
-    -- * Misc
-    throwIfRoot,
-    getRenameFn,
-    getDeleteFn,
     getExistsFn,
+
+    -- * Validation
+    throwIfRoot,
 
     -- * Sorting
 
@@ -52,9 +52,8 @@ module SafeRm.Data.PathData
   )
 where
 
-import Data.Aeson qualified as Asn
+import Codec.Serialise qualified as Serialise
 import Data.ByteString.Lazy qualified as BSL
-import Data.Bytes (_MkBytes)
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import Effects.FileSystem.PathWriter (removeFile)
@@ -74,19 +73,19 @@ import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 import System.FilePath qualified as FP
 
--- | Provides the Aeson instances for PathData.
+-- | Provides the serialized instance for PathData.
 --
 -- The goal is to serialize PathData, but we do not want to include fileName,
 -- as that should be derived from the filename itself. Here are some ideas:
 --
--- 1. Use a custom type (e.g. PathDataJson) for the Aeson instance which leaves
+-- 1. Use a custom type (e.g. PathData') for the Serialize instance which leaves
 -- out the fileName field.
 --
 -- Pro: Simple, does not change anything to the PathData type, entirely
 --      internal.
 -- Con: Duplicated fields.
 --
--- 2. Same as 1, except have PathData directly depend on PathDataJson.
+-- 2. Same as 1, except have PathData directly depend on PathData'.
 --
 -- Pro: Simple, no duplicated fields.
 -- Con: Changes PathData, code that depends on PathData details (e.g. tests)
@@ -110,34 +109,35 @@ import System.FilePath qualified as FP
 -- We choose 1.
 --
 -- @since 0.1
-data PathDataJson = MkPathDataJson
+data PathData' = MkPathData'
   { pathType :: !PathType,
     originalPath :: !(PathI OriginalPath),
     size :: !(Bytes B Natural),
     created :: !Timestamp
   }
+  deriving stock (Generic)
 
 -- | @since 0.1
-makeFieldLabelsNoPrefix ''PathDataJson
+makeFieldLabelsNoPrefix ''PathData'
 
 -- | @since 0.1
-instance FromJSON PathDataJson where
-  parseJSON = Asn.withObject "PathData" $ \pd ->
-    MkPathDataJson
-      <$> pd Asn..: "type"
-      <*> pd Asn..: "original"
-      <*> (MkBytes <$> pd Asn..: "size")
-      <*> pd Asn..: "created"
-
--- | @since 0.1
-instance ToJSON PathDataJson where
-  toJSON pd =
-    Asn.object
-      [ "type" Asn..= (pd ^. #pathType),
-        "original" Asn..= (pd ^. #originalPath),
-        "size" Asn..= (pd ^. #size % _MkBytes),
-        "created" Asn..= (pd ^. #created)
+instance Serialise PathData' where
+  encode (MkPathData' a b (MkBytes c) d) =
+    mconcat
+      [ Serialise.encode a,
+        Serialise.encode b,
+        Serialise.encode c,
+        Serialise.encode d
       ]
+
+  -- Serialise.encode a
+  --  <> Serialise.encode b <> Serialise.encode c <> Serialise.encode d
+  decode =
+    (\a b c d -> MkPathData' a b (MkBytes c) d)
+      <$> Serialise.decode
+      <*> Serialise.decode
+      <*> Serialise.decode
+      <*> Serialise.decode
 
 -- | Data for a path.
 --
@@ -268,36 +268,39 @@ toPathData currTime trashHome origPath = do
         created = currTime
       }
 
--- | Encodes the 'PathData' to a JSON bytestring, ignoring the 'fieldName'
+-- | Encodes the 'PathData' to a bytestring, ignoring the 'fieldName'
 -- field.
 --
 -- @since 0.1
-encode :: PathData -> BSL.ByteString
-encode = Asn.encode . fromPD
+encode :: PathData -> ByteString
+encode = BSL.toStrict . Serialise.serialise . fromPD
   where
     fromPD pd =
-      MkPathDataJson
+      MkPathData'
         { pathType = pd ^. #pathType,
           originalPath = pd ^. #originalPath,
           size = pd ^. #size,
           created = pd ^. #created
         }
 
--- | Decodes the JSON bytestring to the 'PathData', using the passed trashName
+-- | Decodes the bytestring to the 'PathData', using the passed trashName
 -- as the 'fieldName'.
 --
 -- @since 0.1
-decode :: PathI TrashName -> BSL.ByteString -> Either String PathData
-decode name = fmap toPD . Asn.eitherDecode'
+decode :: PathI TrashName -> ByteString -> Either String PathData
+decode name bs = case result of
+  Right pd -> Right $ toPD pd
+  Left err -> Left $ displayException err
   where
-    toPD :: PathDataJson -> PathData
-    toPD pdJson =
+    result = Serialise.deserialiseOrFail (BSL.fromStrict bs)
+    toPD :: PathData' -> PathData
+    toPD pd' =
       MkPathData
         { fileName = name,
-          pathType = pdJson ^. #pathType,
-          originalPath = pdJson ^. #originalPath,
-          size = pdJson ^. #size,
-          created = pdJson ^. #created
+          pathType = pd' ^. #pathType,
+          originalPath = pd' ^. #originalPath,
+          size = pd' ^. #size,
+          created = pd' ^. #created
         }
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,

@@ -188,7 +188,7 @@ formatAutoLargeApprox =
   goldenVsStringDiff desc diff gpath $ do
     ts <- fromText "2020-05-31 12:00:00"
     let idx =
-          MkIndex $
+          MkIndex
             [ MkPathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
               MkPathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
             ]
@@ -241,7 +241,7 @@ mkIndex :: MonadFail f => f Index
 mkIndex = do
   ts <- ts'
   pure $
-    MkIndex $
+    MkIndex
       [ MkPathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
         MkPathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
         MkPathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,

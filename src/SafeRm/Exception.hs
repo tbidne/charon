@@ -22,7 +22,7 @@ module SafeRm.Exception
     RenameDuplicateE (..),
     RestoreCollisionE (..),
     RootE (..),
-    AesonDecodeE (..),
+    InfoDecodeE (..),
   )
 where
 
@@ -68,9 +68,9 @@ instance Exception RenameDuplicateE where
       ]
 
 -- | Trash path not found error. Distinct from 'TrashPathNotFoundE' in that
--- the latter indicates that the entry exists in trash/paths but not
--- trash/info, whereas this exception is less specific i.e. we found nothing in
--- trash/info but did not look in trash/paths.
+-- the latter indicates that the entry exists in trash/info but not
+-- trash/paths, whereas this exception is less specific i.e. we found nothing
+-- in trash/info but did not look in trash/paths.
 --
 -- @since 0.1
 data TrashEntryNotFoundE
@@ -222,22 +222,24 @@ data RootE = MkRootE
 instance Exception RootE where
   displayException _ = "Attempted to delete root! This is not allowed."
 
--- | Exception for aeson. decoding.
+-- | Exception for decoding.
 --
 -- @since 0.1
-data AesonDecodeE = MkAesonDecodeE ByteString String
+data InfoDecodeE = MkInfoDecodeE (PathI TrashInfoPath) ByteString String
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception AesonDecodeE where
-  displayException (MkAesonDecodeE bs str) =
+instance Exception InfoDecodeE where
+  displayException (MkInfoDecodeE path bs err) =
     mconcat
       -- TODO: improve
-      [ "Could not decode aeson contents \n",
+      [ "Could not decode path '",
+        path ^. #unPathI,
+        "' contents\n",
         Char8.unpack bs,
         "\n: ",
-        str
+        err
       ]

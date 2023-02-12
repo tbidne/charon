@@ -15,7 +15,6 @@ module SafeRm.Trash
   )
 where
 
-import Data.ByteString.Lazy qualified as BSL
 import Data.Char qualified as Ch
 import Data.Text qualified as T
 import Effects.Exception (onException)
@@ -31,7 +30,7 @@ import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env (HasTrashHome (..))
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
-  ( AesonDecodeE (..),
+  ( InfoDecodeE (..),
     RestoreCollisionE (MkRestoreCollisionE),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
     TrashInfoDirNotFoundE (..),
@@ -132,8 +131,8 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   --
   -- Perform this before the actual move to be safe i.e. path is only moved
   -- if info is already created.
-  let json = PathData.encode pd
-  writeBinaryFile trashInfoPath (BSL.toStrict json)
+  let encoded = PathData.encode pd
+  writeBinaryFile trashInfoPath encoded
 
   -- 4. Move file to trash
   let moveFn = mvPathData pd (pd ^. #originalPath % #unPathI) trashPath
@@ -257,8 +256,8 @@ findPathData trashHome pathName = do
       MkTrashEntryNotFoundE pathName trashInfoPath
 
   contents <- readBinaryFile trashInfoPath'
-  pathData <- case PathData.decode pathName (BSL.fromStrict contents) of
-    Left err -> throwCS $ MkAesonDecodeE contents err
+  pathData <- case PathData.decode pathName contents of
+    Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
     Right pd -> pure pd
 
   let existsFn = PathData.getExistsFn pathData
