@@ -64,7 +64,7 @@ Available options:
 Delete Commands
   d                        Moves the path(s) to the trash.
   x                        Permanently deletes path(s) from the trash.
-  e                        Empties the trash and deletes the index.
+  e                        Empties the trash.
 
 Restore Commands
   r                        Restores the trash path(s) to their original
@@ -133,10 +133,11 @@ $ sr x -f foo bar baz
 **Usage:**
 
 ```
-Usage: sr e
-  Empties the trash and deletes the index.
+Usage: sr e [-f|--force]
+  Empties the trash.
 
 Available options:
+  -f,--force               If enabled, will not ask before deleting each path.
   -h,--help                Show this help text
 ```
 

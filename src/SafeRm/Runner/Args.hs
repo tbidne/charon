@@ -257,7 +257,7 @@ commandParser =
   where
     delTxt = OA.progDesc "Moves the path(s) to the trash."
     permDelTxt = OA.progDesc "Permanently deletes path(s) from the trash."
-    emptyTxt = OA.progDesc "Empties the trash and deletes the index."
+    emptyTxt = OA.progDesc "Empties the trash."
     restoreTxt =
       OA.progDesc
         "Restores the trash path(s) to their original location."

@@ -229,7 +229,7 @@ restore paths = addNamespace "restore" $ do
   anyFailed <- readIORef anyFailedRef
   when anyFailed exitFailure
 
--- | Empties the trash. Deletes the index file.
+-- | Empties the trash.
 --
 -- @since 0.1
 emptyTrash ::

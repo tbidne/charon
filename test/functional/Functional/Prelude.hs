@@ -2,6 +2,7 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Prelude for functional test suite.
@@ -35,6 +36,7 @@ module Functional.Prelude
     mkAllTrashPaths,
     mkTrashPaths,
     mkTrashInfoPaths,
+    fixRandomPaths,
   )
 where
 
@@ -43,6 +45,9 @@ import Data.ByteString.Builder qualified as Builder
 import Data.List ((++))
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
+import Data.Text.Internal (Text (..))
+import Data.Text.Internal qualified as TI
+import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (getTemporaryDirectory))
@@ -217,7 +222,8 @@ captureSafeRmLogs title argList = do
   terminal <- unsafeReplaceDir tmpDir <$> readIORef terminalRef
   logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
   let terminalBs = Builder.byteString $ encodeUtf8 terminal
-      logsBs = Builder.byteString $ encodeUtf8 logs
+      logs' = fixRandomPaths logs
+      logsBs = Builder.byteString $ encodeUtf8 logs'
 
   pure (MonadTerminal title terminalBs, Logs title logsBs)
   where
@@ -346,3 +352,25 @@ mkTrashPaths ::
 mkTrashPaths trashHome = fmap mkTrashPath
   where
     mkTrashPath p = trashHome </> "paths" </> p
+
+-- | HACK: There is a log line that starts out 'Paths: ...' that is
+-- non-deterministic because the listed paths can be in random order.
+-- This means the log strings will not match, hence the tests can fail,
+-- which actually happened on CI.
+--
+-- As a workaround, we remove this path names from the logs until we come
+-- up with a more robust solution.
+fixRandomPaths :: Text -> Text
+fixRandomPaths = T.unlines . foldr (flip fixRandomPaths') [] . T.lines
+  where
+    fixRandomPaths' :: [Text] -> Text -> [Text]
+    fixRandomPaths' acc (stripInfix "Path:" -> Just (p, _)) = p <> "Path:" <> " ..." : acc
+    fixRandomPaths' acc (stripInfix "Paths:" -> Just (p, _)) = p <> "Paths:" <> " [...]" : acc
+    fixRandomPaths' acc (stripInfix "Info:" -> Just (p, _)) = p <> "Info:" <> " [...]" : acc
+    fixRandomPaths' acc t = t : acc
+
+stripInfix :: Text -> Text -> Maybe (Text, Text)
+stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
+  case TIS.indices p t of
+    [] -> Nothing
+    (x : _) -> Just (TI.text arr off x, TI.text arr (x + plen) (len - plen - x))

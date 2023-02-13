@@ -156,6 +156,7 @@ replaceDirBS :: FilePath -> ByteString -> BSL.ByteString
 replaceDirBS fp =
   TLEnc.encodeUtf8
     . TL.fromStrict
+    . fixRandomPaths
     . unsafeReplaceDir fp
     . TEnc.decodeUtf8With TEncError.lenientDecode
 

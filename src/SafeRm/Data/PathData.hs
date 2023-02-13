@@ -54,6 +54,7 @@ where
 
 import Codec.Serialise qualified as Serialise
 import Data.ByteString.Lazy qualified as BSL
+import Data.Char qualified as Ch
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import Effects.FileSystem.PathWriter (removeFile)
@@ -372,7 +373,7 @@ sortCreated = mapOrd (view #created)
 --
 -- @since 0.1
 sortName :: PathData -> PathData -> Ordering
-sortName = mapOrd (view #fileName)
+sortName = mapOrd (fmap Ch.toLower . view (#fileName % #unPathI))
 
 -- | Sorts by the name.
 --

@@ -7,29 +7,29 @@
 [2020-05-31 12:00:00][logging-tests.delete.deleting.mvOriginalToTrash][Debug][src/SafeRm/Trash.hs] Moved to trash: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f3"}, originalPath = MkPathI {unPathI = "<dir>/f3"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][logging-tests.getIndex][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
 [2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
-[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [...]
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [...]
 [2020-05-31 12:00:00][logging-tests.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [...]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [...]
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)
 [2020-05-31 12:00:00][logging-tests.getMetadata][Debug][src/SafeRm.hs] Trash home: <dir>/.trash
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/.trash/info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: ["f1.info","f2.info","f3.info"]
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f1.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f2.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: <dir>/.trash/info/f3.info
-[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["f2","f3","f1"]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [...]
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ...
+[2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [...]
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 3
 [2020-05-31 12:00:00][logging-tests.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 3
