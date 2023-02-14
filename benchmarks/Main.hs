@@ -5,8 +5,8 @@ module Main (main) where
 
 import Benchmarks.Prelude
 import Benchmarks.ReadIndex qualified as ReadIndex
-import Effects.FileSystem.MonadPathReader qualified as Dir
-import Effects.FileSystem.MonadPathWriter qualified as Dir
+import Effects.FileSystem.PathReader qualified as Dir
+import Effects.FileSystem.PathWriter qualified as Dir
 import GHC.Conc.Sync (setUncaughtExceptionHandler)
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 

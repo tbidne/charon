@@ -8,11 +8,11 @@ module Benchmarks.ReadIndex
 where
 
 import Benchmarks.Prelude
-import Data.ByteString.Char8 qualified as Char8
 import SafeRm qualified
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import SafeRm.Data.UniqueSeq qualified as UniqueSeq
 import SafeRm.Runner.Env (Env (MkEnv, logEnv, trashHome), LogEnv (MkLogEnv))
-import SafeRm.Runner.SafeRmT
+import SafeRm.Runner.SafeRmT (runSafeRmT)
 
 -- | Index reading benchmarks.
 --
@@ -23,8 +23,7 @@ benchmarks tmpDir = do
     "Read Index"
     [ readIndex "1,000" (MkPathI $ tmpDir </> "read1/.trash"),
       readIndex "10,000" (MkPathI $ tmpDir </> "read2/.trash"),
-      readIndex "100,000" (MkPathI $ tmpDir </> "read3/.trash"),
-      readIndex "1,000,000" (MkPathI $ tmpDir </> "read4/.trash")
+      readIndex "100,000" (MkPathI $ tmpDir </> "read3/.trash")
     ]
 
 -- | Setup for index reading.
@@ -35,35 +34,28 @@ setup testDir = do
   setupRead r1 [1 .. 1_000]
   setupRead r2 [1 .. 10_000]
   setupRead r3 [1 .. 100_000]
-  setupRead r4 [1 .. 1_000_000]
   where
     r1 = testDir </> "read1/"
     r2 = testDir </> "read2/"
     r3 = testDir </> "read3/"
-    r4 = testDir </> "read4/"
 
     setupRead :: FilePath -> [Int] -> IO ()
     setupRead dir files = do
       clearDirectory dir
       clearDirectory trashDir
-      appendBinaryFile indexPath header
+
+      uniqueSeqRef <- newIORef UniqueSeq.empty
 
       for_ files $ \filename -> do
-        let filepath = trashDir </> show filename
-        clearDirectory trashDir
+        let filepath = dir </> show filename
         writeBinaryFile filepath ""
-        appendBinaryFile indexPath (Char8.pack $ mkEntry dir filename)
+        modifyIORef' uniqueSeqRef (`UniqueSeq.append` MkPathI filepath)
+
+      uniqueSeq <- readIORef uniqueSeqRef
+      env <- mkEnv $ MkPathI trashDir
+      runSafeRmT (SafeRm.delete uniqueSeq) env
       where
         trashDir = dir </> ".trash/"
-        indexPath = trashDir </> ".index.csv"
-        mkEntry d' f =
-          mconcat
-            [ "file,",
-              show f,
-              ",",
-              d' </> show f,
-              ",2022-09-28 12:00:00\n"
-            ]
 
 readIndex :: String -> PathI TrashHome -> Benchmark
 readIndex desc =
@@ -71,7 +63,7 @@ readIndex desc =
     . nfIO
     . (runSafeRmT SafeRm.getIndex <=< mkEnv)
 
-mkEnv :: PathI TrashHome -> IO Env
+mkEnv :: PathI TrashHome -> IO (Env IO)
 mkEnv trashHome = do
   pure $
     MkEnv
