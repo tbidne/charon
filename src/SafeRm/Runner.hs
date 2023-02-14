@@ -25,6 +25,7 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env (HasTrashHome)
+import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Runner.Args
   ( TomlConfigPath
@@ -160,7 +161,7 @@ getEnv = do
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      let logPath = trashHome ^. #unPathI </> ".log"
+      let MkPathI logPath = Env.getTrashLog trashHome
       h <- openBinaryFile logPath AppendMode
       pure $
         Just $
@@ -197,7 +198,7 @@ configToEnv mergedConfig = do
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      let logPath = trashHome ^. #unPathI </> ".log"
+      let MkPathI logPath = Env.getTrashLog trashHome
       h <- openBinaryFile logPath AppendMode
       pure $
         Just $

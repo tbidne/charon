@@ -89,13 +89,13 @@ logging args = goldenVsStringDiff desc diff gpath $ do
   runLogging delArgList
 
   -- file assertions
-  assertFilesExist [trashDir </> ".log"]
+  assertFilesExist [trashDir </> "log"]
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
 
   -- Test logging. In particular, test that startup does not fail when the
   -- log file does not already exist.
-  replaceDirBS testDir <$> BS.readFile (trashDir </> ".log")
+  replaceDirBS testDir <$> BS.readFile (trashDir </> "log")
   where
     desc = "Logging is successful"
     gpath = goldenPath </> "logs.golden"
@@ -123,7 +123,7 @@ excludesMetadata args = goldenVsStringDiff desc diff gpath $ do
   runLogging listArgList
   runLogging metadataArgList
 
-  replaceDirBS testDir <$> BS.readFile (trashDir </> ".log")
+  replaceDirBS testDir <$> BS.readFile (trashDir </> "log")
   where
     desc = "Log file is excluded from metadata entries count"
     gpath = goldenPath </> "log-metadata-excluded.golden"

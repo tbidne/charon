@@ -3,7 +3,6 @@
 -- @since 0.1
 module SafeRm.Env
   ( HasTrashHome (..),
-    getTrashPaths,
     getTrashLog,
     getTrashPathDir,
     getTrashInfoDir,
@@ -15,7 +14,6 @@ where
 import SafeRm.Data.Paths
   ( PathI,
     PathIndex (..),
-    liftPathI,
     liftPathI',
     (<//>),
   )
@@ -37,20 +35,11 @@ class HasTrashHome a where
     PathI TrashHome
   getTrashHome = view #trashHome
 
--- | Retrieves all trash paths.
---
--- @since 0.1
-getTrashPaths ::
-  HasTrashHome a =>
-  a ->
-  (PathI TrashHome, PathI TrashLog)
-getTrashPaths x = (getTrashHome x, getTrashLog x)
-
 -- | Retrieves the trash log path.
 --
 -- @since 0.1
-getTrashLog :: HasTrashHome a => a -> PathI TrashLog
-getTrashLog = liftPathI (</> ".log") . getTrashHome
+getTrashLog :: PathI TrashHome -> PathI TrashLog
+getTrashLog = (<//> "log")
 
 -- | @since 0.1
 getTrashPath :: PathI TrashHome -> PathI TrashName -> PathI TrashPath
@@ -58,7 +47,6 @@ getTrashPath trashHome name = trashHome <//> "paths" <//> name
 
 -- | @since 0.1
 getTrashInfoPath :: PathI TrashHome -> PathI TrashName -> PathI TrashInfoPath
--- getTrashInfoPath trashHome name = trashHome <//> "info" <//> name <//> ".info"
 getTrashInfoPath trashHome name = trashHome <//> "info" <//> liftPathI' (<> ".info") name
 
 -- | Retrieves the trash path dir.

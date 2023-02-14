@@ -69,7 +69,7 @@ empty args = goldenVsStringDiff "Prints empty metadata" diff gpath $ do
       trashDir = testDir </> ".trash"
 
   createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "paths"]
-  createFiles [trashDir </> ".log"]
+  createFiles [trashDir </> "log"]
 
   let metaArgList = ["m", "-t", trashDir]
   (result, logs) <- captureSafeRmLogs "METADATA" metaArgList

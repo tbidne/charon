@@ -36,10 +36,8 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
-import SafeRm.Env
-  ( HasTrashHome (getTrashHome),
-    getTrashPaths,
-  )
+import SafeRm.Env (HasTrashHome (getTrashHome))
+import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
 import System.IO qualified as IO
@@ -178,7 +176,8 @@ getMetadata ::
   ) =>
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
-  (trashHome, trashLog) <- asks getTrashPaths
+  trashHome <- asks getTrashHome
+  let trashLog = Env.getTrashLog trashHome
   $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
   Trash.doesTrashExist >>= \case
     True -> Metadata.toMetadata (trashHome, trashLog)

@@ -12,7 +12,6 @@ where
 
 import Data.Bytes (SomeSize)
 import Data.Bytes qualified as Bytes
-import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Real (Integral)
@@ -29,7 +28,6 @@ import SafeRm.Exception
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
-import System.FilePath qualified as FP
 
 -- | Holds trash metadata.
 --
@@ -110,7 +108,7 @@ toMetadata (trashHome, trashLog) =
     $(logDebug) ("Index size: " <> showt numIndex)
 
     -- Num entries
-    numEntries <- foldl' countFiles 0 <$> listDirectory trashPathsDir
+    numEntries <- foldl' (\acc _ -> acc + 1) 0 <$> listDirectory trashPathsDir
     $(logDebug) ("Num entries: " <> showt numEntries)
 
     -- Log size
@@ -132,7 +130,7 @@ toMetadata (trashHome, trashLog) =
           pure (afromRational 0)
 
     -- Summed size
-    allFiles <- filter (not . skipFile) <$> getAllFiles trashPathsDir
+    allFiles <- getAllFiles trashPathsDir
     allSizes <- toDouble <$> foldl' sumFileSizes (pure zero) allFiles
     let numFiles = length allFiles
         size = Bytes.normalize allSizes
@@ -161,13 +159,6 @@ toMetadata (trashHome, trashLog) =
     toDouble = fmap fromIntegral
     toNat :: Int -> Natural
     toNat = fromIntegral
-
-    countFiles :: Int -> FilePath -> Int
-    countFiles !acc fp
-      | skipFile fp = acc
-      | otherwise = acc + 1
-
-    skipFile fp = FP.takeFileName fp `L.elem` [".log", ".index.csv"]
 
 getAllFiles ::
   ( HasCallStack,
