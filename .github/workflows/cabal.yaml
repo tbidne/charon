@@ -38,3 +38,18 @@ jobs:
 
       - name: Functional Tests
         run: cabal test functional --enable-tests
+
+      - name: Benchmarks
+        run: |
+          set +e
+
+          cabal bench --benchmark-options '
+            --csv benchmarks/bench_ci.csv
+            --baseline benchmarks/baseline_ci.csv
+            --fail-if-slower 10'
+
+          bench_ec=$?
+
+          cat benchmarks/bench_ci.csv
+
+          exit $bench_ec
