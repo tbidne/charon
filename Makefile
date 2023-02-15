@@ -1,5 +1,4 @@
 .PHONY: build clean repl watch ;\
-	test unit integration functional ;\
 	cic ci formatc format lint lintc ;\
 	haddock haddockc hackage
 
@@ -30,24 +29,6 @@ watch:
 	else \
 		ghcid --command "cabal repl $(T)"; \
 	fi
-
-# testing
-
-test:
-	if [ -z "$(T)" ]; then \
-		cabal test; \
-	else \
-		cabal test $(T); \
-	fi
-
-unit:
-	cabal test unit
-
-integration:
-	cabal test integration
-
-functional:
-	cabal test functional
 
 # ci
 
