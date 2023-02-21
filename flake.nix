@@ -64,7 +64,7 @@
     };
   };
   outputs =
-    { algebra-simple
+    inputs@{ algebra-simple
     , bounds
     , byte-types
     , flake-compat
@@ -75,7 +75,7 @@
     , self
     , smart-math
     }:
-    flake-parts.lib.mkFlake { inherit self; } {
+    flake-parts.lib.mkFlake { inherit inputs; } {
       perSystem = { pkgs, ... }:
         let
           buildTools = c: with c; [
@@ -84,10 +84,18 @@
             pkgs.zlib
           ];
           devTools = c: with c; [
-            ghcid
-            haskell-language-server
+            (pkgs.haskell.lib.dontCheck ghcid)
+            (hlib.overrideCabal haskell-language-server (old: {
+              configureFlags = (old.configureFlags or [ ]) ++
+                [
+                  "-f -brittany"
+                  "-f -floskell"
+                  "-f -fourmolu"
+                  "-f -stylishhaskell"
+                ];
+            }))
           ];
-          ghc-version = "ghc925";
+          ghc-version = "ghc944";
           compiler = pkgs.haskell.packages."${ghc-version}".override {
             overrides = final: prev: {
               # https://github.com/ddssff/listlike/issues/23
@@ -155,17 +163,6 @@
                 path-size = final.callCabal2nix "path-size" path-size { };
                 smart-math = final.callCabal2nix "smart-math" smart-math { };
                 tasty-hedgehog = prev.tasty-hedgehog_1_4_0_0;
-
-                # Until we can upgrade nixpkgs. Current problems:
-                # - flake-parts warning on deps
-                # - ghcid broken thus deps not upgraded yet
-                toml-reader = final.callHackageDirect
-                  {
-                    pkg = "toml-reader";
-                    ver = "0.2.0.0";
-                    sha256 = "sha256-/A40+3QFwWq0Q6KOfB+9tgEiQBWWgW2zutpaz4RmjeQ=";
-                  }
-                  { };
               };
             };
         in
