@@ -523,7 +523,7 @@ metadata mtestDir = askOption $ \(MkAsciiOnly b) -> do
       length α === natToInt (metadata' ^. #numEntries)
       length α === natToInt (metadata' ^. #numFiles)
 
-natToInt :: HasCallStack => Natural -> Int
+natToInt :: (HasCallStack) => Natural -> Int
 natToInt i
   | i <= intMax = fromIntegral i
   | otherwise = error $ "natToInt: Too large to convert to Int: " <> show i

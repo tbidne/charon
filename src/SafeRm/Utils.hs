@@ -28,21 +28,21 @@ import Text.Printf (PrintfArg)
 -- | Applies the function when we have a Just.
 --
 -- @since 0.1
-whenJust :: Applicative f => Maybe t -> (t -> f ()) -> f ()
+whenJust :: (Applicative f) => Maybe t -> (t -> f ()) -> f ()
 whenJust Nothing _ = pure ()
 whenJust (Just x) f = f x
 
 -- | Applies the function when we have a Left.
 --
 -- @since 0.1
-whenLeft :: Applicative f => Either e a -> (e -> f ()) -> f ()
+whenLeft :: (Applicative f) => Either e a -> (e -> f ()) -> f ()
 whenLeft (Right _) _ = pure ()
 whenLeft (Left x) f = f x
 
 -- | 'allM' that must have at least one 'True'.
 --
 -- @since 0.1
-allM1 :: Monad m => NonEmpty (m Bool) -> m Bool
+allM1 :: (Monad m) => NonEmpty (m Bool) -> m Bool
 allM1 (m :| ms) =
   m >>= \case
     True -> allM ms
@@ -90,19 +90,19 @@ formatBytes =
 -- | 'fromMaybe' for 'Monoid'.
 --
 -- @since 0.1
-fromMaybeMonoid :: Monoid a => Maybe a -> a
+fromMaybeMonoid :: (Monoid a) => Maybe a -> a
 fromMaybeMonoid = fromMaybe mempty
 
 -- | 'maybe' for 'Monoid'.
 --
 -- @since 0.1
-maybeMonoid :: Monoid b => (a -> b) -> Maybe a -> b
+maybeMonoid :: (Monoid b) => (a -> b) -> Maybe a -> b
 maybeMonoid = maybe mempty
 
 -- | Reads the 'LogLevel'.
 --
 -- @since 0.1
-readLogLevel :: MonadFail m => Text -> m (Maybe LogLevel)
+readLogLevel :: (MonadFail m) => Text -> m (Maybe LogLevel)
 readLogLevel "none" = pure Nothing
 readLogLevel "error" = pure $ Just LevelError
 readLogLevel "warn" = pure $ Just LevelWarn

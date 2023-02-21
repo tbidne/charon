@@ -154,7 +154,7 @@ makeFieldLabelsNoPrefix ''Args
 -- | Retrieves CLI args.
 --
 -- @since 0.1
-getArgs :: MonadOptparse m => m Args
+getArgs :: (MonadOptparse m) => m Args
 getArgs = execParser parserInfoArgs
 
 parserInfoArgs :: ParserInfo Args
@@ -402,6 +402,6 @@ pathsParser =
 mkCommand :: String -> Parser a -> InfoMod a -> Mod CommandFields a
 mkCommand cmdTxt parser helpTxt = OA.command cmdTxt (OA.info parser helpTxt)
 
-unsafeNE :: HasCallStack => [a] -> NonEmpty a
+unsafeNE :: (HasCallStack) => [a] -> NonEmpty a
 unsafeNE [] = error "Args: Empty list given to unsafeNE"
 unsafeNE (x : xs) = x :| xs

@@ -88,7 +88,7 @@ runSafeRm = do
     closeLogging
     (runSafeRmT (runCmd cmd))
   where
-    closeLogging :: Monad m => Env m -> m ()
+    closeLogging :: (Monad m) => Env m -> m ()
     closeLogging env = do
       let mFinalizer = env ^? #logEnv % #logFile %? #finalizer
       fromMaybe (pure ()) mFinalizer
@@ -132,7 +132,7 @@ runCmd cmd =
         printMetadata
       Metadata -> printMetadata
 
-    logEx :: HasCallStack => SomeException -> m a
+    logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do
       $(logError) (T.pack $ displayNoCS ex)
       throwCS ex

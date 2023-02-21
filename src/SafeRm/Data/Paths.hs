@@ -133,7 +133,7 @@ liftPathI' = liftPathI
 -- @since 0.1
 liftPathIF ::
   (Functor f, HasCallStack) =>
-  (HasCallStack => FilePath -> f FilePath) ->
+  ((HasCallStack) => FilePath -> f FilePath) ->
   PathI i ->
   f (PathI j)
 liftPathIF f = fmap MkPathI . applyPathI f
@@ -143,8 +143,8 @@ liftPathIF f = fmap MkPathI . applyPathI f
 --
 -- @since 0.1
 liftPathIF' ::
-  Functor f =>
-  (HasCallStack => FilePath -> f FilePath) ->
+  (Functor f) =>
+  ((HasCallStack) => FilePath -> f FilePath) ->
   PathI i ->
   f (PathI i)
 liftPathIF' = liftPathIF
@@ -152,7 +152,7 @@ liftPathIF' = liftPathIF
 -- | Lifts a 'FilePath' function to 'PathI'.
 --
 -- @since 0.1
-applyPathI :: HasCallStack => (HasCallStack => FilePath -> a) -> PathI i -> a
+applyPathI :: (HasCallStack) => ((HasCallStack) => FilePath -> a) -> PathI i -> a
 applyPathI f = f . view #unPathI
 
 -- | '(</>)' lifted to 'PathI'. Notice the index can change, so take care.

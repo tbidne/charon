@@ -155,7 +155,7 @@ toMetadata (trashHome, trashLog) =
       !acc <- macc
       sz <- (MkBytes @B) <$> getFileSize f
       pure $ acc .+. sz
-    toDouble :: Integral a => Bytes s a -> Bytes s Double
+    toDouble :: (Integral a) => Bytes s a -> Bytes s Double
     toDouble = fmap fromIntegral
     toNat :: Int -> Natural
     toNat = fromIntegral

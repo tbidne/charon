@@ -83,7 +83,7 @@ createDirectories paths =
 -- | Clears a directory by deleting it if it exists and then recreating it.
 --
 -- @since 0.1
-clearDirectory :: HasCallStack => FilePath -> IO ()
+clearDirectory :: (HasCallStack) => FilePath -> IO ()
 clearDirectory path = do
   exists <- doesDirectoryExist path
   when exists $ removePathForcibly path
@@ -164,7 +164,7 @@ capturedToBs =
 -- __WARNING:__ This function is not total! It calls error for multiple
 -- matches on "safe-rm/tmp". This should never happen and is definitely an
 -- error.
-unsafeReplaceDir :: HasCallStack => FilePath -> Text -> Text
+unsafeReplaceDir :: (HasCallStack) => FilePath -> Text -> Text
 unsafeReplaceDir fp txt = case T.splitOn "safe-rm/tmp" txt of
   -- Expected case 1: We have exactly one match, thus we split into two
   -- elements.
@@ -200,7 +200,7 @@ txtToBuilder :: Text -> Builder
 txtToBuilder = Builder.byteString . encodeUtf8
 
 -- | Exception to ByteString Builder. If a filepath is given, replaces it.
-exToBuilder :: Exception e => Maybe FilePath -> e -> Builder
+exToBuilder :: (Exception e) => Maybe FilePath -> e -> Builder
 exToBuilder Nothing = txtToBuilder . T.pack . displayException
 exToBuilder (Just fp) = txtToBuilder . unsafeReplaceDir fp . T.pack . displayException
 

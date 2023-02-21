@@ -237,9 +237,9 @@ import System.IO as X
 import Text.Show as X (Show (show))
 
 -- | @since 0.1
-showt :: Show a => a -> Text
+showt :: (Show a) => a -> Text
 showt = T.pack . show
 
 -- | @since 0.1
-displayExceptiont :: Exception e => e -> Text
+displayExceptiont :: (Exception e) => e -> Text
 displayExceptiont = T.pack . displayException

@@ -237,7 +237,7 @@ formatAutoFail = testCase desc $ do
           "Perhaps try multiline."
         ]
 
-mkIndex :: MonadFail f => f Index
+mkIndex :: (MonadFail f) => f Index
 mkIndex = do
   ts <- ts'
   pure $
@@ -252,7 +252,7 @@ mkIndex = do
   where
     -- 5,000 Y
     largeFile = afromInteger 5_000_000_000_000_000_000_000_000_000
-    ts' :: MonadFail f => f Timestamp
+    ts' :: (MonadFail f) => f Timestamp
     ts' = fromText "2020-05-31 12:00:00"
 
 toBS :: Text -> BSL.ByteString

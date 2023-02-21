@@ -195,7 +195,7 @@ captureSafeRmIntPure title argList = do
 -- deleted paths.
 captureSafeRmIntExceptionPure ::
   forall e.
-  Exception e =>
+  (Exception e) =>
   -- | Title to add to captured output.
   Builder ->
   -- Args.

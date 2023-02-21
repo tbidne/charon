@@ -84,5 +84,5 @@ toText :: Timestamp -> Text
 toText = T.pack . formatLocalTime . view #unTimestamp
 
 -- | @since 0.1
-fromText :: MonadFail f => Text -> f Timestamp
+fromText :: (MonadFail f) => Text -> f Timestamp
 fromText = fmap MkTimestamp . parseLocalTime . T.unpack

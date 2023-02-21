@@ -36,7 +36,7 @@ instance DecodeTOML ListFormatCfg where
   tomlDecoder = tomlDecoder >>= parseListFormat
 
 -- | @since 0.1
-parseListFormat :: MonadFail m => Text -> m ListFormatCfg
+parseListFormat :: (MonadFail m) => Text -> m ListFormatCfg
 parseListFormat "multi" = pure FormatMultilineCfg
 parseListFormat "m" = pure FormatMultilineCfg
 parseListFormat "tabular" = pure FormatTabularCfg

@@ -193,7 +193,7 @@ instance Monoid Sort where
   mempty = Name
 
 -- | @since 0.1
-readSort :: MonadFail m => Text -> m Sort
+readSort :: (MonadFail m) => Text -> m Sort
 readSort "name" = pure Name
 readSort "size" = pure Size
 readSort other = fail $ "Unrecognized sort: " <> T.unpack other

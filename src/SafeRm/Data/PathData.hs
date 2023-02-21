@@ -327,7 +327,7 @@ mkUniqPath fp = do
     then go 1
     else pure fp
   where
-    go :: HasCallStack => Word16 -> m (PathI TrashPath)
+    go :: (HasCallStack) => Word16 -> m (PathI TrashPath)
     go !counter
       | counter == maxBound =
           throwCS $ MkRenameDuplicateE fp
@@ -381,7 +381,7 @@ sortName = mapOrd (fmap Ch.toLower . view (#fileName % #unPathI))
 sortSize :: PathData -> PathData -> Ordering
 sortSize = mapOrd (view #size)
 
-mapOrd :: Ord b => (a -> b) -> a -> a -> Ordering
+mapOrd :: (Ord b) => (a -> b) -> a -> a -> Ordering
 mapOrd f x y = f x `compare` f y
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
@@ -544,19 +544,19 @@ throwIfRoot :: (HasCallStack, MonadThrow m) => PathData -> m ()
 throwIfRoot pd = when (isRoot pd) (throwCS MkRootE)
 
 -- | @since 0.1
-getRenameFn :: MonadPathWriter m => PathData -> Path -> Path -> m ()
+getRenameFn :: (MonadPathWriter m) => PathData -> Path -> Path -> m ()
 getRenameFn pd = case pd ^. #pathType of
   PathTypeFile -> renameFile
   PathTypeDirectory -> renameDirectory
 
 -- | @since 0.1
-getDeleteFn :: MonadPathWriter m => PathData -> Path -> m ()
+getDeleteFn :: (MonadPathWriter m) => PathData -> Path -> m ()
 getDeleteFn pd = case pd ^. #pathType of
   PathTypeFile -> removeFile
   PathTypeDirectory -> removeDirectoryRecursive
 
 -- | @since 0.1
-getExistsFn :: MonadPathReader m => PathData -> Path -> m Bool
+getExistsFn :: (MonadPathReader m) => PathData -> Path -> m Bool
 getExistsFn pd = case pd ^. #pathType of
   PathTypeFile -> doesFileExist
   PathTypeDirectory -> doesDirectoryExist

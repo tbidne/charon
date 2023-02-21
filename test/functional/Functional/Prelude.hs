@@ -233,7 +233,7 @@ captureSafeRmLogs title argList = do
 -- | Runs safe-rm and captures a thrown exception and logs.
 captureSafeRmExceptionLogs ::
   forall e.
-  Exception e =>
+  (Exception e) =>
   -- | Title to add to captured output.
   Builder ->
   -- Args.
