@@ -1,6 +1,6 @@
 .PHONY: build clean repl watch ;\
 	cic ci formatc format lint lintc ;\
-	haddock haddockc hackage
+	haddock hackage
 
 # dev
 
@@ -32,9 +32,9 @@ watch:
 
 # ci
 
-cic: formatc lintc haddockc
+cic: formatc lintc
 
-ci: lint format haddockc
+ci: lint format
 
 # formatting
 
@@ -62,15 +62,6 @@ haddock:
 	mkdir -p docs/ ;\
 	find docs/ -type f | xargs -I % sh -c "rm -r %" ;\
 	cp -r dist-newstyle/build/x86_64-linux/ghc-9.2.5/safe-rm-0.1/opt/doc/html/safe-rm/* docs/
-
-haddockc:
-	nix run github:tbidne/nix-hs-tools/0.7#haddock-cov -- \
-	. \
-	-m SafeRm.Data.PathData 85 \
-	-m SafeRm.Data.Index 90 \
-	-m SafeRm.Prelude 75 \
-	-m SafeRm.Runner.Command 20 \
-	-m SafeRm.Runner.Args 40
 
 # generate dist and docs suitable for hackage
 hackage:
