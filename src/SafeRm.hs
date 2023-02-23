@@ -177,7 +177,7 @@ getMetadata ::
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
   trashHome <- asks getTrashHome
-  let trashLog = Env.getTrashLog trashHome
+  trashLog <- Env.getTrashLog
   $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
   Trash.doesTrashExist >>= \case
     True -> Metadata.toMetadata (trashHome, trashLog)

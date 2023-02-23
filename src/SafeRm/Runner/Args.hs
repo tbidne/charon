@@ -377,8 +377,8 @@ trashParser =
     helpTxt =
       mconcat
         [ "Path to the trash directory. This overrides the toml config, if ",
-          "it exists. If neither is given then we use the xdg home directory ",
-          "e.g. ~/.trash"
+          "it exists. If neither is given then we use the xdg data directory ",
+          "e.g. ~/.local/share/safe-rm."
         ]
 
 logLevelParser :: Parser (Maybe (Maybe LogLevel))
@@ -388,7 +388,11 @@ logLevelParser =
       mconcat
         [ OA.long "log-level",
           OA.metavar Utils.logLevelStrings,
-          OA.help "The file level in which to log. Defaults to none."
+          OA.help $
+            mconcat
+              [ "The file level in which to log. Defaults to none. Logs are ",
+                "written to the xdg state directory e.g. ~/.local/state/safe-rm."
+              ]
         ]
 
 pathsParser :: (Hashable a, IsString a) => Parser (UniqueSeq a)

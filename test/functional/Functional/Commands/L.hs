@@ -55,6 +55,7 @@ noPathsError args = goldenVsStringDiff "No Paths Error" diff gpath $ do
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
+  clearDirectory (trashDir </> "info")
 
   (ex, logs) <-
     captureSafeRmExceptionLogs

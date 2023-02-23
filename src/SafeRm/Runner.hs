@@ -15,6 +15,7 @@ module SafeRm.Runner
 where
 
 import Data.Text qualified as T
+import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
@@ -23,7 +24,6 @@ import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
   )
-import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env (HasTrashHome)
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
@@ -144,6 +144,7 @@ runCmd cmd =
 getEnv ::
   ( HasCallStack,
     MonadFileReader m,
+    MonadFileWriter m,
     MonadHandleWriter m,
     MonadMask m,
     MonadOptparse m,
@@ -155,14 +156,11 @@ getEnv = do
   (mergedConfig, command) <- getConfiguration
 
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
-  -- NOTE: Needed so below openFile command does not fail
-  Paths.applyPathI (createDirectoryIfMissing False) trashHome
 
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      let MkPathI logPath = Env.getTrashLog trashHome
-      h <- openBinaryFile logPath AppendMode
+      h <- getLogHandle
       pure $
         Just $
           MkLogFile
@@ -183,6 +181,7 @@ getEnv = do
 
 configToEnv ::
   ( HasCallStack,
+    MonadFileWriter m,
     MonadHandleWriter m,
     MonadMask m,
     MonadPathReader m,
@@ -192,14 +191,11 @@ configToEnv ::
   m (Env m)
 configToEnv mergedConfig = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
-  -- NOTE: Needed so below openFile command does not fail
-  Paths.applyPathI (createDirectoryIfMissing False) trashHome
 
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      let MkPathI logPath = Env.getTrashLog trashHome
-      h <- openBinaryFile logPath AppendMode
+      h <- getLogHandle
       pure $
         Just $
           MkLogFile
@@ -323,4 +319,19 @@ getTrashHome ::
     MonadPathReader m
   ) =>
   m (PathI TrashHome)
-getTrashHome = MkPathI . (</> ".trash") <$> getHomeDirectory
+getTrashHome = MkPathI <$> (getXdgData "safe-rm")
+
+getLogHandle ::
+  ( HasCallStack,
+    MonadFileWriter m,
+    MonadHandleWriter m,
+    MonadPathReader m,
+    MonadPathWriter m
+  ) =>
+  m Handle
+getLogHandle = do
+  xdgState <- getXdgState "safe-rm"
+  createDirectoryIfMissing True xdgState
+
+  MkPathI logPath <- Env.getTrashLog
+  openBinaryFile logPath AppendMode

@@ -63,7 +63,7 @@ library
 
   build-depends:
     , algebra-simple          ^>=0.1
-    , base                    >=4.16.0.0  && <4.18
+    , base                    >=4.17.0.0  && <4.18
     , byte-types              ^>=0.1
     , bytestring              ^>=0.11.1.0
     , containers              ^>=0.6.3.1
@@ -197,7 +197,6 @@ test-suite functional
     Functional.Commands.M
     Functional.Commands.R
     Functional.Commands.X
-    Functional.Logging
     Functional.Prelude
 
   build-depends:

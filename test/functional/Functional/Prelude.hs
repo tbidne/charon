@@ -50,7 +50,7 @@ import Data.Text.Internal qualified as TI
 import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
-import Effects.FileSystem.PathReader (MonadPathReader (getTemporaryDirectory))
+import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
 import Effects.LoggerNamespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -80,6 +80,7 @@ import Test.Tasty.HUnit as X
     testCase,
     (@=?),
   )
+import SafeRm.Data.Paths (PathI(MkPathI))
 
 -- | Infinite stream of chars.
 data CharStream = Char :> CharStream
@@ -120,12 +121,26 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadHandleWriter,
       MonadIO,
       MonadIORef,
-      MonadPathReader,
       MonadPathWriter,
       MonadThrow,
       MonadReader env
     )
     via (ReaderT env IO)
+
+instance (Is k A_Getter,
+    LabelOptic' "trashHome" k env (PathI TrashHome)) =>
+      MonadPathReader (FuncIO env) where
+  doesFileExist = liftIO . doesFileExist
+  doesDirectoryExist = liftIO . doesDirectoryExist
+  doesPathExist = liftIO . doesPathExist
+  listDirectory = liftIO . listDirectory
+  canonicalizePath = liftIO . canonicalizePath
+  getFileSize = liftIO . getFileSize
+
+  getXdgDirectory XdgState _ = do
+    MkPathI th <- asks (view #trashHome)
+    pure th
+  getXdgDirectory xdg p = liftIO $ getXdgDirectory xdg p
 
 instance MonadPathSize (FuncIO env) where
   findLargestPaths _ _ =

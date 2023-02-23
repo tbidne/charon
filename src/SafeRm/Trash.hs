@@ -87,17 +87,22 @@ doesTrashExist = do
   if not homeExists
     then pure False
     else do
-      pathsExists <- doesDirectoryExist trashPathDir'
-      unless pathsExists $
-        throwCS $
-          MkTrashPathDirNotFoundE trashHome
-
+      pathExists <- doesDirectoryExist trashPathDir'
       infoExists <- doesDirectoryExist trashInfoDir'
-      unless infoExists $
-        throwCS $
-          MkTrashInfoDirNotFoundE trashHome
 
-      pure True
+      case (pathExists, infoExists) of
+        -- Everything exists -> true
+        (True, True) -> pure True
+        -- Info and Path both do not exist -> false
+        (False, False) -> pure False
+        -- Path exists; info does not -> Badly formed, throw exception
+        (True, False) ->
+          throwCS $
+            MkTrashInfoDirNotFoundE trashHome
+        -- Info exists; path does not -> Badly formed, throw exception
+        (False, True) ->
+          throwCS $
+            MkTrashPathDirNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 --

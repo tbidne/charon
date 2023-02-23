@@ -11,8 +11,9 @@ module SafeRm.Env
   )
 where
 
+import Effects.FileSystem.PathReader (getXdgState)
 import SafeRm.Data.Paths
-  ( PathI,
+  ( PathI (MkPathI),
     PathIndex (..),
     liftPathI',
     (<//>),
@@ -38,8 +39,8 @@ class HasTrashHome a where
 -- | Retrieves the trash log path.
 --
 -- @since 0.1
-getTrashLog :: PathI TrashHome -> PathI TrashLog
-getTrashLog = (<//> "log")
+getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
+getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
 
 -- | @since 0.1
 getTrashPath :: PathI TrashHome -> PathI TrashName -> PathI TrashPath
