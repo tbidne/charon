@@ -98,6 +98,7 @@ This section describes the possible commands, along with their specific options.
 
 ```
 Usage: sr d PATHS...
+
   Moves the path(s) to the trash.
 
 Available options:
@@ -117,10 +118,11 @@ $ sr d foo bar baz
 
 ```
 Usage: sr x [-f|--force] PATHS...
+
   Permanently deletes path(s) from the trash.
 
 Available options:
-  -f,--force               If enabled, will not ask before deleting each path.
+  -f,--force               If enabled, will not ask before deleting path(s).
   -h,--help                Show this help text
 ```
 
@@ -137,10 +139,11 @@ $ sr x -f foo bar baz
 
 ```
 Usage: sr e [-f|--force]
+
   Empties the trash.
 
 Available options:
-  -f,--force               If enabled, will not ask before deleting each path.
+  -f,--force               If enabled, will not ask before deleting path(s).
   -h,--help                Show this help text
 ```
 
@@ -158,6 +161,7 @@ $ sr e
 
 ```
 Usage: sr r PATHS...
+
   Restores the trash path(s) to their original location.
 
 Available options:
@@ -183,6 +187,7 @@ $ sr r foo baz
 ```
 Usage: sr l [--format (a[uto] | t[abular] | m[ulti])] [-n|--name-trunc NAT]
             [-o|--orig-trunc NAT] [-s|--sort (name|size)] [-r|--reverse-sort]
+
   Lists all trash contents and metadata.
 
 Available options:
@@ -230,6 +235,7 @@ Size:         111.35M
 
 ```
 Usage: sr m
+
   Prints trash metadata.
 
 Available options:
@@ -258,7 +264,6 @@ Size:         111.35M
 You will need one of:
 
 * [cabal-install 2.4+](https://www.haskell.org/cabal/download.html) and one of
-  * [ghc 9.2](https://www.haskell.org/ghcup/)
   * [ghc 9.4](https://www.haskell.org/ghcup/)
 * [nix](https://nixos.org/download.html)
 

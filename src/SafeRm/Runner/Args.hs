@@ -360,7 +360,7 @@ forceParser =
         OA.help helpTxt
       ]
   where
-    helpTxt = "If enabled, will not ask before deleting each path."
+    helpTxt = "If enabled, will not ask before deleting path(s)."
 
 trashParser :: Parser (Maybe (PathI TrashHome))
 trashParser =
