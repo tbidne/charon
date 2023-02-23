@@ -63,7 +63,7 @@ import Effects.Time
   )
 import GHC.Exts (IsList (Item, fromList, toList))
 import PathSize qualified
-import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
 import SafeRm.FileUtils as X
 import SafeRm.Prelude as X
@@ -80,7 +80,6 @@ import Test.Tasty.HUnit as X
     testCase,
     (@=?),
   )
-import SafeRm.Data.Paths (PathI(MkPathI))
 
 -- | Infinite stream of chars.
 data CharStream = Char :> CharStream
@@ -127,9 +126,13 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
     )
     via (ReaderT env IO)
 
-instance (Is k A_Getter,
-    LabelOptic' "trashHome" k env (PathI TrashHome)) =>
-      MonadPathReader (FuncIO env) where
+-- Overriding this for getXdgDirectory
+instance
+  ( Is k A_Getter,
+    LabelOptic' "trashHome" k env (PathI TrashHome)
+  ) =>
+  MonadPathReader (FuncIO env)
+  where
   doesFileExist = liftIO . doesFileExist
   doesDirectoryExist = liftIO . doesDirectoryExist
   doesPathExist = liftIO . doesPathExist
@@ -137,6 +140,9 @@ instance (Is k A_Getter,
   canonicalizePath = liftIO . canonicalizePath
   getFileSize = liftIO . getFileSize
 
+  -- Redirecting the xdg state to the trash dir so that we do not interact with
+  -- the real state (~/.local/state/safe-rm) and instead use our testing
+  -- trash dir
   getXdgDirectory XdgState _ = do
     MkPathI th <- asks (view #trashHome)
     pure th

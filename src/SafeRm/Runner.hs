@@ -58,6 +58,7 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (runSafeRmT)
 import SafeRm.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
+import SafeRm.Utils qualified as U
 import TOML qualified
 
 -- | Entry point for running SafeRm. Does everything: reads CLI args,
@@ -293,11 +294,7 @@ printMetadata ::
 printMetadata = SafeRm.getMetadata >>= prettyDel
 
 prettyDel :: (Pretty a, MonadTerminal m) => a -> m ()
-prettyDel =
-  putTextLn
-    . renderStrict
-    . layoutCompact
-    . pretty
+prettyDel = putTextLn . U.renderPretty
 
 -- | If the argument is given, returns it. Otherwise searches for the default
 -- trash location.

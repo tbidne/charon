@@ -40,6 +40,7 @@ import SafeRm.Env (HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
+import SafeRm.Utils qualified as U
 import System.IO qualified as IO
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
@@ -235,12 +236,15 @@ emptyTrash ::
   forall env m.
   ( HasCallStack,
     HasTrashHome env,
+    MonadFileReader m,
     MonadHandleWriter m,
     MonadPathReader m,
+    MonadPathSize m,
     MonadPathWriter m,
     MonadLoggerNamespace m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   Bool ->
   m ()
@@ -260,6 +264,8 @@ emptyTrash force = addNamespace "emptyTrash" $ do
           Trash.createTrash
         else do
           noBuffering
+          metadata <- getMetadata
+          putTextLn $ U.renderPretty metadata
           putStr "Permanently delete all contents (y/n)? "
           c <- Ch.toLower <$> getChar
           if

@@ -13,6 +13,7 @@ module SafeRm.Utils
     logLevelStrings,
     mergeAlt,
     merge,
+    renderPretty,
   )
 where
 
@@ -142,3 +143,10 @@ merge ::
   t ->
   a
 merge f sLens tLens s t = (s ^. sLens) `f` (t ^. tLens)
+
+-- | @since 0.1
+renderPretty :: (Pretty a) => a -> Text
+renderPretty =
+  renderStrict
+    . layoutCompact
+    . pretty
