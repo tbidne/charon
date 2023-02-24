@@ -117,7 +117,7 @@ data PathData' = MkPathData'
     size :: !(Bytes B Natural),
     created :: !Timestamp
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
 
 -- | @since 0.1
 makeFieldLabelsNoPrefix ''PathData'

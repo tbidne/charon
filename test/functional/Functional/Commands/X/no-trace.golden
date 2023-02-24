@@ -34,9 +34,9 @@ LOGS PERM DELETE
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f2
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '<dir>/safe-rm/functional/x5/.trash/info/f3.info'
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '<dir>/safe-rm/functional/x5/.trash/info/f3.json'
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f4
-[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '<dir>/safe-rm/functional/x5/.trash/info/f4.info'
+[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '<dir>/safe-rm/functional/x5/.trash/info/f4.json'
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f5
 [2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/x5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1

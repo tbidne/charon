@@ -31,6 +31,7 @@ import SafeRm.Data.Paths
   ( PathI,
     PathIndex (..),
   )
+import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 
 -- | Path is not found.
@@ -117,7 +118,9 @@ instance Exception TrashPathNotFoundE where
         "' despite being listed in '",
         thome ^. #unPathI,
         "/info'. This can be fixed by ",
-        "manually deleting the .info file or deleting everything ",
+        "manually deleting the ",
+        Env.trashInfoExtension,
+        " file or deleting everything ",
         "(i.e. sr e)."
       ]
 
@@ -139,7 +142,8 @@ instance Exception TrashInfoNotFoundE where
     mconcat
       [ "The path '",
         name ^. #unPathI,
-        ".info' was not found in '",
+        Env.trashInfoExtension,
+        "' was not found in '",
         thome ^. #unPathI,
         "/info",
         "' despite being listed in '",

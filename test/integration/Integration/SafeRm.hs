@@ -601,4 +601,4 @@ mkTrashPaths trashHome =
   fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
   where
     mkTrashPath p = trashHome </> "paths" </> p
-    mkTrashInfoPath p = trashHome </> "info" </> p <> ".info"
+    mkTrashInfoPath p = trashHome </> "info" </> p <> ".json"

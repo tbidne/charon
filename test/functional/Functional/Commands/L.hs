@@ -6,6 +6,7 @@ module Functional.Commands.L
   )
 where
 
+import Data.ByteString.Char8 qualified as Char8
 import Functional.Prelude
 import SafeRm.Exception
   ( TrashInfoDirNotFoundE,
@@ -13,7 +14,6 @@ import SafeRm.Exception
     TrashPathDirNotFoundE,
     TrashPathNotFoundE,
   )
-import Data.ByteString.Char8 qualified as Char8
 
 -- import Data.ByteString qualified as BS
 
@@ -107,10 +107,10 @@ missingPathError args = goldenVsStringDiff desc diff gpath $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "paths")
   clearDirectory (trashDir </> "info")
-  createFileContents [(trashDir </> "info" </> "missing.info", missingInfo)]
+  createFileContents [(trashDir </> "info" </> "missing.json", missingInfo)]
 
   -- Creating empty file so that we don't get the "size mismatch" error.
-  -- We specifically want the "missing.info has no corresponding missing" error.
+  -- We specifically want the "missing.json has no corresponding missing" error.
   createFiles [trashDir </> "paths" </> "blah"]
 
   (ex, logs) <-

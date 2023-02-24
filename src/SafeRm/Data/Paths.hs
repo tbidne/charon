@@ -54,7 +54,7 @@ data PathIndex
     --
     -- @since 0.1
     TrashPath
-  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.info@.
+  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.json@.
     --
     -- @since 0.1
     TrashInfoPath

@@ -34,9 +34,9 @@ LOGS RESTORE
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f2
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f2"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r5/f2"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3
-[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '<dir>/safe-rm/functional/r5/.trash/info/f3.info'
+[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '<dir>/safe-rm/functional/r5/.trash/info/f3.json'
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f4
-[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '<dir>/safe-rm/functional/r5/.trash/info/f4.info'
+[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '<dir>/safe-rm/functional/r5/.trash/info/f4.json'
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f5
 [2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = "f5"}, originalPath = MkPathI {unPathI = "<dir>/safe-rm/functional/r5/f5"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}
 [2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1

@@ -8,6 +8,7 @@ module SafeRm.Env
     getTrashInfoDir,
     getTrashPath,
     getTrashInfoPath,
+    trashInfoExtension,
   )
 where
 
@@ -48,7 +49,10 @@ getTrashPath trashHome name = trashHome <//> "paths" <//> name
 
 -- | @since 0.1
 getTrashInfoPath :: PathI TrashHome -> PathI TrashName -> PathI TrashInfoPath
-getTrashInfoPath trashHome name = trashHome <//> "info" <//> liftPathI' (<> ".info") name
+getTrashInfoPath trashHome name =
+  trashHome
+    <//> "info"
+    <//> liftPathI' (<> trashInfoExtension) name
 
 -- | Retrieves the trash path dir.
 --
@@ -61,3 +65,9 @@ getTrashPathDir trashHome = trashHome <//> "paths"
 -- @since 0.1
 getTrashInfoDir :: PathI TrashHome -> PathI TrashInfoDir
 getTrashInfoDir trashHome = trashHome <//> "info"
+
+-- | Returns the extension for the trash info files.
+--
+-- @since 0.1
+trashInfoExtension :: (IsString a) => a
+trashInfoExtension = ".json"

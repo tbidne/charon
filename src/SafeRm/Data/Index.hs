@@ -116,7 +116,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
         $(logDebug) ("Path: " <> T.pack path)
 
         contents <- readBinaryFile path
-        let -- NOTE: 'dropExtension' removes the '.info' suffix
+        let -- NOTE: We want the name without the suffix
             fileName = FP.dropExtension $ FP.takeFileName path
             decoded = PathData.decode (MkPathI fileName) contents
         case decoded of
