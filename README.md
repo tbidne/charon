@@ -130,7 +130,15 @@ Available options:
 
 ```
 # permanently deletes "foo", "bar", and "baz" from the trash directory
-$ sr x -f foo bar baz
+$ sr x foo bar baz
+
+Type:      File
+Name:      foo
+Original:  /path/to/foo
+Size:      0.00B
+Created:   2023-02-24 14:32:01
+
+Permanently delete (y/n)?
 ```
 
 ### Empty
@@ -151,6 +159,13 @@ Available options:
 
 ```
 $ sr e
+
+Entries:      8
+Total Files:  12
+Log size:     144.80K
+Size:         31.36K
+
+Permanently delete all contents (y/n)?
 ```
 
 ## Restore Commands
@@ -217,16 +232,16 @@ $ sr d foo bar baz
 # list contents
 $ sr l
 
-Name       | Type       | Size    | Original               | Created
---------------------------------------------------------------------------------
-bar        | File       | 41.35M  | /home/tommy/Dev/tom... | 2022-10-28 15:33:18
-baz        | File       | 45.61M  | /home/tommy/Dev/tom... | 2022-10-28 15:33:18
-foo        | File       | 24.38M  | /home/tommy/Dev/tom... | 2022-10-28 15:33:18
+Name | Type      | Size    | Original            | Created
+----------------------------------------------------------------------
+bar  | File      | 410.35G | /bar                | 2022-10-28 15:33:18
+baz  | File      | 45.61M  | /a/long/path/to/baz | 2022-10-28 15:33:18
+foo  | Directory | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
 
 Entries:      3
-Total Files:  3
+Total Files:  5
 Log size:     1.65K
-Size:         111.35M
+Size:         410.40G
 ```
 
 ### Metadata

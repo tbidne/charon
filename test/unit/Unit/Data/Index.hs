@@ -177,7 +177,7 @@ formatAutoMin =
     formatted <-
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
-        60
+        59
     pure $ toBS formatted
   where
     desc = "Auto tabular formats minimum terminal size"
@@ -221,7 +221,7 @@ formatAutoFail = testCase desc $ do
     tryAnyCS $
       runConfigIO
         (Index.formatIndex FormatTabularAuto Name False idx)
-        59
+        58
   case eformatted of
     Right result ->
       assertFailure $
@@ -232,8 +232,8 @@ formatAutoFail = testCase desc $ do
     desc = "Auto tabular throws error for small terminal width"
     expected =
       mconcat
-        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (59)",
-          " is less than minimum width (60) for automatic tabular display. ",
+        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (58)",
+          " is less than minimum width (59) for automatic tabular display. ",
           "Perhaps try multiline."
         ]
 

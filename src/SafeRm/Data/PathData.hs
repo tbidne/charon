@@ -474,7 +474,7 @@ formatTabularHeader nameLen origLen =
   mconcat
     [ fixLen nameLen "Name",
       sep,
-      fixLen 10 "Type",
+      fixLen 9 "Type",
       sep,
       fixLen 7 "Size",
       sep,
@@ -493,7 +493,7 @@ formatTabularHeader nameLen origLen =
 -- | For tabular formatting, this is the necessary width for the fixed
 -- columns:
 --
--- type: 10
+-- type: 9
 -- size: 7
 -- created: 19
 -- separators: 12
@@ -506,7 +506,7 @@ formatTabularHeader nameLen origLen =
 --
 -- @since 0.1
 reservedLineLen :: Natural
-reservedLineLen = 10 + 7 + 19 + 12
+reservedLineLen = 9 + 7 + 19 + 12
 
 -- | @since 0.1
 formatTabularRow :: Natural -> Natural -> PathData -> Text
@@ -523,8 +523,8 @@ formatTabularRow nameLen origLen pd =
       toText (pd ^. #created)
     ]
   where
-    paddedType PathTypeFile = "File      "
-    paddedType PathTypeDirectory = "Directory "
+    paddedType PathTypeFile = "File     "
+    paddedType PathTypeDirectory = "Directory"
 
 sep :: Text
 sep = " | "

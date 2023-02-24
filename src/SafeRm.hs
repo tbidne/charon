@@ -265,6 +265,7 @@ emptyTrash force = addNamespace "emptyTrash" $ do
         else do
           noBuffering
           metadata <- getMetadata
+          putStrLn ""
           putTextLn $ U.renderPretty metadata
           putStr "Permanently delete all contents (y/n)? "
           c <- Ch.toLower <$> getChar
