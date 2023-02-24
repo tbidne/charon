@@ -92,17 +92,19 @@ newtype PathI (i :: PathIndex) = MkPathI
     ( -- | @since 0.1
       Hashable,
       -- | @since 0.1
-      NFData,
-      -- | @since 0.1
-      Serialise
+      NFData
     )
   deriving
     ( -- | @since 0.1
+      FromJSON,
+      -- | @since 0.1
       IsString,
       -- | @since 0.1
       Monoid,
       -- | @since 0.1
-      Semigroup
+      Semigroup,
+      -- | @since 0.1
+      ToJSON
     )
     via FilePath
 

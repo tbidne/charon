@@ -12,10 +12,8 @@ module SafeRm.Data.Timestamp
   )
 where
 
-import Codec.Serialise qualified as Serialise
 import Data.Text qualified as T
-import Data.Time (Day (..))
-import Data.Time.LocalTime (LocalTime (..), TimeOfDay (..))
+import Data.Time.LocalTime (LocalTime (..))
 import Effects.Time (formatLocalTime, parseLocalTime)
 import SafeRm.Prelude
 
@@ -58,20 +56,13 @@ newtype Timestamp = MkTimestamp
 makeFieldLabelsNoPrefix ''Timestamp
 
 -- | @since 0.1
-instance Serialise Timestamp where
-  encode (MkTimestamp (LocalTime (ModifiedJulianDay d) (TimeOfDay h m s))) =
-    mconcat
-      [ Serialise.encode d,
-        Serialise.encode h,
-        Serialise.encode m,
-        Serialise.encode s
-      ]
-  decode =
-    (\d h m s -> MkTimestamp $ LocalTime (ModifiedJulianDay d) (TimeOfDay h m s))
-      <$> Serialise.decode
-      <*> Serialise.decode
-      <*> Serialise.decode
-      <*> Serialise.decode
+instance FromJSON Timestamp where
+  parseJSON = fmap MkTimestamp . parseLocalTime <=< parseJSON
+
+-- | @since 0.1
+instance ToJSON Timestamp where
+  toJSON = toJSON . formatLocalTime . view #unTimestamp
+  toEncoding = toEncoding . formatLocalTime . view #unTimestamp
 
 -- | @since 0.1
 instance Pretty Timestamp where

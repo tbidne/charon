@@ -52,7 +52,8 @@ module SafeRm.Data.PathData
   )
 where
 
-import Codec.Serialise qualified as Serialise
+import Data.Aeson ((.:), (.=))
+import Data.Aeson qualified as Asn
 import Data.ByteString.Lazy qualified as BSL
 import Data.Char qualified as Ch
 import Data.Text qualified as T
@@ -79,7 +80,7 @@ import System.FilePath qualified as FP
 -- The goal is to serialize PathData, but we do not want to include fileName,
 -- as that should be derived from the filename itself. Here are some ideas:
 --
--- 1. Use a custom type (e.g. PathData') for the Serialize instance which leaves
+-- 1. Use a custom type (e.g. PathData') for the instance which leaves
 -- out the fileName field.
 --
 -- Pro: Simple, does not change anything to the PathData type, entirely
@@ -122,23 +123,23 @@ data PathData' = MkPathData'
 makeFieldLabelsNoPrefix ''PathData'
 
 -- | @since 0.1
-instance Serialise PathData' where
-  encode (MkPathData' a b (MkBytes c) d) =
-    mconcat
-      [ Serialise.encode a,
-        Serialise.encode b,
-        Serialise.encode c,
-        Serialise.encode d
-      ]
+instance FromJSON PathData' where
+  parseJSON = Asn.withObject "PathData'" $ \pd ->
+    MkPathData'
+      <$> pd .: "type"
+      <*> pd .: "original"
+      <*> (MkBytes <$> pd .: "size")
+      <*> pd .: "created"
 
-  -- Serialise.encode a
-  --  <> Serialise.encode b <> Serialise.encode c <> Serialise.encode d
-  decode =
-    (\a b c d -> MkPathData' a b (MkBytes c) d)
-      <$> Serialise.decode
-      <*> Serialise.decode
-      <*> Serialise.decode
-      <*> Serialise.decode
+-- | @since 0.1
+instance ToJSON PathData' where
+  toJSON pd =
+    Asn.object
+      [ "type" .= (pd ^. #pathType),
+        "original" .= (pd ^. #originalPath),
+        "size" .= (pd ^. #size % _MkBytes),
+        "created" .= (pd ^. #created)
+      ]
 
 -- | Data for a path.
 --
@@ -274,7 +275,7 @@ toPathData currTime trashHome origPath = do
 --
 -- @since 0.1
 encode :: PathData -> ByteString
-encode = BSL.toStrict . Serialise.serialise . fromPD
+encode = BSL.toStrict . Asn.encode . fromPD
   where
     fromPD pd =
       MkPathData'
@@ -291,9 +292,9 @@ encode = BSL.toStrict . Serialise.serialise . fromPD
 decode :: PathI TrashName -> ByteString -> Either String PathData
 decode name bs = case result of
   Right pd -> Right $ toPD pd
-  Left err -> Left $ displayException err
+  Left err -> Left err
   where
-    result = Serialise.deserialiseOrFail (BSL.fromStrict bs)
+    result = Asn.eitherDecode' (BSL.fromStrict bs)
     toPD :: PathData' -> PathData
     toPD pd' =
       MkPathData

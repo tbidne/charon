@@ -12,7 +12,6 @@ module SafeRm.Prelude
   )
 where
 
-import Codec.Serialise as X (Serialise)
 import Control.Applicative as X
   ( Alternative ((<|>)),
     Applicative (pure, (<*>)),
@@ -46,10 +45,11 @@ import Control.Monad.Reader as X
     local,
     runReaderT,
   )
+import Data.Aeson as X (FromJSON (parseJSON), ToJSON (toEncoding, toJSON))
 import Data.Bifunctor as X (Bifunctor (bimap))
 import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
-import Data.Bytes as X (Bytes (MkBytes), Size (B))
+import Data.Bytes as X (Bytes (MkBytes), Size (B), _MkBytes)
 import Data.Char as X (Char)
 import Data.Either as X (Either (Left, Right), either)
 import Data.Eq as X (Eq ((/=), (==)))

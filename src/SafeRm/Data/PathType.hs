@@ -6,6 +6,8 @@ module SafeRm.Data.PathType
   )
 where
 
+import Data.Aeson qualified as Asn
+import Data.Text qualified as T
 import SafeRm.Prelude
 
 -- | Path type.
@@ -32,12 +34,27 @@ data PathType
     ( -- | @since 0.1
       Hashable,
       -- | @since 0.1
-      NFData,
-      -- | @since 0.1
-      Serialise
+      NFData
     )
 
 -- | @since 0.1
 instance Pretty PathType where
   pretty PathTypeFile = "File"
   pretty PathTypeDirectory = "Directory"
+
+-- | @since 0.1
+instance ToJSON PathType where
+  toJSON PathTypeFile = "f"
+  toJSON PathTypeDirectory = "d"
+
+-- | @since 0.1
+instance FromJSON PathType where
+  parseJSON = Asn.withText "PathType" $ \case
+    "f" -> pure PathTypeFile
+    "d" -> pure PathTypeDirectory
+    other ->
+      fail $
+        mconcat
+          [ "Unexpected PathType. Wanted 'f' or 'd', received: ",
+            T.unpack other
+          ]

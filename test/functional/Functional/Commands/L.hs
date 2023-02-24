@@ -7,18 +7,13 @@ module Functional.Commands.L
 where
 
 import Functional.Prelude
-import Numeric.Literal.Integer (FromInteger (afromInteger))
-import SafeRm.Data.PathData (PathData (..))
-import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI (..))
-import SafeRm.Data.Timestamp (fromText)
 import SafeRm.Exception
   ( TrashInfoDirNotFoundE,
     TrashInfoNotFoundE,
     TrashPathDirNotFoundE,
     TrashPathNotFoundE,
   )
+import Data.ByteString.Char8 qualified as Char8
 
 -- import Data.ByteString qualified as BS
 
@@ -90,16 +85,22 @@ noInfoError args = goldenVsStringDiff "No Info Error" diff gpath $ do
 missingPathError :: IO FilePath -> TestTree
 missingPathError args = goldenVsStringDiff desc diff gpath $ do
   tmpDir <- args
-  ts <- fromText "2020-05-31 12:00:00"
   let testDir = tmpDir </> "l3"
       trashDir = testDir </> ".trash"
       argList = ["-t", trashDir, "l", "--format", "m"]
-      pd = MkPathData PathTypeFile "missing" (MkPathI $ testDir </> "missing") (afromInteger 0) ts
-      -- Originally we were directly writing the string text here, as that
-      -- served as a test that the actual serialization did not change. Alas,
-      -- this was hard to get working with nix, so for now we are relying
-      -- on directly serializing the data itself.
-      missingInfo = PathData.encode pd
+      missingInfo =
+        Char8.unlines
+          [ "{",
+            "\"created\":",
+            "\"2020-05-31 12:00:00\",",
+            "\"original\":",
+            Char8.pack ("\"" <> testDir </> "missing\","),
+            "\"size\":",
+            "5,",
+            "\"type\":",
+            "\"f\"",
+            "}"
+          ]
 
   -- setup
   clearDirectory testDir
