@@ -134,7 +134,7 @@ instance MonadTime (IntPure env) where
 instance MonadLogger (IntPure IntPureEnv) where
   monadLoggerLog _ _ _ _ = pure ()
 
-instance MonadLoggerNamespace (IntPure IntPureEnv) where
+instance MonadLoggerNS (IntPure IntPureEnv) where
   getNamespace = pure ""
   localNamespace _ = id
 

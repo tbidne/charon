@@ -101,7 +101,7 @@ runCmd ::
   forall m env.
   ( HasCallStack,
     HasTrashHome env,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
@@ -265,7 +265,7 @@ printIndex ::
     HasTrashHome env,
     MonadFileReader m,
     MonadPathReader m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
     MonadThrow m
@@ -283,7 +283,7 @@ printMetadata ::
   ( HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
     MonadReader env m,

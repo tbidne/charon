@@ -161,8 +161,8 @@ import Effects.IORef as X
     readIORef,
     writeIORef,
   )
-import Effects.LoggerNamespace as X
-  ( MonadLoggerNamespace (getNamespace, localNamespace),
+import Effects.LoggerNS as X
+  ( MonadLoggerNS (getNamespace, localNamespace),
     addNamespace,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))

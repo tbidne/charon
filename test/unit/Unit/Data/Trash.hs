@@ -53,7 +53,7 @@ runPathDataT (MkPathDataT x) = do
 instance MonadLogger PathDataT where
   monadLoggerLog _ _ _ _ = pure ()
 
-instance MonadLoggerNamespace PathDataT where
+instance MonadLoggerNS PathDataT where
   getNamespace = pure ""
   localNamespace _ = id
 

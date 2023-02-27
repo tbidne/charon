@@ -55,7 +55,7 @@ delete ::
     MonadCatch m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
@@ -104,7 +104,7 @@ deletePermanently ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -144,7 +144,7 @@ getIndex ::
     MonadFileReader m,
     MonadPathReader m,
     HasTrashHome env,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadReader env m,
     MonadThrow m
   ) =>
@@ -168,7 +168,7 @@ getMetadata ::
   ( HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
     MonadReader env m,
@@ -198,7 +198,7 @@ restore ::
     MonadCatch m,
     MonadFileReader m,
     MonadIORef m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
@@ -241,7 +241,7 @@ emptyTrash ::
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
     MonadThrow m

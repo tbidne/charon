@@ -96,7 +96,7 @@ readIndex ::
   forall m.
   ( HasCallStack,
     MonadFileReader m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadThrow m
   ) =>

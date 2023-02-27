@@ -51,12 +51,12 @@ import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
-import Effects.LoggerNamespace
+import Effects.LoggerNS
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
     Namespace,
   )
-import Effects.LoggerNamespace qualified as Logger
+import Effects.LoggerNS qualified as Logger
 import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
@@ -200,7 +200,7 @@ instance MonadLogger (FuncIO FuncEnv) where
             timezone = False
           }
 
-instance MonadLoggerNamespace (FuncIO FuncEnv) where
+instance MonadLoggerNS (FuncIO FuncEnv) where
   getNamespace = asks (view #logNamespace)
   localNamespace f = local (over' #logNamespace f)
 

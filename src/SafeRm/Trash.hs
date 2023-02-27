@@ -111,7 +111,7 @@ mvOriginalToTrash ::
   ( HasCallStack,
     MonadCatch m,
     MonadFileWriter m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
@@ -153,7 +153,7 @@ deleteTrashPath ::
   ( HasCallStack,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTerminal m,
@@ -209,7 +209,7 @@ mvTrashToOriginal ::
   ( HasCallStack,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m
   ) =>

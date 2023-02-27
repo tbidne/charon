@@ -17,8 +17,8 @@ import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.LoggerNamespace (defaultLogFormatter)
-import Effects.LoggerNamespace qualified as Logger
+import Effects.LoggerNS (defaultLogFormatter)
+import Effects.LoggerNS qualified as Logger
 import GHC.Exts (IsList (Item, fromList))
 import Hedgehog (PropertyT)
 import Hedgehog.Gen qualified as Gen
@@ -96,7 +96,7 @@ instance MonadLogger IntIO where
     logsRef <- asks (view #logsRef)
     modifyIORef' logsRef (txt :)
 
-instance MonadLoggerNamespace IntIO where
+instance MonadLoggerNS IntIO where
   getNamespace = pure "integration"
   localNamespace _ = id
 

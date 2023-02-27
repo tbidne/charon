@@ -94,7 +94,7 @@ toMetadata ::
     MonadFileReader m,
     MonadPathReader m,
     MonadPathSize m,
-    MonadLoggerNamespace m,
+    MonadLoggerNS m,
     MonadTerminal m,
     MonadThrow m
   ) =>

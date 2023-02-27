@@ -119,45 +119,45 @@
                 byte-types =
                   final.callCabal2nix "byte-types" byte-types { };
                 hedgehog = prev.hedgehog_1_2;
-                monad-async =
+                effects-async =
                   final.callCabal2nix
-                    "monad-async" "${monad-effects}/monad-async"
+                    "effects-async" "${monad-effects}/effects-async"
                     { };
-                monad-exceptions =
+                effects-exceptions =
                   final.callCabal2nix
-                    "monad-exceptions" "${monad-effects}/monad-exceptions"
+                    "effects-exceptions" "${monad-effects}/effects-exceptions"
                     { };
-                monad-fs =
+                effects-fs =
                   final.callCabal2nix
-                    "monad-fs" "${monad-effects}/monad-fs"
+                    "effects-fs" "${monad-effects}/effects-fs"
                     { };
-                monad-ioref =
+                effects-ioref =
                   final.callCabal2nix
-                    "monad-ioref" "${monad-effects}/monad-ioref"
+                    "effects-ioref" "${monad-effects}/effects-ioref"
                     { };
-                monad-logger-namespace =
-                  final.callCabal2nix "monad-logger-namespace"
-                    "${monad-effects}/monad-logger-namespace"
+                effects-logger-ns =
+                  final.callCabal2nix "effects-logger-ns"
+                    "${monad-effects}/effects-logger-ns"
                     { };
-                monad-optparse =
-                  final.callCabal2nix "monad-optparse"
-                    "${monad-effects}/monad-optparse"
+                effects-optparse =
+                  final.callCabal2nix "effects-optparse"
+                    "${monad-effects}/effects-optparse"
                     { };
-                monad-stm =
-                  final.callCabal2nix "monad-stm"
-                    "${monad-effects}/monad-stm"
+                effects-stm =
+                  final.callCabal2nix "effects-stm"
+                    "${monad-effects}/effects-stm"
                     { };
-                monad-terminal =
+                effects-terminal =
                   final.callCabal2nix
-                    "monad-terminal" "${monad-effects}/monad-terminal"
+                    "effects-terminal" "${monad-effects}/effects-terminal"
                     { };
-                monad-thread =
+                effects-thread =
                   final.callCabal2nix
-                    "monad-thread" "${monad-effects}/monad-thread"
+                    "effects-thread" "${monad-effects}/effects-thread"
                     { };
-                monad-system-time =
+                effects-time =
                   final.callCabal2nix
-                    "monad-system-time" "${monad-effects}/monad-system-time"
+                    "effects-time" "${monad-effects}/effects-time"
                     { };
                 package-version = pkgs.haskell.lib.doJailbreak prev.package-version;
                 path-size = final.callCabal2nix "path-size" path-size { };

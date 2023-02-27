@@ -8,8 +8,8 @@ module SafeRm.Runner.SafeRmT
   )
 where
 
-import Effects.LoggerNamespace (defaultLogFormatter)
-import Effects.LoggerNamespace qualified as Logger
+import Effects.LoggerNS (defaultLogFormatter)
+import Effects.LoggerNS qualified as Logger
 import SafeRm.Prelude
 import SafeRm.Runner.Env (Env, LogFile, handle, logLevel)
 
@@ -78,7 +78,7 @@ instance
 -- | @since 0.1
 instance
   (MonadHandleWriter m, MonadTime m) =>
-  MonadLoggerNamespace (SafeRmT (Env m) m)
+  MonadLoggerNS (SafeRmT (Env m) m)
   where
   getNamespace = asks (view (#logEnv % #logNamespace))
   localNamespace = local . over' (#logEnv % #logNamespace)
