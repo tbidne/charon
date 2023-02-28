@@ -45,7 +45,7 @@ import System.IO qualified as IO
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
--- defaults to @~\/.trash@.
+-- defaults to XDG data e.g. @~\/.local/share/safe-rm/@.
 --
 -- @since 0.1
 delete ::
@@ -187,8 +187,7 @@ getMetadata = addNamespace "getMetadata" $ do
       pure mempty
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
--- location. If @trash@ is not given then we look in the default location
--- e.g. @~\/.trash@.
+-- location.
 --
 -- @since 0.1
 restore ::

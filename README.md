@@ -54,14 +54,14 @@ Available options:
   -c,--config (none|PATH)  Path to the toml config file. Can be the string
                            'none' -- in which case no toml config is used -- or
                            a path to the config file. If not specified then we
-                           look in the xdg config directory e.g.
+                           look in the XDG config directory e.g.
                            ~/.config/safe-rm/config.toml
   -t,--trash-home PATH     Path to the trash directory. This overrides the toml
                            config, if it exists. If neither is given then we use
-                           the xdg data directory e.g. ~/.local/share/safe-rm.
+                           the XDG data directory e.g. ~/.local/share/safe-rm.
   --log-level (none|error|warn|info|debug)
                            The file level in which to log. Defaults to none.
-                           Logs are written to the xdg state directory e.g.
+                           Logs are written to the XDG state directory e.g.
                            ~/.local/state/safe-rm.
   --log-size-mode <warn SIZE | delete SIZE>
                            Sets a threshold for the file log size, upon which we
@@ -89,7 +89,7 @@ Version: 0.1
 
 # Configuration
 
-`safe-rm` can be configured by either CLI args or a `toml` config file. A path to the config file can be given with the `-c` option. Otherwise we search in the xdg config e.g. `~/.config/safe-rm/config.toml`. In general, if an option can be specified in both the config file and on the CLI (e.g. `--trash-home`), then the CLI takes priority.
+`safe-rm` can be configured by either CLI args or a `toml` config file. A path to the config file can be given with the `-c` option. Otherwise we search in the XDG config e.g. `~/.config/safe-rm/config.toml`. In general, if an option can be specified in both the config file and on the CLI (e.g. `--trash-home`), then the CLI takes priority.
 
 See [config.toml](./examples/config.toml) for a description of the `toml` file.
 
