@@ -227,7 +227,7 @@ configParser =
       mconcat
         [ "Path to the toml config file. Can be the string 'none' -- in which ",
           "case no toml config is used -- or a path to the config file. If ",
-          "not specified then we look in the xdg config directory ",
+          "not specified then we look in the XDG config directory ",
           "e.g. ~/.config/safe-rm/config.toml"
         ]
     readTomlPath =
@@ -383,7 +383,7 @@ trashParser =
     helpTxt =
       mconcat
         [ "Path to the trash directory. This overrides the toml config, if ",
-          "it exists. If neither is given then we use the xdg data directory ",
+          "it exists. If neither is given then we use the XDG data directory ",
           "e.g. ~/.local/share/safe-rm."
         ]
 
@@ -397,7 +397,7 @@ logLevelParser =
           OA.help $
             mconcat
               [ "The file level in which to log. Defaults to none. Logs are ",
-                "written to the xdg state directory e.g. ~/.local/state/safe-rm."
+                "written to the XDG state directory e.g. ~/.local/state/safe-rm."
               ]
         ]
 
