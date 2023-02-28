@@ -54,10 +54,11 @@ library
     SafeRm.Runner
     SafeRm.Runner.Args
     SafeRm.Runner.Command
-    SafeRm.Runner.Config
+    SafeRm.Runner.Command.List
     SafeRm.Runner.Env
     SafeRm.Runner.FileSizeMode
     SafeRm.Runner.SafeRmT
+    SafeRm.Runner.Stage
     SafeRm.Runner.Toml
     SafeRm.Trash
     SafeRm.Utils

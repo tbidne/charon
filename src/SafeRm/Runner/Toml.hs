@@ -11,19 +11,12 @@ module SafeRm.Runner.Toml
   )
 where
 
-import SafeRm.Data.PathData
-  ( PathDataFormat
-      ( FormatMultiline,
-        FormatTabular,
-        FormatTabularAuto
-      ),
-  )
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
-import SafeRm.Runner.Args (Args, CommandArg (..))
-import SafeRm.Runner.Command (Command (..), ListCommand (..))
-import SafeRm.Runner.Config (CmdListCfg (..), ListFormatCfg (..))
+import SafeRm.Runner.Args (Args)
+import SafeRm.Runner.Command (Command (..))
 import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
+import SafeRm.Runner.Stage (Stage (..), advanceStage)
 import SafeRm.Utils qualified as U
 import TOML
   ( DecodeTOML (..),
@@ -79,8 +72,8 @@ instance DecodeTOML TomlConfig where
 -- F is specified by both args and toml config, then args takes precedence.
 --
 -- @since 0.1
-mergeConfigs :: Args -> TomlConfig -> (TomlConfig, Command)
-mergeConfigs args toml = (mergedConfig, mkCommand cmd)
+mergeConfigs :: Args -> TomlConfig -> (TomlConfig, Command Stage2)
+mergeConfigs args toml = (mergedConfig, advanceStage cmd)
   where
     cmd = args ^. #command
     mergedConfig =
@@ -89,35 +82,3 @@ mergeConfigs args toml = (mergedConfig, mkCommand cmd)
           logLevel = U.mergeAlt #logLevel #logLevel args toml,
           logSizeMode = U.mergeAlt #logSizeMode #logSizeMode args toml
         }
-
--- Returns the new command after possibly updating the old command from the
--- toml configuration.
-mkCommand :: CommandArg -> Command
-mkCommand = \case
-  -- simple translations
-  DeleteArg paths -> Delete paths
-  DeletePermArg force paths -> DeletePerm force paths
-  EmptyArg b -> Empty b
-  RestoreArg paths -> Restore paths
-  MetadataArg -> Metadata
-  (ListArg cfg) -> List $ listCfgToCmd cfg
-
-listCfgToCmd :: CmdListCfg -> ListCommand
-listCfgToCmd listCfg = do
-  MkListCommand
-    { format,
-      sort,
-      revSort
-    }
-  where
-    sort = U.fromMaybeMonoid (listCfg ^. #sort)
-    revSort = fromMaybe False (listCfg ^. #revSort)
-    format = case listCfg ^. #format of
-      Just FormatMultilineCfg -> FormatMultiline
-      Just FormatTabularCfg ->
-        FormatTabular
-          (fromMaybe 10 (listCfg ^. #nameTrunc))
-          (fromMaybe 22 (listCfg ^. #origTrunc))
-      Just FormatAutoCfg -> FormatTabularAuto
-      -- default to FormatTabularAuto
-      Nothing -> FormatTabularAuto

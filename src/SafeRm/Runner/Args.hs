@@ -7,13 +7,6 @@
 module SafeRm.Runner.Args
   ( getArgs,
     Args (..),
-    CommandArg (..),
-    _DeleteArg,
-    _DeletePermArg,
-    _EmptyArg,
-    _RestoreArg,
-    _ListArg,
-    _MetadataArg,
     TomlConfigPath (..),
     _TomlNone,
     _TomlDefault,
@@ -47,11 +40,18 @@ import Options.Applicative qualified as OA
 import Options.Applicative.Help.Chunk (Chunk (Chunk))
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import SafeRm.Data.Index (Sort, readSort)
-import SafeRm.Data.Paths (PathI, PathIndex (OriginalPath, TrashHome, TrashName))
+import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
-import SafeRm.Runner.Config (CmdListCfg (MkCmdListCfg), ListFormatCfg, parseListFormat)
+import SafeRm.Runner.Command (Command (..))
+import SafeRm.Runner.Command.List
+  ( ListCmd (MkListCmd),
+    ListFormatStage1 (MkListFormatStage1),
+    ListFormatStyle,
+    parseListFormat,
+  )
 import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
+import SafeRm.Runner.Stage (Stage (..))
 import SafeRm.Utils qualified as Utils
 
 -- | Toml path config.
@@ -79,46 +79,6 @@ data TomlConfigPath
 
 makePrisms ''TomlConfigPath
 
--- | Args representing a command. Analagous to SafeRm.Runner.Command,
--- though we maintain a separate type here as the actual command is derived
--- from a combination of arguments.
---
--- @since 0.1
-data CommandArg
-  = -- | Deletes a path.
-    --
-    -- @since 0.1
-    DeleteArg !(UniqueSeq (PathI OriginalPath))
-  | -- | Permanently deletes a path from the trash.
-    --
-    -- @since 0.1
-    DeletePermArg !Bool !(UniqueSeq (PathI TrashName))
-  | -- | Empties the trash.
-    --
-    -- @since 0.1
-    EmptyArg !Bool
-  | -- | Restores a path.
-    --
-    -- @since 0.1
-    RestoreArg (UniqueSeq (PathI TrashName))
-  | -- | List all trash contents.
-    --
-    -- @since 0.1
-    ListArg !CmdListCfg
-  | -- | Prints trash metadata.
-    --
-    -- @since 0.1
-    MetadataArg
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
-
--- | @since 0.1
-makePrisms ''CommandArg
-
 -- | CLI args.
 --
 -- @since 0.1
@@ -142,7 +102,7 @@ data Args = MkArgs
     -- | Command to run.
     --
     -- @since 0.1
-    command :: !CommandArg
+    command :: !(Command Stage1)
   }
   deriving stock
     ( -- | @since 0.1
@@ -235,7 +195,7 @@ configParser =
         "none" -> pure TomlNone
         path -> pure $ TomlPath path
 
-commandParser :: Parser CommandArg
+commandParser :: Parser (Command Stage1)
 commandParser =
   OA.hsubparser
     ( mconcat
@@ -270,22 +230,24 @@ commandParser =
     listTxt = OA.progDesc "Lists all trash contents and metadata."
     metadataTxt = OA.progDesc "Prints trash metadata."
 
-    delParser = DeleteArg <$> pathsParser
-    permDelParser = DeletePermArg <$> forceParser <*> pathsParser
-    emptyParser = EmptyArg <$> forceParser
-    restoreParser = RestoreArg <$> pathsParser
+    delParser = Delete <$> pathsParser
+    permDelParser = DeletePerm <$> forceParser <*> pathsParser
+    emptyParser = Empty <$> forceParser
+    restoreParser = Restore <$> pathsParser
     listParser =
-      fmap ListArg $
-        MkCmdListCfg
-          <$> listFormatParser
-          <*> nameTruncParser
-          <*> origTruncParser
+      fmap List $
+        MkListCmd
+          <$> ( MkListFormatStage1
+                  <$> listFormatStyleParser
+                  <*> nameTruncParser
+                  <*> origTruncParser
+              )
           <*> sortParser
           <*> reverseSortParser
-    metadataParser = pure MetadataArg
+    metadataParser = pure Metadata
 
-listFormatParser :: Parser (Maybe ListFormatCfg)
-listFormatParser =
+listFormatStyleParser :: Parser (Maybe ListFormatStyle)
+listFormatStyleParser =
   A.optional $
     OA.option (OA.str >>= parseListFormat) $
       mconcat

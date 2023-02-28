@@ -7,7 +7,6 @@
 module SafeRm.Runner.Command
   ( -- * Types
     Command (..),
-    ListCommand (..),
 
     -- * Optics
     _Delete,
@@ -19,43 +18,27 @@ module SafeRm.Runner.Command
   )
 where
 
-import SafeRm.Data.Index (Sort)
-import SafeRm.Data.PathData (PathDataFormat)
 import SafeRm.Data.Paths (PathI, PathIndex (OriginalPath, TrashName))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
+import SafeRm.Runner.Command.List (ListCmd)
+import SafeRm.Runner.Stage (AdvanceStage (..), Stage (..))
 
--- | Arguments for the list command.
---
--- @since 0.1
-data ListCommand = MkListCommand
-  { -- | Format style.
-    --
-    -- @since 0.1
-    format :: !PathDataFormat,
-    -- | How to sort the list.
-    --
-    -- @since 0.1
-    sort :: !Sort,
-    -- | Whether to reverse the sort.
-    --
-    -- @since 0.1
-    revSort :: !Bool
-  }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
+instance AdvanceStage (Command Stage1) where
+  type NextStage (Command Stage1) = Command Stage2
 
--- | @since 0.1
-makeFieldLabelsNoPrefix ''ListCommand
+  advanceStage (Delete paths) = Delete paths
+  advanceStage (DeletePerm force paths) = DeletePerm force paths
+  advanceStage (Empty b) = Empty b
+  advanceStage (Restore paths) = Restore paths
+  advanceStage Metadata = Metadata
+  advanceStage (List cfg) = List $ advanceStage cfg
 
 -- | Action to run.
 --
 -- @since 0.1
-data Command
+type Command :: Stage -> Type
+data Command s
   = -- | Deletes a path.
     --
     -- @since 0.1
@@ -77,17 +60,23 @@ data Command
   | -- | List all trash contents.
     --
     -- @since 0.1
-    List !ListCommand
+    List !(ListCmd s)
   | -- | Prints trash metadata.
     --
     -- @since 0.1
     Metadata
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
 
 -- | @since 0.1
 makePrisms ''Command
+
+-- | @since 0.1
+deriving stock instance Eq (Command Stage1)
+
+-- | @since 0.1
+deriving stock instance Show (Command Stage1)
+
+-- | @since 0.1
+deriving stock instance Eq (Command Stage2)
+
+-- | @since 0.1
+deriving stock instance Show (Command Stage2)

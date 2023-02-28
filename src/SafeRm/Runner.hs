@@ -62,6 +62,7 @@ import SafeRm.Runner.Env
 import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
 import SafeRm.Runner.FileSizeMode qualified as FileSizeMode
 import SafeRm.Runner.SafeRmT (runSafeRmT)
+import SafeRm.Runner.Stage (Stage (..))
 import SafeRm.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
 import SafeRm.Utils qualified as U
 import TOML qualified
@@ -119,7 +120,7 @@ runCmd ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  Command ->
+  Command Stage2 ->
   m ()
 runCmd cmd =
   -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
@@ -158,7 +159,7 @@ getEnv ::
     MonadPathWriter m,
     MonadTerminal m
   ) =>
-  m (Env m, Command)
+  m (Env m, Command Stage2)
 getEnv = do
   (mergedConfig, command) <- getConfiguration
 
@@ -236,7 +237,7 @@ getConfiguration ::
     MonadPathReader m,
     MonadThrow m
   ) =>
-  m (TomlConfig, Command)
+  m (TomlConfig, Command Stage2)
 getConfiguration = do
   -- get CLI args
   args <- getArgs

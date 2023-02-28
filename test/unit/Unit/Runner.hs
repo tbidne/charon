@@ -9,17 +9,17 @@ module Unit.Runner
 where
 
 import SafeRm.Data.Index (Sort (Name))
-import SafeRm.Data.PathData (PathDataFormat (FormatTabular, FormatTabularAuto))
+import SafeRm.Data.PathData (PathDataFormat (..))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
-  ( ListCommand (MkListCommand, format, revSort, sort),
-    _Delete,
+  ( _Delete,
     _DeletePerm,
     _Empty,
     _List,
     _Metadata,
     _Restore,
   )
+import SafeRm.Runner.Command.List (ListCmd (..))
 import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
 import System.Environment qualified as SysEnv
 import Unit.Prelude
@@ -110,7 +110,7 @@ list = testCase "Parses list" $ do
   where
     argList = ["l", "-c", "none"]
     defList =
-      MkListCommand
+      MkListCmd
         { format = FormatTabularAuto,
           sort = Name,
           revSort = False
@@ -135,7 +135,7 @@ listNonDefaults = testCase "List non-default args" $ do
         "100"
       ]
     defList =
-      MkListCommand
+      MkListCmd
         { format = FormatTabular 80 100,
           sort = Name,
           revSort = False
