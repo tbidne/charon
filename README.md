@@ -44,7 +44,8 @@
 Safe-rm: A tool for deleting files to a trash directory.
 
 Usage: sr [-c|--config (none|PATH)] [-t|--trash-home PATH]
-          [--log-level (none|error|warn|info|debug)] COMMAND [--version]
+          [--log-level (none|error|warn|info|debug)]
+          [--log-size-mode <warn SIZE | delete SIZE>] COMMAND [--version]
 
 
 Safe-rm moves files to a trash directory, so they can later be restored or permanently deleted. It is intended as a safer alternative to rm. See github.com/tbidne/safe-rm#readme for full documentation.
@@ -62,6 +63,12 @@ Available options:
                            The file level in which to log. Defaults to none.
                            Logs are written to the xdg state directory e.g.
                            ~/.local/state/safe-rm.
+  --log-size-mode <warn SIZE | delete SIZE>
+                           Sets a threshold for the file log size, upon which we
+                           either print a warning or delete the file, if it is
+                           exceeded. The SIZE should include the value and units
+                           e.g. 'warn 10 mb', 'warn 5 gigabytes', 'delete
+                           20.5B'.
   -h,--help                Show this help text
 
 Delete Commands

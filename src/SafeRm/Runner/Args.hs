@@ -51,6 +51,7 @@ import SafeRm.Data.Paths (PathI, PathIndex (OriginalPath, TrashHome, TrashName))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
 import SafeRm.Runner.Config (CmdListCfg (MkCmdListCfg), ListFormatCfg, parseListFormat)
+import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import SafeRm.Utils qualified as Utils
 
 -- | Toml path config.
@@ -134,6 +135,10 @@ data Args = MkArgs
     --
     -- @since 0.1
     logLevel :: !(Maybe (Maybe LogLevel)),
+    -- | Whether to warn/delete for large log files.
+    --
+    -- @since 0.1
+    logSizeMode :: !(Maybe FileSizeMode),
     -- | Command to run.
     --
     -- @since 0.1
@@ -186,6 +191,7 @@ argsParser =
     <$> configParser
     <*> trashParser
     <*> logLevelParser
+    <*> logSizeModeParser
     <*> commandParser
     <**> OA.helper
     <**> version
@@ -402,6 +408,27 @@ pathsParser =
   -- help metavar is duplicated i.e. "PATHS... [PATHS...]".
   fromFoldable . unsafeNE
     <$> OA.some (OA.argument OA.str (OA.metavar "PATHS..."))
+
+logSizeModeParser :: Parser (Maybe FileSizeMode)
+logSizeModeParser =
+  OA.optional $
+    OA.option
+      readFileSize
+      ( mconcat
+          [ OA.long "log-size-mode",
+            OA.help helpTxt,
+            OA.metavar "<warn SIZE | delete SIZE>"
+          ]
+      )
+  where
+    helpTxt =
+      mconcat
+        [ "Sets a threshold for the file log size, upon which we either ",
+          "print a warning or delete the file, if it is exceeded. ",
+          "The SIZE should include the value and units e.g. ",
+          "'warn 10 mb', 'warn 5 gigabytes', 'delete 20.5B'."
+        ]
+    readFileSize = OA.str >>= parseFileSizeMode
 
 mkCommand :: String -> Parser a -> InfoMod a -> Mod CommandFields a
 mkCommand cmdTxt parser helpTxt = OA.command cmdTxt (OA.info parser helpTxt)

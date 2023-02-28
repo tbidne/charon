@@ -14,8 +14,11 @@ module SafeRm.Runner
   )
 where
 
+import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
+import Data.Bytes qualified as Bytes
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
+import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
@@ -56,6 +59,8 @@ import SafeRm.Runner.Env
     logLevel,
     logNamespace,
   )
+import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
+import SafeRm.Runner.FileSizeMode qualified as FileSizeMode
 import SafeRm.Runner.SafeRmT (runSafeRmT)
 import SafeRm.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
 import SafeRm.Utils qualified as U
@@ -150,7 +155,8 @@ getEnv ::
     MonadMask m,
     MonadOptparse m,
     MonadPathReader m,
-    MonadPathWriter m
+    MonadPathWriter m,
+    MonadTerminal m
   ) =>
   m (Env m, Command)
 getEnv = do
@@ -161,7 +167,7 @@ getEnv = do
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      h <- getLogHandle
+      h <- getLogHandle (mergedConfig ^. #logSizeMode)
       pure $
         Just $
           MkLogFile
@@ -186,7 +192,8 @@ configToEnv ::
     MonadHandleWriter m,
     MonadMask m,
     MonadPathReader m,
-    MonadPathWriter m
+    MonadPathWriter m,
+    MonadTerminal m
   ) =>
   TomlConfig ->
   m (Env m)
@@ -196,7 +203,7 @@ configToEnv mergedConfig = do
   logFile <- case join (mergedConfig ^. #logLevel) of
     Nothing -> pure Nothing
     Just lvl -> do
-      h <- getLogHandle
+      h <- getLogHandle (mergedConfig ^. #logSizeMode)
       pure $
         Just $
           MkLogFile
@@ -323,12 +330,62 @@ getLogHandle ::
     MonadFileWriter m,
     MonadHandleWriter m,
     MonadPathReader m,
-    MonadPathWriter m
+    MonadPathWriter m,
+    MonadTerminal m
   ) =>
+  Maybe FileSizeMode ->
   m Handle
-getLogHandle = do
+getLogHandle sizeMode = do
   xdgState <- getXdgState "safe-rm"
   createDirectoryIfMissing True xdgState
 
   MkPathI logPath <- Env.getTrashLog
+
+  handleLogSize logPath sizeMode
+
   openBinaryFile logPath AppendMode
+
+handleLogSize ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadTerminal m
+  ) =>
+  Path ->
+  Maybe FileSizeMode ->
+  m ()
+handleLogSize logFile msizeMode = do
+  logExists <- doesFileExist logFile
+  when logExists $ do
+    logSize <- getFileSize logFile
+    let logSize' = MkBytes (fromIntegral logSize)
+
+    case sizeMode of
+      FileSizeModeWarn warnSize ->
+        when (logSize' > warnSize) $
+          putTextLn $
+            sizeWarning warnSize logFile logSize'
+      FileSizeModeDelete delSize ->
+        when (logSize' > delSize) $ do
+          putTextLn $ sizeWarning delSize logFile logSize' <> " Deleting log."
+          removeFile logFile
+  where
+    sizeMode = fromMaybe FileSizeMode.defaultSizeMode msizeMode
+    sizeWarning warnSize fp fileSize =
+      mconcat
+        [ "Warning: log dir '",
+          T.pack fp,
+          "' has size: ",
+          formatBytes fileSize,
+          ", but specified threshold is: ",
+          formatBytes warnSize,
+          "."
+        ]
+
+    formatBytes =
+      Bytes.formatSized (MkFloatingFormatter (Just 2)) Bytes.sizedFormatterNatural
+        . Bytes.normalize
+        -- Convert to double _before_ normalizing. We may lose some precision
+        -- here, but it is better than normalizing a natural, which will
+        -- truncate (i.e. greater precision loss).
+        . fmap (fromIntegral @Natural @Double)

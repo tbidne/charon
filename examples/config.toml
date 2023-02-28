@@ -5,3 +5,8 @@ trash-home = "./tmp"
 # File log level. Can be one of none, error, warn, info, or debug.
 # Defaults to none.
 log-level = "info"
+
+# Sets a threshold upon which we either delete or warn when the log file size
+# exceeds it. Examples include "delete 20.5 gigabytes", "warn 10 KB".
+# Defaults to "delete 50 mb".
+log-size-mode = "warn 10 mb"

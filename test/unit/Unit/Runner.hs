@@ -20,6 +20,7 @@ import SafeRm.Runner.Command
     _Metadata,
     _Restore,
   )
+import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
 import System.Environment qualified as SysEnv
 import Unit.Prelude
 
@@ -164,6 +165,7 @@ parsesExample = testCase "Parses example" $ do
 
   Just "./tmp" @=? cfg ^. #trashHome
   Just (Just LevelInfo) @=? cfg ^. #logLevel
+  Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^. #logSizeMode
   where
     argList = ["-c", "examples/config.toml", "d", "foo"]
 
@@ -173,6 +175,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
 
   Just "not-tmp" @=? cfg ^. #trashHome
   Just (Just LevelError) @=? cfg ^. #logLevel
+  Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^. #logSizeMode
   where
     argList =
       [ "-c",
@@ -181,6 +184,8 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "not-tmp",
         "--log-level",
         "error",
+        "--log-size-mode",
+        "delete 5 mb",
         "d",
         "foo"
       ]

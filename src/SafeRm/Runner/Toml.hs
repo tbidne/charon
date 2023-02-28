@@ -23,6 +23,7 @@ import SafeRm.Prelude
 import SafeRm.Runner.Args (Args, CommandArg (..))
 import SafeRm.Runner.Command (Command (..), ListCommand (..))
 import SafeRm.Runner.Config (CmdListCfg (..), ListFormatCfg (..))
+import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import SafeRm.Utils qualified as U
 import TOML
   ( DecodeTOML (..),
@@ -41,7 +42,11 @@ data TomlConfig = MkTomlConfig
     -- | Log level.
     --
     -- @since 0.1
-    logLevel :: !(Maybe (Maybe LogLevel))
+    logLevel :: !(Maybe (Maybe LogLevel)),
+    -- | Whether to warn/delete large log files.
+    --
+    -- @since 0.1
+    logSizeMode :: !(Maybe FileSizeMode)
   }
   deriving stock
     ( -- | @since 0.1
@@ -55,7 +60,7 @@ makeFieldLabelsNoPrefix ''TomlConfig
 
 -- | @since 0.1
 defaultTomlConfig :: TomlConfig
-defaultTomlConfig = MkTomlConfig Nothing Nothing
+defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing
 
 -- | @since 0.5
 instance DecodeTOML TomlConfig where
@@ -63,10 +68,12 @@ instance DecodeTOML TomlConfig where
     MkTomlConfig
       <$> decodeTrashHome
       <*> decodeLogLevel
+      <*> decodeSizeMode
     where
       decodeTrashHome = fmap MkPathI <$> getFieldOpt "trash-home"
       decodeLogLevel =
         getFieldOptWith (tomlDecoder >>= U.readLogLevel) "log-level"
+      decodeSizeMode = getFieldOptWith (tomlDecoder >>= parseFileSizeMode) "log-size-mode"
 
 -- | Merges the args and toml config into a single toml config. If some field
 -- F is specified by both args and toml config, then args takes precedence.
@@ -79,7 +86,8 @@ mergeConfigs args toml = (mergedConfig, mkCommand cmd)
     mergedConfig =
       MkTomlConfig
         { trashHome = U.mergeAlt #trashHome #trashHome args toml,
-          logLevel = U.mergeAlt #logLevel #logLevel args toml
+          logLevel = U.mergeAlt #logLevel #logLevel args toml,
+          logSizeMode = U.mergeAlt #logSizeMode #logSizeMode args toml
         }
 
 -- Returns the new command after possibly updating the old command from the
