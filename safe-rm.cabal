@@ -57,8 +57,8 @@ library
     SafeRm.Runner.Command.List
     SafeRm.Runner.Env
     SafeRm.Runner.FileSizeMode
+    SafeRm.Runner.Phase
     SafeRm.Runner.SafeRmT
-    SafeRm.Runner.Stage
     SafeRm.Runner.Toml
     SafeRm.Trash
     SafeRm.Utils

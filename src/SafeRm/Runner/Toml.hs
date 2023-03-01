@@ -14,9 +14,9 @@ where
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
 import SafeRm.Runner.Args (Args)
-import SafeRm.Runner.Command (Command (..))
+import SafeRm.Runner.Command (CommandP2)
 import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
-import SafeRm.Runner.Stage (Stage (..), advanceStage)
+import SafeRm.Runner.Phase (advancePhase)
 import SafeRm.Utils qualified as U
 import TOML
   ( DecodeTOML (..),
@@ -72,8 +72,8 @@ instance DecodeTOML TomlConfig where
 -- F is specified by both args and toml config, then args takes precedence.
 --
 -- @since 0.1
-mergeConfigs :: Args -> TomlConfig -> (TomlConfig, Command Stage2)
-mergeConfigs args toml = (mergedConfig, advanceStage cmd)
+mergeConfigs :: Args -> TomlConfig -> (TomlConfig, CommandP2)
+mergeConfigs args toml = (mergedConfig, advancePhase cmd)
   where
     cmd = args ^. #command
     mergedConfig =

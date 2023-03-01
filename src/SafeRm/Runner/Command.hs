@@ -7,6 +7,8 @@
 module SafeRm.Runner.Command
   ( -- * Types
     Command (..),
+    CommandP1,
+    CommandP2,
 
     -- * Optics
     _Delete,
@@ -22,22 +24,22 @@ import SafeRm.Data.Paths (PathI, PathIndex (OriginalPath, TrashName))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import SafeRm.Runner.Command.List (ListCmd)
-import SafeRm.Runner.Stage (AdvanceStage (..), Stage (..))
+import SafeRm.Runner.Phase (AdvancePhase (..), Phase (..))
 
-instance AdvanceStage (Command Stage1) where
-  type NextStage (Command Stage1) = Command Stage2
+instance AdvancePhase (Command Phase1) where
+  type NextPhase (Command Phase1) = Command Phase2
 
-  advanceStage (Delete paths) = Delete paths
-  advanceStage (DeletePerm force paths) = DeletePerm force paths
-  advanceStage (Empty b) = Empty b
-  advanceStage (Restore paths) = Restore paths
-  advanceStage Metadata = Metadata
-  advanceStage (List cfg) = List $ advanceStage cfg
+  advancePhase (Delete paths) = Delete paths
+  advancePhase (DeletePerm force paths) = DeletePerm force paths
+  advancePhase (Empty b) = Empty b
+  advancePhase (Restore paths) = Restore paths
+  advancePhase Metadata = Metadata
+  advancePhase (List cfg) = List $ advancePhase cfg
 
 -- | Action to run.
 --
 -- @since 0.1
-type Command :: Stage -> Type
+type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
     --
@@ -70,13 +72,19 @@ data Command s
 makePrisms ''Command
 
 -- | @since 0.1
-deriving stock instance Eq (Command Stage1)
+deriving stock instance Eq (Command Phase1)
 
 -- | @since 0.1
-deriving stock instance Show (Command Stage1)
+deriving stock instance Show (Command Phase1)
 
 -- | @since 0.1
-deriving stock instance Eq (Command Stage2)
+deriving stock instance Eq (Command Phase2)
 
 -- | @since 0.1
-deriving stock instance Show (Command Stage2)
+deriving stock instance Show (Command Phase2)
+
+-- | @since 0.1
+type CommandP1 = Command Phase1
+
+-- | @since 0.1
+type CommandP2 = Command Phase2

@@ -43,15 +43,14 @@ import SafeRm.Data.Index (Sort, readSort)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
-import SafeRm.Runner.Command (Command (..))
+import SafeRm.Runner.Command (Command (..), CommandP1)
 import SafeRm.Runner.Command.List
   ( ListCmd (MkListCmd),
-    ListFormatStage1 (MkListFormatStage1),
+    ListFormatPhase1 (MkListFormatPhase1),
     ListFormatStyle,
     parseListFormat,
   )
 import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
-import SafeRm.Runner.Stage (Stage (..))
 import SafeRm.Utils qualified as Utils
 
 -- | Toml path config.
@@ -102,7 +101,7 @@ data Args = MkArgs
     -- | Command to run.
     --
     -- @since 0.1
-    command :: !(Command Stage1)
+    command :: !CommandP1
   }
   deriving stock
     ( -- | @since 0.1
@@ -195,7 +194,7 @@ configParser =
         "none" -> pure TomlNone
         path -> pure $ TomlPath path
 
-commandParser :: Parser (Command Stage1)
+commandParser :: Parser CommandP1
 commandParser =
   OA.hsubparser
     ( mconcat
@@ -237,7 +236,7 @@ commandParser =
     listParser =
       fmap List $
         MkListCmd
-          <$> ( MkListFormatStage1
+          <$> ( MkListFormatPhase1
                   <$> listFormatStyleParser
                   <*> nameTruncParser
                   <*> origTruncParser

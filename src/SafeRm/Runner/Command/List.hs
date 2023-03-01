@@ -5,12 +5,12 @@
 --
 -- @since 0.1
 module SafeRm.Runner.Command.List
-  ( -- * Stage 1
+  ( -- * Phase 1
     ListFormatStyle (..),
     parseListFormat,
-    ListFormatStage1 (..),
+    ListFormatPhase1 (..),
 
-    -- * Stage 2
+    -- * Phase 2
     ListCmd (..),
   )
 where
@@ -19,11 +19,11 @@ import Data.Text qualified as T
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.PathData (PathDataFormat (..))
 import SafeRm.Prelude
-import SafeRm.Runner.Stage (AdvanceStage (..), MaybeStageF, Stage (..))
+import SafeRm.Runner.Phase (AdvancePhase (..), MaybePhaseF, Phase (..))
 import SafeRm.Utils qualified as U
 
 --------------------------------------------------------------------------------
------------------------------------ STAGE 1 ------------------------------------
+----------------------------------- PHASE 1 ------------------------------------
 --------------------------------------------------------------------------------
 
 -- | Configuration option for the list command format.
@@ -57,7 +57,7 @@ parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 -- truncation params.
 --
 -- @since 0.1
-data ListFormatStage1 = MkListFormatStage1
+data ListFormatPhase1 = MkListFormatPhase1
   { -- | Format style.
     --
     -- @since 0.1
@@ -79,30 +79,30 @@ data ListFormatStage1 = MkListFormatStage1
     )
 
 -- | @since 0.1
-makeFieldLabelsNoPrefix ''ListFormatStage1
+makeFieldLabelsNoPrefix ''ListFormatPhase1
 
 --------------------------------------------------------------------------------
------------------------------------ STAGE 2 ------------------------------------
+----------------------------------- PHASE 2 ------------------------------------
 --------------------------------------------------------------------------------
 
--- | Associates the stage to the formatting type.
+-- | Associates the phase to the formatting type.
 --
 -- @since 0.1
-type ListFormatStageF :: Stage -> Type
-type family ListFormatStageF s where
-  ListFormatStageF Stage1 = ListFormatStage1
-  ListFormatStageF Stage2 = PathDataFormat
+type ListFormatPhaseF :: Phase -> Type
+type family ListFormatPhaseF s where
+  ListFormatPhaseF Phase1 = ListFormatPhase1
+  ListFormatPhaseF Phase2 = PathDataFormat
 
 -- | @since 0.1
-instance AdvanceStage ListFormatStage1 where
-  type NextStage ListFormatStage1 = PathDataFormat
+instance AdvancePhase ListFormatPhase1 where
+  type NextPhase ListFormatPhase1 = PathDataFormat
 
-  advanceStage formatStage1 = case formatStage1 ^. #style of
+  advancePhase formatPhase1 = case formatPhase1 ^. #style of
     Just ListFormatStyleMultiline -> FormatMultiline
     Just ListFormatStyleTabular ->
       FormatTabular
-        (fromMaybe 10 (formatStage1 ^. #nameTrunc))
-        (fromMaybe 22 (formatStage1 ^. #origTrunc))
+        (fromMaybe 10 (formatPhase1 ^. #nameTrunc))
+        (fromMaybe 22 (formatPhase1 ^. #origTrunc))
     Just ListFormatStyleAuto -> FormatTabularAuto
     -- default to FormatTabularAuto
     Nothing -> FormatTabularAuto
@@ -110,42 +110,42 @@ instance AdvanceStage ListFormatStage1 where
 -- | Arguments for the list command.
 --
 -- @since 0.1
-type ListCmd :: Stage -> Type
-data ListCmd s = MkListCmd
+type ListCmd :: Phase -> Type
+data ListCmd p = MkListCmd
   { -- | Format style.
     --
     -- @since 0.1
-    format :: !(ListFormatStageF s),
+    format :: !(ListFormatPhaseF p),
     -- | How to sort the list.
     --
     -- @since 0.1
-    sort :: !(MaybeStageF s Sort),
+    sort :: !(MaybePhaseF p Sort),
     -- | Whether to reverse the sort.
     --
     -- @since 0.1
-    revSort :: !(MaybeStageF s Bool)
+    revSort :: !(MaybePhaseF p Bool)
   }
 
 -- | @since 0.1
 makeFieldLabelsNoPrefix ''ListCmd
 
 -- | @since 0.1
-deriving stock instance Eq (ListCmd Stage1)
+deriving stock instance Eq (ListCmd Phase1)
 
 -- | @since 0.1
-deriving stock instance Show (ListCmd Stage1)
+deriving stock instance Show (ListCmd Phase1)
 
 -- | @since 0.1
-deriving stock instance Eq (ListCmd Stage2)
+deriving stock instance Eq (ListCmd Phase2)
 
 -- | @since 0.1
-deriving stock instance Show (ListCmd Stage2)
+deriving stock instance Show (ListCmd Phase2)
 
 -- | @since 0.1
-instance AdvanceStage (ListCmd Stage1) where
-  type NextStage (ListCmd Stage1) = ListCmd Stage2
+instance AdvancePhase (ListCmd Phase1) where
+  type NextPhase (ListCmd Phase1) = ListCmd Phase2
 
-  advanceStage listCfg =
+  advancePhase listCfg =
     MkListCmd
       { format,
         sort,
@@ -154,4 +154,4 @@ instance AdvanceStage (ListCmd Stage1) where
     where
       sort = U.fromMaybeMonoid (listCfg ^. #sort)
       revSort = fromMaybe False (listCfg ^. #revSort)
-      format = advanceStage (listCfg ^. #format)
+      format = advancePhase (listCfg ^. #format)
