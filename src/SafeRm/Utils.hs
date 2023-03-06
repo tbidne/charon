@@ -2,11 +2,9 @@
 --
 -- @since 0.1
 module SafeRm.Utils
-  ( whenJust,
-    whenLeft,
+  ( whenLeft,
     allM1,
     fromMaybeMonoid,
-    maybeMonoid,
     formatBytes,
     normalizedFormat,
     readLogLevel,
@@ -25,13 +23,6 @@ import Data.Bytes.Size (Sized)
 import Data.Text qualified as T
 import SafeRm.Prelude
 import Text.Printf (PrintfArg)
-
--- | Applies the function when we have a Just.
---
--- @since 0.1
-whenJust :: (Applicative f) => Maybe t -> (t -> f ()) -> f ()
-whenJust Nothing _ = pure ()
-whenJust (Just x) f = f x
 
 -- | Applies the function when we have a Left.
 --
@@ -93,12 +84,6 @@ formatBytes =
 -- @since 0.1
 fromMaybeMonoid :: (Monoid a) => Maybe a -> a
 fromMaybeMonoid = fromMaybe mempty
-
--- | 'maybe' for 'Monoid'.
---
--- @since 0.1
-maybeMonoid :: (Monoid b) => (a -> b) -> Maybe a -> b
-maybeMonoid = maybe mempty
 
 -- | Reads the 'LogLevel'.
 --

@@ -32,7 +32,8 @@ data TomlConfig = MkTomlConfig
     --
     -- @since 0.1
     trashHome :: !(Maybe (PathI TrashHome)),
-    -- | Log level.
+    -- | Log level. The double Maybe is so we distinguish between
+    -- unspecified (Nothing) and explicitly disabled (Just Nothing).
     --
     -- @since 0.1
     logLevel :: !(Maybe (Maybe LogLevel)),

@@ -156,6 +156,7 @@ tomlTests =
     "Toml"
     [ parsesExample,
       argsOverridesToml,
+      argsDisablesTomlLogging,
       defaultConfig
     ]
 
@@ -186,6 +187,21 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "error",
         "--log-size-mode",
         "delete 5 mb",
+        "d",
+        "foo"
+      ]
+
+argsDisablesTomlLogging :: TestTree
+argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
+  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+
+  Just Nothing @=? cfg ^. #logLevel
+  where
+    argList =
+      [ "-c",
+        "examples/config.toml",
+        "--log-level",
+        "none",
         "d",
         "foo"
       ]

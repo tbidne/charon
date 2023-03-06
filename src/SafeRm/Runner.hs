@@ -16,8 +16,8 @@ where
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
 import Data.Text qualified as T
-import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.HandleWriter (withBinaryFile)
+import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
@@ -78,7 +78,6 @@ runSafeRm ::
   m ()
 runSafeRm = do
   (config, cmd) <- getConfiguration
-
   withEnv config (runSafeRmT $ runCmd cmd)
 
 -- | Runs SafeRm in the given environment. This is useful in conjunction with
@@ -138,12 +137,13 @@ withEnv ::
 withEnv mergedConfig onEnv = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
 
-  withLogHandle (mergedConfig ^. #logSizeMode) $ \h ->
-    let logFile = join (mergedConfig ^. #logLevel) <&> \lvl ->
-          MkLogFile
-            { handle = h,
-              logLevel = lvl
-            }
+  withLogHandle (mergedConfig ^. #logSizeMode) $ \handle ->
+    let logFile =
+          join (mergedConfig ^. #logLevel) <&> \logLevel ->
+            MkLogFile
+              { handle,
+                logLevel
+              }
      in onEnv $
           MkEnv
             { trashHome,
