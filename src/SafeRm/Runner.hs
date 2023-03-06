@@ -9,7 +9,6 @@ module SafeRm.Runner
     runCmd,
 
     -- * Helpers
-    getEnv,
     getConfiguration,
   )
 where
@@ -18,6 +17,7 @@ import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
+import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
@@ -43,7 +43,6 @@ import SafeRm.Runner.Env
   ( Env (MkEnv, trashHome),
     LogEnv (MkLogEnv),
     LogFile (MkLogFile),
-    finalizer,
     handle,
     logEnv,
     logFile,
@@ -80,15 +79,7 @@ runSafeRm ::
 runSafeRm = do
   (config, cmd) <- getConfiguration
 
-  bracket
-    (configToEnv config)
-    closeLogging
-    (runSafeRmT (runCmd cmd))
-  where
-    closeLogging :: (Monad m) => Env m -> m ()
-    closeLogging env = do
-      let mFinalizer = env ^? #logEnv % #logFile %? #finalizer
-      fromMaybe (pure ()) mFinalizer
+  withEnv config (runSafeRmT $ runCmd cmd)
 
 -- | Runs SafeRm in the given environment. This is useful in conjunction with
 -- 'getConfiguration' as an alternative 'runSafeRm', when we want to use a
@@ -134,83 +125,34 @@ runCmd cmd =
       $(logError) (T.pack $ displayNoCS ex)
       throwCS ex
 
--- | Parses CLI 'Args' and optional 'TomlConfig' to produce the final Env used
--- by SafeRm.
---
--- @since 0.1
-getEnv ::
-  ( HasCallStack,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadMask m,
-    MonadOptparse m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
-  ) =>
-  m (Env m, CommandP2)
-getEnv = do
-  (mergedConfig, command) <- getConfiguration
-
-  trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
-
-  logFile <- case join (mergedConfig ^. #logLevel) of
-    Nothing -> pure Nothing
-    Just lvl -> do
-      h <- getLogHandle (mergedConfig ^. #logSizeMode)
-      pure $
-        Just $
-          MkLogFile
-            { handle = h,
-              logLevel = lvl,
-              finalizer = hFlush h `finally` hClose h
-            }
-  let env =
-        MkEnv
-          { trashHome,
-            logEnv =
-              MkLogEnv
-                { logFile,
-                  logNamespace = "runner"
-                }
-          }
-  pure (env, command)
-
-configToEnv ::
+withEnv ::
   ( HasCallStack,
     MonadFileWriter m,
     MonadHandleWriter m,
-    MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTerminal m
   ) =>
   TomlConfig ->
-  m (Env m)
-configToEnv mergedConfig = do
+  ((Env m -> m a) -> m a)
+withEnv mergedConfig onEnv = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
 
-  logFile <- case join (mergedConfig ^. #logLevel) of
-    Nothing -> pure Nothing
-    Just lvl -> do
-      h <- getLogHandle (mergedConfig ^. #logSizeMode)
-      pure $
-        Just $
+  withLogHandle (mergedConfig ^. #logSizeMode) $ \h ->
+    let logFile = join (mergedConfig ^. #logLevel) <&> \lvl ->
           MkLogFile
             { handle = h,
-              logLevel = lvl,
-              finalizer = hFlush h `finally` hClose h
+              logLevel = lvl
             }
-  pure $
-    MkEnv
-      { trashHome,
-        logEnv =
-          MkLogEnv
-            { logFile,
-              logNamespace = "runner"
+     in onEnv $
+          MkEnv
+            { trashHome,
+              logEnv =
+                MkLogEnv
+                  { logFile,
+                    logNamespace = "runner"
+                  }
             }
-      }
 
 -- | Parses CLI 'Args' and optional 'TomlConfig' to produce the user
 -- configuration. For values shared between the CLI and Toml file, the CLI
@@ -316,7 +258,7 @@ getTrashHome ::
   m (PathI TrashHome)
 getTrashHome = MkPathI <$> (getXdgData "safe-rm")
 
-getLogHandle ::
+withLogHandle ::
   ( HasCallStack,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -325,8 +267,8 @@ getLogHandle ::
     MonadTerminal m
   ) =>
   Maybe FileSizeMode ->
-  m Handle
-getLogHandle sizeMode = do
+  ((Handle -> m a) -> m a)
+withLogHandle sizeMode onHandle = do
   xdgState <- getXdgState "safe-rm"
   createDirectoryIfMissing True xdgState
 
@@ -334,7 +276,7 @@ getLogHandle sizeMode = do
 
   handleLogSize logPath sizeMode
 
-  openBinaryFile logPath AppendMode
+  withBinaryFile logPath AppendMode onHandle
 
 handleLogSize ::
   ( HasCallStack,

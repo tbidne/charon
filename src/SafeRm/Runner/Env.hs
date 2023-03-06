@@ -27,11 +27,7 @@ data LogFile m = MkLogFile
     -- | Level in which to log.
     --
     -- @since 0.1
-    logLevel :: !LogLevel,
-    -- Finalizer to run e.g. flush/close.
-    --
-    -- @since 0.1
-    finalizer :: m ()
+    logLevel :: !LogLevel
   }
 
 makeFieldLabelsNoPrefix ''LogFile
