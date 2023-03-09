@@ -133,7 +133,8 @@ withEnv ::
     MonadTerminal m
   ) =>
   TomlConfig ->
-  ((Env m -> m a) -> m a)
+  (Env m -> m a) ->
+  m a
 withEnv mergedConfig onEnv = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
 
@@ -267,7 +268,8 @@ withLogHandle ::
     MonadTerminal m
   ) =>
   Maybe FileSizeMode ->
-  ((Handle -> m a) -> m a)
+  (Handle -> m a) ->
+  m a
 withLogHandle sizeMode onHandle = do
   xdgState <- getXdgState "safe-rm"
   createDirectoryIfMissing True xdgState
