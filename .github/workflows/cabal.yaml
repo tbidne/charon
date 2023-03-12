@@ -19,26 +19,30 @@ jobs:
         ghc:
           - "9.4.4"
         os:
+          - "macos-latest"
           - "ubuntu-latest"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.3.0
 
-      - uses: haskell/actions/setup@v2.0.0
+      - uses: haskell/actions/setup@v2.3.4
         with:
           ghc-version: ${{ matrix.ghc }}
 
+      - name: Configure
+        run: cabal configure --enable-tests --enable-benchmarks
+
       - name: Compile
-        run: cabal build
+        run: cabal build safe-rm:exe:sr
 
       - name: Unit Tests
-        run: cabal test unit --enable-tests --test-options '--hedgehog-tests 10000'
+        run: cabal test unit --test-options '--hedgehog-tests 10000'
 
       - name: Integration Tests
-        run: cabal test integration --enable-tests --test-options '--hedgehog-tests 10000'
+        run: cabal test integration --test-options '--hedgehog-tests 10000'
 
       - name: Functional Tests
-        run: cabal test functional --enable-tests
+        run: cabal test functional
 
       - name: Benchmarks
         if: ${{ matrix.os == 'ubuntu-latest' }}

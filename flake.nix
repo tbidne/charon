@@ -22,15 +22,6 @@
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    byte-types = {
-      url = "github:tbidne/byte-types";
-      inputs.flake-compat.follows = "flake-compat";
-      inputs.flake-parts.follows = "flake-parts";
-      inputs.nixpkgs.follows = "nixpkgs";
-
-      inputs.algebra-simple.follows = "algebra-simple";
-      inputs.bounds.follows = "bounds";
-    };
     monad-effects = {
       url = "github:tbidne/monad-effects/";
       inputs.flake-compat.follows = "flake-compat";
@@ -49,9 +40,18 @@
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
-      inputs.byte-types.follows = "byte-types";
+      inputs.si-bytes.follows = "si-bytes";
       inputs.monad-effects.follows = "monad-effects";
       inputs.smart-math.follows = "smart-math";
+    };
+    si-bytes = {
+      url = "github:tbidne/si-bytes";
+      inputs.flake-compat.follows = "flake-compat";
+      inputs.flake-parts.follows = "flake-parts";
+      inputs.nixpkgs.follows = "nixpkgs";
+
+      inputs.algebra-simple.follows = "algebra-simple";
+      inputs.bounds.follows = "bounds";
     };
     smart-math = {
       url = "github:tbidne/smart-math";
@@ -66,34 +66,26 @@
   outputs =
     inputs@{ algebra-simple
     , bounds
-    , byte-types
     , flake-compat
     , flake-parts
     , monad-effects
     , nixpkgs
     , path-size
     , self
+    , si-bytes
     , smart-math
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       perSystem = { pkgs, ... }:
         let
-          buildTools = c: with c; [
-            cabal-install
+          buildTools = c: [
+            c.cabal-install
             pkgs.gnumake
             pkgs.zlib
           ];
-          devTools = c: with c; [
-            (pkgs.haskell.lib.dontCheck ghcid)
-            (hlib.overrideCabal haskell-language-server (old: {
-              configureFlags = (old.configureFlags or [ ]) ++
-                [
-                  "-f -brittany"
-                  "-f -floskell"
-                  "-f -fourmolu"
-                  "-f -stylishhaskell"
-                ];
-            }))
+          devTools = c: [
+            (hlib.dontCheck c.ghcid)
+            (hlib.dontCheck c.haskell-language-server)
           ];
           ghc-version = "ghc944";
           compiler = pkgs.haskell.packages."${ghc-version}".override {
@@ -116,8 +108,6 @@
                 algebra-simple =
                   final.callCabal2nix "algebra-simple" algebra-simple { };
                 bounds = final.callCabal2nix "bounds" bounds { };
-                byte-types =
-                  final.callCabal2nix "byte-types" byte-types { };
                 hedgehog = prev.hedgehog_1_2;
                 effects-async =
                   final.callCabal2nix
@@ -161,8 +151,10 @@
                     { };
                 package-version = pkgs.haskell.lib.doJailbreak prev.package-version;
                 path-size = final.callCabal2nix "path-size" path-size { };
+                si-bytes = final.callCabal2nix "si-bytes" si-bytes { };
                 smart-math = final.callCabal2nix "smart-math" smart-math { };
                 tasty-hedgehog = prev.tasty-hedgehog_1_4_0_0;
+                unix-compat = prev.unix-compat_0_6;
               };
             };
         in
@@ -171,6 +163,7 @@
           devShells.default = mkPkg true;
         };
       systems = [
+        "x86_64-darwin"
         "x86_64-linux"
       ];
     };

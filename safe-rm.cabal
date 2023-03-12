@@ -3,7 +3,7 @@ name:               safe-rm
 version:            0.1
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC ==9.2.5 || ==9.4.4
+tested-with:        GHC ==9.4.4
 copyright:          2022-2023 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
@@ -20,7 +20,7 @@ source-repository head
   type:     git
   location: https://github.com/tbidne/safe-rm
 
-common common-exts
+common common-lang
   default-extensions:
     NoFieldSelectors
     NoImplicitPrelude
@@ -37,8 +37,11 @@ common common-exts
     PatternSynonyms
     TypeFamilies
 
+  if os(osx)
+    cpp-options: -DOSX
+
 library
-  import:           common-exts
+  import:           common-lang
   exposed-modules:
     SafeRm
     SafeRm.Data.Index
@@ -67,7 +70,6 @@ library
     , aeson                 ^>=2.1.1.0
     , algebra-simple        ^>=0.1
     , base                  >=4.17.0.0  && <4.18
-    , byte-types            ^>=0.1
     , bytestring            ^>=0.11.1.0
     , containers            ^>=0.6.3.1
     , deepseq               ^>=1.4.6.0
@@ -89,6 +91,7 @@ library
     , package-version       >=0.1.0.0   && <0.4
     , path-size             ^>=0.1
     , prettyprinter         ^>=1.7.1
+    , si-bytes              ^>=0.1
     , text                  >=1.2.4.0   && <2.1
     , time                  >=1.9.3     && <1.14
     , toml-reader           >=0.2.0.0   && <0.3
@@ -99,7 +102,7 @@ library
   default-language: GHC2021
 
 library test-utils
-  import:           common-exts
+  import:           common-lang
   exposed-modules:  Test.Utils
   build-depends:
     , base
@@ -112,7 +115,7 @@ library test-utils
   default-language: GHC2021
 
 executable sr
-  import:             common-exts
+  import:             common-lang
   default-extensions: ImplicitPrelude
   main-is:            Main.hs
   build-depends:
@@ -124,7 +127,7 @@ executable sr
   default-language:   GHC2021
 
 test-suite unit
-  import:           common-exts
+  import:           common-lang
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
@@ -156,7 +159,7 @@ test-suite unit
   default-language: GHC2021
 
 test-suite integration
-  import:           common-exts
+  import:           common-lang
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
@@ -190,7 +193,7 @@ test-suite integration
   default-language: GHC2021
 
 test-suite functional
-  import:           common-exts
+  import:           common-lang
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
@@ -223,7 +226,7 @@ test-suite functional
   default-language: GHC2021
 
 benchmark benchmarks
-  import:           common-exts
+  import:           common-lang
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:

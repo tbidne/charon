@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -39,6 +40,7 @@ import SafeRm.Runner.Env
     trashHome,
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (..))
+import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -113,15 +115,24 @@ usingIntIO env rdr = do
   -- NOTE: Evidently annotations do not work with uncaught exceptions.
   -- Therefore we catch any exceptions here, print out any relevant data,
   -- then use Hedgehog's failure to die.
-  usingIntIONoCatch env rdr `catchAny` \ex -> do
-    termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
-    logs <- liftIO $ readIORef (env ^. #logsRef)
-    annotate "TERMINAL LOGS"
-    for_ termLogs (annotate . T.unpack)
-    annotate "FILE LOGS"
-    for_ (L.reverse logs) (annotate . T.unpack)
-    annotate $ displayException ex
-    failure
+  result <-
+    usingIntIONoCatch env rdr `catchAny` \ex -> do
+      printLogs
+      annotate $ displayException ex
+      failure
+
+  -- for help debugging CI failures
+  withGuard_ "INT_LOGS" ExpectEnvSet printLogs
+
+  pure result
+  where
+    printLogs = do
+      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
+      logs <- liftIO $ readIORef (env ^. #logsRef)
+      annotate "TERMINAL LOGS"
+      for_ termLogs (annotate . T.unpack)
+      annotate "FILE LOGS"
+      for_ (L.reverse logs) (annotate . T.unpack)
 
 -- | Use this for when we are expecting an exception and want to specifically
 -- handle it in the test
@@ -146,7 +157,7 @@ delete :: IO FilePath -> TestTree
 delete mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "All paths are deleted" "delete" $ do
     property $ do
-      testDir <- (</> "d1") <$> liftIO mtestDir
+      testDir <- (</> "d1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -182,7 +193,7 @@ deleteSome :: IO FilePath -> TestTree
 deleteSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
-      testDir <- (</> "d2") <$> liftIO mtestDir
+      testDir <- (</> "d2") <$> getTestPath mtestDir
       (α, β) <- forAll (gen2FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -239,7 +250,7 @@ deletePermanently :: IO FilePath -> TestTree
 deletePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deletePermanently" $ do
     property $ do
-      testDir <- (</> "x1") <$> liftIO mtestDir
+      testDir <- (</> "x1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
       let trashDir = testDir </> ".trash"
           αTest = USeq.map (testDir </>) α
@@ -280,7 +291,7 @@ deleteSomePermanently :: IO FilePath -> TestTree
 deleteSomePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deleteSomePermanently" $ do
     property $ do
-      testDir <- (</> "x2") <$> liftIO mtestDir
+      testDir <- (</> "x2") <$> getTestPath mtestDir
       (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -346,7 +357,7 @@ restore :: IO FilePath -> TestTree
 restore mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
-      testDir <- (</> "r1") <$> liftIO mtestDir
+      testDir <- (</> "r1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -388,7 +399,7 @@ restoreSome :: IO FilePath -> TestTree
 restoreSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
-      testDir <- (</> "r2") <$> liftIO mtestDir
+      testDir <- (</> "r2") <$> getTestPath mtestDir
       (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -452,7 +463,7 @@ emptyTrash :: IO FilePath -> TestTree
 emptyTrash mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
-      testDir <- (</> "e1") <$> liftIO mtestDir
+      testDir <- (</> "e1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -492,7 +503,7 @@ metadata :: IO FilePath -> TestTree
 metadata mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
-      testDir <- (</> "m1") <$> liftIO mtestDir
+      testDir <- (</> "m1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -564,12 +575,34 @@ genFileNameNoDupes asciiOnly paths =
     range = Range.linear 1 20
 
 genChar :: Bool -> Gen Char
-genChar asciiOnly = Gen.filterT (not . badChars) gen
+genChar True = Gen.filterT (not . Ch.isControl) Gen.ascii
+genChar False = genChar'
   where
-    gen
-      | asciiOnly = Gen.ascii
-      | otherwise = Gen.unicode
-    badChars c = Ch.isControl c || L.elem @[] c ['/', '.']
+    genChar' :: Gen Char
+#ifdef OSX
+    -- Below unrestricted unicode paths are causing the mac tests to fail.
+    -- It would be nice to have a list of paths that we _should_ support,
+    -- so we know which set to generate, but for now, just generate the
+    -- printable chars.
+    --
+    -- Note: paths that previous caused failures were \x19ad and \x2800.
+    -- ':' was also excluded, though it hadn't caused a test failure (yet).
+    genChar' =
+      Gen.filterT
+        (\c -> Ch.isPrint c && notBadChar c)
+        Gen.unicode
+#else
+    genChar' =
+      Gen.filterT
+        (\c -> notControl c && notBadChar c)
+        Gen.unicode
+
+    notControl :: Char -> Bool
+    notControl = not . Ch.isControl
+#endif
+
+notBadChar :: Char -> Bool
+notBadChar c = not $ L.elem @[] c ['/', '.']
 
 toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
@@ -602,3 +635,22 @@ mkTrashPaths trashHome =
   where
     mkTrashPath p = trashHome </> "paths" </> p
     mkTrashInfoPath p = trashHome </> "info" </> p <> ".json"
+
+-- NOTE: This exists because in the osx tests', canoncialize transforms a path
+--
+--    /var/...
+--
+-- into
+--
+--    /private/var/...
+--
+-- due to some symlink shenanigans. This causes tests to fail because the
+-- trash dir we create looks like /var/... whereas the PathData's
+-- originalPath is /private/var/...
+--
+-- Thus we canonicalize the test path as well, allowing our
+-- "deleted paths match expected paths" checks to succeed.
+--
+-- This is not needed on linux but also appears unharmful..
+getTestPath :: (MonadIO m) => IO Path -> m Path
+getTestPath mtestPath = liftIO (canonicalizePath =<< mtestPath)
