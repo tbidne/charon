@@ -98,16 +98,16 @@ library
   hs-source-dirs:   src
   default-language: GHC2021
 
-library file-utils
+library test-utils
   import:           common-exts
-  exposed-modules:  SafeRm.FileUtils
+  exposed-modules:  Test.Utils
   build-depends:
     , base
     , bytestring
     , safe-rm
     , text
 
-  hs-source-dirs:   lib/file-utils
+  hs-source-dirs:   lib/test-utils
   default-language: GHC2021
 
 executable sr
@@ -171,7 +171,6 @@ test-suite integration
     , effects-terminal
     , effects-time
     , env-guard             ^>=0.2
-    , file-utils
     , hedgehog
     , mtl
     , nonempty-containers
@@ -181,6 +180,7 @@ test-suite integration
     , tasty
     , tasty-golden
     , tasty-hedgehog
+    , test-utils
     , text
     , time
     , unordered-containers
@@ -209,13 +209,13 @@ test-suite functional
     , effects-terminal
     , effects-time
     , env-guard            ^>=0.2
-    , file-utils
     , nonempty-containers
     , path-size
     , safe-rm
     , tasty
     , tasty-golden
     , tasty-hunit
+    , test-utils
     , text
     , time
 
@@ -235,9 +235,9 @@ benchmark benchmarks
     , bytestring
     , effects-fs
     , env-guard
-    , file-utils
     , safe-rm
     , tasty-bench  ^>=0.3
+    , test-utils
 
   ghc-options:      -Wno-unused-packages
   hs-source-dirs:   benchmarks

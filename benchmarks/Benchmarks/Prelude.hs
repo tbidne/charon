@@ -10,7 +10,6 @@ where
 import Data.ByteString.Char8 qualified as Char8
 import Data.List qualified as L
 import SafeRm.Data.PathData (headerNames)
-import SafeRm.FileUtils as X (clearDirectory)
 import SafeRm.Prelude as X
 import Test.Tasty.Bench as X
   ( Benchmark,
@@ -19,6 +18,7 @@ import Test.Tasty.Bench as X
     defaultMain,
     nfIO,
   )
+import Test.Utils as X (clearDirectory)
 
 -- | Csv header.
 --

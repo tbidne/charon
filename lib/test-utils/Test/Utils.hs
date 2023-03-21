@@ -1,7 +1,7 @@
 -- | Provides utils for file system actions.
 --
 -- @since 0.1
-module SafeRm.FileUtils
+module Test.Utils
   ( -- * File System Operations
     createFiles,
     createFilesMap,
@@ -64,7 +64,7 @@ createFileContents paths = for_ paths $
       `catchAnyCS` \ex -> do
         putStrLn $
           mconcat
-            [ "[SafeRm.FileUtils.createFileContents] Exception for file '",
+            [ "[Test.Utils.createFileContents] Exception for file '",
               p,
               "' and contents '",
               Char8.unpack c,

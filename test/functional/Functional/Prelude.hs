@@ -65,7 +65,6 @@ import GHC.Exts (IsList (Item, fromList, toList))
 import PathSize qualified
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
-import SafeRm.FileUtils as X
 import SafeRm.Prelude as X
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
@@ -80,6 +79,7 @@ import Test.Tasty.HUnit as X
     testCase,
     (@=?),
   )
+import Test.Utils as X
 
 -- | Infinite stream of chars.
 data CharStream = Char :> CharStream

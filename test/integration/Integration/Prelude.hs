@@ -46,7 +46,6 @@ import Hedgehog as X
   )
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasTrashHome)
-import SafeRm.FileUtils as X
 import SafeRm.Prelude as X
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
@@ -54,6 +53,7 @@ import System.Environment qualified as SysEnv
 import Test.Tasty as X (TestTree, askOption, testGroup)
 import Test.Tasty.Golden as X (goldenVsString, goldenVsStringDiff)
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
+import Test.Utils as X
 
 -- | Asserts that files exist.
 --
