@@ -9,7 +9,7 @@ package safe-rm
     -Wno-unticked-promoted-constructors -Wprepositive-qualified-module
 
   benchmark-options:
-    +RTS -T --nonmoving-gc -RTS --svg benchmarks/bench.svg
+    +RTS -T --nonmoving-gc -RTS
 
 optimization: 2
 test-show-details: direct

@@ -30,6 +30,10 @@ watch:
 		ghcid --command "cabal repl $(T)"; \
 	fi
 
+bench:
+	cabal bench --benchmark-options \
+		'--csv benchmarks/bench.csv --svg benchmarks/bench.svg'
+
 # ci
 
 cic: formatc lintc

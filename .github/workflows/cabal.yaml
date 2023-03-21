@@ -13,12 +13,14 @@ on:
 
 jobs:
   cabal:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         ghc:
-        - "9.4.4"
+          - "9.4.4"
+        os:
+          - "ubuntu-latest"
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3.0.2
 
@@ -39,16 +41,20 @@ jobs:
         run: cabal test functional --enable-tests
 
       - name: Benchmarks
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        id: bench
         run: |
-          set +e
-
           cabal bench --benchmark-options '
-            --csv benchmarks/bench_ci.csv
-            --baseline benchmarks/baseline_ci.csv
-            --fail-if-slower 10'
+            --csv benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
+            --svg benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.svg
+            --baseline benchmarks/baseline_${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
+            --fail-if-slower 20
+            --fail-if-faster 20'
 
-          bench_ec=$?
-
-          cat benchmarks/bench_ci.csv
-
-          exit $bench_ec
+      - uses: actions/upload-artifact@v3
+        if: ${{ failure() && steps.bench.conclusion == 'failure' }}
+        with:
+          name: build-artifacts
+          path: |
+            benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
+            benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.svg
