@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Provides utils for file system actions.
 --
 -- @since 0.1
@@ -17,12 +19,18 @@ module Test.Utils
     -- ** HUnit
     assertMatch,
     assertMatches,
+
+    -- * Posix/Windows compat
+    massagePathI,
+    massagePath,
   )
 where
 
 import Data.ByteString.Char8 qualified as Char8
 import Data.List qualified as L
 import Data.Text qualified as T
+import SafeRm.Data.Paths (PathI)
+import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Prelude
 import Test.Tasty.HUnit (assertFailure)
 
@@ -54,7 +62,7 @@ createFileContents ::
   IO ()
 createFileContents paths = for_ paths $
   \(p, c) ->
-    writeBinaryFile p c
+    writeBinaryFile (massagePath p) c
       `catchAnyCS` \ex -> do
         putStrLn $
           mconcat
@@ -72,16 +80,18 @@ createFileContents paths = for_ paths $
 -- @since 0.1
 createDirectories :: (Foldable f, HasCallStack) => f FilePath -> IO ()
 createDirectories paths =
-  for_ paths $ \p -> createDirectoryIfMissing False p
+  for_ paths $ \p -> createDirectoryIfMissing False (massagePath p)
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
 --
 -- @since 0.1
 clearDirectory :: (HasCallStack) => FilePath -> IO ()
 clearDirectory path = do
-  exists <- doesDirectoryExist path
-  when exists $ removePathForcibly path
-  createDirectoryIfMissing False path
+  exists <- doesDirectoryExist path'
+  when exists $ removePathForcibly path'
+  createDirectoryIfMissing False path'
+  where
+    path' = massagePath path
 
 -- | Data type used for testing text matches.
 --
@@ -100,7 +110,19 @@ data TextMatch
       Show
     )
 
+mapTextMatch :: (Text -> Text) -> TextMatch -> TextMatch
+mapTextMatch f (Exact t) = Exact (f t)
+mapTextMatch f (Prefix t) = Prefix (f t)
+mapTextMatch f (Infix t) = Infix (f t)
+mapTextMatch f (Suffix t) = Suffix (f t)
+mapTextMatch f (Outfix s e) = Outfix (f s) (f e)
+mapTextMatch f (Outfixes s ins e) = Outfixes (f s) (f <$> ins) (f e)
+
 -- | Tests text for matches via 'matches'. Otherwise triggers an HUnit failure.
+--
+-- This function automatically replaces backslashes with forward slashes
+-- for posix/windows path compatibility. Take care that any tests do not
+-- rely on having actual backslash chars (as opposed to "path separators").
 --
 -- @since 0.1
 assertMatches :: [TextMatch] -> [Text] -> IO ()
@@ -117,6 +139,10 @@ assertMatches expectations results = case matches expectations results of
         ]
 
 -- | Tests text for matches. Otherwise triggers an HUnit failure.
+--
+-- This function automatically replaces backslashes with forward slashes
+-- for posix/windows path compatibility. Take care that any tests do not
+-- rely on having actual backslash chars (as opposed to "path separators").
 --
 -- @since 0.1
 assertMatch :: TextMatch -> Text -> IO ()
@@ -160,12 +186,15 @@ isMatch (s :| es) (r :| rs) =
           ]
 
 isMatchHelper :: TextMatch -> Text -> Bool
-isMatchHelper (Exact e) r = e == r
-isMatchHelper (Prefix e) r = e `T.isPrefixOf` r
-isMatchHelper (Infix e) r = e `T.isInfixOf` r
-isMatchHelper (Suffix e) r = e `T.isSuffixOf` r
-isMatchHelper (Outfix e1 e2) r = e1 `T.isPrefixOf` r && e2 `T.isSuffixOf` r
-isMatchHelper (Outfixes start ins end) r =
+isMatchHelper tm = isMatchHelper' (mapTextMatch massageTextPath tm)
+
+isMatchHelper' :: TextMatch -> Text -> Bool
+isMatchHelper' (Exact e) r = e == r
+isMatchHelper' (Prefix e) r = e `T.isPrefixOf` r
+isMatchHelper' (Infix e) r = e `T.isInfixOf` r
+isMatchHelper' (Suffix e) r = e `T.isSuffixOf` r
+isMatchHelper' (Outfix e1 e2) r = e1 `T.isPrefixOf` r && e2 `T.isSuffixOf` r
+isMatchHelper' (Outfixes start ins end) r =
   start `T.isPrefixOf` r
     && L.all (`T.isInfixOf` r) ins
     && end `T.isSuffixOf` r
@@ -193,3 +222,19 @@ showTextMatch (Outfixes start ins end) =
 
 wc :: String
 wc = "**"
+
+-- | @since 0.1
+massagePathI :: PathI i -> PathI i
+massagePathI = Paths.liftPathI' massagePath
+
+-- | @since 0.1
+massagePath :: FilePath -> FilePath
+massagePath = T.unpack . massageTextPath . T.pack
+
+-- | @since 0.1
+massageTextPath :: Text -> Text
+#if WINDOWS
+massageTextPath = T.replace "/" "\\"
+#else
+massageTextPath = id
+#endif

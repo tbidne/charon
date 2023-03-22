@@ -28,7 +28,7 @@ import Hedgehog as X
   )
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, askOption, testGroup)
-import Test.Tasty.Golden as X (goldenVsStringDiff)
+import Test.Tasty.Golden as X (goldenVsFile, goldenVsFileDiff)
 import Test.Tasty.HUnit as X
   ( assertBool,
     assertEqual,

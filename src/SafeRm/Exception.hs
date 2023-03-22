@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Provides exceptions used by SafeRm.
 --
 -- @since 0.1
@@ -116,10 +118,12 @@ instance Exception TrashPathNotFoundE where
         name ^. #unPathI,
         "' was not found in '",
         thome ^. #unPathI,
-        "/paths",
+        slash,
+        "paths",
         "' despite being listed in '",
         thome ^. #unPathI,
-        "/info'. This can be fixed by ",
+        slash,
+        "info'. This can be fixed by ",
         "manually deleting the ",
         Env.trashInfoExtension,
         " file or deleting everything ",
@@ -147,11 +151,14 @@ instance Exception TrashInfoNotFoundE where
         Env.trashInfoExtension,
         "' was not found in '",
         thome ^. #unPathI,
-        "/info",
+        slash,
+        "info",
         "' despite being listed in '",
         thome ^. #unPathI,
-        "/paths'. This can be fixed by ",
-        "manually deleting the /paths entry or deleting everything ",
+        slash,
+        "paths'. This can be fixed by manually deleting the ",
+        slash,
+        "paths entry or deleting everything ",
         "(i.e. sr e -f)."
       ]
 
@@ -170,7 +177,8 @@ instance Exception TrashPathDirNotFoundE where
     mconcat
       [ "The trash paths directory was not found at '",
         th ^. #unPathI,
-        "/paths' despite the trash home existing. This can be fixed by ",
+        slash,
+        "paths' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
@@ -189,7 +197,8 @@ instance Exception TrashInfoDirNotFoundE where
     mconcat
       [ "The trash info directory was not found at '",
         th ^. #unPathI,
-        "/info' despite the trash home existing. This can be fixed by ",
+        slash,
+        "info' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
@@ -228,7 +237,7 @@ data RootE = MkRootE
 instance Exception RootE where
   displayException _ = "Attempted to delete root! This is not allowed."
 
--- | Exception for deleting the root.
+-- | Exception for deleting an empty path.
 --
 -- @since 0.1
 data EmptyPathE = MkEmptyPathE
@@ -261,3 +270,10 @@ instance Exception InfoDecodeE where
         "\n: ",
         err
       ]
+
+slash :: FilePath
+#if WINDOWS
+slash = "\\"
+#else
+slash = "/"
+#endif

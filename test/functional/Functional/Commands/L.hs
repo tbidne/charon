@@ -115,7 +115,7 @@ missingPathError args = testCase "Entry Missing Path" $ do
             "\"created\":",
             "\"2020-05-31 12:00:00\",",
             "\"original\":",
-            Char8.pack ("\"" <> testDir </> "missing\","),
+            Char8.pack (escapeBackslashes $ "\"" <> testDir </> "missing\","),
             "\"size\":",
             "5,",
             "\"type\":",
@@ -155,6 +155,11 @@ missingPathError args = testCase "Entry Missing Path" $ do
           ["/safe-rm/functional/l/missingPathError/.trash/paths' despite being listed in '"]
           "/safe-rm/functional/l/missingPathError/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e -f)."
       ]
+
+    -- Windows paths have backslashes which isn't valid json. Need to escape
+    escapeBackslashes [] = []
+    escapeBackslashes ('\\' : xs) = '\\' : '\\' : escapeBackslashes xs
+    escapeBackslashes (x : xs) = x : escapeBackslashes xs
 
 missingInfoError :: IO FilePath -> TestTree
 missingInfoError args = testCase "Entry Missing Info" $ do

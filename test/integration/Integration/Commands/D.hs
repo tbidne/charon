@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Tests for d command.
 --
 -- @since 0.1
@@ -6,6 +8,7 @@ module Integration.Commands.D
   )
 where
 
+import Data.Text qualified as T
 import Integration.Prelude
 
 -- | @since 0.1
@@ -13,15 +16,39 @@ tests :: TestTree
 tests =
   testGroup
     "Delete (d)"
-    [ deletesRootError
+    [ testRoot
     ]
 
-deletesRootError :: TestTree
-deletesRootError = testCase "Delete root throws error" $ do
-  let argList = ["d", "/", "-t", "/dev/null"]
+testRoot :: TestTree
+testRoot =
+  testGroup
+    "Delete root throws error"
+#if WINDOWS
+    [ deletesRootError "C:\\",
+      deletesRootError "d:",
+      deletesRootError "X:\\   ",
+      deletesRootError "  g:   "
+    ]
+#else
+    [ deletesRootError "/",
+      deletesRootError "/   ",
+      deletesRootError " /   "
+    ]
+#endif
 
+deletesRootError :: String -> TestTree
+deletesRootError r = testCase ("delete '" <> r <> "'") $ do
   (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @ExitCode argList
 
   "ExitFailure 1" @=? ex
-  "Error deleting path '/': Attempted to delete root! This is not allowed.\n" @=? terminal
+  errMsg @=? terminal
   "" @=? deletedPaths
+  where
+    errMsg :: Text
+    errMsg =
+      "Error deleting path '"
+        <> T.pack r
+        <> "': Attempted to delete root! This is not allowed.\n"
+
+    argList :: [String]
+    argList = "d" : r : ["-t", "/dev/null"]

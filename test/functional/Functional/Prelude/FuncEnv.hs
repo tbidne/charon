@@ -58,6 +58,7 @@ import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import System.Exit (die)
+import Test.Utils qualified as U
 
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
@@ -324,15 +325,16 @@ runIndexMetadata testDir = do
             charStream
           }
 
-  tmpDir <- getTemporaryDirectory
+  -- Need to canonicalize due to windows aliases
+  tmpDir <- canonicalizePath =<< getTemporaryDirectory
 
   idx <- view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
   mdata <- runFuncIO SafeRm.getMetadata funcEnv
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
-    addSet t acc pd =
-      let fixPath tmp =
+    addSet tmp acc pd =
+      let fixPath =
             MkPathI
               . T.unpack
               . T.replace (T.pack tmp) ""
@@ -342,7 +344,7 @@ runIndexMetadata testDir = do
             UnsafePathData
               { pathType = pd ^. #pathType,
                 fileName = pd ^. #fileName,
-                originalPath = fixPath t (pd ^. #originalPath),
+                originalPath = fixPath (pd ^. #originalPath),
                 size = pd ^. #size,
                 created = pd ^. #created
               }
@@ -357,7 +359,7 @@ mkPathData pathType fileName originalPath =
   UnsafePathData
     { pathType,
       fileName,
-      originalPath,
+      originalPath = U.massagePathI originalPath,
       size = afromInteger 5,
       created = fixedTimestamp
     }

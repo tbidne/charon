@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Unit tests for Data.Trash
@@ -12,7 +13,7 @@ import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..))
 import PathSize (SubPathData (MkSubPathData))
 import PathSize.Data.PathData qualified as PathSize.PathData
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import SafeRm.Data.Paths (PathI, PathIndex (..), liftPathI')
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Exception (EmptyPathE, RootE)
 import SafeRm.Trash qualified as Trash
@@ -63,22 +64,23 @@ instance MonadPathWriter PathDataT where
       writeIORef ref ("renamed " <> T.pack p1 <> " to " <> T.pack p2)
 
 instance MonadPathReader PathDataT where
-  canonicalizePath = pure . ("/home/" </>)
+  canonicalizePath = pure . (windowsify "/home/" </>)
 
   doesPathExist p
     | p `L.elem` nexists = pure False
-    | otherwise = error p
+    | otherwise = error $ "Path: '" <> p <> "'"
     where
       nexists =
-        [ "test/unit/.trash/paths/foo",
-          "test/unit/.trash/paths/ "
-        ]
+        windowsify
+          <$> [ "test/unit/.trash/paths/foo",
+                "test/unit/.trash/paths/ "
+              ]
 
   doesFileExist p
     | p `L.elem` exists = pure True
     | otherwise = error p
     where
-      exists = ["/home/path/to/foo", "/", "/home/ "]
+      exists = windowsify <$> ["/home/path/to/foo", "/", "/home/ "]
 
 instance MonadPathSize PathDataT where
   findLargestPaths _ p = pure (PathSizeSuccess spd)
@@ -102,25 +104,30 @@ instance MonadTerminal PathDataT where
 
 mvTrash :: TestTree
 mvTrash = testCase "mvOriginalToTrash success" $ do
-  (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts "path/to/foo")
-  "renamed /home/path/to/foo to test/unit/.trash/paths/foo" @=? result
+  (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts (liftPathI' windowsify "path/to/foo"))
+  windowsify "renamed /home/path/to/foo to test/unit/.trash/paths/foo" @=? T.unpack result
 
 mvTrashWhitespace :: TestTree
 mvTrashWhitespace = testCase "mvOriginalToTrash whitespace success" $ do
   (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts " ")
-  "renamed /home/  to test/unit/.trash/paths/ " @=? result
+  windowsify "renamed /home/  to test/unit/.trash/paths/ " @=? T.unpack result
 
 mvTrashRootError :: TestTree
 mvTrashRootError = testCase desc $ do
   eformatted <-
     tryCS @_ @RootE $
-      runPathDataT (Trash.mvOriginalToTrash trashHome ts "/")
+      runPathDataT (Trash.mvOriginalToTrash trashHome ts rootDir)
   case eformatted of
     Right result ->
       assertFailure $ "Expected exception, received result: " <> show result
     Left ex -> "Attempted to delete root! This is not allowed." @=? displayException ex
   where
     desc = "mvOriginalToTrash throws exception for root original path"
+#if WINDOWS
+    rootDir = "C:\\"
+#else
+    rootDir = "/"
+#endif
 
 mvTrashEmptyError :: TestTree
 mvTrashEmptyError = testCase desc $ do
@@ -135,9 +142,19 @@ mvTrashEmptyError = testCase desc $ do
     desc = "mvOriginalToTrash throws exception for empty original path"
 
 trashHome :: PathI TrashHome
-trashHome = "test/unit/.trash"
+trashHome = liftPathI' windowsify "test/unit/.trash"
 
 ts :: Timestamp
 ts = case fromText "2020-05-31 12:00:00" of
   Nothing -> error "[Unit.Data.PathData.ts]: Error creating timestamp"
   Just t -> t
+
+windowsify :: String -> String
+#if WINDOWS
+windowsify [] = []
+windowsify (c:cs)
+  | c == '/' = '\\' : windowsify cs
+  | otherwise = c : windowsify cs
+#else
+windowsify = id
+#endif

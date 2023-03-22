@@ -40,6 +40,9 @@ common common-lang
   if os(osx)
     cpp-options: -DOSX
 
+  if os(windows)
+    cpp-options: -DWINDOWS
+
 library
   import:           common-lang
   exposed-modules:
@@ -143,7 +146,6 @@ test-suite unit
   build-depends:
     , algebra-simple
     , base
-    , bytestring
     , containers
     , effects-terminal
     , hedgehog              >=1.0.2    && <1.3

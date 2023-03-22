@@ -36,7 +36,7 @@ main = do
 
 setup :: IO FilePath
 setup = do
-  tmpDir <- (</> "safe-rm/functional") <$> Dir.getTemporaryDirectory
+  tmpDir <- (\tmp -> tmp </> "safe-rm" </> "functional") <$> Dir.getTemporaryDirectory
   createDirectoryIfMissing True tmpDir
   pure tmpDir
 

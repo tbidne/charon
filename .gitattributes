@@ -1,1 +1,1 @@
-*.golden diff
+*.golden -text

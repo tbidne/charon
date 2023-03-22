@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -15,6 +16,7 @@ module SafeRm.Data.Paths
     isEmpty,
     isRoot,
     isRoot',
+    toText,
 
     -- ** General
     -- $general
@@ -197,7 +199,14 @@ isRoot = isRoot' . view #unPathI
 --
 -- @since 0.1
 isRoot' :: FilePath -> Bool
+#if WINDOWS
+isRoot' = f . T.unpack . T.strip . T.pack
+  where
+    f (_ : ':' : rest) = null rest || rest == "\\"
+    f _ = False
+#else
 isRoot' = (== "/") . T.strip . T.pack
+#endif
 
 -- | Pretty-print a list of paths.
 --
@@ -207,6 +216,10 @@ isRoot' = (== "/") . T.strip . T.pack
 -- @since 0.1
 showPaths :: [PathI a] -> String
 showPaths = L.intercalate ", " . fmap (view #unPathI)
+
+-- | @since 0.1
+toText :: PathI i -> Text
+toText = T.pack . view #unPathI
 
 -- $general
 -- These functions allows for lifting arbitrary 'FilePath' functions onto our

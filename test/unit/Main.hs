@@ -4,6 +4,7 @@
 module Main (main) where
 
 import Test.Tasty qualified as Tasty
+import Test.Tasty.Golden (DeleteOutputFile (OnPass))
 import Unit.Data.Index qualified as Index
 import Unit.Data.Trash qualified as Trash
 import Unit.Data.UniqueSeq qualified as UniqueSeq
@@ -17,11 +18,12 @@ import Unit.Utils qualified as Utils
 main :: IO ()
 main =
   Tasty.defaultMain $
-    testGroup
-      "Unit Tests"
-      [ Index.tests,
-        Trash.tests,
-        UniqueSeq.tests,
-        Runner.tests,
-        Utils.tests
-      ]
+    Tasty.localOption OnPass $
+      testGroup
+        "Unit Tests"
+        [ Index.tests,
+          Trash.tests,
+          UniqueSeq.tests,
+          Runner.tests,
+          Utils.tests
+        ]

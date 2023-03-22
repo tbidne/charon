@@ -18,7 +18,7 @@ import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.LoggerNS (defaultLogFormatter)
+import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
 import GHC.Exts (IsList (Item, fromList))
 import Hedgehog (PropertyT)
@@ -50,7 +50,8 @@ import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 data IntEnv = MkIntEnv
   { coreEnv :: Env IO,
     termLogsRef :: IORef [Text],
-    logsRef :: IORef [Text]
+    logsRef :: IORef [Text],
+    namespace :: !Namespace
   }
 
 makeFieldLabelsNoPrefix ''IntEnv
@@ -99,8 +100,8 @@ instance MonadLogger IntIO where
     modifyIORef' logsRef (txt :)
 
 instance MonadLoggerNS IntIO where
-  getNamespace = pure "integration"
-  localNamespace _ = id
+  getNamespace = view #namespace <$> ask
+  localNamespace f = local (over' #namespace f)
 
 -- Wno-missing-methods
 instance MonadTerminal IntIO where
@@ -544,7 +545,7 @@ natToInt i
 genFileNameSet :: Bool -> Gen (UniqueSeq FilePath)
 genFileNameSet asciiOnly = fromFoldable <$> Gen.list range (genFileName asciiOnly)
   where
-    range = Range.linear 0 100
+    range = Range.linear 1 100
 
 gen2FileNameSets :: Bool -> Gen (UniqueSeq FilePath, UniqueSeq FilePath)
 gen2FileNameSets asciiOnly = do
@@ -575,34 +576,56 @@ genFileNameNoDupes asciiOnly paths =
     range = Range.linear 1 20
 
 genChar :: Bool -> Gen Char
-genChar True = Gen.filterT (not . Ch.isControl) Gen.ascii
-genChar False = genChar'
+genChar asciiOnly = Gen.filterT f (mapper <$> g)
   where
-    genChar' :: Gen Char
-#ifdef OSX
+    g =
+      if asciiOnly
+        then Gen.ascii
+        else Gen.unicode
+#if OSX
     -- Below unrestricted unicode paths are causing the mac tests to fail.
     -- It would be nice to have a list of paths that we _should_ support,
     -- so we know which set to generate, but for now, just generate the
     -- printable chars.
     --
     -- Note: paths that previous caused failures were \x19ad and \x2800.
-    -- ':' was also excluded, though it hadn't caused a test failure (yet).
-    genChar' =
-      Gen.filterT
-        (\c -> Ch.isPrint c && notBadChar c)
-        Gen.unicode
+    -- ':' was also excluded, though it hadn't caused a test failure (yet)
+    f c = Ch.isPrint c && notBadChar c
+
+    -- The wildcard '*' is excluded because it causes tests to fail.
+    -- For instance, suppose we delete files '*' and ' ' and then try to
+    -- permanently delete them. Permanently deleting the wildcard will match
+    -- ' ' and delete both, so then when we try to explicitly delete ' ',
+    -- it will fail.
+    notBadChar :: Char -> Bool
+    notBadChar c = not $ L.elem @[] c ['/', '.', ':', '*']
+
+    mapper :: Char -> Char
+    mapper = id
+#elif WINDOWS
+    f c = Ch.isPrint c && notBadChar c
+
+    -- https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#file-and-directory-names
+    notBadChar :: Char -> Bool
+    notBadChar c = not $ L.elem @[] c
+      ['/', '\\', '<', '>', ':', '"', '|', '?', '*', '0', '.', ' ']
+
+    -- windows paths are case-insensitive by default, so let's just take
+    -- lower-case paths :-(
+    mapper :: Char -> Char
+    mapper = Ch.toLower
 #else
-    genChar' =
-      Gen.filterT
-        (\c -> notControl c && notBadChar c)
-        Gen.unicode
+    f c = notControl c && notBadChar c
 
     notControl :: Char -> Bool
     notControl = not . Ch.isControl
-#endif
 
-notBadChar :: Char -> Bool
-notBadChar c = not $ L.elem @[] c ['/', '.']
+    notBadChar :: Char -> Bool
+    notBadChar c = not $ L.elem @[] c ['/', '.', '*']
+
+    mapper :: Char -> Char
+    mapper = id
+#endif
 
 toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
@@ -619,7 +642,8 @@ mkEnv fp = do
               logEnv = MkLogEnv Nothing ""
             },
         termLogsRef,
-        logsRef
+        logsRef,
+        namespace = "integration"
       }
 
 mkTrashPaths ::

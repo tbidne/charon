@@ -175,7 +175,7 @@ headerNames = ["Type", "Name", "Original", "Size", "Created"]
 -- @since 0.1
 toPathData ::
   ( HasCallStack,
-    MonadLogger m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
     MonadTerminal m,
@@ -185,7 +185,9 @@ toPathData ::
   PathI TrashHome ->
   PathI OriginalPath ->
   m PathData
-toPathData currTime trashHome origPath = do
+toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
+  $(logDebug) $ "Retreiving path data: '" <> Paths.toText origPath <> "'"
+
   -- NOTE: It is VERY important that this check is first i.e. we perform it
   -- on the original given path, before any processing. As an example of
   -- what can go wrong, if someone attempts to delete a blank path
@@ -195,6 +197,9 @@ toPathData currTime trashHome origPath = do
   throwIfIllegal origPath
 
   originalPath <- Paths.liftPathIF' canonicalizePath origPath
+
+  $(logDebug) $ "Canonicalized: '" <> Paths.toText originalPath <> "'"
+
   -- NOTE: need to get the file name here because fp could refer to an
   -- absolute path. In this case, </> returns the 2nd arg which is absolutely
   -- not what we want.
@@ -204,6 +209,8 @@ toPathData currTime trashHome origPath = do
   let fileName = Paths.liftPathI' FP.takeFileName originalPath
   uniqPath <- mkUniqPath (Env.getTrashPath trashHome (Paths.reindex fileName))
   let uniqName = Paths.liftPathI FP.takeFileName uniqPath
+
+  $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
   isFile <- Paths.applyPathI doesFileExist originalPath
   (fileName', originalPath', pathType) <-
@@ -312,9 +319,16 @@ mkUniqPath fp = do
     mkSuffix i = " (" <> show i <> ")"
 
 -- | @since 0.1
-throwIfIllegal :: (HasCallStack, MonadThrow m) => PathI i -> m ()
+throwIfIllegal ::
+  ( HasCallStack,
+    MonadLoggerNS m,
+    MonadThrow m
+  ) =>
+  PathI i ->
+  m ()
 throwIfIllegal p =
-  if
-      | Paths.isRoot p -> throwCS MkRootE
-      | Paths.isEmpty p -> throwCS MkEmptyPathE
-      | otherwise -> pure ()
+  addNamespace "throwIfIllegal" $
+    if
+        | Paths.isRoot p -> $(logError) "Path is root!" *> throwCS MkRootE
+        | Paths.isEmpty p -> $(logError) "Path is empty!" *> throwCS MkEmptyPathE
+        | otherwise -> pure ()

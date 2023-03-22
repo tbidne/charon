@@ -18,10 +18,17 @@ jobs:
       matrix:
         ghc:
           - "9.4.4"
-        os:
-          - "macos-latest"
-          - "ubuntu-latest"
-    runs-on: ${{ matrix.os }}
+        platform:
+          - os: "macos-latest"
+            set-env: "export"
+            trials: 1000
+          - os: "ubuntu-latest"
+            set-env: "export"
+            trials: 10000
+          - os: "windows-latest"
+            set-env: "set"
+            trials: 100
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v3.3.0
 
@@ -36,22 +43,24 @@ jobs:
         run: cabal build safe-rm:exe:sr
 
       - name: Unit Tests
-        run: cabal test unit --test-options '--hedgehog-tests 10000'
+        run: cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'
 
       - name: Integration Tests
-        run: cabal test integration --test-options '--hedgehog-tests 10000'
+        run: |
+          ${{ matrix.platform.set-env }} INT_LOGS=1
+          cabal test integration --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'
 
       - name: Functional Tests
         run: cabal test functional
 
       - name: Benchmarks
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
         id: bench
         run: |
           cabal bench --benchmark-options '
-            --csv benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
-            --svg benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.svg
-            --baseline benchmarks/baseline_${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
+            --csv benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
+            --svg benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
+            --baseline benchmarks/baseline_${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
             --fail-if-slower 50
             --fail-if-faster 50'
 
@@ -60,5 +69,5 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.csv
-            benchmarks/${{ matrix.os }}_${{ matrix.ghc }}_ci.svg
+            benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
+            benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
