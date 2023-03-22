@@ -74,11 +74,11 @@ noPathsError args = testCase "No Paths Error" $ do
   assertMatches expectedLogs logs
   where
     expectedErr =
-      Outfix "The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+      Outfix "The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l2/.trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
 noInfoError :: IO FilePath -> TestTree
@@ -99,11 +99,11 @@ noInfoError args = testCase "No Info Error" $ do
   assertMatches expectedLogs logs
   where
     expectedErr =
-      Outfix "The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+      Outfix "The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l2/.trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
 missingPathError :: IO FilePath -> TestTree
@@ -146,7 +146,7 @@ missingPathError args = testCase "Entry Missing Path" $ do
       Outfixes
         "The path 'missing' was not found in '"
         ["/safe-rm/functional/l3/.trash/paths' despite being listed in '"]
-        "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e)."
+        "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l3/.trash",
@@ -156,7 +156,7 @@ missingPathError args = testCase "Entry Missing Path" $ do
         Outfixes
           "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'missing' was not found in '"
           ["/safe-rm/functional/l3/.trash/paths' despite being listed in '"]
-          "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e)."
+          "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e -f)."
       ]
 
 missingInfoError :: IO FilePath -> TestTree
@@ -182,7 +182,7 @@ missingInfoError args = testCase "Entry Missing Info" $ do
       Outfixes
         "The path 'bar.json' was not found in '"
         ["/safe-rm/functional/l5/.trash/info' despite being listed in '"]
-        "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e)."
+        "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l5/.trash",
@@ -192,5 +192,5 @@ missingInfoError args = testCase "Entry Missing Info" $ do
         Outfixes
           "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'bar.json' was not found in '"
           ["/safe-rm/functional/l5/.trash/info' despite being listed in '"]
-          "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e)."
+          "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e -f)."
       ]

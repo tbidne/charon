@@ -15,7 +15,9 @@ tests args =
     "Empty (e)"
     [ emptyTrash args,
       emptyTrashTwice args,
-      emptyNoForce args
+      emptyNoForce args,
+      missingInfoForcesDelete args,
+      missingPathsForcesDelete args
     ]
 
 emptyTrash :: IO FilePath -> TestTree
@@ -130,8 +132,6 @@ emptyTrashTwice args = testCase "Calling empty twice does not error" $ do
 
   (_, logs2) <- captureSafeRmLogs ["e", "-f", "-t", trashDir]
 
-  -- FIXME: This test should probably be changed so that the first delete
-  -- actually does something
   assertMatches expectedLogs logs1
   assertMatches expectedLogs logs2
   where
@@ -239,6 +239,130 @@ emptyNoForce args = testCase "Empties trash without force" $ do
         Exact "",
         Exact "Entries:      5",
         Exact "Total Files:  5",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+missingInfoForcesDelete :: IO FilePath -> TestTree
+missingInfoForcesDelete args = testCase "empty --force overwrites bad directory (no info.)" $ do
+  tmpDir <- args
+  let testDir = tmpDir </> "e4"
+      trashDir = testDir </> ".trash"
+      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+
+  -- setup
+  clearDirectory testDir
+  -- test w/ a nested dir
+  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+  -- test w/ a file in dir
+  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+  assertFilesExist filesToDelete
+  assertDirectoriesExist dirsToDelete
+
+  -- delete files
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesDoNotExist filesToDelete
+  assertDirectoriesDoNotExist dirsToDelete
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
+  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
+
+  -- delete info dir, leaving trash dir in bad state
+  clearDirectory (trashDir </> "info")
+
+  let emptyArgList = ["-t", trashDir, "e", "-f"]
+  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
+
+  metadataResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
+  assertDirectoriesDoNotExist $ mkAllTrashPaths trashDir ["dir2"]
+  assertFilesDoNotExist filesToDelete
+  assertDirectoriesDoNotExist dirsToDelete
+  assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
+
+  assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
+
+  assertMatches [] emptyResult
+  assertMatches expectedEmptyLogs emptyLogs
+  assertMatches expectedMetadata metadataResult
+  where
+    expectedEmptyLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home:" "/safe-rm/functional/e4/.trash"
+      ]
+
+    expectedMetadata =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+missingPathsForcesDelete :: IO FilePath -> TestTree
+missingPathsForcesDelete args = testCase "empty --force overwrites bad directory (no paths/)" $ do
+  tmpDir <- args
+  let testDir = tmpDir </> "e5"
+      trashDir = testDir </> ".trash"
+      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+
+  -- setup
+  clearDirectory testDir
+  -- test w/ a nested dir
+  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+  -- test w/ a file in dir
+  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+  assertFilesExist filesToDelete
+  assertDirectoriesExist dirsToDelete
+
+  -- delete files
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesDoNotExist filesToDelete
+  assertDirectoriesDoNotExist dirsToDelete
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
+  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
+
+  -- delete info dir, leaving trash dir in bad state
+  clearDirectory (trashDir </> "paths")
+
+  let emptyArgList = ["-t", trashDir, "e", "-f"]
+  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
+
+  metadataResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
+  assertDirectoriesDoNotExist $ mkAllTrashPaths trashDir ["dir2"]
+  assertFilesDoNotExist filesToDelete
+  assertDirectoriesDoNotExist dirsToDelete
+  assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
+
+  assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
+
+  assertMatches [] emptyResult
+  assertMatches expectedEmptyLogs emptyLogs
+  assertMatches expectedMetadata metadataResult
+  where
+    expectedEmptyLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home:" "/safe-rm/functional/e5/.trash"
+      ]
+
+    expectedMetadata =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
         Exact "Log size:     0.00B",
         Exact "Size:         0.00B",
         Exact ""

@@ -121,7 +121,7 @@ instance Exception TrashPathNotFoundE where
         "manually deleting the ",
         Env.trashInfoExtension,
         " file or deleting everything ",
-        "(i.e. sr e)."
+        "(i.e. sr e -f)."
       ]
 
 -- | Path found in trash/paths but not trash/info error
@@ -150,7 +150,7 @@ instance Exception TrashInfoNotFoundE where
         thome ^. #unPathI,
         "/paths'. This can be fixed by ",
         "manually deleting the /paths entry or deleting everything ",
-        "(i.e. sr e)."
+        "(i.e. sr e -f)."
       ]
 
 -- | Trash path dir not found error.
@@ -169,7 +169,7 @@ instance Exception TrashPathDirNotFoundE where
       [ "The trash paths directory was not found at '",
         th ^. #unPathI,
         "/paths' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. sr e)."
+        "manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
 -- | Trash info dir not found error.
@@ -188,7 +188,7 @@ instance Exception TrashInfoDirNotFoundE where
       [ "The trash info directory was not found at '",
         th ^. #unPathI,
         "/info' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. sr e)."
+        "manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
 -- | Collision with existing file when attempting a restore.
@@ -239,7 +239,6 @@ data InfoDecodeE = MkInfoDecodeE (PathI TrashInfoPath) ByteString String
 instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
-      -- TODO: improve
       [ "Could not decode path '",
         path ^. #unPathI,
         "' contents\n",

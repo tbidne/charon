@@ -83,7 +83,10 @@ makeFieldLabelsNoPrefix ''IntPureEnv
 
 deriving anyclass instance HasTrashHome IntPureEnv
 
--- TODO: Replace the below IO w/ Identity
+-- NOTE: It would be nice to replace the IO with Identity, so we could be
+-- really sure that we are not doing any IO. Alas, while we could mock
+-- e.g. MonadPathReader (and possibly replace MonadIORef w/ STRef), we rely
+-- on throwing exceptions, which requires IO.
 
 -- | Type for running integration tests via a pure file-system. As this is
 -- used to test protecting against root, it is VERY important that it cannot
