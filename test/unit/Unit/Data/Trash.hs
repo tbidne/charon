@@ -14,7 +14,7 @@ import PathSize (SubPathData (MkSubPathData))
 import PathSize.Data.PathData qualified as PathSize.PathData
 import SafeRm.Data.Paths (PathI, PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
-import SafeRm.Exception (RootE)
+import SafeRm.Exception (EmptyPathE, RootE)
 import SafeRm.Trash qualified as Trash
 import Unit.Prelude
 
@@ -23,7 +23,8 @@ tests =
   testGroup
     "Data.Trash"
     [ mvTrash,
-      mvTrashRootError
+      mvTrashRootError,
+      mvTrashEmptyError
     ]
 
 -- NOTE: Real IO because of MonadThrow, etc. Would be nice to mock these and
@@ -64,29 +65,18 @@ instance MonadPathReader PathDataT where
   canonicalizePath = pure . ("/home/" </>)
 
   doesPathExist p
-    | p `L.elem` exists = pure True
     | p `L.elem` nexists = pure False
     | otherwise = error p
     where
-      exists =
-        [ -- Need this so that our root test works i.e.
-          -- test/unit/.trash/paths </> (takeFileName "/" -> "")
-          -- == test/unit/.trash/paths
-          "test/unit/.trash/paths"
-        ]
       nexists =
-        [ "test/unit/.trash/paths/foo",
-          -- Due to above root test, needs a unique name
-          "test/unit/.trash/paths (1)"
+        [ "test/unit/.trash/paths/foo"
         ]
 
   doesFileExist p
     | p `L.elem` exists = pure True
-    | p `L.elem` nexists = pure False
     | otherwise = error p
     where
       exists = ["/home/path/to/foo", "/"]
-      nexists = []
 
 instance MonadPathSize PathDataT where
   findLargestPaths _ p = pure (PathSizeSuccess spd)
@@ -124,6 +114,18 @@ mvTrashRootError = testCase desc $ do
     Left ex -> "Attempted to delete root! This is not allowed." @=? displayException ex
   where
     desc = "mvOriginalToTrash throws exception for root original path"
+
+mvTrashEmptyError :: TestTree
+mvTrashEmptyError = testCase desc $ do
+  eformatted <-
+    tryCS @_ @EmptyPathE $
+      runPathDataT (Trash.mvOriginalToTrash trashHome ts "  ")
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete an empty path! This is not allowed." @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for empty original path"
 
 trashHome :: PathI TrashHome
 trashHome = "test/unit/.trash"

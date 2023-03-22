@@ -3,6 +3,7 @@
     within:
       - "Integration.SafeRm.natToInt"
       - "SafeRm.Data.PathData"
+      - "SafeRm.Data.PathData.Internal"
       - "SafeRm.Data.Paths.applyPathI"
       - "SafeRm.Data.Paths.liftPathIF"
       - "SafeRm.Data.Paths.liftPathIF'"

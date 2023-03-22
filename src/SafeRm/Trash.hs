@@ -21,7 +21,7 @@ import Effects.Exception (onException)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
 import Effects.FileSystem.PathWriter (removeFile)
 import Effects.System.Terminal (MonadTerminal (..))
-import SafeRm.Data.PathData (PathData (..))
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI (..), PathIndex (..))
@@ -129,10 +129,7 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   let MkPathI trashPath = PathData.pathDataToTrashPath trashHome pd
       MkPathI trashInfoPath = PathData.pathDataToTrashInfoPath trashHome pd
 
-  -- 2. Check that it's not root
-  PathData.throwIfRoot pd
-
-  -- 3. Write info file
+  -- 2. Write info file
   --
   -- Perform this before the actual move to be safe i.e. path is only moved
   -- if info is already created.

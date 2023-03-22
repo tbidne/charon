@@ -208,6 +208,8 @@ import Optics.Core as X
     view,
     (%),
     (%?),
+    (&),
+    (.~),
     (^.),
     (^?),
     _1,
@@ -216,7 +218,13 @@ import Optics.Core as X
     _4,
     _Just,
   )
-import Optics.TH as X (makeFieldLabelsNoPrefix, makePrisms)
+import Optics.TH as X
+  ( generateUpdateableOptics,
+    makeFieldLabelsNoPrefix,
+    makeFieldLabelsWith,
+    makePrisms,
+    noPrefixFieldLabels,
+  )
 import Prettyprinter as X
   ( Doc,
     Pretty (pretty),

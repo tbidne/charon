@@ -12,6 +12,7 @@ module SafeRm.Data.Paths
     -- * Functions
 
     -- ** Specific
+    isEmpty,
     isRoot,
     isRoot',
 
@@ -176,6 +177,12 @@ infixl 5 <//
 (//>) = flip (<//)
 
 infixl 5 //>
+
+-- | Returns true if the paths is empty, up to whitespace.
+--
+-- @since 0.1
+isEmpty :: PathI i -> Bool
+isEmpty = T.null . T.strip . T.pack . view #unPathI
 
 -- | Returns true if the path is the root.
 --

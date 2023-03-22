@@ -79,7 +79,7 @@ deletesOne args = testCase "Permanently deletes a single file" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x1/.trash",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
       ]
 
     expectedTerminal2 =
@@ -182,13 +182,13 @@ deletesMany args = testCase "Permanently deletes several paths" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x2/.trash",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: dir1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: dir2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
       ]
 
     expectedTerminal2 =
@@ -337,15 +337,15 @@ deletesSome args = testCase "Deletes some, errors on others" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x4/.trash",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
         Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/x4/.trash/info/f3.json'",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f4",
         Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/x4/.trash/info/f4.json'",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f5",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
       ]
 
@@ -430,15 +430,15 @@ deletesSomeNoTrace args = testCase "Deletes some no trace" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x5/.trash",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
         Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/x5/.trash/info/f3.json'",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f4",
         Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/x5/.trash/info/f4.json'",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f5",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
       ]
 
@@ -538,10 +538,10 @@ deletesNoForce args = testCase "Permanently deletes several paths without --forc
       [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x6/.trash",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 1",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 3",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 4",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"4\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/4\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"4\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/4\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 5"
       ]
 

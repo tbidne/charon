@@ -22,6 +22,7 @@ module SafeRm.Exception
     RenameDuplicateE (..),
     RestoreCollisionE (..),
     RootE (..),
+    EmptyPathE (..),
     InfoDecodeE (..),
   )
 where
@@ -225,6 +226,19 @@ data RootE = MkRootE
 -- | @since 0.1
 instance Exception RootE where
   displayException _ = "Attempted to delete root! This is not allowed."
+
+-- | Exception for deleting the root.
+--
+-- @since 0.1
+data EmptyPathE = MkEmptyPathE
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception EmptyPathE where
+  displayException _ = "Attempted to delete an empty path! This is not allowed."
 
 -- | Exception for decoding.
 --

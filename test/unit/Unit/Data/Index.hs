@@ -19,10 +19,8 @@ import Effects.System.Terminal
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData
-  ( PathData (MkPathData),
-    PathDataFormat (FormatMultiline, FormatTabular, FormatTabularAuto),
-  )
+import SafeRm.Data.PathData (PathDataFormat (..))
+import SafeRm.Data.PathData.Internal (PathData (UnsafePathData))
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
@@ -225,8 +223,8 @@ formatAutoLargeApprox =
     ts <- fromText "2020-05-31 12:00:00"
     let idx =
           MkIndex
-            [ MkPathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
-              MkPathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
+            [ UnsafePathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
+              UnsafePathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
             ]
     formatted <-
       runConfigIO
@@ -278,12 +276,12 @@ mkIndex = do
   ts <- ts'
   pure $
     MkIndex
-      [ MkPathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
-        MkPathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
-        MkPathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
-        MkPathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
-        MkPathData PathTypeDirectory "d" "/d" largeFile ts,
-        MkPathData PathTypeFile "z" "/z" (afromInteger 200_120) ts
+      [ UnsafePathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
+        UnsafePathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
+        UnsafePathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
+        UnsafePathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
+        UnsafePathData PathTypeDirectory "d" "/d" largeFile ts,
+        UnsafePathData PathTypeFile "z" "/z" (afromInteger 200_120) ts
       ]
   where
     -- 5,000 Y

@@ -81,7 +81,7 @@ restoreOne args = testCase "Restores a single file" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r1/.trash",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
       ]
 
     expectedTerminal2 =
@@ -186,13 +186,13 @@ restoreMany args = testCase "Restores several paths" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r2/.trash",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: dir1",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: dir2",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
       ]
 
     expectedTerminal2 =
@@ -394,15 +394,15 @@ restoresSome args = testCase "Restores some, errors on others" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r5/.trash",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f2",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
         Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/r5/.trash/info/f3.json'",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f4",
         Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/r5/.trash/info/f4.json'",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f5",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
       ]
     expectedTerminal2 =
@@ -486,15 +486,15 @@ restoresSomeNoTrace args = testCase "Restores some no trace" $ do
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r5/.trash",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f2",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
         Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/r5/.trash/info/f3.json'",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f4",
         Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/r5/.trash/info/f4.json'",
         Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f5",
-        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
         Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
       ]
 
