@@ -119,7 +119,8 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
 
   -- permanently delete paths
   addNamespace "deleting" $ for_ paths $ \p ->
-    Trash.deleteTrashPath force trashHome p
+    -- Record error if any occurred
+    (Trash.deleteTrashPath force trashHome p >>= U.setRefIfTrue anyFailedRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
@@ -213,7 +214,8 @@ restore paths = addNamespace "restore" $ do
 
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ paths $ \p ->
-    Trash.mvTrashToOriginal trashHome p
+    -- Record error if any occurred
+    (Trash.mvTrashToOriginal trashHome p >>= U.setRefIfTrue anyFailedRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $

@@ -222,11 +222,21 @@ commandParser =
       )
   where
     delTxt = OA.progDesc "Moves the path(s) to the trash."
-    permDelTxt = OA.progDesc "Permanently deletes path(s) from the trash."
+    permDelTxt =
+      OA.progDesc $
+        mconcat
+          [ "Permanently deletes path(s) from the trash. Can use wildcards ",
+            "to match trash paths e.g. *foo*bar matches foobar, xxxfooyyybar, ",
+            "etc."
+          ]
     emptyTxt = OA.progDesc "Empties the trash."
     restoreTxt =
-      OA.progDesc
-        "Restores the trash path(s) to their original location."
+      OA.progDesc $
+        mconcat
+          [ "Restores the trash path(s) to their original location. Can use ",
+            "wildcards to match trash paths e.g. *foo*bar matches foobar, ",
+            "xxxfooyyybar, etc."
+          ]
     listTxt = OA.progDesc "Lists all trash contents and metadata."
     metadataTxt = OA.progDesc "Prints trash metadata."
 

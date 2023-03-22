@@ -78,6 +78,7 @@ import Data.Ord as X
 import Data.Proxy as X (Proxy (Proxy))
 import Data.Semigroup as X (Semigroup ((<>)))
 import Data.Sequence as X (Seq ((:<|), (:|>)))
+import Data.Sequence.NonEmpty as X (NESeq ((:<||), (:||>)))
 import Data.String as X (IsString (fromString), String)
 import Data.Text as X (Text)
 import Data.Text qualified as T

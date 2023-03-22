@@ -9,6 +9,7 @@ import Unit.Data.Trash qualified as Trash
 import Unit.Data.UniqueSeq qualified as UniqueSeq
 import Unit.Prelude
 import Unit.Runner qualified as Runner
+import Unit.Utils qualified as Utils
 
 -- | Runs unit tests.
 --
@@ -21,5 +22,6 @@ main =
       [ Index.tests,
         Trash.tests,
         UniqueSeq.tests,
-        Runner.tests
+        Runner.tests,
+        Utils.tests
       ]

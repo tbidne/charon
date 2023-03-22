@@ -21,7 +21,10 @@ module Functional.Prelude
 
     -- ** Runners
     runSafeRm,
+    runSafeRmException,
     runIndexMetadata,
+
+    -- *** Data capture
     captureSafeRm,
     captureSafeRmLogs,
     captureSafeRmExceptionLogs,
@@ -50,6 +53,7 @@ import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
+import Effects.FileSystem.PathWriter (MonadPathWriter (..))
 import Effects.LoggerNS
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -135,7 +139,6 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadHandleWriter,
       MonadIO,
       MonadIORef,
-      MonadPathWriter,
       MonadThrow,
       MonadReader env
     )
@@ -162,6 +165,18 @@ instance
     MkPathI th <- asks (view #trashHome)
     pure th
   getXdgDirectory xdg p = liftIO $ getXdgDirectory xdg p
+
+instance MonadPathWriter (FuncIO env) where
+  createDirectoryIfMissing b = liftIO . createDirectoryIfMissing b
+  renameDirectory x = liftIO . renameDirectory x
+  renameFile x = liftIO . renameFile x
+  removeDirectory = liftIO . removeDirectory
+  removeDirectoryRecursive = liftIO . removeDirectoryRecursive
+
+  removeFile x
+    -- This is for X.deletesSomeWildcards test
+    | (T.isSuffixOf "fooBadbar" $ T.pack x) = throwString "Mock: cannot delete fooBadbar"
+    | otherwise = liftIO $ removeFile x
 
 instance MonadPathSize (FuncIO env) where
   findLargestPaths _ _ =
@@ -264,6 +279,9 @@ captureSafeRmLogs argList = do
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+
+runSafeRmException :: forall e. (Exception e) => [String] -> IO ()
+runSafeRmException = void . captureSafeRmExceptionLogs @e
 
 -- | Runs safe-rm and captures a thrown exception and logs.
 captureSafeRmExceptionLogs ::

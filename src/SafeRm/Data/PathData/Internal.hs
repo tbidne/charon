@@ -311,30 +311,6 @@ mkUniqPath fp = do
             else pure fp'
     mkSuffix i = " (" <> show i <> ")"
 
--- | Determines how to format a textual 'PathData'.
---
--- @since 0.1
-data PathDataFormat
-  = -- | Formats each file on its own line.
-    --
-    -- @since 0.1
-    FormatMultiline
-  | -- | Formats all fields on the same line.
-    --
-    -- @since 0.1
-    FormatTabular Natural Natural
-  | -- | Like 'FormatTabular', except it attempts to detect the best
-    -- column widths automatically.
-    --
-    -- @since 0.1
-    FormatTabularAuto
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
-
 -- | @since 0.1
 throwIfIllegal :: (HasCallStack, MonadThrow m) => PathI i -> m ()
 throwIfIllegal p =

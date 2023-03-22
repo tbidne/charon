@@ -12,6 +12,9 @@ module SafeRm.Utils
     mergeAlt,
     merge,
     renderPretty,
+    matchesWildcards,
+    stripInfix,
+    setRefIfTrue,
   )
 where
 
@@ -21,6 +24,9 @@ import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes.Formatting.Base (BaseFormatter)
 import Data.Bytes.Size (Sized)
 import Data.Text qualified as T
+import Data.Text.Internal (Text (Text))
+import Data.Text.Internal qualified as TI
+import Data.Text.Internal.Search qualified as TIS
 import SafeRm.Prelude
 import Text.Printf (PrintfArg)
 
@@ -135,3 +141,31 @@ renderPretty =
   renderStrict
     . layoutCompact
     . pretty
+
+-- | @since 0.1
+matchesWildcards :: Text -> Text -> Bool
+matchesWildcards matchStr toMatch = case T.split (== '*') matchStr of
+  -- Impossible
+  [] -> False
+  (m : ms) -> case T.stripPrefix m toMatch of
+    Nothing -> False
+    Just toMatch' -> go ms toMatch'
+  where
+    go [] s = T.null s
+    go [""] _ = True
+    go (m : ms) s = case stripInfix m s of
+      Nothing -> False
+      Just (_, s') -> go ms s'
+
+-- | @since 0.1
+stripInfix :: Text -> Text -> Maybe (Text, Text)
+stripInfix "" t = Just ("", t)
+stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
+  case TIS.indices p t of
+    [] -> Nothing
+    (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
+
+-- | @since 0.1
+setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
+setRefIfTrue _ False = pure ()
+setRefIfTrue ref True = writeIORef ref True

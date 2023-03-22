@@ -73,12 +73,15 @@ Available options:
 
 Delete Commands
   d                        Moves the path(s) to the trash.
-  x                        Permanently deletes path(s) from the trash.
+  x                        Permanently deletes path(s) from the trash. Can use
+                           wildcards to match trash paths e.g. *foo*bar matches
+                           foobar, xxxfooyyybar, etc.
   e                        Empties the trash.
 
 Restore Commands
   r                        Restores the trash path(s) to their original
-                           location.
+                           location. Can use wildcards to match trash paths e.g.
+                           *foo*bar matches foobar, xxxfooyyybar, etc.
 
 Information Commands
   l                        Lists all trash contents and metadata.
@@ -126,7 +129,8 @@ $ sr d foo bar baz
 ```
 Usage: sr x [-f|--force] PATHS...
 
-  Permanently deletes path(s) from the trash.
+  Permanently deletes path(s) from the trash. Can use wildcards to match trash
+  paths e.g. *foo*bar matches foobar, xxxfooyyybar, etc.
 
 Available options:
   -f,--force               If enabled, will not ask before deleting path(s).
@@ -184,7 +188,8 @@ Permanently delete all contents (y/n)?
 ```
 Usage: sr r PATHS...
 
-  Restores the trash path(s) to their original location.
+  Restores the trash path(s) to their original location. Can use wildcards to
+  match trash paths e.g. *foo*bar matches foobar, xxxfooyyybar, etc.
 
 Available options:
   -h,--help                Show this help text
