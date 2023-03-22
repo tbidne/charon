@@ -167,7 +167,7 @@ isMatchHelper (Suffix e) r = e `T.isSuffixOf` r
 isMatchHelper (Outfix e1 e2) r = e1 `T.isPrefixOf` r && e2 `T.isSuffixOf` r
 isMatchHelper (Outfixes start ins end) r =
   start `T.isPrefixOf` r
-    && L.all (\e -> e `T.isInfixOf` r) ins
+    && L.all (`T.isInfixOf` r) ins
     && end `T.isSuffixOf` r
 
 -- | Pretty show for multiple text matches.
