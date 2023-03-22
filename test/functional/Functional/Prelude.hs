@@ -2,7 +2,6 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Prelude for functional test suite.
@@ -36,18 +35,12 @@ module Functional.Prelude
     mkAllTrashPaths,
     mkTrashPaths,
     mkTrashInfoPaths,
-    fixRandomPaths,
   )
 where
 
-import Data.ByteString.Builder (Builder)
-import Data.ByteString.Builder qualified as Builder
 import Data.List ((++))
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Data.Text.Internal (Text (..))
-import Data.Text.Internal qualified as TI
-import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
@@ -71,7 +64,6 @@ import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import System.Exit (die)
 import Test.Tasty as X (TestTree, testGroup)
-import Test.Tasty.Golden as X (goldenVsString, goldenVsStringDiff)
 import Test.Tasty.HUnit as X
   ( assertBool,
     assertEqual,
@@ -209,20 +201,18 @@ runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
 -- | Runs safe-rm.
 runSafeRm :: [String] -> IO ()
-runSafeRm = void . captureSafeRm ""
+runSafeRm = void . captureSafeRm
 
 -- | Runs safe-rm and captures terminal output.
-captureSafeRm :: Builder -> [String] -> IO CapturedOutput
-captureSafeRm title = fmap (view _1) . captureSafeRmLogs title
+captureSafeRm :: [String] -> IO [Text]
+captureSafeRm = fmap (view _1) . captureSafeRmLogs
 
 -- | Runs safe-rm and captures (terminal output, logs).
 captureSafeRmLogs ::
-  -- | Title to add to captured output.
-  Builder ->
   -- Args.
   [String] ->
-  IO (CapturedOutput, CapturedOutput)
-captureSafeRmLogs title argList = do
+  IO ([Text], [Text])
+captureSafeRmLogs argList = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -238,15 +228,10 @@ captureSafeRmLogs title argList = do
       putStrLn ""
       throwCS ex
 
-  tmpDir <- getTemporaryDirectory
+  terminal <- T.lines <$> readIORef terminalRef
+  logs <- T.lines <$> readIORef logsRef
 
-  terminal <- unsafeReplaceDir tmpDir <$> readIORef terminalRef
-  logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
-  let terminalBs = Builder.byteString $ encodeUtf8 terminal
-      logs' = fixRandomPaths logs
-      logsBs = Builder.byteString $ encodeUtf8 logs'
-
-  pure (MonadTerminal title terminalBs, Logs title logsBs)
+  pure (terminal, logs)
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
@@ -255,16 +240,12 @@ captureSafeRmLogs title argList = do
 captureSafeRmExceptionLogs ::
   forall e.
   (Exception e) =>
-  -- | Title to add to captured output.
-  Builder ->
   -- Args.
   [String] ->
-  IO (CapturedOutput, CapturedOutput)
-captureSafeRmExceptionLogs title argList = do
+  IO (Text, [Text])
+captureSafeRmExceptionLogs argList = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
-
-  tmpDir <- getTemporaryDirectory
 
   (toml, cmd) <- getConfig
   env <- mkFuncEnv toml logsRef terminalRef
@@ -277,10 +258,8 @@ captureSafeRmExceptionLogs title argList = do
             error
               "captureSafeRmExceptionLogs: Expected exception, received none"
           Left ex -> do
-            logs <- unsafeReplaceDir tmpDir <$> readIORef logsRef
-            let exceptionBs = exToBuilder (Just tmpDir) ex
-                logsBs = txtToBuilder logs
-            pure (Exception title exceptionBs, Logs title logsBs)
+            logs <- T.lines <$> readIORef logsRef
+            pure (T.pack (displayException ex), logs)
 
   runCatch
     `catchAny` \ex -> do
@@ -373,25 +352,3 @@ mkTrashPaths ::
 mkTrashPaths trashHome = fmap mkTrashPath
   where
     mkTrashPath p = trashHome </> "paths" </> p
-
--- | HACK: There is a log line that starts out 'Paths: ...' that is
--- non-deterministic because the listed paths can be in random order.
--- This means the log strings will not match, hence the tests can fail,
--- which actually happened on CI.
---
--- As a workaround, we remove this path names from the logs until we come
--- up with a more robust solution.
-fixRandomPaths :: Text -> Text
-fixRandomPaths = T.unlines . foldr (flip fixRandomPaths') [] . T.lines
-  where
-    fixRandomPaths' :: [Text] -> Text -> [Text]
-    fixRandomPaths' acc (stripInfix "Path:" -> Just (p, _)) = p <> "Path:" <> " ..." : acc
-    fixRandomPaths' acc (stripInfix "Paths:" -> Just (p, _)) = p <> "Paths:" <> " [...]" : acc
-    fixRandomPaths' acc (stripInfix "Info:" -> Just (p, _)) = p <> "Info:" <> " [...]" : acc
-    fixRandomPaths' acc t = t : acc
-
-stripInfix :: Text -> Text -> Maybe (Text, Text)
-stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
-  case TIS.indices p t of
-    [] -> Nothing
-    (x : _) -> Just (TI.text arr off x, TI.text arr (x + plen) (len - plen - x))

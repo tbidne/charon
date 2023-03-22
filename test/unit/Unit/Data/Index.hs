@@ -9,6 +9,7 @@ where
 
 import Data.ByteString.Lazy qualified as BSL
 import Data.List qualified as L
+import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TLEnc
 import Effects.System.Terminal
@@ -54,14 +55,49 @@ formattingTests =
     ]
 
 format1 :: TestTree
-format1 =
-  goldenVsStringDiff desc diff gpath $ do
-    idx <- mkIndex
-    formatted <- Index.formatIndex FormatMultiline Name False idx
-    pure $ toBS formatted
+format1 = testCase "Multiline, name, asc" $ do
+  idx <- mkIndex
+  formatted <- T.lines <$> Index.formatIndex FormatMultiline Name False idx
+  assertMatches expected formatted
   where
-    desc = "Multiline, name, asc"
-    gpath = goldenPath </> "multi-name-asc.golden"
+    expected =
+      Exact
+        <$> [ "Type:     File",
+              "Name:     bazzz",
+              "Original: /path/bar/bazzz",
+              "Size:     5.00K",
+              "Created:  2020-05-31 12:00:00",
+              "",
+              "Type:     Directory",
+              "Name:     d",
+              "Original: /d",
+              "Size:     5000.00Y",
+              "Created:  2020-05-31 12:00:00",
+              "",
+              "Type:     Directory",
+              "Name:     dir",
+              "Original: /some/really/really/long/dir",
+              "Size:     20.23K",
+              "Created:  2020-05-31 12:00:00",
+              "",
+              "Type:     File",
+              "Name:     f",
+              "Original: /foo/path/f",
+              "Size:     13.07M",
+              "Created:  2020-05-31 12:00:00",
+              "",
+              "Type:     File",
+              "Name:     foo",
+              "Original: /path/foo",
+              "Size:     70.00B",
+              "Created:  2020-05-31 12:00:00",
+              "",
+              "Type:     File",
+              "Name:     z",
+              "Original: /z",
+              "Size:     200.12K",
+              "Created:  2020-05-31 12:00:00"
+            ]
 
 format2 :: TestTree
 format2 =

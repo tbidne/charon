@@ -17,19 +17,11 @@ tests =
     ]
 
 deletesRootError :: TestTree
-deletesRootError = goldenVsStringDiff desc diff gpath $ do
+deletesRootError = testCase "Delete root throws error" $ do
   let argList = ["d", "/", "-t", "/dev/null"]
 
-  (ex, terminal, deletedPaths) <-
-    captureSafeRmIntExceptionPure
-      @ExitCode
-      "DELETE"
-      argList
+  (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @ExitCode argList
 
-  pure $ capturedToBs [ex, terminal, deletedPaths]
-  where
-    desc = "Delete root throws error"
-    gpath = goldenPath </> "root-error.golden"
-
-goldenPath :: FilePath
-goldenPath = "test/integration/Integration/Commands/D"
+  "ExitFailure 1" @=? ex
+  "Error deleting path '/': Attempted to delete root! This is not allowed.\n" @=? terminal
+  "" @=? deletedPaths

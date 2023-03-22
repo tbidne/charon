@@ -3,6 +3,8 @@
 -- @since 0.1
 module Unit.Prelude
   ( module X,
+    TextMatch (..),
+    assertMatches,
     getDefaultTrash,
     diff,
   )
@@ -34,6 +36,7 @@ import Test.Tasty.HUnit as X
     (@=?),
   )
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
+import Test.Utils (TextMatch (..), assertMatches)
 
 getDefaultTrash :: IO FilePath
 getDefaultTrash = (</> ".trash") <$> getHomeDirectory

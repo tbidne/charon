@@ -30,6 +30,9 @@ watch:
 		ghcid --command "cabal repl $(T)"; \
 	fi
 
+watcht:
+	find . -type f -name "*hs" | entr -s "cabal test $(T)"
+
 bench:
 	cabal bench --benchmark-options \
 		'--csv benchmarks/bench.csv --svg benchmarks/bench.svg'

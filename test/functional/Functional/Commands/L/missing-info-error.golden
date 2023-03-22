@@ -1,9 +1,0 @@
-EXCEPTION LIST
-The path 'bar.json' was not found in '<dir>/safe-rm/functional/l5/.trash/info' despite being listed in '<dir>/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e).
-
-LOGS LIST
-[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: <dir>/safe-rm/functional/l5/.trash
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: <dir>/safe-rm/functional/l5/.trash/info
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: []
-[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ["bar"]
-[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'bar.json' was not found in '<dir>/safe-rm/functional/l5/.trash/info' despite being listed in '<dir>/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e).

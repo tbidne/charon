@@ -22,7 +22,7 @@ tests args =
     ]
 
 restoreOne :: IO FilePath -> TestTree
-restoreOne args = goldenVsStringDiff desc diff gpath $ do
+restoreOne args = testCase "Restores a single file" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r1"
       trashDir = testDir </> ".trash"
@@ -39,7 +39,7 @@ restoreOne args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
@@ -49,22 +49,54 @@ restoreOne args = goldenVsStringDiff desc diff gpath $ do
   -- RESTORE
 
   let restoreArgList = ["r", "f1", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs "RESTORE" restoreArgList
+  (_, logs) <- captureSafeRmLogs restoreArgList
 
   -- list output assertions
-  restoreResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  restoreResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist [f1]
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1"]
   assertDirectoriesExist [trashDir]
-  pure $ capturedToBs [delResult, logs, restoreResult]
+  -- pure $ capturedToBs [delResult, logs, restoreResult]
+
+  assertMatches expectedTerminal1 delResult
+  assertMatches expectedLogs logs
+  assertMatches expectedTerminal2 restoreResult
   where
-    desc = "Restores a single file"
-    gpath = goldenPath </> "single.golden"
+    expectedTerminal1 =
+      [ Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r1/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      1",
+        Exact "Total Files:  1",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r1/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+      ]
+
+    expectedTerminal2 =
+      Exact
+        <$> [ "",
+              "",
+              "Entries:      0",
+              "Total Files:  0",
+              "Log size:     0.00B",
+              "Size:         0.00B",
+              ""
+            ]
 
 restoreMany :: IO FilePath -> TestTree
-restoreMany args = goldenVsStringDiff desc diff gpath $ do
+restoreMany args = testCase "Restores several paths" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r2"
       trashDir = testDir </> ".trash"
@@ -85,7 +117,7 @@ restoreMany args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
@@ -98,23 +130,87 @@ restoreMany args = goldenVsStringDiff desc diff gpath $ do
   let restoreArgList =
         -- do not restore f2
         ["r", "f1", "f3", "dir1", "dir2", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs "RESTORE" restoreArgList
+  (_, logs) <- captureSafeRmLogs restoreArgList
 
   -- list output assertions
-  restoreResult <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  restoreResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f2"]
   assertDirectoriesExist [trashDir]
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f3"]
   assertDirectoriesDoNotExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
-  pure $ capturedToBs [delResult, logs, restoreResult]
+
+  assertMatches expectedTerminal1 delResult
+  assertMatches expectedLogs logs
+  assertMatches expectedTerminal2 restoreResult
   where
-    desc = "Restores several paths"
-    gpath = goldenPath </> "many.golden"
+    expectedTerminal1 =
+      [ Exact "Type:     Directory",
+        Exact "Name:     dir1",
+        Outfix "Original: " "/safe-rm/functional/r2/dir1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     Directory",
+        Exact "Name:     dir2",
+        Outfix "Original: " "/safe-rm/functional/r2/dir2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r2/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f2",
+        Outfix "Original: " "/safe-rm/functional/r2/f2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f3",
+        Outfix "Original: " "/safe-rm/functional/r2/f3",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      5",
+        Exact "Total Files:  4",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r2/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: dir1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: dir2",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
+      ]
+
+    expectedTerminal2 =
+      [ Exact "Type:     File",
+        Exact "Name:     f2",
+        Outfix "Original: " "/safe-rm/functional/r2/f2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      1",
+        Exact "Total Files:  1",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
 
 restoreUnknownError :: IO FilePath -> TestTree
-restoreUnknownError args = goldenVsStringDiff desc diff gpath $ do
+restoreUnknownError args = testCase "Restore unknown prints error" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r3"
       trashDir = testDir </> ".trash"
@@ -134,7 +230,7 @@ restoreUnknownError args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
@@ -143,20 +239,37 @@ restoreUnknownError args = goldenVsStringDiff desc diff gpath $ do
 
   -- RESTORE
   let restoreArgList = ["r", "bad file", "-t", trashDir]
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @ExitCode
-      "RESTORE"
-      restoreArgList
+  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  pure $ capturedToBs [delResult, ex, logs]
+
+  assertMatches expectedTerminal delResult
+  "ExitFailure 1" @=? ex
+  assertMatches expectedLogs logs
   where
-    desc = "Restore unknown prints error"
-    gpath = goldenPath </> "unknown.golden"
+    expectedTerminal =
+      [ Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r3/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      1",
+        Exact "Total Files:  1",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r3/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: bad file",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'bad file'; did not find '" "/safe-rm/functional/r3/.trash/info/bad file.json'",
+        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
+      ]
 
 restoreCollisionError :: IO FilePath -> TestTree
-restoreCollisionError args = goldenVsStringDiff desc diff gpath $ do
+restoreCollisionError args = testCase "Restore collision prints error" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r4"
       trashDir = testDir </> ".trash"
@@ -173,7 +286,7 @@ restoreCollisionError args = goldenVsStringDiff desc diff gpath $ do
   createFiles [f1]
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
@@ -181,20 +294,37 @@ restoreCollisionError args = goldenVsStringDiff desc diff gpath $ do
 
   -- RESTORE
   let restoreArgList = ["r", "f1", "-t", trashDir]
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @ExitCode
-      "RESTORE"
-      restoreArgList
+  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  pure $ capturedToBs [delResult, ex, logs]
+
+  assertMatches expectedTerminal delResult
+  "ExitFailure 1" @=? ex
+  assertMatches expectedLogs logs
   where
-    desc = "Restore collision prints error"
-    gpath = goldenPath </> "collision.golden"
+    expectedTerminal =
+      [ Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r4/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      1",
+        Exact "Total Files:  1",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r4/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] Cannot restore the trash file 'f1' as one exists at the original location: " "/safe-rm/functional/r4/f1",
+        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
+      ]
 
 restoresSome :: IO FilePath -> TestTree
-restoresSome args = goldenVsStringDiff desc diff gpath $ do
+restoresSome args = testCase "Restores some, errors on others" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r5"
       trashDir = testDir </> ".trash"
@@ -211,7 +341,7 @@ restoresSome args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
@@ -221,26 +351,72 @@ restoresSome args = goldenVsStringDiff desc diff gpath $ do
   -- RESTORE
   let restoreArgList =
         ("r" : filesTryRestore) <> ["-t", trashDir]
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @ExitCode
-      "RESTORE"
-      restoreArgList
+  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   -- list output assertions
-  resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  resultList <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist ((testDir </>) <$> ["f3", "f4"])
   assertFilesExist ((testDir </>) <$> ["f1", "f2", "f5"])
-  pure $ capturedToBs [delResult, ex, logs, resultList]
+
+  assertMatches expectedTerminal1 delResult
+  "ExitFailure 1" @=? ex
+  assertMatches expectedLogs logs
+  assertMatches expectedTerminal2 resultList
   where
-    desc = "Restores some, errors on others"
-    gpath = goldenPath </> "some.golden"
+    expectedTerminal1 =
+      [ Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r5/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f2",
+        Outfix "Original: " "/safe-rm/functional/r5/f2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f5",
+        Outfix "Original: " "/safe-rm/functional/r5/f5",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      3",
+        Exact "Total Files:  3",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r5/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f2",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/r5/.trash/info/f3.json'",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f4",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/r5/.trash/info/f4.json'",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f5",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
+      ]
+    expectedTerminal2 =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
 
 restoresSomeNoTrace :: IO FilePath -> TestTree
-restoresSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
+restoresSomeNoTrace args = testCase "Restores some no trace" $ do
   tmpDir <- args
   let testDir = tmpDir </> "r5"
       trashDir = testDir </> ".trash"
@@ -257,7 +433,7 @@ restoresSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  delResult <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
@@ -267,23 +443,67 @@ restoresSomeNoTrace args = goldenVsStringDiff desc diff gpath $ do
   -- RESTORE
   let restoreArgList =
         ("r" : filesTryRestore) <> ["-t", trashDir]
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @ExitCode
-      "RESTORE"
-      restoreArgList
+  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   -- list output assertions
-  resultList <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  resultList <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist ((testDir </>) <$> ["f3", "f4"])
   assertFilesExist ((testDir </>) <$> ["f1", "f2", "f5"])
-  pure $ capturedToBs [delResult, ex, logs, resultList]
-  where
-    desc = "Restores some no trace"
-    gpath = goldenPath </> "no-trace.golden"
 
-goldenPath :: FilePath
-goldenPath = "test/functional/Functional/Commands/R"
+  assertMatches expectedTerminal1 delResult
+  "ExitFailure 1" @=? ex
+  assertMatches expectedLogs logs
+  assertMatches expectedTerminal2 resultList
+  where
+    expectedTerminal1 =
+      [ Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/r5/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f2",
+        Outfix "Original: " "/safe-rm/functional/r5/f2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f5",
+        Outfix "Original: " "/safe-rm/functional/r5/f5",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      3",
+        Exact "Total Files:  3",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.restore][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/r5/.trash",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f1",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f2",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f3",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/r5/.trash/info/f3.json'",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f4",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/r5/.trash/info/f4.json'",
+        Exact "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restoring: f5",
+        Outfix "[2020-05-31 12:00:00][functional.restore.restoring.mvTrashToOriginal][Debug][src/SafeRm/Trash.hs] Restored: MkPathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/r5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
+        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
+      ]
+
+    expectedTerminal2 =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]

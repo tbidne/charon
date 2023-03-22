@@ -14,14 +14,11 @@ module Integration.Prelude
     assertFilesDoNotExist,
 
     -- * Running SafeRm
-    captureSafeRmIntPure,
     captureSafeRmIntExceptionPure,
   )
 where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.ByteString.Builder (Builder)
-import Data.ByteString.Builder qualified as Builder
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
@@ -51,7 +48,7 @@ import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import Test.Tasty as X (TestTree, askOption, testGroup)
-import Test.Tasty.Golden as X (goldenVsString, goldenVsStringDiff)
+import Test.Tasty.HUnit as X (testCase, (@=?))
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils as X
 
@@ -165,43 +162,15 @@ instance MonadPathWriter (IntPure IntPureEnv) where
 runIntPure :: (IntPure env) a -> env -> IO a
 runIntPure (MkIntPure rdr) = runReaderT rdr
 
--- | Runs safe-rm and captures (terminal output, deleted paths).
-captureSafeRmIntPure ::
-  -- | Title to add to captured output.
-  Builder ->
-  -- Args.
-  [String] ->
-  IO (CapturedOutput, CapturedOutput)
-captureSafeRmIntPure title argList = do
-  terminalRef <- newIORef ""
-  deletedPathsRef <- newIORef ""
-
-  (toml, cmd) <- getConfig
-  env <- mkIntPureEnv toml terminalRef deletedPathsRef
-
-  runIntPure (Runner.runCmd cmd) env
-
-  terminal <- readIORef terminalRef
-  deletedPaths <- readIORef deletedPathsRef
-
-  let terminalBs = Builder.byteString $ encodeUtf8 terminal
-      deletedBs = strToBuilder deletedPaths
-  pure (MonadTerminal title terminalBs, DeletedPaths title deletedBs)
-  where
-    argList' = "-c" : "none" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
-
 -- | Runs safe-rm and captures a thrown exception, terminal, and
 -- deleted paths.
 captureSafeRmIntExceptionPure ::
   forall e.
   (Exception e) =>
-  -- | Title to add to captured output.
-  Builder ->
   -- Args.
   [String] ->
-  IO (CapturedOutput, CapturedOutput, CapturedOutput)
-captureSafeRmIntExceptionPure title argList = do
+  IO (Text, Text, Text)
+captureSafeRmIntExceptionPure argList = do
   terminalRef <- newIORef ""
   deletedPathsRef <- newIORef ""
 
@@ -218,13 +187,10 @@ captureSafeRmIntExceptionPure title argList = do
       terminal <- readIORef terminalRef
       deletedPaths <- readIORef deletedPathsRef
 
-      let terminalBs = Builder.byteString $ encodeUtf8 terminal
-          exceptionBs = exToBuilder Nothing ex
-          deletedBs = strToBuilder deletedPaths
       pure
-        ( Exception title exceptionBs,
-          MonadTerminal title terminalBs,
-          DeletedPaths title deletedBs
+        ( T.pack (displayException ex),
+          terminal,
+          T.pack deletedPaths
         )
   where
     argList' = "-c" : "none" : argList

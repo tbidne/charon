@@ -19,7 +19,7 @@ tests args =
     ]
 
 emptyTrash :: IO FilePath -> TestTree
-emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
+emptyTrash args = testCase "Empties trash" $ do
   tmpDir <- args
   let testDir = tmpDir </> "e1"
       trashDir = testDir </> ".trash"
@@ -39,7 +39,7 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   runSafeRm delArgList
 
   -- list output assertions
-  resultDel <- captureSafeRm "LIST 1" ["-t", trashDir, "l", "--format", "m"]
+  resultDel <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
@@ -52,10 +52,10 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   -- EMPTY
 
   let emptyArgList = ["e", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs "EMPTY" emptyArgList
+  (_, logs) <- captureSafeRmLogs emptyArgList
 
   -- list output assertions
-  result <- captureSafeRm "LIST 2" ["-t", trashDir, "l", "--format", "m"]
+  result <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
@@ -63,26 +63,85 @@ emptyTrash args = goldenVsStringDiff "Empties trash" diff gpath $ do
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
-  pure $ capturedToBs [resultDel, logs, result]
+
+  assertMatches expectedTerminal1 resultDel
+  assertMatches expectedLogs logs
+  assertMatches expectedTerminal2 result
   where
-    gpath = goldenPath </> "empties.golden"
+    expectedTerminal1 =
+      [ Exact "Type:     Directory",
+        Exact "Name:     dir1",
+        Outfix "Original: " "/safe-rm/functional/e1/dir1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     Directory",
+        Exact "Name:     dir2",
+        Outfix "Original: " "/safe-rm/functional/e1/dir2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f1",
+        Outfix "Original: " "/safe-rm/functional/e1/f1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f2",
+        Outfix "Original: " "/safe-rm/functional/e1/f2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     f3",
+        Outfix "Original: " "/safe-rm/functional/e1/f3",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      5",
+        Exact "Total Files:  4",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e1/.trash"
+      ]
+
+    expectedTerminal2 =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
 
 emptyTrashTwice :: IO FilePath -> TestTree
-emptyTrashTwice args = goldenVsStringDiff desc diff gpath $ do
+emptyTrashTwice args = testCase "Calling empty twice does not error" $ do
   tmpDir <- args
   let testDir = tmpDir </> "e2"
       trashDir = testDir </> ".trash"
 
-  (_, logs1) <- captureSafeRmLogs "EMPTY 1" ["e", "-f", "-t", trashDir]
+  (_, logs1) <- captureSafeRmLogs ["e", "-f", "-t", trashDir]
 
-  (_, logs2) <- captureSafeRmLogs "EMPTY 2" ["e", "-f", "-t", trashDir]
-  pure $ capturedToBs [logs1, logs2]
+  (_, logs2) <- captureSafeRmLogs ["e", "-f", "-t", trashDir]
+
+  -- FIXME: This test should probably be changed so that the first delete
+  -- actually does something
+  assertMatches expectedLogs logs1
+  assertMatches expectedLogs logs2
   where
-    desc = "Calling empty twice does not error"
-    gpath = goldenPath </> "twice.golden"
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e2/.trash",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home does not exist."
+      ]
 
 emptyNoForce :: IO FilePath -> TestTree
-emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
+emptyNoForce args = testCase "Empties trash without force" $ do
   tmpDir <- args
   let testDir = tmpDir </> "e3"
       trashDir = testDir </> ".trash"
@@ -105,24 +164,82 @@ emptyNoForce args = goldenVsStringDiff desc diff gpath $ do
   -- EMPTY
 
   let emptyArgList = ["-t", trashDir, "e"]
-  (emptyResult, emptyLogs) <-
-    captureSafeRmLogs "EMPTY" emptyArgList
+  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
 
   -- list output assertions
-  listResult <- captureSafeRm "LIST" ["-t", trashDir, "l", "--format", "m"]
+  listResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
 
   -- file assertions
   -- First getChar response was 'n', so files should still exist
   assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
-  pure $
-    capturedToBs
-      [ emptyResult,
-        emptyLogs,
-        listResult
-      ]
-  where
-    desc = "Empties trash without force"
-    gpath = goldenPath </> "no-force.golden"
 
-goldenPath :: FilePath
-goldenPath = "test/functional/Functional/Commands/E"
+  assertMatches expectedTerminal1 emptyResult
+  assertMatches expectedLogs emptyLogs
+  assertMatches expectedTerminal2 listResult
+  where
+    expectedTerminal1 =
+      [ Exact "",
+        Exact "Entries:      5",
+        Exact "Total Files:  5",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact "",
+        Exact "Permanently delete all contents (y/n)?"
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e3/.trash",
+        Outfix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e3/.trash",
+        Outfix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/e3/.trash/info",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ",
+        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 5",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 5",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Log does not exist",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 5",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)",
+        Exact "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Not deleting contents."
+      ]
+
+    expectedTerminal2 =
+      [ Exact "Type:     File",
+        Exact "Name:     1",
+        Outfix "Original: " "/safe-rm/functional/e3/1",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     2",
+        Outfix "Original: " "/safe-rm/functional/e3/2",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     3",
+        Outfix "Original: " "/safe-rm/functional/e3/3",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     4",
+        Outfix "Original: " "/safe-rm/functional/e3/4",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Type:     File",
+        Exact "Name:     5",
+        Outfix "Original: " "/safe-rm/functional/e3/5",
+        Exact "Size:     5.00B",
+        Exact "Created:  2020-05-31 12:00:00",
+        Exact "",
+        Exact "Entries:      5",
+        Exact "Total Files:  5",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]

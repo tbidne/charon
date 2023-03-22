@@ -6,12 +6,9 @@ module Unit.Data.Trash
   )
 where
 
-import Data.ByteString.Lazy qualified as BSL
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Encoding qualified as TLEnc
 import Effects.FileSystem.PathSize (PathSizeResult (..))
 import PathSize (SubPathData (MkSubPathData))
 import PathSize.Data.PathData qualified as PathSize.PathData
@@ -112,25 +109,21 @@ instance MonadTerminal PathDataT where
   putStr = MkPathDataT . putStr
 
 mvTrash :: TestTree
-mvTrash = goldenVsStringDiff desc diff gpath $ do
+mvTrash = testCase "mvOriginalToTrash success" $ do
   (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts "path/to/foo")
-  pure $ toBS result
-  where
-    desc = "mvOriginalToTrash success"
-    gpath = goldenPath </> "move-trash.golden"
+  "renamed /home/path/to/foo to test/unit/.trash/paths/foo" @=? result
 
 mvTrashRootError :: TestTree
-mvTrashRootError = goldenVsStringDiff desc diff gpath $ do
+mvTrashRootError = testCase desc $ do
   eformatted <-
     tryCS @_ @RootE $
       runPathDataT (Trash.mvOriginalToTrash trashHome ts "/")
   case eformatted of
     Right result ->
-      pure $ "Expected exception, received result: " <> strToBS (show result)
-    Left ex -> pure $ strToBS (displayException ex)
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete root! This is not allowed." @=? displayException ex
   where
     desc = "mvOriginalToTrash throws exception for root original path"
-    gpath = goldenPath </> "move-trash-root-error.golden"
 
 trashHome :: PathI TrashHome
 trashHome = "test/unit/.trash"
@@ -139,12 +132,3 @@ ts :: Timestamp
 ts = case fromText "2020-05-31 12:00:00" of
   Nothing -> error "[Unit.Data.PathData.ts]: Error creating timestamp"
   Just t -> t
-
-toBS :: Text -> BSL.ByteString
-toBS = TLEnc.encodeUtf8 . TL.fromStrict
-
-strToBS :: String -> BSL.ByteString
-strToBS = toBS . T.pack
-
-goldenPath :: FilePath
-goldenPath = "test/unit/Unit/Data/Trash"

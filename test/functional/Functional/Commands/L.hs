@@ -30,18 +30,34 @@ tests args =
     ]
 
 emptySucceeds :: IO FilePath -> TestTree
-emptySucceeds args = goldenVsStringDiff desc diff gpath $ do
+emptySucceeds args = testCase "List on empty directory succeeds" $ do
   tmpDir <- args
   let argList = ["-t", tmpDir </> "l1/.trash", "l", "--format", "m"]
 
-  (result, logs) <- captureSafeRmLogs "LIST" argList
-  pure $ capturedToBs [result, logs]
+  (result, logs) <- captureSafeRmLogs argList
+
+  assertMatches expectedTerminal result
+  assertMatches expectedLogs logs
   where
-    desc = "List on empty directory succeeds"
-    gpath = goldenPath </> "empty.golden"
+    expectedTerminal =
+      [ Exact "",
+        Exact "",
+        Exact "Entries:      0",
+        Exact "Total Files:  0",
+        Exact "Log size:     0.00B",
+        Exact "Size:         0.00B",
+        Exact ""
+      ]
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l1/.trash",
+        Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist.",
+        Outfix "[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l1/.trash",
+        Exact "[2020-05-31 12:00:00][functional.getMetadata][Info][src/SafeRm.hs] Trash does not exist."
+      ]
 
 noPathsError :: IO FilePath -> TestTree
-noPathsError args = goldenVsStringDiff "No Paths Error" diff gpath $ do
+noPathsError args = testCase "No Paths Error" $ do
   tmpDir <- args
   let testDir = tmpDir </> "l2"
       trashDir = testDir </> ".trash"
@@ -52,17 +68,21 @@ noPathsError args = goldenVsStringDiff "No Paths Error" diff gpath $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "info")
 
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @TrashPathDirNotFoundE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashPathDirNotFoundE argList
+
+  assertMatch expectedErr ex
+  assertMatches expectedLogs logs
   where
-    gpath = goldenPath </> "no-paths-error.golden"
+    expectedErr =
+      Outfix "The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l2/.trash",
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash paths directory was not found at '" "/safe-rm/functional/l2/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+      ]
 
 noInfoError :: IO FilePath -> TestTree
-noInfoError args = goldenVsStringDiff "No Info Error" diff gpath $ do
+noInfoError args = testCase "No Info Error" $ do
   tmpDir <- args
   let testDir = tmpDir </> "l2"
       trashDir = testDir </> ".trash"
@@ -73,17 +93,21 @@ noInfoError args = goldenVsStringDiff "No Info Error" diff gpath $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "paths")
 
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @TrashInfoDirNotFoundE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashInfoDirNotFoundE argList
+
+  assertMatch expectedErr ex
+  assertMatches expectedLogs logs
   where
-    gpath = goldenPath </> "no-info-error.golden"
+    expectedErr =
+      Outfix "The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l2/.trash",
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" "/safe-rm/functional/l2/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e)."
+      ]
 
 missingPathError :: IO FilePath -> TestTree
-missingPathError args = goldenVsStringDiff desc diff gpath $ do
+missingPathError args = testCase "Entry Missing Path" $ do
   tmpDir <- args
   let testDir = tmpDir </> "l3"
       trashDir = testDir </> ".trash"
@@ -113,18 +137,30 @@ missingPathError args = goldenVsStringDiff desc diff gpath $ do
   -- We specifically want the "missing.json has no corresponding missing" error.
   createFiles [trashDir </> "paths" </> "blah"]
 
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @TrashPathNotFoundE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashPathNotFoundE argList
+
+  assertMatch expectedErr ex
+  assertMatches expectedLogs logs
   where
-    desc = "Entry Missing Path"
-    gpath = goldenPath </> "missing-path-error.golden"
+    expectedErr =
+      Outfixes
+        "The path 'missing' was not found in '"
+        ["/safe-rm/functional/l3/.trash/paths' despite being listed in '"]
+        "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e)."
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l3/.trash",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/l3/.trash/info",
+        Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [\"missing.json\"]",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: " "/safe-rm/functional/l3/.trash/info/missing.json",
+        Outfixes
+          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'missing' was not found in '"
+          ["/safe-rm/functional/l3/.trash/paths' despite being listed in '"]
+          "/safe-rm/functional/l3/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e)."
+      ]
 
 missingInfoError :: IO FilePath -> TestTree
-missingInfoError args = goldenVsStringDiff desc diff gpath $ do
+missingInfoError args = testCase "Entry Missing Info" $ do
   tmpDir <- args
   let testDir = tmpDir </> "l5"
       trashDir = testDir </> ".trash"
@@ -137,15 +173,24 @@ missingInfoError args = goldenVsStringDiff desc diff gpath $ do
   clearDirectory (trashDir </> "info")
   createFiles [trashDir </> "paths" </> "bar"]
 
-  (ex, logs) <-
-    captureSafeRmExceptionLogs
-      @TrashInfoNotFoundE
-      "LIST"
-      argList
-  pure $ capturedToBs [ex, logs]
-  where
-    desc = "Entry Missing Info"
-    gpath = goldenPath </> "missing-info-error.golden"
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashInfoNotFoundE argList
 
-goldenPath :: FilePath
-goldenPath = "test/functional/Functional/Commands/L"
+  assertMatch expectedErr ex
+  assertMatches expectedLogs logs
+  where
+    expectedErr =
+      Outfixes
+        "The path 'bar.json' was not found in '"
+        ["/safe-rm/functional/l5/.trash/info' despite being listed in '"]
+        "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e)."
+
+    expectedLogs =
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l5/.trash",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/l5/.trash/info",
+        Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: []",
+        Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [\"bar\"]",
+        Outfixes
+          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'bar.json' was not found in '"
+          ["/safe-rm/functional/l5/.trash/info' despite being listed in '"]
+          "/safe-rm/functional/l5/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e)."
+      ]
