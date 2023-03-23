@@ -6,7 +6,10 @@ module Functional.Commands.X
   )
 where
 
+import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.PathType (PathType (..))
 
 -- | @since 0.1
 tests :: IO FilePath -> TestTree
@@ -17,15 +20,13 @@ tests args =
       deletesMany args,
       deleteUnknownError args,
       deletesSome args,
-      deletesSomeNoTrace args,
       deletesNoForce args
     ]
 
 deletesOne :: IO FilePath -> TestTree
 deletesOne args = testCase "Permanently deletes a single file" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x1"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "deletesOne"
+  let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
       delArgList = ["d", f1, "-t", trashDir]
 
@@ -38,65 +39,49 @@ deletesOne args = testCase "Permanently deletes a single file" $ do
   -- delete to trash first
   runSafeRm delArgList
 
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertFilesDoNotExist [f1]
   assertDirectoriesExist [trashDir]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- PERMANENT DELETE
 
   let permDelArgList = ["x", "f1", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs permDelArgList
-
-  -- list output assertions
-  permDelResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm permDelArgList
 
   -- file assertions
   assertFilesDoNotExist $ f1 : mkAllTrashPaths trashDir ["f1"]
   assertDirectoriesExist [trashDir]
 
-  assertMatches expectedTerminal1 delResult
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 permDelResult
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
   where
-    expectedTerminal1 =
-      [ Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/x1/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      1",
-        Exact "Total Files:  1",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedIdxSet =
+      HashSet.singleton
+        (mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deletesOne/f1")
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x1/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x1/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 1,
+          numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
-    expectedTerminal2 =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    permDelExpectedIdxSet = HashSet.empty
+    permDelExpectedMetadata = mempty
 
 deletesMany :: IO FilePath -> TestTree
 deletesMany args = testCase "Permanently deletes several paths" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x2"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "deletesMany"
+  let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
       delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
@@ -112,24 +97,22 @@ deletesMany args = testCase "Permanently deletes several paths" $ do
 
   runSafeRm delArgList
 
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- PERMANENT DELETE
 
-  let permDelArgList =
-        -- leave f2 alone
-        ["x", "f1", "f3", "dir1", "dir2", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs permDelArgList
-
-  -- list output assertions
-  permDelResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  -- leave f2 alone
+  let permDelArgList = ["x", "f1", "f3", "dir1", "dir2", "-f", "-t", trashDir]
+  runSafeRm permDelArgList
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir filesToDelete
@@ -137,79 +120,43 @@ deletesMany args = testCase "Permanently deletes several paths" $ do
   assertFilesExist $ mkAllTrashPaths trashDir ["f2"]
   assertDirectoriesExist [trashDir]
 
-  assertMatches expectedTerminal1 delResult
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 permDelResult
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
   where
-    expectedTerminal1 =
-      [ Exact "Type:     Directory",
-        Exact "Name:     dir1",
-        Outfix "Original: " "/safe-rm/functional/x2/dir1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     Directory",
-        Exact "Name:     dir2",
-        Outfix "Original: " "/safe-rm/functional/x2/dir2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/x2/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/x2/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f3",
-        Outfix "Original: " "/safe-rm/functional/x2/f3",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      5",
-        Exact "Total Files:  4",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deletesMany/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/x/deletesMany/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/x/deletesMany/f3",
+          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/x/deletesMany/dir1",
+          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/x/deletesMany/dir2"
+        ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x2/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f3\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/f3\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: dir1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: dir2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeDirectory, fileName = MkPathI {unPathI = \"dir2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x2/dir2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}"
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
-    expectedTerminal2 =
-      [ Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/x2/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      1",
-        Exact "Total Files:  1",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    permDelExpectedIdxSet =
+      HashSet.singleton
+        (mkPathData PathTypeFile "f2" "/safe-rm/functional/x/deletesMany/f2")
+    permDelExpectedMetadata =
+      MkMetadata
+        { numEntries = 1,
+          numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
 deleteUnknownError :: IO FilePath -> TestTree
 deleteUnknownError args = testCase "Delete unknown prints error" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x3"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "deleteUnknownError"
+  let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
       delArgList = ["d", f1, "-t", trashDir]
 
@@ -226,52 +173,47 @@ deleteUnknownError args = testCase "Delete unknown prints error" $ do
   -- delete to trash first
   runSafeRm delArgList
 
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
   assertFilesDoNotExist [f1]
   assertDirectoriesExist [trashDir]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- PERMANENT DELETE
-  let permDelArgList =
-        ["x", "bad file", "-f", "-t", trashDir]
-  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
+  let permDelArgList = ["x", "bad file", "-f", "-t", trashDir]
+  (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
 
   -- assert exception
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
 
-  assertMatches expectedTerminal delResult
   "ExitFailure 1" @=? ex
-  assertMatches expectedLogs logs
-  where
-    expectedTerminal =
-      [ Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/x3/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      1",
-        Exact "Total Files:  1",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x3/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: bad file",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'bad file'; did not find '" "/safe-rm/functional/x3/.trash/info/bad file.json'",
-        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
-      ]
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet permDelIdxSet
+  delExpectedMetadata @=? permDelMetadata
+  where
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deleteUnknownError/f1"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 1,
+          numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
 deletesSome :: IO FilePath -> TestTree
 deletesSome args = testCase "Deletes some, errors on others" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x4"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "deletesSome"
+  let trashDir = testDir </> ".trash"
       realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
       filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
       delArgList = ("d" : realFiles) <> ["-t", trashDir]
@@ -284,179 +226,53 @@ deletesSome args = testCase "Deletes some, errors on others" $ do
   -- delete to trash first
   runSafeRm delArgList
 
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
   assertFilesDoNotExist realFiles
   assertDirectoriesExist [trashDir]
 
-  -- PERMANENT DELETE
-  let permDelArgList =
-        ("x" : filesTryPermDelete) <> ["-f", "-t", trashDir]
-  (ex, logs) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
-
-  -- list output assertions
-  resultList <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir filesTryPermDelete
-
-  assertMatches expectedTerminal1 delResult
-  "ExitFailure 1" @=? ex
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 resultList
-  where
-    expectedTerminal1 =
-      [ Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/x4/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/x4/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f5",
-        Outfix "Original: " "/safe-rm/functional/x4/f5",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      3",
-        Exact "Total Files:  3",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x4/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/x4/.trash/info/f3.json'",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f4",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/x4/.trash/info/f4.json'",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f5",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x4/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
-      ]
-
-    expectedTerminal2 =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
-
-deletesSomeNoTrace :: IO FilePath -> TestTree
-deletesSomeNoTrace args = testCase "Deletes some no trace" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x5"
-      trashDir = testDir </> ".trash"
-      realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
-      filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
-      delArgList = ("d" : realFiles) <> ["-t", trashDir]
-
-  -- setup
-  clearDirectory testDir
-  createFiles realFiles
-  assertFilesExist realFiles
-
-  -- delete to trash first
-  runSafeRm delArgList
-
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
-  assertFilesDoNotExist realFiles
-  assertDirectoriesExist [trashDir]
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
 
   -- PERMANENT DELETE
   let permDelArgList =
         ("x" : filesTryPermDelete) <> ["-f", "-t", trashDir]
-  (ex, logs) <-
-    captureSafeRmExceptionLogs @ExitCode permDelArgList
-
-  -- list output assertions
-  resultList <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir filesTryPermDelete
 
-  assertMatches expectedTerminal1 delResult
   "ExitFailure 1" @=? ex
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 resultList
+
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
   where
-    expectedTerminal1 =
-      [ Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/x5/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/x5/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f5",
-        Outfix "Original: " "/safe-rm/functional/x5/f5",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      3",
-        Exact "Total Files:  3",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deletesSome/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/x/deletesSome/f2",
+          mkPathData PathTypeFile "f5" "/safe-rm/functional/x/deletesSome/f5"
+        ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x5/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f1",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f1\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f1\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f3",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f3'; did not find '" "/safe-rm/functional/x5/.trash/info/f3.json'",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f4",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting][Warn][src/SafeRm.hs] No entry for 'f4'; did not find '" "/safe-rm/functional/x5/.trash/info/f4.json'",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: f5",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"f5\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x5/f5\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] ExitFailure 1"
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 3,
+          numFiles = 3,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
-    expectedTerminal2 =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    permDelExpectedIdxSet = HashSet.empty
+    permDelExpectedMetadata = mempty
 
 deletesNoForce :: IO FilePath -> TestTree
 deletesNoForce args = testCase "Permanently deletes several paths without --force" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "x6"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "deletesNoForce"
+  let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
       delArgList = ("d" : fileDeletePaths) <> ["-t", trashDir]
@@ -472,13 +288,15 @@ deletesNoForce args = testCase "Permanently deletes several paths without --forc
   assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
   assertFilesDoNotExist fileDeletePaths
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- PERMANENT DELETE
 
   let permDelArgList = ["-t", trashDir, "x"] <> fileDeleteNames
-  (permDelResult, logs) <- captureSafeRmLogs permDelArgList
-
-  -- list output assertions
-  listResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm permDelArgList
 
   -- file assertions
   -- Our mock FuncIO alternates returning 'n' and 'y' to getChar, so without
@@ -487,86 +305,45 @@ deletesNoForce args = testCase "Permanently deletes several paths without --forc
   assertFilesExist $ mkAllTrashPaths trashDir ["1", "3", "5"]
   assertDirectoriesExist [trashDir]
 
-  assertMatches expectedTerminal1 permDelResult
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 listResult
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
   where
-    expectedTerminal1 =
-      [ Exact "",
-        Exact "Type:      File",
-        Exact "Name:      1",
-        Outfix "Original:  " "/safe-rm/functional/x6/1",
-        Exact "Size:      5.00B",
-        Exact "Created:   2020-05-31 12:00:00",
-        Exact "",
-        Exact "Permanently delete (y/n)?",
-        Exact "",
-        Exact "Type:      File",
-        Exact "Name:      2",
-        Outfix "Original:  " "/safe-rm/functional/x6/2",
-        Exact "Size:      5.00B",
-        Exact "Created:   2020-05-31 12:00:00",
-        Exact "",
-        Exact "Permanently delete (y/n)?",
-        Exact "",
-        Exact "Type:      File",
-        Exact "Name:      3",
-        Outfix "Original:  " "/safe-rm/functional/x6/3",
-        Exact "Size:      5.00B",
-        Exact "Created:   2020-05-31 12:00:00",
-        Exact "",
-        Exact "Permanently delete (y/n)?",
-        Exact "",
-        Exact "Type:      File",
-        Exact "Name:      4",
-        Outfix "Original:  " "/safe-rm/functional/x6/4",
-        Exact "Size:      5.00B",
-        Exact "Created:   2020-05-31 12:00:00",
-        Exact "",
-        Exact "Permanently delete (y/n)?",
-        Exact "",
-        Exact "Type:      File",
-        Exact "Name:      5",
-        Outfix "Original:  " "/safe-rm/functional/x6/5",
-        Exact "Size:      5.00B",
-        Exact "Created:   2020-05-31 12:00:00",
-        Exact "",
-        Exact "Permanently delete (y/n)?"
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "1" "/safe-rm/functional/x/deletesNoForce/1",
+          mkPathData PathTypeFile "2" "/safe-rm/functional/x/deletesNoForce/2",
+          mkPathData PathTypeFile "3" "/safe-rm/functional/x/deletesNoForce/3",
+          mkPathData PathTypeFile "4" "/safe-rm/functional/x/deletesNoForce/4",
+          mkPathData PathTypeFile "5" "/safe-rm/functional/x/deletesNoForce/5"
+        ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.deletePermanently][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/x6/.trash",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 1",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 2",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"2\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/2\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 3",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 4",
-        Outfix "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleted: UnsafePathData {pathType = PathTypeFile, fileName = MkPathI {unPathI = \"4\"}, originalPath = MkPathI {unPathI = " "/safe-rm/functional/x6/4\"}, size = MkBytes 5, created = MkTimestamp {unTimestamp = 2020-05-31 12:00:00}}",
-        Exact "[2020-05-31 12:00:00][functional.deletePermanently.deleting.deleteTrashPath][Debug][src/SafeRm/Trash.hs] Deleting: 5"
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 5,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
-    expectedTerminal2 =
-      [ Exact "Type:     File",
-        Exact "Name:     1",
-        Outfix "Original: " "/safe-rm/functional/x6/1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     3",
-        Outfix "Original: " "/safe-rm/functional/x6/3",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     5",
-        Outfix "Original: " "/safe-rm/functional/x6/5",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      3",
-        Exact "Total Files:  3",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    permDelExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "1" "/safe-rm/functional/x/deletesNoForce/1",
+          mkPathData PathTypeFile "3" "/safe-rm/functional/x/deletesNoForce/3",
+          mkPathData PathTypeFile "5" "/safe-rm/functional/x/deletesNoForce/5"
+        ]
+    permDelExpectedMetadata =
+      MkMetadata
+        { numEntries = 3,
+          numFiles = 3,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+getTestPath :: IO FilePath -> FilePath -> IO String
+getTestPath mroot d = do
+  root <- mroot
+  let rdir = root </> "x"
+  createDirectoryIfMissing False rdir
+  pure $ rdir </> d

@@ -21,6 +21,7 @@ module Functional.Prelude
 
     -- ** Runners
     runSafeRm,
+    runIndexMetadata,
     captureSafeRm,
     captureSafeRmLogs,
     captureSafeRmExceptionLogs,
@@ -30,17 +31,22 @@ module Functional.Prelude
     assertFilesDoNotExist,
     assertDirectoriesExist,
     assertDirectoriesDoNotExist,
+    assertSetEq,
 
     -- * Misc
+    fixedTimestamp,
+    mkPathData,
     mkAllTrashPaths,
     mkTrashPaths,
     mkTrashInfoPaths,
   )
 where
 
+import Data.HashSet qualified as HSet
 import Data.List ((++))
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
@@ -55,8 +61,14 @@ import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
 import GHC.Exts (IsList (Item, fromList, toList))
+import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import PathSize qualified
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import SafeRm qualified
+import SafeRm.Data.Metadata (Metadata)
+import SafeRm.Data.PathData.Internal (PathData (..))
+import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.Timestamp (Timestamp (..))
 import SafeRm.Env (HasTrashHome)
 import SafeRm.Prelude as X
 import SafeRm.Runner qualified as Runner
@@ -72,6 +84,7 @@ import Test.Tasty.HUnit as X
     (@=?),
   )
 import Test.Utils as X
+import Text.Pretty.Simple qualified as Pretty
 
 -- | Infinite stream of chars.
 data CharStream = Char :> CharStream
@@ -95,6 +108,16 @@ data FuncEnv = MkFuncEnv
     -- | Used to alternate responses to getChar.
     charStream :: !(IORef CharStream)
   }
+
+instance Show FuncEnv where
+  show (MkFuncEnv th ns _ _ _) =
+    mconcat
+      [ "MkFuncEnv {trashHome = ",
+        show th,
+        ", logNamespace = ",
+        show ns,
+        ", terminalRef = <ref>, logsRef = <ref>, charStream = <ref> }"
+      ]
 
 makeFieldLabelsNoPrefix ''FuncEnv
 
@@ -175,8 +198,14 @@ instance
         }
 
 instance MonadTime (FuncIO env) where
-  getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
+  getSystemZonedTime = pure $ ZonedTime localTime utc
   getMonotonicTime = pure 0
+
+fixedTimestamp :: Timestamp
+fixedTimestamp = MkTimestamp localTime
+
+localTime :: LocalTime
+localTime = LocalTime (toEnum 59_000) midday
 
 instance MonadLogger (FuncIO FuncEnv) where
   monadLoggerLog loc _src lvl msg = do
@@ -274,6 +303,45 @@ captureSafeRmExceptionLogs argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
+runIndexMetadata :: FilePath -> IO (HashSet PathData, Metadata)
+runIndexMetadata testDir = do
+  terminalRef <- newIORef ""
+  logsRef <- newIORef ""
+  charStream <- newIORef altAnswers
+
+  let funcEnv =
+        MkFuncEnv
+          { trashHome = MkPathI (testDir </> ".trash"),
+            logNamespace = "functional",
+            terminalRef,
+            logsRef,
+            charStream
+          }
+
+  tmpDir <- getTemporaryDirectory
+
+  idx <- view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
+  mdata <- runFuncIO SafeRm.getMetadata funcEnv
+
+  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
+  where
+    addSet t acc pd =
+      let fixPath tmp =
+            MkPathI
+              . T.unpack
+              . T.replace (T.pack tmp) ""
+              . T.pack
+              . view #unPathI
+          pd' =
+            UnsafePathData
+              { pathType = pd ^. #pathType,
+                fileName = pd ^. #fileName,
+                originalPath = fixPath t (pd ^. #originalPath),
+                size = pd ^. #size,
+                created = pd ^. #created
+              }
+       in HSet.insert pd' acc
+
 -- | Asserts that files exist.
 assertFilesExist :: [FilePath] -> IO ()
 assertFilesExist paths =
@@ -302,7 +370,7 @@ assertDirectoriesDoNotExist paths =
     exists <- doesDirectoryExist p
     assertBool ("Expected directory not to exist: " <> p) (not exists)
 
-mkFuncEnv :: TomlConfig -> IORef Text -> IORef Text -> IO FuncEnv
+mkFuncEnv :: (HasCallStack) => TomlConfig -> IORef Text -> IORef Text -> IO FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- getTrashHome
   charStream <- newIORef altAnswers
@@ -352,3 +420,45 @@ mkTrashPaths ::
 mkTrashPaths trashHome = fmap mkTrashPath
   where
     mkTrashPath p = trashHome </> "paths" </> p
+
+assertSetEq :: (Hashable a, Show a) => HashSet a -> HashSet a -> IO ()
+assertSetEq x y = do
+  unless (HSet.null xdiff) $
+    assertFailure $
+      TL.unpack (prettySet "Expected" "Results" xdiff y)
+
+  unless (HSet.null ydiff) $
+    assertFailure $
+      TL.unpack (prettySet "Results" "Expected" ydiff x)
+  where
+    xdiff = HSet.difference x y
+    ydiff = HSet.difference y x
+
+    prettySet d e s t =
+      mconcat
+        [ d,
+          " contained elements not found in ",
+          e,
+          ":\n",
+          p' s,
+          "\n",
+          e,
+          ":\n",
+          p' t
+        ]
+
+    p' = HSet.foldl' (\acc z -> Pretty.pShow z <> "\n" <> acc) ""
+
+mkPathData ::
+  PathType ->
+  PathI TrashName ->
+  PathI OriginalPath ->
+  PathData
+mkPathData pathType fileName originalPath =
+  UnsafePathData
+    { pathType,
+      fileName,
+      originalPath,
+      size = afromInteger 5,
+      created = fixedTimestamp
+    }

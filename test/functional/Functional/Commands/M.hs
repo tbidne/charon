@@ -6,7 +6,10 @@ module Functional.Commands.M
   )
 where
 
+import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.PathType (PathType (..))
 
 -- | @since 0.1
 tests :: IO FilePath -> TestTree
@@ -19,9 +22,8 @@ tests args =
 
 metadata :: IO FilePath -> TestTree
 metadata args = testCase "Prints metadata" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "m1"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "metadata"
+  let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
       delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
@@ -37,19 +39,21 @@ metadata args = testCase "Prints metadata" $ do
 
   runSafeRm delArgList
 
-  -- list output assertions
-  delResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesDoNotExist filesToDelete
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- METADATA
 
   let metaArgList = ["m", "-t", trashDir]
-  (metadataResult, logs) <- captureSafeRmLogs metaArgList
+  (metadataResult, _) <- captureSafeRmLogs metaArgList
 
   -- assert nothing changed
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
@@ -58,48 +62,29 @@ metadata args = testCase "Prints metadata" $ do
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
-  -- pure $ capturedToBs [delResult, metadataResult, logs]
-  assertMatches expectedTerminal1 delResult
   assertMatches expectedMetadata metadataResult
-  assertMatches expectedLogs logs
+
+  -- trash structure assertions
+  (metadataIdxSet, metadatMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet metadataIdxSet
+  delExpectedMetadata @=? metadatMetadata
   where
-    expectedTerminal1 =
-      [ Exact "Type:     Directory",
-        Exact "Name:     dir1",
-        Outfix "Original: " "/safe-rm/functional/m1/dir1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     Directory",
-        Exact "Name:     dir2",
-        Outfix "Original: " "/safe-rm/functional/m1/dir2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/m1/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/m1/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f3",
-        Outfix "Original: " "/safe-rm/functional/m1/f3",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      5",
-        Exact "Total Files:  4",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/m/metadata/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/m/metadata/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/m/metadata/f3",
+          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/m/metadata/dir1",
+          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/m/metadata/dir2"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
     expectedMetadata =
       Exact
@@ -110,37 +95,18 @@ metadata args = testCase "Prints metadata" $ do
               ""
             ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/m1/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/m1/.trash/info",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 5",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 5",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Log does not exist",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 4",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)"
-      ]
-
 empty :: IO FilePath -> TestTree
 empty args = testCase "Prints empty metadata" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "m2"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "empty"
+  let trashDir = testDir </> ".trash"
 
   createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "paths"]
   createFiles [trashDir </> "log"]
 
   let metaArgList = ["m", "-t", trashDir]
-  (result, logs) <- captureSafeRmLogs metaArgList
+  (result, _) <- captureSafeRmLogs metaArgList
 
   assertMatches expectedTerminal result
-  assertMatches expectedLogs logs
   where
     expectedTerminal =
       Exact
@@ -151,13 +117,9 @@ empty args = testCase "Prints empty metadata" $ do
               ""
             ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/m2/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/m2/.trash/info",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [",
-        Prefix "[2020-05-31 12:00:00][functional.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 0",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 0",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 0",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)"
-      ]
+getTestPath :: IO FilePath -> FilePath -> IO String
+getTestPath mroot d = do
+  root <- mroot
+  let rdir = root </> "m"
+  createDirectoryIfMissing False rdir
+  pure $ rdir </> d

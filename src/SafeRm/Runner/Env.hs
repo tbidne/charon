@@ -30,6 +30,14 @@ data LogFile m = MkLogFile
     logLevel :: !LogLevel
   }
 
+-- | @since 0.1
+instance Show (LogFile m) where
+  show (MkLogFile _ l) =
+    "MkLogFile {handle = <handle>, logLevel ="
+      <> show l
+      <> "}"
+
+-- | @since 0.1
 makeFieldLabelsNoPrefix ''LogFile
 
 -- | Holds logging env data.
@@ -45,7 +53,12 @@ data LogEnv m = MkLogEnv
     -- @since 0.1
     logNamespace :: !Namespace
   }
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
 
+-- | @since 0.1
 makeFieldLabelsNoPrefix ''LogEnv
 
 -- | Concrete environment type that can be used for running SafeRm
@@ -62,6 +75,10 @@ data Env m = MkEnv
     -- @since 0.1
     logEnv :: !(LogEnv m)
   }
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
 
 makeFieldLabelsNoPrefix ''Env
 

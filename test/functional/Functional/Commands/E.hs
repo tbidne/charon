@@ -6,7 +6,10 @@ module Functional.Commands.E
   )
 where
 
+import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.PathType (PathType (..))
 
 -- | @since 0.1
 tests :: IO FilePath -> TestTree
@@ -22,9 +25,8 @@ tests args =
 
 emptyTrash :: IO FilePath -> TestTree
 emptyTrash args = testCase "Empties trash" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "e1"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "emptyTrash"
+  let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
       delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
@@ -40,9 +42,6 @@ emptyTrash args = testCase "Empties trash" $ do
 
   runSafeRm delArgList
 
-  -- list output assertions
-  resultDel <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
-
   -- file assertions
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertFilesExist $ mkTrashInfoPaths trashDir ["dir2"]
@@ -51,13 +50,15 @@ emptyTrash args = testCase "Empties trash" $ do
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- EMPTY
 
   let emptyArgList = ["e", "-f", "-t", trashDir]
-  (_, logs) <- captureSafeRmLogs emptyArgList
-
-  -- list output assertions
-  result <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm emptyArgList
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
@@ -66,85 +67,43 @@ emptyTrash args = testCase "Empties trash" $ do
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
 
-  assertMatches expectedTerminal1 resultDel
-  assertMatches expectedLogs logs
-  assertMatches expectedTerminal2 result
+  -- trash structure assertions
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  assertSetEq emptyExpectedIdxSet emptyIdxSet
+  emptyExpectedMetadata @=? emptyMetadata
   where
-    expectedTerminal1 =
-      [ Exact "Type:     Directory",
-        Exact "Name:     dir1",
-        Outfix "Original: " "/safe-rm/functional/e1/dir1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     Directory",
-        Exact "Name:     dir2",
-        Outfix "Original: " "/safe-rm/functional/e1/dir2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f1",
-        Outfix "Original: " "/safe-rm/functional/e1/f1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f2",
-        Outfix "Original: " "/safe-rm/functional/e1/f2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     f3",
-        Outfix "Original: " "/safe-rm/functional/e1/f3",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      5",
-        Exact "Total Files:  4",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/emptyTrash/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/emptyTrash/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/emptyTrash/f3",
+          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/emptyTrash/dir1",
+          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/emptyTrash/dir2"
+        ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e1/.trash"
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
-    expectedTerminal2 =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    emptyExpectedIdxSet = HashSet.empty
+    emptyExpectedMetadata = mempty
 
 emptyTrashTwice :: IO FilePath -> TestTree
 emptyTrashTwice args = testCase "Calling empty twice does not error" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "e2"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "emptyTrashTwice"
+  let trashDir = testDir </> ".trash"
 
-  (_, logs1) <- captureSafeRmLogs ["e", "-f", "-t", trashDir]
-
-  (_, logs2) <- captureSafeRmLogs ["e", "-f", "-t", trashDir]
-
-  assertMatches expectedLogs logs1
-  assertMatches expectedLogs logs2
-  where
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e2/.trash",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home does not exist."
-      ]
+  runSafeRm ["e", "-f", "-t", trashDir]
+  runSafeRm ["e", "-f", "-t", trashDir]
 
 emptyNoForce :: IO FilePath -> TestTree
 emptyNoForce args = testCase "Empties trash without force" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "e3"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "emptyNoForce"
+  let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
       delArgList = ["-t", trashDir, "d"] <> fileDeletePaths
@@ -161,94 +120,46 @@ emptyNoForce args = testCase "Empties trash without force" $ do
   assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
   assertFilesDoNotExist fileDeletePaths
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- EMPTY
 
   let emptyArgList = ["-t", trashDir, "e"]
-  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
-
-  -- list output assertions
-  listResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm emptyArgList
 
   -- file assertions
   -- First getChar response was 'n', so files should still exist
   assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
 
-  assertMatches expectedTerminal1 emptyResult
-  assertMatches expectedLogs emptyLogs
-  assertMatches expectedTerminal2 listResult
+  -- trash structure assertions
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet emptyIdxSet
+  delExpectedMetadata @=? emptyMetadata
   where
-    expectedTerminal1 =
-      [ Exact "",
-        Exact "Entries:      5",
-        Exact "Total Files:  5",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact "",
-        Exact "Permanently delete all contents (y/n)?"
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "1" "/safe-rm/functional/e/emptyNoForce/1",
+          mkPathData PathTypeFile "2" "/safe-rm/functional/e/emptyNoForce/2",
+          mkPathData PathTypeFile "3" "/safe-rm/functional/e/emptyNoForce/3",
+          mkPathData PathTypeFile "4" "/safe-rm/functional/e/emptyNoForce/4",
+          mkPathData PathTypeFile "5" "/safe-rm/functional/e/emptyNoForce/5"
+        ]
 
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e3/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/e3/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/e3/.trash/info",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: ",
-        Prefix "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Index size: 5",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num entries: 5",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Log does not exist",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Num all files: 5",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash.getMetadata.toMetadata][Debug][src/SafeRm/Data/Metadata.hs] Total size: MkSomeSize SB (MkBytes 0.0)",
-        Exact "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Not deleting contents."
-      ]
-
-    expectedTerminal2 =
-      [ Exact "Type:     File",
-        Exact "Name:     1",
-        Outfix "Original: " "/safe-rm/functional/e3/1",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     2",
-        Outfix "Original: " "/safe-rm/functional/e3/2",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     3",
-        Outfix "Original: " "/safe-rm/functional/e3/3",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     4",
-        Outfix "Original: " "/safe-rm/functional/e3/4",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Type:     File",
-        Exact "Name:     5",
-        Outfix "Original: " "/safe-rm/functional/e3/5",
-        Exact "Size:     5.00B",
-        Exact "Created:  2020-05-31 12:00:00",
-        Exact "",
-        Exact "Entries:      5",
-        Exact "Total Files:  5",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 5,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
 
 missingInfoForcesDelete :: IO FilePath -> TestTree
 missingInfoForcesDelete args = testCase "empty --force overwrites bad directory (no info.)" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "e4"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "missingInfoForcesDelete"
+  let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
       delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
@@ -270,14 +181,17 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
   assertDirectoriesDoNotExist dirsToDelete
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
 
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "info")
 
   let emptyArgList = ["-t", trashDir, "e", "-f"]
-  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
-
-  metadataResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm emptyArgList
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
@@ -288,29 +202,35 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
 
   assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
 
-  assertMatches [] emptyResult
-  assertMatches expectedEmptyLogs emptyLogs
-  assertMatches expectedMetadata metadataResult
+  -- trash structure assertions
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  assertSetEq emptyExpectedIdxSet emptyIdxSet
+  emptyExpectedMetadata @=? emptyMetadata
   where
-    expectedEmptyLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home:" "/safe-rm/functional/e4/.trash"
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/missingInfoForcesDelete/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/missingInfoForcesDelete/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/missingInfoForcesDelete/f3",
+          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/missingInfoForcesDelete/dir1",
+          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/missingInfoForcesDelete/dir2"
+        ]
 
-    expectedMetadata =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    emptyExpectedIdxSet = HashSet.empty
+    emptyExpectedMetadata = mempty
 
 missingPathsForcesDelete :: IO FilePath -> TestTree
 missingPathsForcesDelete args = testCase "empty --force overwrites bad directory (no paths/)" $ do
-  tmpDir <- args
-  let testDir = tmpDir </> "e5"
-      trashDir = testDir </> ".trash"
+  testDir <- getTestPath args "missingPathsForcesDelete"
+  let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
       delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
@@ -333,13 +253,16 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
   assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "paths")
 
   let emptyArgList = ["-t", trashDir, "e", "-f"]
-  (emptyResult, emptyLogs) <- captureSafeRmLogs emptyArgList
-
-  metadataResult <- captureSafeRm ["-t", trashDir, "l", "--format", "m"]
+  runSafeRm emptyArgList
 
   -- file assertions
   assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "dir2"]
@@ -350,20 +273,34 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
 
   assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
 
-  assertMatches [] emptyResult
-  assertMatches expectedEmptyLogs emptyLogs
-  assertMatches expectedMetadata metadataResult
+  -- trash structure assertions
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  assertSetEq emptyExpectedIdxSet emptyIdxSet
+  emptyExpectedMetadata @=? emptyMetadata
   where
-    expectedEmptyLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.emptyTrash][Debug][src/SafeRm.hs] Trash home:" "/safe-rm/functional/e5/.trash"
-      ]
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/missingPathsForcesDelete/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/missingPathsForcesDelete/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/missingPathsForcesDelete/f3",
+          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/missingPathsForcesDelete/dir1",
+          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/missingPathsForcesDelete/dir2"
+        ]
 
-    expectedMetadata =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
-      ]
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 5,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    emptyExpectedIdxSet = HashSet.empty
+    emptyExpectedMetadata = mempty
+
+getTestPath :: IO FilePath -> FilePath -> IO String
+getTestPath mroot d = do
+  root <- mroot
+  let rdir = root </> "e"
+  createDirectoryIfMissing False rdir
+  pure $ rdir </> d

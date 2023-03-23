@@ -207,21 +207,24 @@ test-suite functional
     Functional.Prelude
 
   build-depends:
+    , algebra-simple
     , base
     , bytestring
     , effects-fs
     , effects-logger-ns
     , effects-terminal
     , effects-time
-    , env-guard            ^>=0.2
+    , env-guard             ^>=0.2
     , nonempty-containers
     , path-size
+    , pretty-simple         >=4.0.0.0 && <4.2
     , safe-rm
     , tasty
     , tasty-hunit
     , test-utils
     , text
     , time
+    , unordered-containers
 
   hs-source-dirs:   test/functional
   default-language: GHC2021

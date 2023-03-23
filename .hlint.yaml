@@ -1,6 +1,7 @@
 - ignore:
     name: "Redundant bracket"
     within:
+      - "Functional.Prelude"
       - "Integration.SafeRm.natToInt"
       - "SafeRm.Data.PathData"
       - "SafeRm.Data.PathData.Internal"
