@@ -192,8 +192,4 @@ missingInfoError args = testCase "Entry Missing Info" $ do
       ]
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let rdir = root </> "l"
-  createDirectoryIfMissing False rdir
-  pure $ rdir </> d
+getTestPath mroot = createTestDir mroot "l"

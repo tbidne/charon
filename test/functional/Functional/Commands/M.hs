@@ -118,8 +118,4 @@ empty args = testCase "Prints empty metadata" $ do
             ]
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let rdir = root </> "m"
-  createDirectoryIfMissing False rdir
-  pure $ rdir </> d
+getTestPath mroot = createTestDir mroot "m"

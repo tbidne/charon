@@ -224,8 +224,4 @@ deletesSome args = testCase "Deletes some files with errors" $ do
         }
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let rdir = root </> "d"
-  createDirectoryIfMissing False rdir
-  pure $ rdir </> d
+getTestPath mroot = createTestDir mroot "d"

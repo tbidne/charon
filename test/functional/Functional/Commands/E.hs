@@ -299,8 +299,4 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
     emptyExpectedMetadata = mempty
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let rdir = root </> "e"
-  createDirectoryIfMissing False rdir
-  pure $ rdir </> d
+getTestPath mroot = createTestDir mroot "e"

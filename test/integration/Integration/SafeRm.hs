@@ -636,7 +636,9 @@ mkTrashPaths trashHome =
     mkTrashPath p = trashHome </> "paths" </> p
     mkTrashInfoPath p = trashHome </> "info" </> p <> ".json"
 
--- NOTE: This exists because in the osx tests', canoncialize transforms a path
+-- NOTE: [OSX temp symlink]
+--
+-- This exists because in the osx tests', canoncialize transforms a path
 --
 --    /var/...
 --

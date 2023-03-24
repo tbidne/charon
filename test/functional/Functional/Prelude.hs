@@ -37,6 +37,7 @@ module Functional.Prelude
     assertSetEq,
 
     -- * Misc
+    createTestDir,
     fixedTimestamp,
     mkPathData,
     mkAllTrashPaths,
@@ -480,3 +481,17 @@ mkPathData pathType fileName originalPath =
       size = afromInteger 5,
       created = fixedTimestamp
     }
+
+-- | @createTestDir tmpDirIO moduleDir testDir@, returns
+-- @tmpDir/moduleDir/testDir@, creating the moduleDir if it does not exist.
+--
+-- E.g.
+--
+-- @createTestDir args "d" "someDeleteTest" @
+createTestDir :: IO FilePath -> FilePath -> FilePath -> IO FilePath
+createTestDir args modDir testDir = do
+  -- See Note [OSX temp symlink]
+  root <- canonicalizePath =<< args
+  let rootMod = root </> modDir
+  createDirectoryIfMissing False rootMod
+  pure $ rootMod </> testDir

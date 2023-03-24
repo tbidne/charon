@@ -503,8 +503,4 @@ deletesSomeWildcards args = testCase "Deletes some paths via wildcards" $ do
         }
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let xdir = root </> "x"
-  createDirectoryIfMissing False xdir
-  pure $ xdir </> d
+getTestPath mroot = createTestDir mroot "x"

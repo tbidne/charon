@@ -486,8 +486,4 @@ restoresSomeWildcards args = testCase "Restores some paths via wildcards" $ do
         }
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot d = do
-  root <- mroot
-  let rdir = root </> "r"
-  createDirectoryIfMissing False rdir
-  pure $ rdir </> d
+getTestPath mroot = createTestDir mroot "r"
