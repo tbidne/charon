@@ -207,6 +207,7 @@ test-suite functional
     Functional.Commands.R
     Functional.Commands.X
     Functional.Prelude
+    Functional.Prelude.FuncEnv
 
   build-depends:
     , algebra-simple
