@@ -17,7 +17,7 @@ where
 
 import Data.Text qualified as T
 import SafeRm.Data.Index (Sort)
-import SafeRm.Data.PathData (PathDataFormat (..))
+import SafeRm.Data.PathData (ColFormat (..), PathDataFormat (..))
 import SafeRm.Prelude
 import SafeRm.Runner.Phase (AdvancePhase (..), MaybePhaseF, Phase (..))
 import SafeRm.Utils qualified as U
@@ -34,8 +34,6 @@ data ListFormatStyle
     ListFormatStyleMultiline
   | -- | @since 0.1
     ListFormatStyleTabular
-  | -- | @since 0.1
-    ListFormatStyleAuto
   deriving stock
     ( -- | @since 0.1
       Eq,
@@ -49,8 +47,6 @@ parseListFormat "multi" = pure ListFormatStyleMultiline
 parseListFormat "m" = pure ListFormatStyleMultiline
 parseListFormat "tabular" = pure ListFormatStyleTabular
 parseListFormat "t" = pure ListFormatStyleTabular
-parseListFormat "auto" = pure ListFormatStyleAuto
-parseListFormat "a" = pure ListFormatStyleAuto
 parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 
 -- | Holds all configuration data for list formatting i.e. style and
@@ -65,11 +61,11 @@ data ListFormatPhase1 = MkListFormatPhase1
     -- | Name truncation.
     --
     -- @since 0.1
-    nameTrunc :: !(Maybe Natural),
+    nameTrunc :: !(Maybe ColFormat),
     -- | Original path truncation.
     --
     -- @since 0.1
-    origTrunc :: !(Maybe Natural)
+    origTrunc :: !(Maybe ColFormat)
   }
   deriving stock
     ( -- | @since 0.1
@@ -101,11 +97,9 @@ instance AdvancePhase ListFormatPhase1 where
     Just ListFormatStyleMultiline -> FormatMultiline
     Just ListFormatStyleTabular ->
       FormatTabular
-        (fromMaybe 10 (formatPhase1 ^. #nameTrunc))
-        (fromMaybe 22 (formatPhase1 ^. #origTrunc))
-    Just ListFormatStyleAuto -> FormatTabularAuto
-    -- default to FormatTabularAuto
-    Nothing -> FormatTabularAuto
+        (formatPhase1 ^. #nameTrunc)
+        (formatPhase1 ^. #origTrunc)
+    Nothing -> FormatTabular Nothing Nothing
 
 -- | Arguments for the list command.
 --

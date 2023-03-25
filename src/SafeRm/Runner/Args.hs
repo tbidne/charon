@@ -40,6 +40,8 @@ import Options.Applicative qualified as OA
 import Options.Applicative.Help.Chunk (Chunk (Chunk))
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import SafeRm.Data.Index (Sort, readSort)
+import SafeRm.Data.PathData (ColFormat (..))
+import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
@@ -52,6 +54,7 @@ import SafeRm.Runner.Command.List
   )
 import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import SafeRm.Utils qualified as Utils
+import Text.Read qualified as TR
 
 -- | Toml path config.
 --
@@ -276,34 +279,53 @@ listFormatStyleParser =
           "the data and terminal width."
         ]
 
-nameTruncParser :: Parser (Maybe Natural)
-nameTruncParser = natParser fields
+nameTruncParser :: Parser (Maybe ColFormat)
+nameTruncParser = colParser PathData.formatFileNameLenMin fields
   where
     fields =
       mconcat
-        [ OA.long "name-trunc",
+        [ OA.long "name-len",
           OA.short 'n',
-          OA.metavar "NAT",
+          OA.metavar "(NAT|max)",
           OA.help $
-            "Truncates the name to NAT chars. Only affects the 'tabular' "
-              <> "format."
+            mconcat
+              [ "Sets the file name column length to either NAT characters or ",
+                "longest file-name. Only affects the 'tabular' format."
+              ]
         ]
 
-origTruncParser :: Parser (Maybe Natural)
-origTruncParser = natParser fields
+origTruncParser :: Parser (Maybe ColFormat)
+origTruncParser = colParser PathData.formatOriginalPathLenMin fields
   where
     fields =
       mconcat
-        [ OA.long "orig-trunc",
+        [ OA.long "orig-len",
           OA.short 'o',
-          OA.metavar "NAT",
+          OA.metavar "(NAT|max)",
           OA.help $
-            "Truncates the original path to NAT chars. Only affects the 'tabular' "
-              <> "format."
+            mconcat
+              [ "Sets the original-path column length to either NAT characters or ",
+                "longest path. Only affects the 'tabular' format."
+              ]
         ]
 
-natParser :: Mod OptionFields Natural -> Parser (Maybe Natural)
-natParser = A.optional . OA.option OA.auto
+colParser :: Natural -> Mod OptionFields ColFormat -> Parser (Maybe ColFormat)
+colParser minLen = A.optional . OA.option readCol
+  where
+    readCol =
+      OA.str >>= \case
+        "max" -> pure ColFormatMax
+        other -> case TR.readMaybe other of
+          Just n -> pure $ ColFormatFixed n
+          Nothing ->
+            fail $
+              mconcat
+                [ "Unrecognized col-format. Should either be 'max' or a positive ",
+                  "integer < ",
+                  show minLen,
+                  ". Received: ",
+                  other
+                ]
 
 sortParser :: Parser (Maybe Sort)
 sortParser =

@@ -34,11 +34,28 @@ module SafeRm.Data.PathData
     sortSize,
 
     -- * Formatting
+
+    -- ** Types
     PathDataFormat (..),
+    ColFormat (..),
+    _ColFormatFixed,
+    _ColFormatMax,
+    -- _ColFormatAuto,
+
+    -- ** Functions
     formatMultiLine,
     formatTabularHeader,
     formatTabularRow,
+
+    -- ** Field lengths
+    minTableWidth,
     reservedLineLen,
+    formatFileNameLenMin,
+    formatOriginalPathLenMin,
+    formatTypeLen,
+    formatSizeLen,
+    formatCreatedLen,
+    formatSeparatorsLen,
 
     -- * Miscellaneous
     headerNames,
@@ -154,6 +171,45 @@ pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
 pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashInfoPath
 pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
 
+-- | @since 0.1
+data ColFormat
+  = -- | Fixed length format.
+    --
+    -- @since 0.1
+    ColFormatFixed !Natural
+  | -- | Format the column according to its longest entry, if possible.
+    --
+    -- @since 0.1
+    ColFormatMax
+  deriving stock
+    ( -- | @since 0.1
+      Eq,
+      -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+_ColFormatFixed :: Prism' ColFormat Natural
+_ColFormatFixed =
+  prism
+    ColFormatFixed
+    ( \x -> case x of
+        ColFormatFixed lbl -> Right lbl
+        _ -> Left x
+    )
+{-# INLINE _ColFormatFixed #-}
+
+-- | @since 0.1
+_ColFormatMax :: Prism' ColFormat ()
+_ColFormatMax =
+  prism
+    (const ColFormatMax)
+    ( \x -> case x of
+        ColFormatMax -> Right ()
+        _ -> Left x
+    )
+{-# INLINE _ColFormatMax #-}
+
 -- | Determines how to format a textual 'PathData'.
 --
 -- @since 0.1
@@ -165,12 +221,12 @@ data PathDataFormat
   | -- | Formats all fields on the same line.
     --
     -- @since 0.1
-    FormatTabular Natural Natural
-  | -- | Like 'FormatTabular', except it attempts to detect the best
-    -- column widths automatically.
-    --
-    -- @since 0.1
-    FormatTabularAuto
+    FormatTabular !(Maybe ColFormat) !(Maybe ColFormat)
+  -- \| -- | Like 'FormatTabular', except it attempts to detect the best
+  --   -- column widths automatically.
+  --   --
+  --   -- @since 0.1
+  --   FormatTabularAuto
   deriving stock
     ( -- | @since 0.1
       Eq,
@@ -201,9 +257,9 @@ formatTabularHeader nameLen origLen =
   mconcat
     [ fixLen nameLen "Name",
       sep,
-      fixLen 9 "Type",
+      fixLen formatTypeLen "Type",
       sep,
-      fixLen 7 "Size",
+      fixLen formatSizeLen "Size",
       sep,
       fixLen origLen "Original",
       sep,
@@ -233,7 +289,15 @@ formatTabularHeader nameLen origLen =
 --
 -- @since 0.1
 reservedLineLen :: Natural
-reservedLineLen = 9 + 7 + 19 + 12
+reservedLineLen =
+  formatTypeLen + formatSizeLen + formatCreatedLen + formatSeparatorsLen
+
+-- | Minimum length needed to display the table.
+--
+-- @since 0.1
+minTableWidth :: Natural
+minTableWidth =
+  reservedLineLen + formatFileNameLenMin + formatOriginalPathLenMin
 
 -- | @since 0.1
 formatTabularRow :: Natural -> Natural -> PathData -> Text
@@ -243,7 +307,7 @@ formatTabularRow nameLen origLen pd =
       sep,
       paddedType (pd ^. #pathType),
       sep,
-      fixLen 7 (U.normalizedFormat $ pd ^. #size),
+      fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
       sep,
       fixLen' origLen (pd ^. #originalPath % #unPathI),
       sep,
@@ -284,3 +348,27 @@ getExistsFn :: (MonadPathReader m) => PathData -> Path -> m Bool
 getExistsFn pd = case pd ^. #pathType of
   PathTypeFile -> doesFileExist
   PathTypeDirectory -> doesDirectoryExist
+
+-- | @since 0.1
+formatTypeLen :: Natural
+formatTypeLen = 9
+
+-- | @since 0.1
+formatFileNameLenMin :: Natural
+formatFileNameLenMin = 4
+
+-- | @since 0.1
+formatOriginalPathLenMin :: Natural
+formatOriginalPathLenMin = 8
+
+-- | @since 0.1
+formatSizeLen :: Natural
+formatSizeLen = 7
+
+-- | @since 0.1
+formatCreatedLen :: Natural
+formatCreatedLen = 19
+
+-- | @since 0.1
+formatSeparatorsLen :: Natural
+formatSeparatorsLen = 12

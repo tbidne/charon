@@ -19,7 +19,7 @@ import Effects.System.Terminal
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData (PathDataFormat (..))
+import SafeRm.Data.PathData (ColFormat (..), PathDataFormat (..))
 import SafeRm.Data.PathData.Internal (PathData (UnsafePathData))
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI))
@@ -55,7 +55,7 @@ formattingTests =
 format1 :: TestTree
 format1 = testCase "Multiline, name, asc" $ do
   idx <- mkIndex
-  formatted <- T.lines <$> Index.formatIndex FormatMultiline Name False idx
+  formatted <- T.lines <$> runConfigIO (Index.formatIndex FormatMultiline Name False idx) 100
   assertMatches expected formatted
   where
     expected =
@@ -101,7 +101,7 @@ format2 :: TestTree
 format2 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex FormatMultiline Name True idx
+    formatted <- runConfigIO (Index.formatIndex FormatMultiline Name True idx) 61
     pure $ toBS formatted
   where
     desc = "Multiline, name, desc"
@@ -111,7 +111,7 @@ format3 :: TestTree
 format3 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex FormatMultiline Size False idx
+    formatted <- runConfigIO (Index.formatIndex FormatMultiline Size False idx) 61
     pure $ toBS formatted
   where
     desc = "Multiline, size, asc"
@@ -121,7 +121,7 @@ format4 :: TestTree
 format4 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex FormatMultiline Size True idx
+    formatted <- runConfigIO (Index.formatIndex FormatMultiline Size True idx) 61
     pure $ toBS formatted
   where
     desc = "Multiline, size, desc"
@@ -131,7 +131,7 @@ format5 :: TestTree
 format5 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex (FormatTabular 10 22) Name False idx
+    formatted <- runConfigIO (Index.formatIndex fixedTabularFormat Name False idx) 61
     pure $ toBS formatted
   where
     desc = "Tabular, name, asc"
@@ -141,7 +141,7 @@ format6 :: TestTree
 format6 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex (FormatTabular 10 22) Name True idx
+    formatted <- runConfigIO (Index.formatIndex fixedTabularFormat Name True idx) 61
     pure $ toBS formatted
   where
     desc = "Tabular, name, desc"
@@ -151,7 +151,7 @@ format7 :: TestTree
 format7 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex (FormatTabular 10 22) Size False idx
+    formatted <- runConfigIO (Index.formatIndex fixedTabularFormat Size False idx) 61
     pure $ toBS formatted
   where
     desc = "Tabular, size, asc"
@@ -161,17 +161,21 @@ format8 :: TestTree
 format8 =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
-    formatted <- Index.formatIndex (FormatTabular 10 22) Size True idx
+    formatted <- runConfigIO (Index.formatIndex fixedTabularFormat Size True idx) 61
     pure $ toBS formatted
   where
     desc = "Tabular, size, desc"
     gpath = goldenPath </> "tabular-size-desc.golden"
+
+fixedTabularFormat :: PathDataFormat
+fixedTabularFormat = FormatTabular (Just $ ColFormatFixed 10) (Just $ ColFormatFixed 22)
 
 newtype ConfigIO a = MkConfigIO (ReaderT Natural IO a)
   deriving
     ( Applicative,
       Functor,
       Monad,
+      MonadCatch,
       MonadIO,
       MonadReader Natural,
       MonadThrow
@@ -191,13 +195,20 @@ instance MonadTerminal ConfigIO where
           }
   putStr = liftIO . putStr
 
+instance MonadLogger ConfigIO where
+  monadLoggerLog _ _ _ _ = pure ()
+
+instance MonadLoggerNS ConfigIO where
+  getNamespace = pure ""
+  localNamespace _ m = m
+
 formatAuto :: TestTree
 formatAuto =
   goldenVsStringDiff desc diff gpath $ do
     idx <- mkIndex
     formatted <-
       runConfigIO
-        (Index.formatIndex FormatTabularAuto Name False idx)
+        (Index.formatIndex (FormatTabular Nothing Nothing) Name False idx)
         100
     pure $ toBS formatted
   where
@@ -210,7 +221,7 @@ formatAutoMin =
     idx <- mkIndex
     formatted <-
       runConfigIO
-        (Index.formatIndex FormatTabularAuto Name False idx)
+        (Index.formatIndex (FormatTabular Nothing Nothing) Name False idx)
         59
     pure $ toBS formatted
   where
@@ -228,7 +239,7 @@ formatAutoLargeApprox =
             ]
     formatted <-
       runConfigIO
-        (Index.formatIndex FormatTabularAuto Name False idx)
+        (Index.formatIndex (FormatTabular Nothing Nothing) Name False idx)
         100
     pure $ toBS formatted
   where
@@ -241,7 +252,7 @@ formatAutoEmpty =
     let idx = MkIndex []
     formatted <-
       runConfigIO
-        (Index.formatIndex FormatTabularAuto Name False idx)
+        (Index.formatIndex (FormatTabular Nothing Nothing) Name False idx)
         100
     pure $ toBS formatted
   where
@@ -254,7 +265,7 @@ formatAutoFail = testCase desc $ do
   eformatted <-
     tryAnyCS $
       runConfigIO
-        (Index.formatIndex FormatTabularAuto Name False idx)
+        (Index.formatIndex (FormatTabular Nothing Nothing) Name False idx)
         58
   case eformatted of
     Right result ->

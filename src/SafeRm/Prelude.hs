@@ -14,7 +14,7 @@ where
 
 import Control.Applicative as X
   ( Alternative ((<|>)),
-    Applicative (pure, (<*>)),
+    Applicative (liftA2, pure, (<*>)),
     (*>),
   )
 import Control.DeepSeq as X (NFData)

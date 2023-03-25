@@ -204,12 +204,12 @@ getConfiguration = do
 printIndex ::
   ( HasCallStack,
     HasTrashHome env,
+    MonadCatch m,
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThrow m
+    MonadTerminal m
   ) =>
   PathDataFormat ->
   Sort ->
