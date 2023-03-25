@@ -178,11 +178,14 @@ infixl 5 <//
 
 infixl 5 //>
 
--- | Returns true if the paths is empty, up to whitespace.
+-- | Returns true if the paths is empty. Note that whitespace is __not__
+-- considered empty as we are trying to prevent deleting "" (which gets
+-- turned into the current working directory). But posix filepaths can be
+-- whitespace (e.g. " "), and that is fine.
 --
 -- @since 0.1
 isEmpty :: PathI i -> Bool
-isEmpty = T.null . T.strip . T.pack . view #unPathI
+isEmpty = null . view #unPathI
 
 -- | Returns true if the path is the root.
 --

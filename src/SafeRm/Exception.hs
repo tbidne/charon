@@ -48,8 +48,9 @@ newtype PathNotFoundE = MkPathNotFoundE FilePath
 instance Exception PathNotFoundE where
   displayException (MkPathNotFoundE f) =
     mconcat
-      [ "Path not found: ",
-        f
+      [ "Path not found: '",
+        f,
+        "'"
       ]
 
 -- | Could not rename file due to duplicate names.
@@ -238,7 +239,7 @@ data EmptyPathE = MkEmptyPathE
 
 -- | @since 0.1
 instance Exception EmptyPathE where
-  displayException _ = "Attempted to delete an empty path! This is not allowed."
+  displayException _ = "Attempted to delete the empty path! This is not allowed."
 
 -- | Exception for decoding.
 --

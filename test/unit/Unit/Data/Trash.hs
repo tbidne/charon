@@ -23,6 +23,7 @@ tests =
   testGroup
     "Data.Trash"
     [ mvTrash,
+      mvTrashWhitespace,
       mvTrashRootError,
       mvTrashEmptyError
     ]
@@ -69,14 +70,15 @@ instance MonadPathReader PathDataT where
     | otherwise = error p
     where
       nexists =
-        [ "test/unit/.trash/paths/foo"
+        [ "test/unit/.trash/paths/foo",
+          "test/unit/.trash/paths/ "
         ]
 
   doesFileExist p
     | p `L.elem` exists = pure True
     | otherwise = error p
     where
-      exists = ["/home/path/to/foo", "/"]
+      exists = ["/home/path/to/foo", "/", "/home/ "]
 
 instance MonadPathSize PathDataT where
   findLargestPaths _ p = pure (PathSizeSuccess spd)
@@ -103,6 +105,11 @@ mvTrash = testCase "mvOriginalToTrash success" $ do
   (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts "path/to/foo")
   "renamed /home/path/to/foo to test/unit/.trash/paths/foo" @=? result
 
+mvTrashWhitespace :: TestTree
+mvTrashWhitespace = testCase "mvOriginalToTrash whitespace success" $ do
+  (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts " ")
+  "renamed /home/  to test/unit/.trash/paths/ " @=? result
+
 mvTrashRootError :: TestTree
 mvTrashRootError = testCase desc $ do
   eformatted <-
@@ -119,11 +126,11 @@ mvTrashEmptyError :: TestTree
 mvTrashEmptyError = testCase desc $ do
   eformatted <-
     tryCS @_ @EmptyPathE $
-      runPathDataT (Trash.mvOriginalToTrash trashHome ts "  ")
+      runPathDataT (Trash.mvOriginalToTrash trashHome ts "")
   case eformatted of
     Right result ->
       assertFailure $ "Expected exception, received result: " <> show result
-    Left ex -> "Attempted to delete an empty path! This is not allowed." @=? displayException ex
+    Left ex -> "Attempted to delete the empty path! This is not allowed." @=? displayException ex
   where
     desc = "mvOriginalToTrash throws exception for empty original path"
 
