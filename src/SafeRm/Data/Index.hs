@@ -266,10 +266,9 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     --
     --       a. Try to display all data w/o truncation i.e. set each column
     --          to the max entry (e.g. longest fileName).
-    --
     --       b. If we cannot fit the maxes within the terminal width, use the
-    --          remaining width according to the following ratio: 20% for
-    --          fileNames, 80% for the originalPath.
+    --          remaining width according to the following ratio: 40% for
+    --          fileNames, 60% for the originalPath.
 
     -- maxLen := maximum terminal width
     maxLen <- getMaxLen
@@ -292,23 +291,16 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
 
     -- Basically: if an option is explicitly specified; use it. Otherwise,
     -- try to calculate a "good" value.
-    --
-    -- REVIEW: It would be nice to do this with less boilerplate.
-    (nameLen, origLen) <- case (nameFormat, origFormat) of
-      (Just (ColFormatFixed nameLen), Just (ColFormatFixed origLen)) -> pure (nameLen, origLen)
-      (Just (ColFormatFixed nameLen), Just ColFormatMax) -> pure (nameLen, maxOrigLen)
-      (Just (ColFormatFixed nameLen), Nothing) -> (nameLen,) <$> mkOrigLen maxLenForDynCols nameLen
-      (Just ColFormatMax, Just (ColFormatFixed origLen)) -> pure (maxNameLen, origLen)
-      (Just ColFormatMax, Just ColFormatMax) -> pure (maxNameLen, maxOrigLen)
-      (Just ColFormatMax, Nothing) -> (maxNameLen,) <$> mkOrigLen maxLenForDynCols maxNameLen
-      (Nothing, Just (ColFormatFixed origLen)) -> (,origLen) <$> mkNameLen maxLenForDynCols origLen
-      (Nothing, Just ColFormatMax) -> (,maxOrigLen) <$> mkNameLen maxLenForDynCols maxOrigLen
-      (Nothing, Nothing) ->
+    (nameLen, origLen) <- case (nameFmtToStrategy nameFormat, origFmtToStrategy origFormat) of
+      (Right nLen, Right oLen) -> pure (nLen, oLen)
+      (Right nLen, Left mkOLen) -> (nLen,) <$> mkOLen maxLenForDynCols nLen
+      (Left mkNLen, Right oLen) -> (,oLen) <$> mkNLen maxLenForDynCols oLen
+      (Left _, Left _) ->
         if maxNameLen + maxOrigLen <= maxLenForDynCols
           then pure (maxNameLen, maxOrigLen)
           else
             let maxLenDynColsD = fromIntegral @_ @Double maxLenForDynCols
-                nameApprox = max 4 (floor $ maxLenDynColsD * 0.3)
+                nameApprox = max 4 (floor $ maxLenDynColsD * 0.4)
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 
@@ -321,11 +313,20 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
         ( max maxNameSoFar (pathLen $ pd ^. #fileName),
           max maxOrigSoFar (pathLen $ pd ^. #originalPath)
         )
-
       maxStart = (PathData.formatFileNameLenMin, PathData.formatOriginalPathLenMin)
-
       pathLen = fromIntegral . Paths.applyPathI length
 
+      -- Map the name format to its strategy
+      nameFmtToStrategy (Just (ColFormatFixed nameLen)) = Right nameLen
+      nameFmtToStrategy (Just ColFormatMax) = Right maxNameLen
+      nameFmtToStrategy Nothing = Left mkNameLen
+
+      -- Map the orig format to its strategy
+      origFmtToStrategy (Just (ColFormatFixed origLen)) = Right origLen
+      origFmtToStrategy (Just ColFormatMax) = Right maxOrigLen
+      origFmtToStrategy Nothing = Left mkOrigLen
+
+      -- Given a fixed nameLen, derive a "good" origLen
       mkOrigLen maxLenForDynCols nLen =
         if nLen + maxOrigLen < maxLenForDynCols
           then -- 1. Requested nLen and maxOrigLen fits; use both
@@ -361,6 +362,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                     ]
                 pure PathData.formatOriginalPathLenMin
 
+      -- Given a fixed origLen, derive a "good" nameLen
       mkNameLen maxLenForDynCols oLen =
         if oLen + maxNameLen < maxLenForDynCols
           then -- 1. Requested oLen and maxNameLen fits; use both

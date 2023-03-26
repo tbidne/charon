@@ -1,4 +1,4 @@
-Name            | Type      | Size    | Original                               | Created
+Name                  | Type      | Size    | Original                         | Created
 ----------------------------------------------------------------------------------------------------
-bbbbbbbbbbbb... | File      | 10.00B  | bar                                    | 2020-05-31 12:00:00
-foo             | File      | 10.00B  | fffffffffffffffffffffffffffffffffff... | 2020-05-31 12:00:00
+bbbbbbbbbbbbbbbbbb... | File      | 10.00B  | bar                              | 2020-05-31 12:00:00
+foo                   | File      | 10.00B  | fffffffffffffffffffffffffffff... | 2020-05-31 12:00:00
