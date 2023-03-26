@@ -44,6 +44,7 @@ argsTests =
       restore,
       list,
       listNonDefaults,
+      listNonDefaultsNoFormat,
       metadata
     ]
 
@@ -137,6 +138,29 @@ listNonDefaults = testCase "List non-default args" $ do
     defList =
       MkListCmd
         { format = FormatTabular (Just $ ColFormatFixed 80) (Just $ ColFormatFixed 100),
+          sort = Name,
+          revSort = False
+        }
+
+listNonDefaultsNoFormat :: TestTree
+listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ do
+  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+
+  Nothing @=? cfg ^. #trashHome
+  Just defList @=? cmd ^? _List
+  where
+    argList =
+      [ "-c",
+        "none",
+        "l",
+        "--name-len",
+        "80",
+        "--orig-len",
+        "max"
+      ]
+    defList =
+      MkListCmd
+        { format = FormatTabular (Just $ ColFormatFixed 80) (Just ColFormatMax),
           sort = Name,
           revSort = False
         }

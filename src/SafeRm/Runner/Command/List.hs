@@ -99,7 +99,10 @@ instance AdvancePhase ListFormatPhase1 where
       FormatTabular
         (formatPhase1 ^. #nameTrunc)
         (formatPhase1 ^. #origTrunc)
-    Nothing -> FormatTabular Nothing Nothing
+    Nothing ->
+      FormatTabular
+        (formatPhase1 ^. #nameTrunc)
+        (formatPhase1 ^. #origTrunc)
 
 -- | Arguments for the list command.
 --

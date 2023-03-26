@@ -265,18 +265,19 @@ listFormatStyleParser =
     OA.option (OA.str >>= parseListFormat) $
       mconcat
         [ OA.long "format",
-          OA.metavar "(a[uto] | t[abular] | m[ulti])",
+          OA.metavar "t[abular] | m[ulti])",
           OA.help helpTxt
         ]
   where
     helpTxt =
       mconcat
-        [ "Determines the output format. The 'tabular' option prints each ",
-          "trash entry on a single line, in tabular form. The 'multi' option ",
-          "prints each entry across multiple lines. Finally, 'auto', the ",
-          "default, has the same structure as 'tabular', except it attempts ",
-          "to choose the best name/path column sizes automatically based on ",
-          "the data and terminal width."
+        [ "Determines the output format. The 'multi' option prints each ",
+          "entry across multiple lines. The default 'tabular' option prints ",
+          "each trash entry on a single line, in a table. By default, ",
+          "tabular tries to intelligently size the table based on the ",
+          "available terminal width and filename / original path lengths. ",
+          "The behavior can be overridden via --name-len and --orig-len. ",
+          "Note that this can lead to word-wrapping."
         ]
 
 nameTruncParser :: Parser (Maybe ColFormat)
@@ -286,7 +287,7 @@ nameTruncParser = colParser PathData.formatFileNameLenMin fields
       mconcat
         [ OA.long "name-len",
           OA.short 'n',
-          OA.metavar "(NAT|max)",
+          OA.metavar "(max|NAT)",
           OA.help $
             mconcat
               [ "Sets the file name column length to either NAT characters or ",
@@ -301,7 +302,7 @@ origTruncParser = colParser PathData.formatOriginalPathLenMin fields
       mconcat
         [ OA.long "orig-len",
           OA.short 'o',
-          OA.metavar "(NAT|max)",
+          OA.metavar "(max|NAT)",
           OA.help $
             mconcat
               [ "Sets the original-path column length to either NAT characters or ",

@@ -308,7 +308,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
           then pure (maxNameLen, maxOrigLen)
           else
             let maxLenDynColsD = fromIntegral @_ @Double maxLenForDynCols
-                nameApprox = max 4 (floor $ maxLenDynColsD * 0.2)
+                nameApprox = max 4 (floor $ maxLenDynColsD * 0.3)
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 

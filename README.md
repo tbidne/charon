@@ -212,24 +212,28 @@ $ sr r foo baz
 **Usage:**
 
 ```
-Usage: sr l [--format (a[uto] | t[abular] | m[ulti])] [-n|--name-trunc NAT]
-            [-o|--orig-trunc NAT] [-s|--sort (name|size)] [-r|--reverse-sort]
+Usage: sr l [--format t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
+            [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
+            [-r|--reverse-sort]
 
   Lists all trash contents and metadata.
 
 Available options:
-  --format (a[uto] | t[abular] | m[ulti])
-                           Determines the output format. The 'tabular' option
-                           prints each trash entry on a single line, in tabular
-                           form. The 'multi' option prints each entry across
-                           multiple lines. Finally, 'auto', the default, has the
-                           same structure as 'tabular', except it attempts to
-                           choose the best name/path column sizes automatically
-                           based on the data and terminal width.
-  -n,--name-trunc NAT      Truncates the name to NAT chars. Only affects the
+  --format t[abular] | m[ulti])
+                           Determines the output format. The 'multi' option
+                           prints each entry across multiple lines. The default
+                           'tabular' option prints each trash entry on a single
+                           line, in a table. By default, tabular tries to
+                           intelligently size the table based on the available
+                           terminal width and filename / original path lengths.
+                           The behavior can be overridden via --name-len and
+                           --orig-len. Note that this can lead to word-wrapping.
+  -n,--name-len (max|NAT)  Sets the file name column length to either NAT
+                           characters or longest file-name. Only affects the
                            'tabular' format.
-  -o,--orig-trunc NAT      Truncates the original path to NAT chars. Only
-                           affects the 'tabular' format.
+  -o,--orig-len (max|NAT)  Sets the original-path column length to either NAT
+                           characters or longest path. Only affects the
+                           'tabular' format.
   -s,--sort (name|size)    How to sort the list. Defaults to name.
   -r,--reverse-sort        Sorts in the reverse order.
   -h,--help                Show this help text
