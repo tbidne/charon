@@ -16,7 +16,6 @@ module SafeRm.Trash
 where
 
 import Data.Char qualified as Ch
-import Data.List qualified as L
 import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
@@ -171,10 +170,7 @@ deleteTrashPath ::
   PathI TrashName ->
   m Bool
 deleteTrashPath force trashHome pathName = addNamespace "deleteTrashPath" $ do
-  pathDatas <-
-    if Paths.applyPathI (L.elem '*') pathName
-      then findManyPathData trashHome pathName
-      else NESeq.singleton <$> findOnePathData trashHome pathName
+  pathDatas <- findPathData trashHome pathName
 
   anyFailedRef <- newIORef False
   let deleteFn pathData = do
@@ -250,10 +246,7 @@ mvTrashToOriginal ::
   m Bool
 mvTrashToOriginal trashHome pathName = addNamespace "mvTrashToOriginal" $ do
   -- 1. Get path info
-  pathDatas <-
-    if Paths.applyPathI (L.elem '*') pathName
-      then findManyPathData trashHome pathName
-      else NESeq.singleton <$> findOnePathData trashHome pathName
+  pathDatas <- findPathData trashHome pathName
 
   anyFailedRef <- newIORef False
   let restoreFn pd = do
@@ -372,3 +365,45 @@ noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout
   where
     buffOff h = hSetBuffering h NoBuffering
+
+-- | Searches for the given trash name in the trash.
+--
+-- @since 0.1
+findPathData ::
+  ( HasCallStack,
+    MonadFileReader m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  PathI TrashName ->
+  m (NESeq PathData)
+findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
+  if
+      -- 1. Found a (n unescaped) wildcard; findMany (findMany handles the case
+      -- where pathName also includes the sequence \\*).
+      | hasWildcard pathName' -> findManyPathData trashHome pathName
+      -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
+      -- wildcards by this point, we can simply findOne as normal, after removing
+      -- the escape.
+      | "\\*" `T.isInfixOf` pathNameTxt -> do
+          $(logDebug) $
+            mconcat
+              [ "Found escape sequence \\* in path '",
+                pathNameTxt,
+                "'. Treating as the literal *."
+              ]
+          let literal = T.replace "\\*" "*" pathNameTxt
+          NESeq.singleton <$> findOnePathData trashHome (MkPathI $ T.unpack literal)
+
+      -- 3. No * at all; normal
+      | otherwise -> NESeq.singleton <$> findOnePathData trashHome pathName
+  where
+    pathNameTxt = T.pack pathName'
+
+    hasWildcard [] = False
+    -- escaped; ignore
+    hasWildcard ('\\' : '*' : xs) = hasWildcard xs
+    hasWildcard ('*' : _) = True
+    hasWildcard (_ : xs) = hasWildcard xs

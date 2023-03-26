@@ -22,7 +22,9 @@ tests args =
       deletesSome args,
       deletesNoForce args,
       deletesWildcards args,
-      deletesSomeWildcards args
+      deletesSomeWildcards args,
+      deletesLiteralWildcardOnly args,
+      deletesCombinedWildcardLiteral args
     ]
 
 deletesOne :: IO FilePath -> TestTree
@@ -498,6 +500,156 @@ deletesSomeWildcards args = testCase "Deletes some paths via wildcards" $ do
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+deletesLiteralWildcardOnly :: IO FilePath -> TestTree
+deletesLiteralWildcardOnly args = testCase "Permanently deletes filename w/ literal wildcard" $ do
+  testDir <- getTestPath args "deletesLiteralWildcardOnly"
+  let trashDir = testDir </> ".trash"
+      files = ["f1", "f2", "f3", "1f", "2f", "3f"]
+      testFiles = (testDir </>) <$> files
+      testWcLiteral = testDir </> "*"
+      delArgList = ("d" : testWcLiteral : testFiles) <> ["-t", trashDir]
+
+  -- SETUP
+  clearDirectory testDir
+  createFiles (testWcLiteral : testFiles)
+  assertFilesExist (testWcLiteral : testFiles)
+
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesExist $ mkAllTrashPaths trashDir ("*" : files)
+  assertFilesDoNotExist (testWcLiteral : testFiles)
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
+  -- PERMANENT DELETE
+
+  -- leave f alone
+  let permDelArgList = ["x", "\\*", "-f", "-t", trashDir]
+  runSafeRm permDelArgList
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["*"]
+  assertFilesExist $ mkAllTrashPaths trashDir files
+
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
+  where
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f3",
+          mkPathData PathTypeFile "1f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/1f",
+          mkPathData PathTypeFile "2f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/2f",
+          mkPathData PathTypeFile "3f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/3f",
+          mkPathData PathTypeFile "*" "/safe-rm/functional/x/deletesLiteralWildcardOnly/*"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 7,
+          numFiles = 7,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    permDelExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/x/deletesLiteralWildcardOnly/f3",
+          mkPathData PathTypeFile "1f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/1f",
+          mkPathData PathTypeFile "2f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/2f",
+          mkPathData PathTypeFile "3f" "/safe-rm/functional/x/deletesLiteralWildcardOnly/3f"
+        ]
+    permDelExpectedMetadata =
+      MkMetadata
+        { numEntries = 6,
+          numFiles = 6,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+deletesCombinedWildcardLiteral :: IO FilePath -> TestTree
+deletesCombinedWildcardLiteral args = testCase desc $ do
+  testDir <- getTestPath args "deletesCombinedWildcardLiteral"
+  let trashDir = testDir </> ".trash"
+      files = ["xxfoo", "xxbar", "xxbaz"]
+      wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
+      testFiles = (testDir </>) <$> files
+      testWcLiterals = (testDir </>) <$> wcLiterals
+      delArgList = ("d" : testWcLiterals <> testFiles) <> ["-t", trashDir]
+
+  -- SETUP
+  clearDirectory testDir
+  createFiles (testWcLiterals <> testFiles)
+  assertFilesExist (testWcLiterals <> testFiles)
+
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesExist $ mkAllTrashPaths trashDir (wcLiterals <> files)
+  assertFilesDoNotExist (testWcLiterals <> testFiles)
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
+  -- PERMANENT DELETE
+
+  -- leave f alone
+  let permDelArgList = ["x", "y\\*xx*", "-f", "-t", trashDir]
+  runSafeRm permDelArgList
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir wcLiterals
+  assertFilesExist $ mkAllTrashPaths trashDir files
+
+  -- trash structure assertions
+  (permDelIdxSet, permDelMetadata) <- runIndexMetadata testDir
+  assertSetEq permDelExpectedIdxSet permDelIdxSet
+  permDelExpectedMetadata @=? permDelMetadata
+  where
+    desc = "Permanently deletes filename w/ literal * and wildcard"
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "xxfoo" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxfoo",
+          mkPathData PathTypeFile "xxbar" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxbar",
+          mkPathData PathTypeFile "xxbaz" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxbaz",
+          mkPathData PathTypeFile "y*xxfoo" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/y*xxfoo",
+          mkPathData PathTypeFile "y*xxbar" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/y*xxbar",
+          mkPathData PathTypeFile "y*xxbaz" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/y*xxbaz"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 6,
+          numFiles = 6,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    permDelExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "xxfoo" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxfoo",
+          mkPathData PathTypeFile "xxbar" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxbar",
+          mkPathData PathTypeFile "xxbaz" "/safe-rm/functional/x/deletesCombinedWildcardLiteral/xxbaz"
+        ]
+    permDelExpectedMetadata =
+      MkMetadata
+        { numEntries = 3,
+          numFiles = 3,
           logSize = afromInteger 0,
           size = afromInteger 0
         }

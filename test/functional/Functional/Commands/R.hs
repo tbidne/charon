@@ -22,7 +22,9 @@ tests args =
       restoreCollisionError args,
       restoresSome args,
       restoresWildcards args,
-      restoresSomeWildcards args
+      restoresSomeWildcards args,
+      restoresLiteralWildcardOnly args,
+      restoresCombinedWildcardLiteral args
     ]
 
 restoreOne :: IO FilePath -> TestTree
@@ -481,6 +483,157 @@ restoresSomeWildcards args = testCase "Restores some paths via wildcards" $ do
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+restoresLiteralWildcardOnly :: IO FilePath -> TestTree
+restoresLiteralWildcardOnly args = testCase "Restores filename w/ literal wildcard" $ do
+  testDir <- getTestPath args "restoresLiteralWildcardOnly"
+  let trashDir = testDir </> ".trash"
+      files = ["f1", "f2", "f3", "1f", "2f", "3f"]
+      testFiles = (testDir </>) <$> files
+      testWcLiteral = testDir </> "*"
+      delArgList = ("d" : testWcLiteral : testFiles) <> ["-t", trashDir]
+
+  -- SETUP
+  clearDirectory testDir
+  createFiles (testWcLiteral : testFiles)
+  assertFilesExist (testWcLiteral : testFiles)
+
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesExist $ mkAllTrashPaths trashDir ("*" : files)
+  assertFilesDoNotExist (testWcLiteral : testFiles)
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
+  -- RESTORE
+
+  -- leave f alone
+  let restoreArgList = ["r", "\\*", "-t", trashDir]
+  runSafeRm restoreArgList
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["*"]
+  assertFilesExist [testWcLiteral]
+  assertFilesExist $ mkAllTrashPaths trashDir files
+
+  -- trash structure assertions
+  (restoreIdxSet, restoreMetadata) <- runIndexMetadata testDir
+  assertSetEq restoreExpectedIdxSet restoreIdxSet
+  restoreExpectedMetadata @=? restoreMetadata
+  where
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f3",
+          mkPathData PathTypeFile "1f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/1f",
+          mkPathData PathTypeFile "2f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/2f",
+          mkPathData PathTypeFile "3f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/3f",
+          mkPathData PathTypeFile "*" "/safe-rm/functional/r/restoresLiteralWildcardOnly/*"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 7,
+          numFiles = 7,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    restoreExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f1",
+          mkPathData PathTypeFile "f2" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f2",
+          mkPathData PathTypeFile "f3" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f3",
+          mkPathData PathTypeFile "1f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/1f",
+          mkPathData PathTypeFile "2f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/2f",
+          mkPathData PathTypeFile "3f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/3f"
+        ]
+    restoreExpectedMetadata =
+      MkMetadata
+        { numEntries = 6,
+          numFiles = 6,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+restoresCombinedWildcardLiteral :: IO FilePath -> TestTree
+restoresCombinedWildcardLiteral args = testCase desc $ do
+  testDir <- getTestPath args "restoresCombinedWildcardLiteral"
+  let trashDir = testDir </> ".trash"
+      files = ["yxxfoo", "yxxbar", "yxxbaz"]
+      wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
+      testFiles = (testDir </>) <$> files
+      testWcLiterals = (testDir </>) <$> wcLiterals
+      delArgList = ("d" : testWcLiterals <> testFiles) <> ["-t", trashDir]
+
+  -- SETUP
+  clearDirectory testDir
+  createFiles (testWcLiterals <> testFiles)
+  assertFilesExist (testWcLiterals <> testFiles)
+
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesExist $ mkAllTrashPaths trashDir (wcLiterals <> files)
+  assertFilesDoNotExist (testWcLiterals <> testFiles)
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
+  -- RESTORE
+
+  let restoreArgList = ["r", "y\\*xx*", "-t", trashDir]
+  runSafeRm restoreArgList
+
+  -- file assertions
+  assertFilesDoNotExist $ mkAllTrashPaths trashDir wcLiterals
+  assertFilesExist testWcLiterals
+  assertFilesExist $ mkAllTrashPaths trashDir files
+
+  -- trash structure assertions
+  (restoreArgListIdxSet, restoreArgListMetadata) <- runIndexMetadata testDir
+  assertSetEq restoreArgListExpectedIdxSet restoreArgListIdxSet
+  restoreArgListExpectedMetadata @=? restoreArgListMetadata
+  where
+    desc = "Restores filename w/ literal * and wildcard"
+    delExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "yxxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxfoo",
+          mkPathData PathTypeFile "yxxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbar",
+          mkPathData PathTypeFile "yxxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbaz",
+          mkPathData PathTypeFile "y*xxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxfoo",
+          mkPathData PathTypeFile "y*xxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxbar",
+          mkPathData PathTypeFile "y*xxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxbaz"
+        ]
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 6,
+          numFiles = 6,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+    restoreArgListExpectedIdxSet =
+      HashSet.fromList
+        [ mkPathData PathTypeFile "yxxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxfoo",
+          mkPathData PathTypeFile "yxxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbar",
+          mkPathData PathTypeFile "yxxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbaz"
+        ]
+    restoreArgListExpectedMetadata =
+      MkMetadata
+        { numEntries = 3,
+          numFiles = 3,
           logSize = afromInteger 0,
           size = afromInteger 0
         }

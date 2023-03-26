@@ -144,7 +144,7 @@ renderPretty =
 
 -- | @since 0.1
 matchesWildcards :: Text -> Text -> Bool
-matchesWildcards matchStr toMatch = case T.split (== '*') matchStr of
+matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
   -- Impossible
   [] -> False
   (m : ms) -> case T.stripPrefix m toMatch of
@@ -156,6 +156,16 @@ matchesWildcards matchStr toMatch = case T.split (== '*') matchStr of
     go (m : ms) s = case stripInfix m s of
       Nothing -> False
       Just (_, s') -> go ms s'
+
+    -- Because the matchStr may contain literal '*'s not representing wildcards
+    -- (written as "\*"), we do nto want to include them in the split.
+    -- Thus we first map them to null bytes (unix paths cannot contain null
+    -- bytes), then add them back.
+    splitMatchStr :: Text -> [Text]
+    splitMatchStr =
+      fmap (T.replace "\0" "*")
+        . T.split (== '*')
+        . T.replace "\\*" "\0"
 
 -- | @since 0.1
 stripInfix :: Text -> Text -> Maybe (Text, Text)
