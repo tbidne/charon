@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Tests for r command.
 --
 -- @since 0.1
@@ -16,16 +18,24 @@ tests :: IO FilePath -> TestTree
 tests args =
   testGroup
     "Restore (r)"
-    [ restoreOne args,
-      restoreMany args,
-      restoreUnknownError args,
-      restoreCollisionError args,
-      restoresSome args,
-      restoresWildcards args,
-      restoresSomeWildcards args,
-      restoresLiteralWildcardOnly args,
-      restoresCombinedWildcardLiteral args
-    ]
+    $ [ restoreOne args,
+        restoreMany args,
+        restoreUnknownError args,
+        restoreCollisionError args,
+        restoresSome args,
+        restoresWildcards args,
+        restoresSomeWildcards args
+      ]
+      <> wildcardLiteralTests
+  where
+#if !WINDOWS
+    wildcardLiteralTests =
+      [ restoresLiteralWildcardOnly args,
+        restoresCombinedWildcardLiteral args
+      ]
+#else
+    wildcardLiteralTests = []
+#endif
 
 restoreOne :: IO FilePath -> TestTree
 restoreOne args = testCase "Restores a single file" $ do
@@ -487,6 +497,9 @@ restoresSomeWildcards args = testCase "Restores some paths via wildcards" $ do
           size = afromInteger 0
         }
 
+-- Wildcard literals are not valid in windows paths
+
+#if !WINDOWS
 restoresLiteralWildcardOnly :: IO FilePath -> TestTree
 restoresLiteralWildcardOnly args = testCase "Restores filename w/ literal wildcard" $ do
   testDir <- getTestPath args "restoresLiteralWildcardOnly"
@@ -637,6 +650,7 @@ restoresCombinedWildcardLiteral args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#endif
 
 getTestPath :: IO FilePath -> FilePath -> IO String
 getTestPath mroot = createTestDir mroot "r"

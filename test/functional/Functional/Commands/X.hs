@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Tests for x command.
 --
 -- @since 0.1
@@ -16,16 +18,24 @@ tests :: IO FilePath -> TestTree
 tests args =
   testGroup
     "Permanent Delete (x)"
-    [ deletesOne args,
-      deletesMany args,
-      deleteUnknownError args,
-      deletesSome args,
-      deletesNoForce args,
-      deletesWildcards args,
-      deletesSomeWildcards args,
-      deletesLiteralWildcardOnly args,
-      deletesCombinedWildcardLiteral args
-    ]
+    $ [ deletesOne args,
+        deletesMany args,
+        deleteUnknownError args,
+        deletesSome args,
+        deletesNoForce args,
+        deletesWildcards args,
+        deletesSomeWildcards args
+      ]
+      <> wildcardLiteralTests
+  where
+#if !WINDOWS
+    wildcardLiteralTests =
+      [ deletesLiteralWildcardOnly args,
+        deletesCombinedWildcardLiteral args
+      ]
+#else
+    wildcardLiteralTests = []
+#endif
 
 deletesOne :: IO FilePath -> TestTree
 deletesOne args = testCase "Permanently deletes a single file" $ do
@@ -504,6 +514,9 @@ deletesSomeWildcards args = testCase "Deletes some paths via wildcards" $ do
           size = afromInteger 0
         }
 
+-- Wildcard literals are not valid in windows paths
+
+#if !WINDOWS
 deletesLiteralWildcardOnly :: IO FilePath -> TestTree
 deletesLiteralWildcardOnly args = testCase "Permanently deletes filename w/ literal wildcard" $ do
   testDir <- getTestPath args "deletesLiteralWildcardOnly"
@@ -653,6 +666,7 @@ deletesCombinedWildcardLiteral args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#endif
 
 getTestPath :: IO FilePath -> FilePath -> IO String
 getTestPath mroot = createTestDir mroot "x"
