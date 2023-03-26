@@ -158,7 +158,7 @@ matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
       Just (_, s') -> go ms s'
 
     -- Because the matchStr may contain literal '*'s not representing wildcards
-    -- (written as "\*"), we do nto want to include them in the split.
+    -- (written as "\*"), we do not want to include them in the split.
     -- Thus we first map them to null bytes (unix paths cannot contain null
     -- bytes), then add them back.
     splitMatchStr :: Text -> [Text]
