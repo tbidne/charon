@@ -8,10 +8,10 @@ module SafeRm.Trash
     createTrash,
     doesTrashExist,
 
-    -- * Trash files
+    -- * Main actions
     mvOriginalToTrash,
-    mvTrashToOriginal,
-    deleteTrashPath,
+    restoreTrashToOriginal,
+    permDeleteFromTrash,
   )
 where
 
@@ -148,13 +148,12 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   moveFn `onException` removeFile trashInfoPath
   $(logDebug) ("Moved to trash: " <> showt pd)
 
--- | Moves the 'PathData'\'s @fileName@ back to its @originalPath@.
--- Returns 'True' if any failed. In this case, the error has already been
--- reported, so this is purely for signaling (i.e. should we exit with
--- an error).
+-- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
+-- In this case, the error has already been reported, so this is purely for
+-- signaling (i.e. should we exit with an error).
 --
 -- @since 0.1
-deleteTrashPath ::
+permDeleteFromTrash ::
   ( HasCallStack,
     MonadCatch m,
     MonadFileReader m,
@@ -169,7 +168,7 @@ deleteTrashPath ::
   PathI TrashHome ->
   PathI TrashName ->
   m Bool
-deleteTrashPath force trashHome pathName = addNamespace "deleteTrashPath" $ do
+permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   pathDatas <- findPathData trashHome pathName
 
   anyFailedRef <- newIORef False
@@ -231,7 +230,7 @@ deleteTrashPath force trashHome pathName = addNamespace "deleteTrashPath" $ do
 -- an error).
 --
 -- @since 0.1
-mvTrashToOriginal ::
+restoreTrashToOriginal ::
   ( HasCallStack,
     MonadCatch m,
     MonadFileReader m,
@@ -244,7 +243,7 @@ mvTrashToOriginal ::
   PathI TrashHome ->
   PathI TrashName ->
   m Bool
-mvTrashToOriginal trashHome pathName = addNamespace "mvTrashToOriginal" $ do
+restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
   pathDatas <- findPathData trashHome pathName
 
