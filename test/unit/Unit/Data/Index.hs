@@ -92,6 +92,8 @@ testFormatMultiline4 =
     desc = "Multiline, size, desc"
     gpath = goldenPath </> "multi-size-desc.golden"
 
+-- Tests w/ fixed format lengths, basically verifying the other args like
+-- the multiline tests.
 tabularFixedTests :: TestTree
 tabularFixedTests =
   testGroup
@@ -177,6 +179,7 @@ instance MonadLoggerNS ConfigIO where
   getNamespace = pure ""
   localNamespace _ m = m
 
+-- Tests tabular automatic formatting i.e. nothing specified
 tabularAutoTests :: TestTree
 tabularAutoTests =
   testGroup
@@ -199,7 +202,7 @@ testFormatTabularAutoNormal =
     pure $ toBS formatted
   where
     desc = "Auto tabular format"
-    gpath = goldenPath </> "auto-normal.golden"
+    gpath = goldenPath </> "tabular-auto-normal.golden"
 
 testFormatTabularAutoMinTermSize :: TestTree
 testFormatTabularAutoMinTermSize =
@@ -212,7 +215,7 @@ testFormatTabularAutoMinTermSize =
     pure $ toBS formatted
   where
     desc = "Auto tabular formats minimum terminal size"
-    gpath = goldenPath </> "auto-min.golden"
+    gpath = goldenPath </> "tabular-auto-min.golden"
 
 testFormatTabularAutoApprox :: TestTree
 testFormatTabularAutoApprox =
@@ -230,7 +233,7 @@ testFormatTabularAutoApprox =
     pure $ toBS formatted
   where
     desc = "Auto tabular falls back to estimates for large paths"
-    gpath = goldenPath </> "auto-large-approx.golden"
+    gpath = goldenPath </> "tabular-auto-large-approx.golden"
 
 testFormatTabularAutoEmpty :: TestTree
 testFormatTabularAutoEmpty =
@@ -243,7 +246,7 @@ testFormatTabularAutoEmpty =
     pure $ toBS formatted
   where
     desc = "Auto tabular empty"
-    gpath = goldenPath </> "auto-empty.golden"
+    gpath = goldenPath </> "tabular-auto-empty.golden"
 
 formatTabularAutoFail :: TestTree
 formatTabularAutoFail = testCase desc $ do
@@ -268,6 +271,7 @@ formatTabularAutoFail = testCase desc $ do
           "Perhaps try multiline."
         ]
 
+-- Tests tabular w/ max options
 tabularMaxTests :: TestTree
 tabularMaxTests =
   testGroup
@@ -315,7 +319,7 @@ testFormatTabularAutoNameMaxOrig =
         100
     pure $ toBS formatted
   where
-    desc = "Tabular auto name, mad original path"
+    desc = "Tabular auto name, max original path"
     gpath = goldenPath </> "tabular-auto-name-max-orig.golden"
 
 testFormatTabularAutoNameMaxOrigTrunc :: TestTree
@@ -329,7 +333,7 @@ testFormatTabularAutoNameMaxOrigTrunc =
     pure $ toBS formatted
   where
     desc = "Tabular auto name, max original path truncates name"
-    gpath = goldenPath </> "tabular-auto-name-max-orig.golden"
+    gpath = goldenPath </> "tabular-auto-name-max-orig-trunc.golden"
 
 testFormatTabularMaxNameMaxOrig :: TestTree
 testFormatTabularMaxNameMaxOrig =
@@ -344,12 +348,15 @@ testFormatTabularMaxNameMaxOrig =
     desc = "Tabular max file name and max original path"
     gpath = goldenPath </> "tabular-max-name-max-orig.golden"
 
+-- Misc tabular tests e.g. interactions between various options
 tabularMiscTests :: TestTree
 tabularMiscTests =
   testGroup
     "Tabular misc"
     [ testFormatTabularFixedNameMaxOrig,
-      testFormatTabularMaxNameFixedOrig
+      testFormatTabularFixedNameAutoOrig,
+      testFormatTabularMaxNameFixedOrig,
+      testFormatTabularAutoNameFixedOrig
     ]
 
 testFormatTabularFixedNameMaxOrig :: TestTree
@@ -365,6 +372,19 @@ testFormatTabularFixedNameMaxOrig =
     desc = "Tabular fixed file name and max original path"
     gpath = goldenPath </> "tabular-fix-name-max-orig.golden"
 
+testFormatTabularFixedNameAutoOrig :: TestTree
+testFormatTabularFixedNameAutoOrig =
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <-
+      runConfigIO
+        (Index.formatIndex (FormatTabular (Just $ ColFormatFixed 50) Nothing) Name False idx)
+        100
+    pure $ toBS formatted
+  where
+    desc = "Tabular fixed file name and auto original path"
+    gpath = goldenPath </> "tabular-fix-name-auto-orig.golden"
+
 testFormatTabularMaxNameFixedOrig :: TestTree
 testFormatTabularMaxNameFixedOrig =
   goldenVsStringDiff desc diff gpath $ do
@@ -377,6 +397,19 @@ testFormatTabularMaxNameFixedOrig =
   where
     desc = "Tabular max file name and fixed original path"
     gpath = goldenPath </> "tabular-max-name-fix-orig.golden"
+
+testFormatTabularAutoNameFixedOrig :: TestTree
+testFormatTabularAutoNameFixedOrig =
+  goldenVsStringDiff desc diff gpath $ do
+    idx <- mkIndex
+    formatted <-
+      runConfigIO
+        (Index.formatIndex (FormatTabular Nothing (Just $ ColFormatFixed 50)) Name False idx)
+        100
+    pure $ toBS formatted
+  where
+    desc = "Tabular auto file name and fixed original path"
+    gpath = goldenPath </> "tabular-auto-name-fix-orig.golden"
 
 mkIndex :: (MonadFail f) => f Index
 mkIndex = do
