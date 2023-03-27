@@ -9,10 +9,10 @@ where
 import Data.ByteString.Char8 qualified as Char8
 import Functional.Prelude
 import SafeRm.Exception
-  ( TrashInfoDirNotFoundE,
-    TrashInfoNotFoundE,
-    TrashPathDirNotFoundE,
-    TrashPathNotFoundE,
+  ( TrashDirInfoNotFoundE,
+    TrashDirPathsNotFoundE,
+    TrashEntryInfoNotFoundE,
+    TrashEntryPathNotFoundE,
   )
 
 -- import Data.ByteString qualified as BS
@@ -67,7 +67,7 @@ noPathsError args = testCase "No Paths Error" $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "info")
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashPathDirNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashDirPathsNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs
@@ -91,7 +91,7 @@ noInfoError args = testCase "No Info Error" $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "paths")
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashInfoDirNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashDirInfoNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs
@@ -134,7 +134,7 @@ missingPathError args = testCase "Entry Missing Path" $ do
   -- We specifically want the "missing.json has no corresponding missing" error.
   createFiles [trashDir </> "paths" </> "blah"]
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashPathNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryPathNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs
@@ -174,7 +174,7 @@ missingInfoError args = testCase "Entry Missing Info" $ do
   clearDirectory (trashDir </> "info")
   createFiles [trashDir </> "paths" </> "bar"]
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashInfoNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryInfoNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs

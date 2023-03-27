@@ -44,8 +44,8 @@ import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
-    TrashInfoNotFoundE (..),
-    TrashPathNotFoundE (MkTrashPathNotFoundE),
+    TrashEntryInfoNotFoundE (..),
+    TrashEntryPathNotFoundE (MkTrashEntryPathNotFoundE),
   )
 import SafeRm.Prelude
 import System.FilePath qualified as FP
@@ -136,7 +136,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
     let pName = MkPathI $ FP.takeFileName p
     unless (pName `HSet.member` pathSet) $
       throwCS $
-        MkTrashInfoNotFoundE trashHome pName
+        MkTrashEntryInfoNotFoundE trashHome pName
 
   pure $ MkIndex indexSeq
   where
@@ -158,7 +158,7 @@ throwIfTrashNonExtant trashHome pd = do
   exists <- PathData.trashPathExists trashHome pd
   unless exists $
     throwCS $
-      MkTrashPathNotFoundE trashHome filePath
+      MkTrashEntryPathNotFoundE trashHome filePath
   where
     filePath = pd ^. #fileName
 

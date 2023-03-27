@@ -7,18 +7,20 @@ module SafeRm.Exception
   ( -- * General
     PathNotFoundE (..),
 
-    -- * Trash Dir
+    -- * Trash
 
-    -- ** General
+    -- ** Entries
+
+    -- *** General
     TrashEntryNotFoundE (..),
 
-    -- ** Partial success
-    TrashPathNotFoundE (..),
-    TrashInfoNotFoundE (..),
+    -- *** Partial success
+    TrashEntryPathNotFoundE (..),
+    TrashEntryInfoNotFoundE (..),
 
     -- ** Directories
-    TrashPathDirNotFoundE (..),
-    TrashInfoDirNotFoundE (..),
+    TrashDirPathsNotFoundE (..),
+    TrashDirInfoNotFoundE (..),
 
     -- * Misc
     RenameDuplicateE (..),
@@ -72,7 +74,7 @@ instance Exception RenameDuplicateE where
         n ^. #unPathI
       ]
 
--- | Trash path not found error. Distinct from 'TrashPathNotFoundE' in that
+-- | Trash path not found error. Distinct from 'TrashEntryPathNotFoundE' in that
 -- the latter indicates that the entry exists in trash/info but not
 -- trash/paths, whereas this exception is less specific i.e. we found nothing
 -- in trash/info but did not look in trash/paths.
@@ -101,8 +103,8 @@ instance Exception TrashEntryNotFoundE where
 -- | Path found in trash/info but not trash/paths error.
 --
 -- @since 0.1
-data TrashPathNotFoundE
-  = MkTrashPathNotFoundE
+data TrashEntryPathNotFoundE
+  = MkTrashEntryPathNotFoundE
       !(PathI TrashHome)
       !(PathI TrashName)
   deriving stock
@@ -111,30 +113,27 @@ data TrashPathNotFoundE
     )
 
 -- | @since 0.1
-instance Exception TrashPathNotFoundE where
-  displayException (MkTrashPathNotFoundE thome name) =
+instance Exception TrashEntryPathNotFoundE where
+  displayException (MkTrashEntryPathNotFoundE thome name) =
     mconcat
       [ "The path '",
         name ^. #unPathI,
         "' was not found in '",
         thome ^. #unPathI,
         slash,
-        "paths",
-        "' despite being listed in '",
+        "paths' despite being listed in '",
         thome ^. #unPathI,
         slash,
-        "info'. This can be fixed by ",
-        "manually deleting the ",
+        "info'. This can be fixed by manually deleting the ",
         Env.trashInfoExtension,
-        " file or deleting everything ",
-        "(i.e. sr e -f)."
+        " file or deleting everything (i.e. sr e -f)."
       ]
 
 -- | Path found in trash/paths but not trash/info error
 --
 -- @since 0.1
-data TrashInfoNotFoundE
-  = MkTrashInfoNotFoundE
+data TrashEntryInfoNotFoundE
+  = MkTrashEntryInfoNotFoundE
       !(PathI TrashHome)
       !(PathI TrashName)
   deriving stock
@@ -143,8 +142,8 @@ data TrashInfoNotFoundE
     )
 
 -- | @since 0.1
-instance Exception TrashInfoNotFoundE where
-  displayException (MkTrashInfoNotFoundE thome name) =
+instance Exception TrashEntryInfoNotFoundE where
+  displayException (MkTrashEntryInfoNotFoundE thome name) =
     mconcat
       [ "The path '",
         name ^. #unPathI,
@@ -152,28 +151,26 @@ instance Exception TrashInfoNotFoundE where
         "' was not found in '",
         thome ^. #unPathI,
         slash,
-        "info",
-        "' despite being listed in '",
+        "info' despite being listed in '",
         thome ^. #unPathI,
         slash,
         "paths'. This can be fixed by manually deleting the ",
         slash,
-        "paths entry or deleting everything ",
-        "(i.e. sr e -f)."
+        "paths entry or deleting everything (i.e. sr e -f)."
       ]
 
 -- | Trash path dir not found error.
 --
 -- @since 0.1
-newtype TrashPathDirNotFoundE = MkTrashPathDirNotFoundE (PathI TrashHome)
+newtype TrashDirPathsNotFoundE = MkTrashDirPathsNotFoundE (PathI TrashHome)
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception TrashPathDirNotFoundE where
-  displayException (MkTrashPathDirNotFoundE th) =
+instance Exception TrashDirPathsNotFoundE where
+  displayException (MkTrashDirPathsNotFoundE th) =
     mconcat
       [ "The trash paths directory was not found at '",
         th ^. #unPathI,
@@ -185,15 +182,15 @@ instance Exception TrashPathDirNotFoundE where
 -- | Trash info dir not found error.
 --
 -- @since 0.1
-newtype TrashInfoDirNotFoundE = MkTrashInfoDirNotFoundE (PathI TrashHome)
+newtype TrashDirInfoNotFoundE = MkTrashDirInfoNotFoundE (PathI TrashHome)
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception TrashInfoDirNotFoundE where
-  displayException (MkTrashInfoDirNotFoundE th) =
+instance Exception TrashDirInfoNotFoundE where
+  displayException (MkTrashDirInfoNotFoundE th) =
     mconcat
       [ "The trash info directory was not found at '",
         th ^. #unPathI,

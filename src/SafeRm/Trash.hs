@@ -36,10 +36,10 @@ import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (..),
     RestoreCollisionE (MkRestoreCollisionE),
+    TrashDirInfoNotFoundE (..),
+    TrashDirPathsNotFoundE (..),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
-    TrashInfoDirNotFoundE (..),
-    TrashPathDirNotFoundE (..),
-    TrashPathNotFoundE (MkTrashPathNotFoundE),
+    TrashEntryPathNotFoundE (MkTrashEntryPathNotFoundE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
@@ -70,7 +70,7 @@ createTrash = do
 -- * \<trash-home\>/paths
 -- * \<trash-home\>/info
 --
--- does not, throws 'TrashPathDirNotFoundE' or 'TrashInfoDirNotFoundE'.
+-- does not, throws 'TrashDirPathsNotFoundE' or 'TrashDirInfoNotFoundE'.
 --
 -- If all three dirs exist, returns 'True'.
 --
@@ -103,11 +103,11 @@ doesTrashExist = do
         -- Path exists; info does not -> Badly formed, throw exception
         (True, False) ->
           throwCS $
-            MkTrashInfoDirNotFoundE trashHome
+            MkTrashDirInfoNotFoundE trashHome
         -- Info exists; path does not -> Badly formed, throw exception
         (False, True) ->
           throwCS $
-            MkTrashPathDirNotFoundE trashHome
+            MkTrashDirPathsNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 --
@@ -315,7 +315,7 @@ findOnePathData trashHome pathName = do
   pathExists <- existsFn trashPath'
   unless pathExists $
     throwCS $
-      MkTrashPathNotFoundE trashHome pathName
+      MkTrashEntryPathNotFoundE trashHome pathName
 
   pure pathData
   where
@@ -336,7 +336,7 @@ findManyPathData trashHome pathName = do
   MkIndex index <- Index.readIndex trashHome
 
   case Seq.filter pdMatchesWildcard index of
-    Seq.Empty -> throwCS $ MkTrashPathNotFoundE trashHome pathName
+    Seq.Empty -> throwCS $ MkTrashEntryPathNotFoundE trashHome pathName
     pd :<| pds -> pure $ pd :<|| pds
   where
     pdMatchesWildcard =
