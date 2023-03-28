@@ -22,7 +22,7 @@ import Unit.Prelude
 tests :: TestTree
 tests =
   testGroup
-    "Data.Trash"
+    "Trash"
     [ mvTrash,
       mvTrashWhitespace,
       mvTrashRootError,
