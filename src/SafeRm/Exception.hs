@@ -75,9 +75,9 @@ instance Exception RenameDuplicateE where
       ]
 
 -- | Trash path not found error. Distinct from 'TrashEntryPathNotFoundE' in that
--- the latter indicates that the entry exists in trash/info but not
--- trash/paths, whereas this exception is less specific i.e. we found nothing
--- in trash/info but did not look in trash/paths.
+-- the latter indicates that the entry exists in @trash\/info@ but not
+-- @trash\/paths@, whereas this exception is less specific i.e. we found nothing
+-- in @trash\/info@ but did not look in @trash\/paths@.
 --
 -- @since 0.1
 data TrashEntryNotFoundE
@@ -100,7 +100,7 @@ instance Exception TrashEntryNotFoundE where
         "'"
       ]
 
--- | Path found in trash/info but not trash/paths error.
+-- | Path found in @trash\/info@ but not @trash\/paths@ error.
 --
 -- @since 0.1
 data TrashEntryPathNotFoundE
@@ -129,7 +129,7 @@ instance Exception TrashEntryPathNotFoundE where
         " file or deleting everything (i.e. sr e -f)."
       ]
 
--- | Path found in trash/paths but not trash/info error
+-- | Path found in @trash\/paths@ but not @trash\/info@ error.
 --
 -- @since 0.1
 data TrashEntryInfoNotFoundE
