@@ -293,8 +293,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     -- try to calculate a "good" value.
     (nameLen, origLen) <- case (nameFmtToStrategy nameFormat, origFmtToStrategy origFormat) of
       (Right nLen, Right oLen) -> pure (nLen, oLen)
-      (Right nLen, Left mkOLen) -> (nLen,) <$> mkOLen maxLenForDynCols nLen
-      (Left mkNLen, Right oLen) -> (,oLen) <$> mkNLen maxLenForDynCols oLen
+      (Right nLen, Left mkOLen) -> mkOLen maxLenForDynCols nLen
+      (Left mkNLen, Right oLen) -> mkNLen maxLenForDynCols oLen
       (Left _, Left _) ->
         if maxNameLen + maxOrigLen <= maxLenForDynCols
           then pure (maxNameLen, maxOrigLen)
@@ -330,7 +330,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
       mkOrigLen maxLenForDynCols nLen =
         if nLen + maxOrigLen < maxLenForDynCols
           then -- 1. Requested nLen and maxOrigLen fits; use both
-            pure maxOrigLen
+            pure (nLen, maxOrigLen)
           else do
             -- 2. MaxOrigLen will not fit; use all remaining space to print
             -- as much as we can. As we require at least
@@ -347,7 +347,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure $ max (maxLenForDynCols - nLen) PathData.formatOriginalPathLenMin
+                pure $ (nLen, max (maxLenForDynCols - nLen) PathData.formatOriginalPathLenMin)
               else -- 3. Requested nameLen > available space. We are going to wrap
               -- regardless, so use it and the minimum orig.
               do
@@ -360,13 +360,13 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       "). Falling back to minimum original path len: ",
                       showt PathData.formatOriginalPathLenMin
                     ]
-                pure PathData.formatOriginalPathLenMin
+                pure (nLen, PathData.formatOriginalPathLenMin)
 
       -- Given a fixed origLen, derive a "good" nameLen
       mkNameLen maxLenForDynCols oLen =
         if oLen + maxNameLen < maxLenForDynCols
           then -- 1. Requested oLen and maxNameLen fits; use both
-            pure maxNameLen
+            pure (maxNameLen, oLen)
           else do
             -- 2. MaxNameLen will not fit; use all remaining space to print
             -- as much as we can. As we require at least
@@ -383,7 +383,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure $ max (maxLenForDynCols - oLen) PathData.formatFileNameLenMin
+                pure $ (max (maxLenForDynCols - oLen) PathData.formatFileNameLenMin, oLen)
               else -- 3. Requested origLen > available space. We are going to wrap
               -- regardless, so use it and the minimum name.
               do
@@ -396,7 +396,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       "). Falling back to minimum name len: ",
                       showt PathData.formatFileNameLenMin
                     ]
-                pure PathData.formatFileNameLenMin
+                pure (PathData.formatFileNameLenMin, oLen)
 
 getMaxLen :: (MonadCatch m, MonadLogger m, MonadTerminal m) => m Natural
 getMaxLen = do
