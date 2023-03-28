@@ -60,7 +60,7 @@ instance Exception PathNotFoundE where
 -- | Could not rename file due to duplicate names.
 --
 -- @since 0.1
-newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashPath)
+newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashEntryPath)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -82,8 +82,8 @@ instance Exception RenameDuplicateE where
 -- @since 0.1
 data TrashEntryNotFoundE
   = MkTrashEntryNotFoundE
-      !(PathI TrashName)
-      !(PathI TrashInfoPath)
+      !(PathI TrashEntryFileName)
+      !(PathI TrashEntryInfo)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -106,7 +106,7 @@ instance Exception TrashEntryNotFoundE where
 data TrashEntryPathNotFoundE
   = MkTrashEntryPathNotFoundE
       !(PathI TrashHome)
-      !(PathI TrashName)
+      !(PathI TrashEntryFileName)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -135,7 +135,7 @@ instance Exception TrashEntryPathNotFoundE where
 data TrashEntryInfoNotFoundE
   = MkTrashEntryInfoNotFoundE
       !(PathI TrashHome)
-      !(PathI TrashName)
+      !(PathI TrashEntryFileName)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -204,8 +204,8 @@ instance Exception TrashDirInfoNotFoundE where
 -- @since 0.1
 data RestoreCollisionE
   = MkRestoreCollisionE
-      !(PathI TrashName)
-      !(PathI OriginalPath)
+      !(PathI TrashEntryFileName)
+      !(PathI TrashEntryOriginalPath)
   deriving stock
     ( -- | @since 0.1
       Show
@@ -250,7 +250,7 @@ instance Exception EmptyPathE where
 -- | Exception for decoding.
 --
 -- @since 0.1
-data InfoDecodeE = MkInfoDecodeE (PathI TrashInfoPath) ByteString String
+data InfoDecodeE = MkInfoDecodeE (PathI TrashEntryInfo) ByteString String
   deriving stock
     ( -- | @since 0.1
       Show

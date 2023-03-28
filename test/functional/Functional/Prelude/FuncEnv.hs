@@ -352,8 +352,8 @@ runIndexMetadata testDir = do
 
 mkPathData ::
   PathType ->
-  PathI TrashName ->
-  PathI OriginalPath ->
+  PathI TrashEntryFileName ->
+  PathI TrashEntryOriginalPath ->
   PathData
 mkPathData pathType fileName originalPath =
   UnsafePathData

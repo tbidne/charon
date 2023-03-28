@@ -124,7 +124,7 @@ mvOriginalToTrash ::
   ) =>
   PathI TrashHome ->
   Timestamp ->
-  PathI OriginalPath ->
+  PathI TrashEntryOriginalPath ->
   m ()
 mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
   -- 1. Transform path to PathData
@@ -166,7 +166,7 @@ permDeleteFromTrash ::
   ) =>
   Bool ->
   PathI TrashHome ->
-  PathI TrashName ->
+  PathI TrashEntryFileName ->
   m Bool
 permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   pathDatas <- findPathData trashHome pathName
@@ -241,7 +241,7 @@ restoreTrashToOriginal ::
     MonadTerminal m
   ) =>
   PathI TrashHome ->
-  PathI TrashName ->
+  PathI TrashEntryFileName ->
   m Bool
 restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
@@ -298,7 +298,7 @@ findOnePathData ::
     MonadThrow m
   ) =>
   PathI TrashHome ->
-  PathI TrashName ->
+  PathI TrashEntryFileName ->
   m PathData
 findOnePathData trashHome pathName = do
   pathInfoExists <- doesFileExist trashInfoPath'
@@ -330,7 +330,7 @@ findManyPathData ::
     MonadThrow m
   ) =>
   PathI TrashHome ->
-  PathI TrashName ->
+  PathI TrashEntryFileName ->
   m (NESeq PathData)
 findManyPathData trashHome pathName = do
   MkIndex index <- Index.readIndex trashHome
@@ -376,7 +376,7 @@ findPathData ::
     MonadThrow m
   ) =>
   PathI TrashHome ->
-  PathI TrashName ->
+  PathI TrashEntryFileName ->
   m (NESeq PathData)
 findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
   if

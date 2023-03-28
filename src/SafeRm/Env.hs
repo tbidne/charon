@@ -44,11 +44,11 @@ getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
 getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
 
 -- | @since 0.1
-getTrashPath :: PathI TrashHome -> PathI TrashName -> PathI TrashPath
+getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
 getTrashPath trashHome name = trashHome <//> "paths" <//> name
 
 -- | @since 0.1
-getTrashInfoPath :: PathI TrashHome -> PathI TrashName -> PathI TrashInfoPath
+getTrashInfoPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
 getTrashInfoPath trashHome name =
   trashHome
     <//> "info"
@@ -57,13 +57,13 @@ getTrashInfoPath trashHome name =
 -- | Retrieves the trash path dir.
 --
 -- @since 0.1
-getTrashPathDir :: PathI TrashHome -> PathI TrashPathDir
+getTrashPathDir :: PathI TrashHome -> PathI TrashDirPaths
 getTrashPathDir trashHome = trashHome <//> "paths"
 
 -- | Retrieves the trash info dir.
 --
 -- @since 0.1
-getTrashInfoDir :: PathI TrashHome -> PathI TrashInfoDir
+getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
 getTrashInfoDir trashHome = trashHome <//> "info"
 
 -- | Returns the extension for the trash info files.

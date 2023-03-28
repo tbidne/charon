@@ -41,26 +41,12 @@ import SafeRm.Prelude
 --
 -- @since 0.1
 data PathIndex
-  = -- | The trash directory.
+  = -- TRASH DIRECTORY PATHS
+
+    -- | The trash directory.
     --
     -- @since 0.1
     TrashHome
-  | -- | The name corresponding to some file/directory in the trash directory.
-    --
-    -- @since 0.1
-    TrashName
-  | -- | The original path for some file/directory in the trash directory.
-    --
-    -- @since 0.1
-    OriginalPath
-  | -- | The full trash path i.e. @\<trash-home\>\/paths\/'\<trash-name\>@.
-    --
-    -- @since 0.1
-    TrashPath
-  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.json@.
-    --
-    -- @since 0.1
-    TrashInfoPath
   | -- | The trash log file.
     --
     -- @since 0.1
@@ -68,11 +54,31 @@ data PathIndex
   | -- | The directory to the trash files themselves i.e. <trash>/paths.
     --
     -- @since 0.1
-    TrashPathDir
+    TrashDirPaths
   | -- | The directory to the trash info files i.e. <trash>/info.
     --
     -- @since 0.1
-    TrashInfoDir
+    TrashDirInfo
+  | -- TRASH ENTRY PATHS
+
+    -- | The full trash path i.e. @\<trash-home\>\/paths\/'\<trash-name\>@.
+    --
+    -- @since 0.1
+    TrashEntryPath
+  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.json@.
+    --
+    -- @since 0.1
+    TrashEntryInfo
+  | -- TRASH ENTRY FIELD TYPES
+
+    -- | The name corresponding to some file/directory in the trash directory.
+    --
+    -- @since 0.1
+    TrashEntryFileName
+  | -- | The original path for some file/directory in the trash directory.
+    --
+    -- @since 0.1
+    TrashEntryOriginalPath
 
 -- | Indexed 'FilePath' so that we can prevent mixing up different filepaths.
 --

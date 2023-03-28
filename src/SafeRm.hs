@@ -32,7 +32,7 @@ import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (OriginalPath, TrashName),
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath),
   )
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
@@ -63,7 +63,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI OriginalPath) ->
+  UniqueSeq (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = addNamespace "delete" $ do
   trashHome <- asks getTrashHome
@@ -109,7 +109,7 @@ deletePermanently ::
     MonadTerminal m
   ) =>
   Bool ->
-  UniqueSeq (PathI TrashName) ->
+  UniqueSeq (PathI TrashEntryFileName) ->
   m ()
 deletePermanently force paths = addNamespace "deletePermanently" $ do
   trashHome <- asks getTrashHome
@@ -204,7 +204,7 @@ restore ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  UniqueSeq (PathI TrashName) ->
+  UniqueSeq (PathI TrashEntryFileName) ->
   m ()
 restore paths = addNamespace "restore" $ do
   trashHome <- asks getTrashHome

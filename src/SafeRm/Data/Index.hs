@@ -110,8 +110,8 @@ readIndex trashHome = addNamespace "readIndex" $ do
 
   let seqify ::
         Path ->
-        m (Seq PathData, HashSet (PathI TrashName)) ->
-        m (Seq PathData, HashSet (PathI TrashName))
+        m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->
+        m (Seq PathData, HashSet (PathI TrashEntryFileName))
       seqify p macc = do
         let path = trashInfoDir' </> p
         $(logDebug) ("Path: " <> T.pack path)
@@ -434,12 +434,12 @@ getElems sort =
     . view #unIndex
 
 -- | @since 0.1
-fromList :: [PathData] -> HashMap (PathI 'TrashName) PathData
+fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
 fromList = foldr insert HMap.empty
 
 -- | @since 0.1
 insert ::
   PathData ->
-  HashMap (PathI 'TrashName) PathData ->
-  HashMap (PathI 'TrashName) PathData
+  HashMap (PathI 'TrashEntryFileName) PathData ->
+  HashMap (PathI 'TrashEntryFileName) PathData
 insert pd = HMap.insert (pd ^. #fileName) pd

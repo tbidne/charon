@@ -73,7 +73,7 @@ import System.FilePath qualified as FP
 -- @since 0.1
 data PathData' = MkPathData'
   { pathType :: !PathType,
-    originalPath :: !(PathI OriginalPath),
+    originalPath :: !(PathI TrashEntryOriginalPath),
     size :: !(Bytes B Natural),
     created :: !Timestamp
   }
@@ -113,11 +113,11 @@ data PathData = UnsafePathData
     -- | The path to be used in the trash directory.
     --
     -- @since 0.1
-    fileName :: !(PathI TrashName),
+    fileName :: !(PathI TrashEntryFileName),
     -- | The original path on the file system.
     --
     -- @since 0.1
-    originalPath :: !(PathI OriginalPath),
+    originalPath :: !(PathI TrashEntryOriginalPath),
     -- | The size of the file or directory.
     --
     -- @since 0.1
@@ -183,7 +183,7 @@ toPathData ::
   ) =>
   Timestamp ->
   PathI TrashHome ->
-  PathI OriginalPath ->
+  PathI TrashEntryOriginalPath ->
   m PathData
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   $(logDebug) $ "Retreiving path data: '" <> Paths.toText origPath <> "'"
@@ -263,11 +263,11 @@ encode = BSL.toStrict . Asn.encode . fromPD
           created = pd ^. #created
         }
 
--- | Decodes the bytestring to the 'PathData', using the passed trashName
+-- | Decodes the bytestring to the 'PathData', using the passed TrashEntryFileName
 -- as the 'fieldName'.
 --
 -- @since 0.1
-decode :: PathI TrashName -> ByteString -> Either String PathData
+decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
 decode name bs = case result of
   Right pd -> Right $ toPD pd
   Left err -> Left err
@@ -298,15 +298,15 @@ mkUniqPath ::
     MonadPathReader m,
     MonadThrow m
   ) =>
-  PathI TrashPath ->
-  m (PathI TrashPath)
+  PathI TrashEntryPath ->
+  m (PathI TrashEntryPath)
 mkUniqPath fp = do
   b <- Paths.applyPathI doesPathExist fp
   if b
     then go 1
     else pure fp
   where
-    go :: (HasCallStack) => Word16 -> m (PathI TrashPath)
+    go :: (HasCallStack) => Word16 -> m (PathI TrashEntryPath)
     go !counter
       | counter == maxBound =
           throwCS $ MkRenameDuplicateE fp

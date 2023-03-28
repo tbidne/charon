@@ -162,13 +162,13 @@ originalPathExists pd = existsFn (pd ^. #originalPath % #unPathI)
 -- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --
 -- @since 0.1
-pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashPath
+pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashEntryPath
 pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
 
 -- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --
 -- @since 0.1
-pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashInfoPath
+pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashEntryInfo
 pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
 
 -- | @since 0.1
