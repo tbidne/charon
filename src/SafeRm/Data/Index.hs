@@ -328,7 +328,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
 
       -- Given a fixed nameLen, derive a "good" origLen
       mkOrigLen maxLenForDynCols nLen =
-        if nLen + maxOrigLen < maxLenForDynCols
+        if nLen + maxOrigLen <= maxLenForDynCols
           then -- 1. Requested nLen and maxOrigLen fits; use both
             pure (nLen, maxOrigLen)
           else do
@@ -364,7 +364,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
 
       -- Given a fixed origLen, derive a "good" nameLen
       mkNameLen maxLenForDynCols oLen =
-        if oLen + maxNameLen < maxLenForDynCols
+        if oLen + maxNameLen <= maxLenForDynCols
           then -- 1. Requested oLen and maxNameLen fits; use both
             pure (maxNameLen, oLen)
           else do
