@@ -29,7 +29,7 @@ invariantTests =
     [ isListIsomorphism,
       isListOrder,
       fromFoldableOrder,
-      cmapInvariant,
+      mapInvariant,
       insertInvariant
     ]
 
@@ -112,9 +112,9 @@ fromFoldableOrder =
       x === y
       sameOrder xs ys
 
-cmapInvariant :: TestTree
-cmapInvariant =
-  testPropertyNamed "cmap invariants" "cmapInvariant" $ do
+mapInvariant :: TestTree
+mapInvariant =
+  testPropertyNamed "map invariants" "mapInvariant" $ do
     property $ do
       useq <- forAll genUniqueSeq
       let useq' = USeq.map even useq
