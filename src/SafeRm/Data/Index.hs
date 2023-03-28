@@ -347,7 +347,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure $ (nLen, max (maxLenForDynCols - nLen) PathData.formatOriginalPathLenMin)
+                pure (nLen, max (maxLenForDynCols - nLen) PathData.formatOriginalPathLenMin)
               else -- 3. Requested nameLen > available space. We are going to wrap
               -- regardless, so use it and the minimum orig.
               do
@@ -383,7 +383,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure $ (max (maxLenForDynCols - oLen) PathData.formatFileNameLenMin, oLen)
+                pure (max (maxLenForDynCols - oLen) PathData.formatFileNameLenMin, oLen)
               else -- 3. Requested origLen > available space. We are going to wrap
               -- regardless, so use it and the minimum name.
               do
