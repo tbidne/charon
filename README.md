@@ -303,70 +303,48 @@ Size:         111.35M
 
 # Building
 
-## Prerequisites
-
-You will need one of:
-
-* [cabal-install 2.4+](https://www.haskell.org/cabal/download.html) and one of
-  * [ghc 9.4](https://www.haskell.org/ghcup/)
-* [nix](https://nixos.org/download.html)
-
-If you have never built a haskell program before, `cabal` + `ghcup` is probably the best choice.
+If you have never built a haskell program before, [Cabal](#cabal) is probably the best choice.
 
 ## Cabal
 
-You will need `ghc` and `cabal-install`. From there `safe-rm` can be built with `cabal build` or installed globally (i.e. `~/.cabal/bin/`) with `cabal install`.
+### Prerequisites
+
+* [`ghcup`](https://www.haskell.org/ghcup/)
+
+Using `ghcup`, install `cabal 2.4+` and `ghc 9.4`.
+
+### Build Safe-rm
+
+Once you have `cabal` and `ghc`, `safe-rm` can be built with `cabal build` or installed globally (i.e. `~/.cabal/bin/`) with `cabal install`.
 
 ## Nix
 
-### From source
+### Prerequisites
+
+* [nix](https://nixos.org/download.html)
+
+### Manually
 
 Building with `nix` uses [flakes](https://nixos.wiki/wiki/Flakes). `safe-rm` can be built with `nix build`, which will compile and run the tests.
 
-To launch a shell with various tools (e.g. `cabal`, `hls`), run `nix develop`. After that we can launch a repl with `cabal repl` or run the various tools on our code. At this point you could also build via `cabal`, though you may have to first run `cabal update`. This will fetch the needed dependencies from `nixpkgs`.
+### Nix expression
 
-### Via nix
-
-Because `safe-rm` is a flake, it be built as part of a nix expression. For instance, if you want to add `safe-rm` to `NixOS`, your `flake.nix` might look something like:
+Because `safe-rm` is a flake, it be built as part of a nix expression. For instance, if you want to add `safe-rm` to `NixOS`, your `flake.nix` should have:
 
 ```nix
+# flake.nix
 {
-  description = "My flake";
-
-  inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
-    safe-rm-src.url= "github:tbidne/safe-rm/main";
-  };
-
-  outputs = { self, nixpkgs, safe-rm-src, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = import nixpkgs {
-        system = system;
-      };
-      safe-rm = safe-rm-src.packages."${system}".default;
-    in
-    {
-      nixosConfigurations = {
-        nixos = nixpkgs.lib.nixosSystem {
-          system = system;
-          modules = [
-            (import ./configuration.nix { inherit pkgs safe-rm; })
-          ];
-        };
-      };
-    };
+  inputs.safe-rm.url = "github:tbidne/safe-rm/main";
 }
 ```
 
-Then in `configuration.nix` you can simply have:
+Then include this in the `systemPackages`:
 
 ```nix
-{ pkgs, safe-rm, ... }:
-
+# wherever your global packages are defined
 {
   environment.systemPackages = [
-    safe-rm
+    safe-rm.packages."${system}".default
   ];
 }
 ```
