@@ -138,10 +138,10 @@ test-suite unit
   other-modules:
     Unit.Data.Index
     Unit.Data.PathData
-    Unit.Data.Trash
     Unit.Data.UniqueSeq
     Unit.Prelude
     Unit.Runner
+    Unit.Trash
     Unit.Utils
 
   build-depends:

@@ -1,8 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
--- | Unit tests for Data.Trash
-module Unit.Data.Trash
+-- | Unit tests for Trash
+module Unit.Trash
   ( tests,
   )
 where
