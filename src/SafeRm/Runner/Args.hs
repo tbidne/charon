@@ -38,6 +38,8 @@ import Options.Applicative
   )
 import Options.Applicative qualified as OA
 import Options.Applicative.Help.Chunk (Chunk (Chunk))
+import Options.Applicative.Help.Chunk qualified as Chunk
+import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import SafeRm.Data.Index (Sort, readSort)
 import SafeRm.Data.PathData (ColFormat (..))
@@ -130,7 +132,7 @@ parserInfoArgs =
   ParserInfo
     { infoParser = argsParser,
       infoFullDesc = True,
-      infoProgDesc = Chunk desc,
+      infoProgDesc = desc,
       infoHeader = Chunk headerTxt,
       infoFooter = Chunk footerTxt,
       infoFailureCode = 1,
@@ -140,9 +142,9 @@ parserInfoArgs =
     headerTxt = Just "Safe-rm: A tool for deleting files to a trash directory."
     footerTxt = Just $ fromString versNum
     desc =
-      Just $
+      Chunk.paragraph $
         mconcat
-          [ "\nSafe-rm moves files to a trash directory, so they can later be ",
+          [ "Safe-rm moves files to a trash directory, so they can later be ",
             "restored or permanently deleted. It is intended as a safer ",
             "alternative to rm. See github.com/tbidne/safe-rm#readme for ",
             "full documentation."
@@ -183,7 +185,7 @@ configParser =
         OA.long "config",
         OA.short 'c',
         OA.metavar "(none|PATH)",
-        OA.help helpTxt
+        mkHelp helpTxt
       ]
   where
     helpTxt =
@@ -224,26 +226,26 @@ commandParser =
           ]
       )
   where
-    delTxt = OA.progDesc "Moves the path(s) to the trash."
+    delTxt = mkCmdDesc "Moves the path(s) to the trash."
     permDelTxt =
-      OA.progDesc $
+      mkCmdDesc $
         mconcat
           [ "Permanently deletes path(s) from the trash. Can use wildcards ",
             "to match trash paths e.g. *foo*bar matches foobar, xxxfooyyybar, ",
             "etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (sr x '\\*foo')."
           ]
-    emptyTxt = OA.progDesc "Empties the trash."
+    emptyTxt = mkCmdDesc "Empties the trash."
     restoreTxt =
-      OA.progDesc $
+      mkCmdDesc $
         mconcat
           [ "Restores the trash path(s) to their original location. Can use ",
             "wildcards to match trash paths e.g. *foo*bar matches foobar, ",
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (sr r '\\*foo')."
           ]
-    listTxt = OA.progDesc "Lists all trash contents and metadata."
-    metadataTxt = OA.progDesc "Prints trash metadata."
+    listTxt = mkCmdDesc "Lists all trash contents and metadata."
+    metadataTxt = mkCmdDesc "Prints trash metadata."
 
     delParser = Delete <$> pathsParser
     permDelParser = DeletePerm <$> forceParser <*> pathsParser
@@ -267,8 +269,8 @@ listFormatStyleParser =
     OA.option (OA.str >>= parseListFormat) $
       mconcat
         [ OA.long "format",
-          OA.metavar "t[abular] | m[ulti])",
-          OA.help helpTxt
+          OA.metavar "(t[abular] | m[ulti])",
+          mkHelp helpTxt
         ]
   where
     helpTxt =
@@ -290,7 +292,7 @@ nameTruncParser = colParser PathData.formatFileNameLenMin fields
         [ OA.long "name-len",
           OA.short 'n',
           OA.metavar "(max|NAT)",
-          OA.help $
+          mkHelp $
             mconcat
               [ "Sets the file name column length to either NAT characters or ",
                 "longest file-name. Only affects the 'tabular' format."
@@ -305,7 +307,7 @@ origTruncParser = colParser PathData.formatOriginalPathLenMin fields
         [ OA.long "orig-len",
           OA.short 'o',
           OA.metavar "(max|NAT)",
-          OA.help $
+          mkHelp $
             mconcat
               [ "Sets the original-path column length to either NAT characters or ",
                 "longest path. Only affects the 'tabular' format."
@@ -339,7 +341,7 @@ sortParser =
       [ OA.long "sort",
         OA.short 's',
         OA.metavar "(name|size)",
-        OA.help "How to sort the list. Defaults to name."
+        mkHelp "How to sort the list. Defaults to name."
       ]
 
 reverseSortParser :: Parser (Maybe Bool)
@@ -349,7 +351,7 @@ reverseSortParser =
       mconcat
         [ OA.long "reverse-sort",
           OA.short 'r',
-          OA.help helpTxt
+          mkHelp helpTxt
         ]
   where
     helpTxt = "Sorts in the reverse order."
@@ -360,7 +362,7 @@ forceParser =
     mconcat
       [ OA.long "force",
         OA.short 'f',
-        OA.help helpTxt
+        mkHelp helpTxt
       ]
   where
     helpTxt = "If enabled, will not ask before deleting path(s)."
@@ -374,7 +376,7 @@ trashParser =
       [ OA.long "trash-home",
         OA.short 't',
         OA.metavar "PATH",
-        OA.help helpTxt
+        mkHelp helpTxt
       ]
   where
     helpTxt =
@@ -391,7 +393,7 @@ logLevelParser =
       mconcat
         [ OA.long "log-level",
           OA.metavar Utils.logLevelStrings,
-          OA.help $
+          mkHelp $
             mconcat
               [ "The file level in which to log. Defaults to none. Logs are ",
                 "written to the XDG state directory e.g. ~/.local/state/safe-rm."
@@ -413,8 +415,8 @@ logSizeModeParser =
       readFileSize
       ( mconcat
           [ OA.long "log-size-mode",
-            OA.help helpTxt,
-            OA.metavar "<warn SIZE | delete SIZE>"
+            mkHelp helpTxt,
+            OA.metavar "(warn SIZE | delete SIZE)"
           ]
       )
   where
@@ -433,3 +435,20 @@ mkCommand cmdTxt parser helpTxt = OA.command cmdTxt (OA.info parser helpTxt)
 unsafeNE :: (HasCallStack) => [a] -> NonEmpty a
 unsafeNE [] = error "Args: Empty list given to unsafeNE"
 unsafeNE (x : xs) = x :| xs
+
+-- Looks a bit convoluted, but this gets us what we want:
+-- 1. lines aligned (paragraph)
+-- 2. linebreak at the end (fmap hardline)
+mkHelp :: String -> OA.Mod f a
+mkHelp =
+  OA.helpDoc
+    . fmap (<> Pretty.hardline)
+    . Chunk.unChunk
+    . Chunk.paragraph
+
+mkCmdDesc :: String -> InfoMod a
+mkCmdDesc =
+  OA.progDescDoc
+    . fmap (<> Pretty.hardline)
+    . Chunk.unChunk
+    . Chunk.paragraph

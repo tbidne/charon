@@ -49,10 +49,11 @@ Safe-rm: A tool for deleting files to a trash directory.
 
 Usage: sr [-c|--config (none|PATH)] [-t|--trash-home PATH]
           [--log-level (none|error|warn|info|debug)]
-          [--log-size-mode <warn SIZE | delete SIZE>] COMMAND [--version]
+          [--log-size-mode (warn SIZE | delete SIZE)] COMMAND [--version]
 
-
-Safe-rm moves files to a trash directory, so they can later be restored or permanently deleted. It is intended as a safer alternative to rm. See github.com/tbidne/safe-rm#readme for full documentation.
+  Safe-rm moves files to a trash directory, so they can later be restored or
+  permanently deleted. It is intended as a safer alternative to rm. See
+  github.com/tbidne/safe-rm#readme for full documentation.
 
 Available options:
   -c,--config (none|PATH)  Path to the toml config file. Can be the string
@@ -60,29 +61,36 @@ Available options:
                            a path to the config file. If not specified then we
                            look in the XDG config directory e.g.
                            ~/.config/safe-rm/config.toml
+
   -t,--trash-home PATH     Path to the trash directory. This overrides the toml
                            config, if it exists. If neither is given then we use
                            the XDG data directory e.g. ~/.local/share/safe-rm.
+
   --log-level (none|error|warn|info|debug)
                            The file level in which to log. Defaults to none.
                            Logs are written to the XDG state directory e.g.
                            ~/.local/state/safe-rm.
-  --log-size-mode <warn SIZE | delete SIZE>
+
+  --log-size-mode (warn SIZE | delete SIZE)
                            Sets a threshold for the file log size, upon which we
                            either print a warning or delete the file, if it is
                            exceeded. The SIZE should include the value and units
                            e.g. 'warn 10 mb', 'warn 5 gigabytes', 'delete
                            20.5B'.
+
   -h,--help                Show this help text
 
 Delete Commands
   d                        Moves the path(s) to the trash.
+
   x                        Permanently deletes path(s) from the trash. Can use
                            wildcards to match trash paths e.g. *foo*bar matches
                            foobar, xxxfooyyybar, etc. To match a filename with a
                            literal * not representing a wildcard -- e.g. '*foo'
                            -- the * must be escaped (sr x '\*foo').
+
   e                        Empties the trash.
+
 
 Restore Commands
   r                        Restores the trash path(s) to their original
@@ -92,9 +100,12 @@ Restore Commands
                            wildcard -- e.g. '*foo' -- the * must be escaped (sr
                            r '\*foo').
 
+
 Information Commands
   l                        Lists all trash contents and metadata.
+
   m                        Prints trash metadata.
+
 
 Version: 0.1
 ```
@@ -120,6 +131,7 @@ Usage: sr d PATHS...
 
   Moves the path(s) to the trash.
 
+
 Available options:
   -h,--help                Show this help text
 ```
@@ -143,8 +155,10 @@ Usage: sr x [-f|--force] PATHS...
   with a literal * not representing a wildcard -- e.g. '*foo' -- the * must be
   escaped (sr x '\*foo').
 
+
 Available options:
   -f,--force               If enabled, will not ask before deleting path(s).
+
   -h,--help                Show this help text
 ```
 
@@ -172,8 +186,10 @@ Usage: sr e [-f|--force]
 
   Empties the trash.
 
+
 Available options:
   -f,--force               If enabled, will not ask before deleting path(s).
+
   -h,--help                Show this help text
 ```
 
@@ -204,6 +220,7 @@ Usage: sr r PATHS...
   filename with a literal * not representing a wildcard -- e.g. '*foo' -- the *
   must be escaped (sr r '\*foo').
 
+
 Available options:
   -h,--help                Show this help text
 ```
@@ -225,14 +242,15 @@ $ sr r foo baz
 **Usage:**
 
 ```
-Usage: sr l [--format t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
+Usage: sr l [--format (t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
             [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
             [-r|--reverse-sort]
 
   Lists all trash contents and metadata.
 
+
 Available options:
-  --format t[abular] | m[ulti])
+  --format (t[abular] | m[ulti])
                            Determines the output format. The 'multi' option
                            prints each entry across multiple lines. The default
                            'tabular' option prints each trash entry on a single
@@ -241,14 +259,19 @@ Available options:
                            terminal width and filename / original path lengths.
                            The behavior can be overridden via --name-len and
                            --orig-len. Note that this can lead to word-wrapping.
+
   -n,--name-len (max|NAT)  Sets the file name column length to either NAT
                            characters or longest file-name. Only affects the
                            'tabular' format.
+
   -o,--orig-len (max|NAT)  Sets the original-path column length to either NAT
                            characters or longest path. Only affects the
                            'tabular' format.
+
   -s,--sort (name|size)    How to sort the list. Defaults to name.
+
   -r,--reverse-sort        Sorts in the reverse order.
+
   -h,--help                Show this help text
 ```
 
@@ -281,6 +304,7 @@ Size:         410.40G
 Usage: sr m
 
   Prints trash metadata.
+
 
 Available options:
   -h,--help                Show this help text
