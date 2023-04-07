@@ -113,10 +113,8 @@ runCmd cmd =
       DeletePerm force paths -> SafeRm.deletePermanently force paths
       Empty force -> SafeRm.emptyTrash force
       Restore paths -> SafeRm.restore paths
-      List listCmd -> do
+      List listCmd ->
         printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
-        putStrLn ""
-        printMetadata
       Metadata -> printMetadata
 
     logEx :: (HasCallStack) => SomeException -> m a

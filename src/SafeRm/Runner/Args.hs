@@ -244,7 +244,7 @@ commandParser =
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (sr r '\\*foo')."
           ]
-    listTxt = mkCmdDesc "Lists all trash contents and metadata."
+    listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
 
     delParser = Delete <$> pathsParser

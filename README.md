@@ -102,7 +102,7 @@ Restore Commands
 
 
 Information Commands
-  l                        Lists all trash contents and metadata.
+  l                        Lists all trash contents.
 
   m                        Prints trash metadata.
 
@@ -246,7 +246,7 @@ Usage: sr l [--format (t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
             [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
             [-r|--reverse-sort]
 
-  Lists all trash contents and metadata.
+  Lists all trash contents.
 
 
 Available options:
@@ -289,11 +289,6 @@ Name | Type      | Size    | Original            | Created
 bar  | File      | 410.35G | /bar                | 2022-10-28 15:33:18
 baz  | File      | 45.61M  | /a/long/path/to/baz | 2022-10-28 15:33:18
 foo  | Directory | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
-
-Entries:      3
-Total Files:  5
-Log size:     1.65K
-Size:         410.40G
 ```
 
 ### Metadata
@@ -316,7 +311,7 @@ Available options:
 # deleting files/directories first
 $ sr d foo bar baz
 
-# list contents
+# print metadata
 $ sr m
 
 Entries:      3

@@ -40,20 +40,12 @@ emptySucceeds args = testCase "List on empty directory succeeds" $ do
   assertMatches expectedLogs logs
   where
     expectedTerminal =
-      [ Exact "",
-        Exact "",
-        Exact "Entries:      0",
-        Exact "Total Files:  0",
-        Exact "Log size:     0.00B",
-        Exact "Size:         0.00B",
-        Exact ""
+      [ Exact ""
       ]
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l/emptySucceeds/.trash",
-        Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist.",
-        Outfix "[2020-05-31 12:00:00][functional.getMetadata][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l/emptySucceeds/.trash",
-        Exact "[2020-05-31 12:00:00][functional.getMetadata][Info][src/SafeRm.hs] Trash does not exist."
+        Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist."
       ]
 
 noPathsError :: IO FilePath -> TestTree
