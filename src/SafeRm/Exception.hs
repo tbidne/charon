@@ -13,6 +13,7 @@ module SafeRm.Exception
 
     -- *** General
     TrashEntryNotFoundE (..),
+    TrashEntryWildcardNotFoundE (..),
 
     -- *** Partial success
     TrashEntryPathNotFoundE (..),
@@ -97,6 +98,25 @@ instance Exception TrashEntryNotFoundE where
         name ^. #unPathI,
         "'; did not find '",
         path ^. #unPathI,
+        "'"
+      ]
+
+-- | Error for not finding any paths via wildcard search.
+--
+-- @since 0.1
+newtype TrashEntryWildcardNotFoundE
+  = MkTrashEntryWildcardNotFoundE (PathI TrashEntryFileName)
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception TrashEntryWildcardNotFoundE where
+  displayException (MkTrashEntryWildcardNotFoundE name) =
+    mconcat
+      [ "No entries found for wildcard search '",
+        name ^. #unPathI,
         "'"
       ]
 

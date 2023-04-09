@@ -40,6 +40,7 @@ import SafeRm.Exception
     TrashDirPathsNotFoundE (..),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
     TrashEntryPathNotFoundE (MkTrashEntryPathNotFoundE),
+    TrashEntryWildcardNotFoundE (..),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
@@ -336,7 +337,7 @@ findManyPathData trashHome pathName = do
   MkIndex index <- Index.readIndex trashHome
 
   case Seq.filter pdMatchesWildcard index of
-    Seq.Empty -> throwCS $ MkTrashEntryPathNotFoundE trashHome pathName
+    Seq.Empty -> throwCS $ MkTrashEntryWildcardNotFoundE pathName
     pd :<| pds -> pure $ pd :<|| pds
   where
     pdMatchesWildcard =
