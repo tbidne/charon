@@ -231,7 +231,7 @@ commandParser =
       mkCmdDesc $
         mconcat
           [ "Permanently deletes path(s) from the trash. Can use wildcards ",
-            "to match trash paths e.g. *foo*bar matches foobar, xxxfooyyybar, ",
+            "to match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, ",
             "etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (sr x '\\*foo')."
           ]
@@ -240,7 +240,7 @@ commandParser =
       mkCmdDesc $
         mconcat
           [ "Restores the trash path(s) to their original location. Can use ",
-            "wildcards to match trash paths e.g. *foo*bar matches foobar, ",
+            "wildcards to match trash paths e.g. '*foo*bar' matches foobar, ",
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (sr r '\\*foo')."
           ]

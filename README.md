@@ -84,7 +84,7 @@ Delete Commands
   d                        Moves the path(s) to the trash.
 
   x                        Permanently deletes path(s) from the trash. Can use
-                           wildcards to match trash paths e.g. *foo*bar matches
+                           wildcards to match trash paths e.g. '*foo*bar' matches
                            foobar, xxxfooyyybar, etc. To match a filename with a
                            literal * not representing a wildcard -- e.g. '*foo'
                            -- the * must be escaped (sr x '\*foo').
@@ -95,7 +95,7 @@ Delete Commands
 Restore Commands
   r                        Restores the trash path(s) to their original
                            location. Can use wildcards to match trash paths e.g.
-                           *foo*bar matches foobar, xxxfooyyybar, etc. To match
+                           '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
                            a filename with a literal * not representing a
                            wildcard -- e.g. '*foo' -- the * must be escaped (sr
                            r '\*foo').
@@ -151,7 +151,7 @@ $ sr d foo bar baz
 Usage: sr x [-f|--force] PATHS...
 
   Permanently deletes path(s) from the trash. Can use wildcards to match trash
-  paths e.g. *foo*bar matches foobar, xxxfooyyybar, etc. To match a filename
+  paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
   with a literal * not representing a wildcard -- e.g. '*foo' -- the * must be
   escaped (sr x '\*foo').
 
@@ -216,7 +216,7 @@ Permanently delete all contents (y/n)?
 Usage: sr r PATHS...
 
   Restores the trash path(s) to their original location. Can use wildcards to
-  match trash paths e.g. *foo*bar matches foobar, xxxfooyyybar, etc. To match a
+  match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a
   filename with a literal * not representing a wildcard -- e.g. '*foo' -- the *
   must be escaped (sr r '\*foo').
 

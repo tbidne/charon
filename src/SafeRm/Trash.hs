@@ -383,7 +383,9 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
   if
       -- 1. Found a (n unescaped) wildcard; findMany (findMany handles the case
       -- where pathName also includes the sequence \\*).
-      | hasWildcard pathName' -> findManyPathData trashHome pathName
+      | hasWildcard pathName' -> do
+          $(logDebug) $ "Performing wildcard search: '" <> pathNameTxt <> "'"
+          findManyPathData trashHome pathName
       -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
       -- wildcards by this point, we can simply findOne as normal, after removing
       -- the escape.
@@ -398,7 +400,9 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
           NESeq.singleton <$> findOnePathData trashHome (MkPathI $ T.unpack literal)
 
       -- 3. No * at all; normal
-      | otherwise -> NESeq.singleton <$> findOnePathData trashHome pathName
+      | otherwise -> do
+          $(logDebug) $ "Normal search: '" <> pathNameTxt <> "'"
+          NESeq.singleton <$> findOnePathData trashHome pathName
   where
     pathNameTxt = T.pack pathName'
 
