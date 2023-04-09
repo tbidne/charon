@@ -24,8 +24,8 @@ jobs:
           extra_nix_config: |
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Format
-        run: make formatc
+      - name: Formatting
+        run: nix develop .#ci -c bash -c "make formatc"
 
-      - name: Lint
-        run: make lintc
+      - name: HLint
+        run: nix develop .#ci -c bash -c "make lintc"
