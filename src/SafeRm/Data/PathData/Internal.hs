@@ -28,7 +28,7 @@ import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( EmptyPathE (MkEmptyPathE),
-    PathNotFoundE (MkPathNotFoundE),
+    FileNotFoundE (MkFileNotFoundE),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
   )
@@ -228,7 +228,7 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
                 Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
                 PathTypeDirectory
               )
-          else throwCS $ MkPathNotFoundE (originalPath ^. #unPathI)
+          else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
 
   size <-
     fmap (MkBytes @B) $

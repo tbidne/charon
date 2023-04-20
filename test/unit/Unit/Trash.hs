@@ -72,8 +72,8 @@ instance MonadPathReader PathDataT where
     where
       nexists =
         windowsify
-          <$> [ "test/unit/.trash/paths/foo",
-                "test/unit/.trash/paths/ "
+          <$> [ "test/unit/.trash/files/foo",
+                "test/unit/.trash/files/ "
               ]
 
   doesFileExist p
@@ -105,12 +105,12 @@ instance MonadTerminal PathDataT where
 mvTrash :: TestTree
 mvTrash = testCase "mvOriginalToTrash success" $ do
   (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts (liftPathI' windowsify "path/to/foo"))
-  windowsify "renamed /home/path/to/foo to test/unit/.trash/paths/foo" @=? T.unpack result
+  windowsify "renamed /home/path/to/foo to test/unit/.trash/files/foo" @=? T.unpack result
 
 mvTrashWhitespace :: TestTree
 mvTrashWhitespace = testCase "mvOriginalToTrash whitespace success" $ do
   (result, _) <- runPathDataT (Trash.mvOriginalToTrash trashHome ts " ")
-  windowsify "renamed /home/  to test/unit/.trash/paths/ " @=? T.unpack result
+  windowsify "renamed /home/  to test/unit/.trash/files/ " @=? T.unpack result
 
 mvTrashRootError :: TestTree
 mvTrashRootError = testCase desc $ do

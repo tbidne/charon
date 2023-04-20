@@ -44,8 +44,8 @@ import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
+    TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
     TrashEntryInfoNotFoundE (..),
-    TrashEntryPathNotFoundE (MkTrashEntryPathNotFoundE),
   )
 import SafeRm.Prelude
 import System.FilePath qualified as FP
@@ -89,7 +89,7 @@ instance Pretty Index where
       . view #unIndex
 
 -- | Reads the trash directory into the 'Index'. If this succeeds then
--- everything is 'well-formed' i.e. there is a bijection between trash/paths
+-- everything is 'well-formed' i.e. there is a bijection between trash/files
 -- and trash/info.
 --
 -- @since 0.1
@@ -129,7 +129,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
 
   (indexSeq, pathSet) <- foldr seqify (pure ([], HSet.empty)) paths
 
-  -- NOTE: Check that all paths in /paths exist in the index.
+  -- NOTE: Check that all files in /files exist in the index.
   allTrashPaths <- listDirectory trashPathsDir'
   $(logDebug) ("Paths: " <> T.pack (show allTrashPaths))
   for_ allTrashPaths $ \p -> do
@@ -158,7 +158,7 @@ throwIfTrashNonExtant trashHome pd = do
   exists <- PathData.trashPathExists trashHome pd
   unless exists $
     throwCS $
-      MkTrashEntryPathNotFoundE trashHome filePath
+      MkTrashEntryFileNotFoundE trashHome filePath
   where
     filePath = pd ^. #fileName
 

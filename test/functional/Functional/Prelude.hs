@@ -113,7 +113,7 @@ mkTrashPaths ::
   f FilePath
 mkTrashPaths trashHome = fmap mkTrashPath
   where
-    mkTrashPath p = trashHome </> "paths" </> p
+    mkTrashPath p = trashHome </> "files" </> p
 
 assertSetEq :: (Hashable a, Show a) => HashSet a -> HashSet a -> IO ()
 assertSetEq x y = do

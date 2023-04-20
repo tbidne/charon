@@ -9,10 +9,10 @@ where
 import Data.ByteString.Char8 qualified as Char8
 import Functional.Prelude
 import SafeRm.Exception
-  ( TrashDirInfoNotFoundE,
-    TrashDirPathsNotFoundE,
+  ( TrashDirFilesNotFoundE,
+    TrashDirInfoNotFoundE,
+    TrashEntryFileNotFoundE,
     TrashEntryInfoNotFoundE,
-    TrashEntryPathNotFoundE,
   )
 
 -- import Data.ByteString qualified as BS
@@ -59,17 +59,17 @@ noPathsError args = testCase "No Paths Error" $ do
   clearDirectory trashDir
   clearDirectory (trashDir </> "info")
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashDirPathsNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashDirFilesNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs
   where
     expectedErr =
-      Outfix "The trash paths directory was not found at '" "/safe-rm/functional/l/noPathsError/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
+      Outfix "The trash files directory was not found at '" "/safe-rm/functional/l/noPathsError/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l/noPathsError/.trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash paths directory was not found at '" "/safe-rm/functional/l/noPathsError/.trash/paths' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash files directory was not found at '" "/safe-rm/functional/l/noPathsError/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
 noInfoError :: IO FilePath -> TestTree
@@ -81,7 +81,7 @@ noInfoError args = testCase "No Info Error" $ do
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "files")
 
   (ex, logs) <- captureSafeRmExceptionLogs @TrashDirInfoNotFoundE argList
 
@@ -118,23 +118,23 @@ missingPathError args = testCase "Entry Missing Path" $ do
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "files")
   clearDirectory (trashDir </> "info")
   createFileContents [(trashDir </> "info" </> "missing.json", missingInfo)]
 
   -- Creating empty file so that we don't get the "size mismatch" error.
   -- We specifically want the "missing.json has no corresponding missing" error.
-  createFiles [trashDir </> "paths" </> "blah"]
+  createFiles [trashDir </> "files" </> "blah"]
 
-  (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryPathNotFoundE argList
+  (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryFileNotFoundE argList
 
   assertMatch expectedErr ex
   assertMatches expectedLogs logs
   where
     expectedErr =
       Outfixes
-        "The path 'missing' was not found in '"
-        ["/safe-rm/functional/l/missingPathError/.trash/paths' despite being listed in '"]
+        "The file 'missing' was not found in '"
+        ["/safe-rm/functional/l/missingPathError/.trash/files' despite being listed in '"]
         "/safe-rm/functional/l/missingPathError/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e -f)."
 
     expectedLogs =
@@ -143,8 +143,8 @@ missingPathError args = testCase "Entry Missing Path" $ do
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [\"missing.json\"]",
         Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: " "/safe-rm/functional/l/missingPathError/.trash/info/missing.json",
         Outfixes
-          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'missing' was not found in '"
-          ["/safe-rm/functional/l/missingPathError/.trash/paths' despite being listed in '"]
+          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'missing' was not found in '"
+          ["/safe-rm/functional/l/missingPathError/.trash/files' despite being listed in '"]
           "/safe-rm/functional/l/missingPathError/.trash/info'. This can be fixed by manually deleting the .json file or deleting everything (i.e. sr e -f)."
       ]
 
@@ -162,9 +162,9 @@ missingInfoError args = testCase "Entry Missing Info" $ do
   -- setup
   clearDirectory testDir
   clearDirectory trashDir
-  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "files")
   clearDirectory (trashDir </> "info")
-  createFiles [trashDir </> "paths" </> "bar"]
+  createFiles [trashDir </> "files" </> "bar"]
 
   (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryInfoNotFoundE argList
 
@@ -173,9 +173,9 @@ missingInfoError args = testCase "Entry Missing Info" $ do
   where
     expectedErr =
       Outfixes
-        "The path 'bar.json' was not found in '"
+        "The file 'bar.json' was not found in '"
         ["/safe-rm/functional/l/missingInfoError/.trash/info' despite being listed in '"]
-        "/safe-rm/functional/l/missingInfoError/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e -f)."
+        "/safe-rm/functional/l/missingInfoError/.trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. sr e -f)."
 
     expectedLogs =
       [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/l/missingInfoError/.trash",
@@ -183,9 +183,9 @@ missingInfoError args = testCase "Entry Missing Info" $ do
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: []",
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [\"bar\"]",
         Outfixes
-          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The path 'bar.json' was not found in '"
+          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'bar.json' was not found in '"
           ["/safe-rm/functional/l/missingInfoError/.trash/info' despite being listed in '"]
-          "/safe-rm/functional/l/missingInfoError/.trash/paths'. This can be fixed by manually deleting the /paths entry or deleting everything (i.e. sr e -f)."
+          "/safe-rm/functional/l/missingInfoError/.trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. sr e -f)."
       ]
 
 getTestPath :: IO FilePath -> FilePath -> IO String

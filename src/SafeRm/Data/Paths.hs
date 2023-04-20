@@ -51,17 +51,17 @@ data PathIndex
     --
     -- @since 0.1
     TrashLog
-  | -- | The directory to the trash files themselves i.e. <trash>/paths.
+  | -- | The directory to the trash files themselves i.e. <trash>/files.
     --
     -- @since 0.1
-    TrashDirPaths
+    TrashDirFiles
   | -- | The directory to the trash info files i.e. <trash>/info.
     --
     -- @since 0.1
     TrashDirInfo
   | -- TRASH ENTRY PATHS
 
-    -- | The full trash path i.e. @\<trash-home\>\/paths\/'\<trash-name\>@.
+    -- | The full trash path i.e. @\<trash-home\>\/files\/'\<trash-name\>@.
     --
     -- @since 0.1
     TrashEntryPath

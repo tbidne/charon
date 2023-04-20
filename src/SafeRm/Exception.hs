@@ -5,7 +5,7 @@
 -- @since 0.1
 module SafeRm.Exception
   ( -- * General
-    PathNotFoundE (..),
+    FileNotFoundE (..),
 
     -- * Trash
 
@@ -16,11 +16,11 @@ module SafeRm.Exception
     TrashEntryWildcardNotFoundE (..),
 
     -- *** Partial success
-    TrashEntryPathNotFoundE (..),
+    TrashEntryFileNotFoundE (..),
     TrashEntryInfoNotFoundE (..),
 
     -- ** Directories
-    TrashDirPathsNotFoundE (..),
+    TrashDirFilesNotFoundE (..),
     TrashDirInfoNotFoundE (..),
 
     -- * Misc
@@ -43,17 +43,17 @@ import SafeRm.Prelude
 -- | Path is not found.
 --
 -- @since 0.1
-newtype PathNotFoundE = MkPathNotFoundE FilePath
+newtype FileNotFoundE = MkFileNotFoundE FilePath
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception PathNotFoundE where
-  displayException (MkPathNotFoundE f) =
+instance Exception FileNotFoundE where
+  displayException (MkFileNotFoundE f) =
     mconcat
-      [ "Path not found: '",
+      [ "File not found: '",
         f,
         "'"
       ]
@@ -75,10 +75,10 @@ instance Exception RenameDuplicateE where
         n ^. #unPathI
       ]
 
--- | Trash path not found error. Distinct from 'TrashEntryPathNotFoundE' in that
+-- | Trash path not found error. Distinct from 'TrashEntryFileNotFoundE' in that
 -- the latter indicates that the entry exists in @trash\/info@ but not
--- @trash\/paths@, whereas this exception is less specific i.e. we found nothing
--- in @trash\/info@ but did not look in @trash\/paths@.
+-- @trash\/files@, whereas this exception is less specific i.e. we found nothing
+-- in @trash\/info@ but did not look in @trash\/files@.
 --
 -- @since 0.1
 data TrashEntryNotFoundE
@@ -101,7 +101,7 @@ instance Exception TrashEntryNotFoundE where
         "'"
       ]
 
--- | Error for not finding any paths via wildcard search.
+-- | Error for not finding any files via wildcard search.
 --
 -- @since 0.1
 newtype TrashEntryWildcardNotFoundE
@@ -120,11 +120,11 @@ instance Exception TrashEntryWildcardNotFoundE where
         "'"
       ]
 
--- | Path found in @trash\/info@ but not @trash\/paths@ error.
+-- | Path found in @trash\/info@ but not @trash\/files@ error.
 --
 -- @since 0.1
-data TrashEntryPathNotFoundE
-  = MkTrashEntryPathNotFoundE
+data TrashEntryFileNotFoundE
+  = MkTrashEntryFileNotFoundE
       !(PathI TrashHome)
       !(PathI TrashEntryFileName)
   deriving stock
@@ -133,15 +133,15 @@ data TrashEntryPathNotFoundE
     )
 
 -- | @since 0.1
-instance Exception TrashEntryPathNotFoundE where
-  displayException (MkTrashEntryPathNotFoundE thome name) =
+instance Exception TrashEntryFileNotFoundE where
+  displayException (MkTrashEntryFileNotFoundE thome name) =
     mconcat
-      [ "The path '",
+      [ "The file '",
         name ^. #unPathI,
         "' was not found in '",
         thome ^. #unPathI,
         slash,
-        "paths' despite being listed in '",
+        "files' despite being listed in '",
         thome ^. #unPathI,
         slash,
         "info'. This can be fixed by manually deleting the ",
@@ -149,7 +149,7 @@ instance Exception TrashEntryPathNotFoundE where
         " file or deleting everything (i.e. sr e -f)."
       ]
 
--- | Path found in @trash\/paths@ but not @trash\/info@ error.
+-- | Path found in @trash\/files@ but not @trash\/info@ error.
 --
 -- @since 0.1
 data TrashEntryInfoNotFoundE
@@ -165,7 +165,7 @@ data TrashEntryInfoNotFoundE
 instance Exception TrashEntryInfoNotFoundE where
   displayException (MkTrashEntryInfoNotFoundE thome name) =
     mconcat
-      [ "The path '",
+      [ "The file '",
         name ^. #unPathI,
         Env.trashInfoExtension,
         "' was not found in '",
@@ -174,28 +174,28 @@ instance Exception TrashEntryInfoNotFoundE where
         "info' despite being listed in '",
         thome ^. #unPathI,
         slash,
-        "paths'. This can be fixed by manually deleting the ",
+        "files'. This can be fixed by manually deleting the ",
         slash,
-        "paths entry or deleting everything (i.e. sr e -f)."
+        "files entry or deleting everything (i.e. sr e -f)."
       ]
 
 -- | Trash path dir not found error.
 --
 -- @since 0.1
-newtype TrashDirPathsNotFoundE = MkTrashDirPathsNotFoundE (PathI TrashHome)
+newtype TrashDirFilesNotFoundE = MkTrashDirFilesNotFoundE (PathI TrashHome)
   deriving stock
     ( -- | @since 0.1
       Show
     )
 
 -- | @since 0.1
-instance Exception TrashDirPathsNotFoundE where
-  displayException (MkTrashDirPathsNotFoundE th) =
+instance Exception TrashDirFilesNotFoundE where
+  displayException (MkTrashDirFilesNotFoundE th) =
     mconcat
-      [ "The trash paths directory was not found at '",
+      [ "The trash files directory was not found at '",
         th ^. #unPathI,
         slash,
-        "paths' despite the trash home existing. This can be fixed by ",
+        "files' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
@@ -280,7 +280,7 @@ data InfoDecodeE = MkInfoDecodeE (PathI TrashEntryInfo) ByteString String
 instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
-      [ "Could not decode path '",
+      [ "Could not decode file '",
         path ^. #unPathI,
         "' contents\n",
         Char8.unpack bs,

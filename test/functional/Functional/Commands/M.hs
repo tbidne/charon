@@ -100,7 +100,7 @@ empty args = testCase "Prints empty metadata" $ do
   testDir <- getTestPath args "empty"
   let trashDir = testDir </> ".trash"
 
-  createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "paths"]
+  createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
   createFiles [trashDir </> "log"]
 
   let metaArgList = ["m", "-t", trashDir]

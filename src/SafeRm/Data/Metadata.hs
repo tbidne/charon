@@ -24,7 +24,7 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
-  ( PathNotFoundE (MkPathNotFoundE),
+  ( FileNotFoundE (MkFileNotFoundE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -139,7 +139,7 @@ toMetadata (trashHome, trashLog) =
     $(logDebug) ("Total size: " <> showt size)
 
     -- NOTE: If the index is successfully read then we have verified that
-    -- all invariants are preserved i.e. bijection between /paths and /info.
+    -- all invariants are preserved i.e. bijection between /files and /info.
 
     pure $
       MkMetadata
@@ -176,4 +176,4 @@ getAllFiles fp =
           listDirectory fp
             >>= fmap join
               . traverse (getAllFiles . (fp </>))
-        False -> throwCS $ MkPathNotFoundE fp
+        False -> throwCS $ MkFileNotFoundE fp

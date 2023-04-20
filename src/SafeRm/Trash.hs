@@ -36,10 +36,10 @@ import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (..),
     RestoreCollisionE (MkRestoreCollisionE),
+    TrashDirFilesNotFoundE (..),
     TrashDirInfoNotFoundE (..),
-    TrashDirPathsNotFoundE (..),
+    TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
-    TrashEntryPathNotFoundE (MkTrashEntryPathNotFoundE),
     TrashEntryWildcardNotFoundE (..),
   )
 import SafeRm.Prelude
@@ -68,10 +68,10 @@ createTrash = do
 -- | Returns 'False' if @\<trash-home\>@ does not exist. If @\<trash-home\>@
 -- /does/ exist but is "badly-formed" i.e. one of
 --
--- * \<trash-home\>/paths
+-- * \<trash-home\>/files
 -- * \<trash-home\>/info
 --
--- does not, throws 'TrashDirPathsNotFoundE' or 'TrashDirInfoNotFoundE'.
+-- does not, throws 'TrashDirFilesNotFoundE' or 'TrashDirInfoNotFoundE'.
 --
 -- If all three dirs exist, returns 'True'.
 --
@@ -108,7 +108,7 @@ doesTrashExist = do
         -- Info exists; path does not -> Badly formed, throw exception
         (False, True) ->
           throwCS $
-            MkTrashDirPathsNotFoundE trashHome
+            MkTrashDirFilesNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 --
@@ -179,7 +179,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
           then -- NOTE: Technically don't need the pathdata if force is on, since we have
           -- the path and can just delete it. Nevertheless, we retrieve the pathData
           -- so that force does not change the semantics i.e. can only delete
-          -- "well-behaved" paths, and we don't have to do a redundant file/directory
+          -- "well-behaved" files, and we don't have to do a redundant file/directory
           -- check.
             deleteFn' pathData
           else do
@@ -316,7 +316,7 @@ findOnePathData trashHome pathName = do
   pathExists <- existsFn trashPath'
   unless pathExists $
     throwCS $
-      MkTrashEntryPathNotFoundE trashHome pathName
+      MkTrashEntryFileNotFoundE trashHome pathName
 
   pure pathData
   where

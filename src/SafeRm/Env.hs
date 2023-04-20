@@ -45,7 +45,7 @@ getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
 
 -- | @since 0.1
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
-getTrashPath trashHome name = trashHome <//> "paths" <//> name
+getTrashPath trashHome name = trashHome <//> "files" <//> name
 
 -- | @since 0.1
 getTrashInfoPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
@@ -57,8 +57,8 @@ getTrashInfoPath trashHome name =
 -- | Retrieves the trash path dir.
 --
 -- @since 0.1
-getTrashPathDir :: PathI TrashHome -> PathI TrashDirPaths
-getTrashPathDir trashHome = trashHome <//> "paths"
+getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
+getTrashPathDir trashHome = trashHome <//> "files"
 
 -- | Retrieves the trash info dir.
 --

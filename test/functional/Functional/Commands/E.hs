@@ -200,7 +200,7 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
 
-  assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
+  assertDirectoriesExist $ fmap (trashDir </>) ["info", "files"]
 
   -- trash structure assertions
   (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
@@ -259,7 +259,7 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
   delExpectedMetadata @=? delMetadata
 
   -- delete info dir, leaving trash dir in bad state
-  clearDirectory (trashDir </> "paths")
+  clearDirectory (trashDir </> "files")
 
   let emptyArgList = ["-t", trashDir, "e", "-f"]
   runSafeRm emptyArgList
@@ -271,7 +271,7 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
   assertDirectoriesDoNotExist dirsToDelete
   assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
 
-  assertDirectoriesExist $ fmap (trashDir </>) ["info", "paths"]
+  assertDirectoriesExist $ fmap (trashDir </>) ["info", "files"]
 
   -- trash structure assertions
   (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
