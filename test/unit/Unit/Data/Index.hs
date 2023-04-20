@@ -174,7 +174,7 @@ formatTabularAutoFail = testCase desc $ do
     tryAnyCS $
       runConfigIO
         (Index.formatIndex formatTabularAuto Name False idx)
-        58
+        53
   case eformatted of
     Right result ->
       assertFailure $
@@ -185,8 +185,8 @@ formatTabularAutoFail = testCase desc $ do
     desc = "Auto tabular throws error for small terminal width"
     expected =
       mconcat
-        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (58)",
-          " is less than minimum width (59) for automatic tabular display. ",
+        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (53)",
+          " is less than minimum width (54) for automatic tabular display. ",
           "Perhaps try multiline."
         ]
 

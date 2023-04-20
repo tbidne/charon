@@ -306,8 +306,8 @@ formatTabularRow nameLen origLen pd =
       toText (pd ^. #created)
     ]
   where
-    paddedType PathTypeFile = "File     "
-    paddedType PathTypeDirectory = "Directory"
+    paddedType PathTypeFile = "F   "
+    paddedType PathTypeDirectory = "D   "
 
 sep :: Text
 sep = " | "
@@ -343,7 +343,7 @@ getExistsFn pd = case pd ^. #pathType of
 
 -- | @since 0.1
 formatTypeLen :: Natural
-formatTypeLen = 9
+formatTypeLen = 4
 
 -- | @since 0.1
 formatFileNameLenMin :: Natural
