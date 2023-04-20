@@ -10,6 +10,7 @@ module SafeRm.Data.PathData.Internal
     toPathData,
     decode,
     encode,
+    headerNames,
   )
 where
 

@@ -58,7 +58,7 @@ module SafeRm.Data.PathData
     formatSeparatorsLen,
 
     -- * Miscellaneous
-    headerNames,
+    Internal.headerNames,
     pathDataToTrashPath,
     pathDataToTrashInfoPath,
   )
@@ -67,8 +67,6 @@ where
 import Data.Char qualified as Ch
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter (removeFile)
-import GHC.Exts (IsList)
-import GHC.Exts qualified as Exts
 import SafeRm.Data.PathData.Internal (PathData)
 import SafeRm.Data.PathData.Internal qualified as Internal
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
@@ -77,12 +75,6 @@ import SafeRm.Data.Timestamp (toText)
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
-
--- | Header names.
---
--- @since 0.1
-headerNames :: (IsList a, IsString (Exts.Item a)) => a
-headerNames = ["Type", "Name", "Original", "Size", "Created"]
 
 -- | Sorts by the created date then the name.
 --
@@ -238,7 +230,7 @@ data PathDataFormat
 formatMultiLine :: PathData -> Text
 formatMultiLine pd = T.intercalate "\n" strs
   where
-    strs = zipWith (flip ($)) headerNames labelFn
+    strs = zipWith (flip ($)) Internal.headerNames labelFn
     labelFn =
       [ \x -> x <> ":     " <> typeToText (pd ^. #pathType),
         \x -> x <> ":     " <> T.pack (pd ^. #fileName % #unPathI),
