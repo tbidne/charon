@@ -7,8 +7,15 @@ module SafeRm.Prelude
   ( module X,
 
     -- * Text
+    bsToStr,
     showt,
     displayExceptiont,
+
+    -- * Optics
+    shown,
+    packed,
+    unpacked,
+    packedbs,
   )
 where
 
@@ -45,7 +52,6 @@ import Control.Monad.Reader as X
     local,
     runReaderT,
   )
-import Data.Aeson as X (FromJSON (parseJSON), ToJSON (toEncoding, toJSON))
 import Data.Bifunctor as X (Bifunctor (bimap))
 import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
@@ -84,7 +90,6 @@ import Data.Text as X (Text)
 import Data.Text qualified as T
 import Data.Traversable as X (traverse)
 import Data.Tuple as X (curry, uncurry)
-import Effects.FileSystem.Path as X (Path)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
 #endif
@@ -117,6 +122,7 @@ import Effects.Exception as X
   )
 import Effects.FileSystem.FileReader as X
   ( MonadFileReader (readBinaryFile),
+    decodeUtf8,
     decodeUtf8Lenient,
     readFileUtf8ThrowM,
   )
@@ -132,6 +138,7 @@ import Effects.FileSystem.HandleWriter as X
         openBinaryFile
       ),
   )
+import Effects.FileSystem.Path as X (Path)
 import Effects.FileSystem.PathReader as X
   ( MonadPathReader
       ( canonicalizePath,
@@ -191,6 +198,7 @@ import Optics.Core as X
     A_Lens,
     A_Setter,
     AffineTraversal',
+    Getter,
     Is,
     Iso',
     LabelOptic (labelOptic),
@@ -206,6 +214,7 @@ import Optics.Core as X
     prism,
     review,
     set',
+    to,
     view,
     (%),
     (%?),
@@ -252,3 +261,24 @@ showt = T.pack . show
 -- | @since 0.1
 displayExceptiont :: (Exception e) => e -> Text
 displayExceptiont = T.pack . displayException
+
+shown :: (Show a) => Getter a String
+shown = to show
+{-# INLINE shown #-}
+
+bsToStr :: ByteString -> String
+bsToStr = either displayException T.unpack . decodeUtf8
+
+-- Vendoring optics-extra Data.Text.Strict.Optics
+
+packed :: Iso' String Text
+packed = iso T.pack T.unpack
+{-# INLINE packed #-}
+
+unpacked :: Iso' Text String
+unpacked = iso T.unpack T.pack
+{-# INLINE unpacked #-}
+
+packedbs :: Getter Text ByteString
+packedbs = to encodeUtf8
+{-# INLINE packedbs #-}

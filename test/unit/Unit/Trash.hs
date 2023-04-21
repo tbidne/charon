@@ -11,6 +11,7 @@ import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..))
+import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import PathSize (SubPathData (MkSubPathData))
 import PathSize.Data.PathData qualified as PathSize.PathData
 import SafeRm.Data.Paths (PathI, PathIndex (..), liftPathI')
@@ -62,6 +63,16 @@ instance MonadPathWriter PathDataT where
   renameFile p1 p2 =
     ask >>= \ref ->
       writeIORef ref ("renamed " <> T.pack p1 <> " to " <> T.pack p2)
+
+  -- overridden for a better error message
+  removeFile p =
+    error $
+      mconcat
+        [ "removeFile intentionally unimplemented; unit tests should not be ",
+          "using it. Attempted delete: '",
+          p,
+          "'"
+        ]
 
 instance MonadPathReader PathDataT where
   canonicalizePath = pure . (windowsify "/home/" </>)
@@ -145,7 +156,7 @@ trashHome :: PathI TrashHome
 trashHome = liftPathI' windowsify "test/unit/.trash"
 
 ts :: Timestamp
-ts = case fromText "2020-05-31 12:00:00" of
+ts = case fromText "2020-05-31T12:00:00" of
   Nothing -> error "[Unit.Data.PathData.ts]: Error creating timestamp"
   Just t -> t
 

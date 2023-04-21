@@ -18,6 +18,7 @@ module SafeRm.Exception
     -- *** Partial success
     TrashEntryFileNotFoundE (..),
     TrashEntryInfoNotFoundE (..),
+    TrashEntryInfoBadExtE (..),
 
     -- ** Directories
     TrashDirFilesNotFoundE (..),
@@ -32,7 +33,6 @@ module SafeRm.Exception
   )
 where
 
-import Data.ByteString.Char8 qualified as Char8
 import SafeRm.Data.Paths
   ( PathI,
     PathIndex (..),
@@ -179,6 +179,31 @@ instance Exception TrashEntryInfoNotFoundE where
         "files entry or deleting everything (i.e. sr e -f)."
       ]
 
+-- | Path found in @trash\/files@ but not @trash\/info@ error.
+--
+-- @since 0.1
+data TrashEntryInfoBadExtE
+  = MkTrashEntryInfoBadExtE
+      !(PathI TrashEntryFileName)
+      !FilePath
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception TrashEntryInfoBadExtE where
+  displayException (MkTrashEntryInfoBadExtE name ext) =
+    mconcat
+      [ "The trash info file '",
+        name ^. #unPathI,
+        "' has an unexpected file extension: ' ",
+        ext,
+        "'. Expected '",
+        Env.trashInfoExtension,
+        "'"
+      ]
+
 -- | Trash path dir not found error.
 --
 -- @since 0.1
@@ -283,7 +308,7 @@ instance Exception InfoDecodeE where
       [ "Could not decode file '",
         path ^. #unPathI,
         "' contents\n",
-        Char8.unpack bs,
+        bsToStr bs,
         "\n: ",
         err
       ]

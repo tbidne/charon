@@ -103,7 +103,7 @@ mkTrashInfoPaths ::
   f FilePath
 mkTrashInfoPaths trashHome = fmap mkTrashInfoPath
   where
-    mkTrashInfoPath p = trashHome </> "info" </> p <> ".json"
+    mkTrashInfoPath p = trashHome </> "info" </> p <> ".trashinfo"
 
 mkTrashPaths ::
   ( Functor f

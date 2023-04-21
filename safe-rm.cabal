@@ -53,6 +53,7 @@ library
     SafeRm.Data.PathData.Internal
     SafeRm.Data.Paths
     SafeRm.Data.PathType
+    SafeRm.Data.Serialize
     SafeRm.Data.Timestamp
     SafeRm.Data.UniqueSeq
     SafeRm.Env
@@ -71,7 +72,6 @@ library
     SafeRm.Utils
 
   build-depends:
-    , aeson                 ^>=2.1.1.0
     , algebra-simple        ^>=0.1
     , base                  >=4.17.0.0  && <4.18
     , bytestring            ^>=0.11.1.0
@@ -111,7 +111,6 @@ library test-utils
   exposed-modules:  Test.Utils
   build-depends:
     , base
-    , bytestring
     , safe-rm
     , tasty-hunit
     , text
@@ -148,6 +147,7 @@ test-suite unit
     , algebra-simple
     , base
     , containers
+    , effects-fs
     , effects-terminal
     , hedgehog              >=1.0.2    && <1.3
     , nonempty-containers

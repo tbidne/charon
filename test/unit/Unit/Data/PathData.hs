@@ -43,6 +43,8 @@ serializeRoundtrip =
       let encoded = PathData.encode pathData
           decoded = PathData.decode fileName encoded
 
+      annotateShow encoded
+
       Right pathData === decoded
 
 genPathData :: Gen PathData

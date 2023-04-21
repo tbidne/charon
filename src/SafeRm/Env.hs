@@ -70,4 +70,4 @@ getTrashInfoDir trashHome = trashHome <//> "info"
 --
 -- @since 0.1
 trashInfoExtension :: (IsString a) => a
-trashInfoExtension = ".json"
+trashInfoExtension = ".trashinfo"

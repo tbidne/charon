@@ -658,7 +658,7 @@ mkTrashPaths trashHome =
   fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
   where
     mkTrashPath p = trashHome </> "files" </> p
-    mkTrashInfoPath p = trashHome </> "info" </> p <> ".json"
+    mkTrashInfoPath p = trashHome </> "info" </> p <> ".trashinfo"
 
 -- NOTE: [OSX temp symlink]
 --

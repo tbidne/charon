@@ -9,12 +9,14 @@ module SafeRm.Data.Timestamp
   ( Timestamp (..),
     toText,
     fromText,
+    toTextSpace,
   )
 where
 
 import Data.Text qualified as T
+import Data.Time.Format qualified as Format
 import Data.Time.LocalTime (LocalTime (..))
-import Effects.Time (formatLocalTime, parseLocalTime)
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Prelude
 
 -- NOTE: We currently do not include any timezone information. We started
@@ -56,17 +58,18 @@ newtype Timestamp = MkTimestamp
 makeFieldLabelsNoPrefix ''Timestamp
 
 -- | @since 0.1
-instance FromJSON Timestamp where
-  parseJSON = fmap MkTimestamp . parseLocalTime <=< parseJSON
-
--- | @since 0.1
-instance ToJSON Timestamp where
-  toJSON = toJSON . formatLocalTime . view #unTimestamp
-  toEncoding = toEncoding . formatLocalTime . view #unTimestamp
-
--- | @since 0.1
 instance Pretty Timestamp where
-  pretty = fromString . formatLocalTime . view #unTimestamp
+  pretty = fromString . formatLocalTimeSpace . view #unTimestamp
+
+-- | @since 0.1
+instance Serialize Timestamp where
+  type DecodeExtra Timestamp = ()
+  encode = encodeUtf8 . toText
+  decode _ bs = case decodeUtf8 bs of
+    Left err -> Left $ displayException err
+    Right timeStr -> case parseLocalTime (T.unpack timeStr) of
+      Nothing -> Left $ "Could not read time: " <> T.unpack timeStr
+      Just t -> Right $ MkTimestamp t
 
 -- | Formats the time.
 --
@@ -77,3 +80,36 @@ toText = T.pack . formatLocalTime . view #unTimestamp
 -- | @since 0.1
 fromText :: (MonadFail f) => Text -> f Timestamp
 fromText = fmap MkTimestamp . parseLocalTime . T.unpack
+
+-- | @since 0.1
+formatLocalTime :: LocalTime -> String
+formatLocalTime = Format.formatTime Format.defaultTimeLocale localTimeFormat
+
+-- | @since 0.1
+parseLocalTime :: (MonadFail f) => String -> f LocalTime
+parseLocalTime =
+  Format.parseTimeM
+    True
+    Format.defaultTimeLocale
+    localTimeFormat
+
+localTimeFormat :: String
+localTimeFormat = "%0Y-%m-%dT%H:%M:%S"
+
+-- | Like 'toText' except adds a space between date and time. Used for
+-- pretty-printing.
+--
+-- @since 0.1
+toTextSpace :: Timestamp -> Text
+toTextSpace = T.pack . formatLocalTimeSpace . view #unTimestamp
+
+-- | Like 'toText' except adds a space between date and time. Used for
+-- pretty-printing.
+--
+-- @since 0.1
+formatLocalTimeSpace :: LocalTime -> String
+formatLocalTimeSpace =
+  Format.formatTime Format.defaultTimeLocale localTimeFormatSpace
+
+localTimeFormatSpace :: String
+localTimeFormatSpace = "%0Y-%m-%d %H:%M:%S"

@@ -71,7 +71,7 @@ import SafeRm.Data.PathData.Internal (PathData)
 import SafeRm.Data.PathData.Internal qualified as Internal
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Timestamp (toText)
+import SafeRm.Data.Timestamp qualified as Timestamp
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -214,11 +214,6 @@ data PathDataFormat
     --
     -- @since 0.1
     FormatTabular !(Maybe ColFormat) !(Maybe ColFormat)
-  -- \| -- | Like 'FormatTabular', except it attempts to detect the best
-  --   -- column widths automatically.
-  --   --
-  --   -- @since 0.1
-  --   FormatTabularAuto
   deriving stock
     ( -- | @since 0.1
       Eq,
@@ -236,7 +231,7 @@ formatMultiLine pd = T.intercalate "\n" strs
         \x -> x <> ":     " <> T.pack (pd ^. #fileName % #unPathI),
         \x -> x <> ": " <> T.pack (pd ^. #originalPath % #unPathI),
         \x -> x <> ":     " <> U.normalizedFormat (pd ^. #size),
-        \x -> x <> ":  " <> toText (pd ^. #created)
+        \x -> x <> ":  " <> Timestamp.toTextSpace (pd ^. #created)
       ]
 
 typeToText :: PathType -> Text
@@ -303,7 +298,7 @@ formatTabularRow nameLen origLen pd =
       sep,
       fixLen' origLen (pd ^. #originalPath % #unPathI),
       sep,
-      toText (pd ^. #created)
+      Timestamp.toTextSpace (pd ^. #created)
     ]
   where
     paddedType PathTypeFile = "F   "

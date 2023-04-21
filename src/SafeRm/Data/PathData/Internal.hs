@@ -14,9 +14,8 @@ module SafeRm.Data.PathData.Internal
   )
 where
 
-import Data.Aeson ((.:), (.=))
-import Data.Aeson qualified as Asn
-import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Char8 qualified as C8
+import Data.HashMap.Strict qualified as Map
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Exts (IsList)
@@ -24,6 +23,7 @@ import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
+import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
@@ -35,72 +35,7 @@ import SafeRm.Exception
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 import System.FilePath qualified as FP
-
--- | Provides the serialized instance for PathData.
---
--- The goal is to serialize PathData, but we do not want to include fileName,
--- as that should be derived from the filename itself. Here are some ideas:
---
--- 1. Use a custom type (e.g. PathData') for the instance which leaves
--- out the fileName field.
---
--- Pro: Simple, does not change anything to the PathData type, entirely
---      internal.
--- Con: Duplicated fields.
---
--- 2. Same as 1, except have PathData directly depend on PathData'.
---
--- Pro: Simple, no duplicated fields.
--- Con: Changes PathData, code that depends on PathData details (e.g. tests)
---      will have to change. Will want manual optics instance so lens still
---      work (e.g. pathData ^. #size).
---
--- 3. Change PathData to Maybe and ignore it in (de)serialization.
---
--- Pro: Simple
--- Con: Code that relies on PathName being present now has to deal with
---      possible failures.
---
--- 4. Higher-kinded data i.e. PathData has field: fileName :: f Path. f will
---    be Maybe for serialization and reduce to Path for main code. Export
---    type PathData = PathDataF (Decoded).
---
--- Pro: Mostly not change PathData. No field duplication.
--- Con: Complex, details leak through (PathData now a type synonym to a more
---      complicated type).
---
--- We choose 1.
---
--- @since 0.1
-data PathData' = MkPathData'
-  { pathType :: !PathType,
-    originalPath :: !(PathI TrashEntryOriginalPath),
-    size :: !(Bytes B Natural),
-    created :: !Timestamp
-  }
-  deriving stock (Generic, Show)
-
--- | @since 0.1
-makeFieldLabelsNoPrefix ''PathData'
-
--- | @since 0.1
-instance FromJSON PathData' where
-  parseJSON = Asn.withObject "PathData'" $ \pd ->
-    MkPathData'
-      <$> pd .: "type"
-      <*> pd .: "original"
-      <*> (MkBytes <$> pd .: "size")
-      <*> pd .: "created"
-
--- | @since 0.1
-instance ToJSON PathData' where
-  toJSON pd =
-    Asn.object
-      [ "type" .= (pd ^. #pathType),
-        "original" .= (pd ^. #originalPath),
-        "size" .= (pd ^. #size % _MkBytes),
-        "created" .= (pd ^. #created)
-      ]
+import Text.Read qualified as TR
 
 -- | Data for a path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -249,40 +184,52 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
         created = currTime
       }
 
--- | Encodes the 'PathData' to a bytestring, ignoring the 'fieldName'
--- field.
---
--- @since 0.1
-encode :: PathData -> ByteString
-encode = BSL.toStrict . Asn.encode . fromPD
-  where
-    fromPD pd =
-      MkPathData'
-        { pathType = pd ^. #pathType,
-          originalPath = pd ^. #originalPath,
-          size = pd ^. #size,
-          created = pd ^. #created
-        }
+instance Serialize PathData where
+  type DecodeExtra PathData = PathI TrashEntryFileName
 
--- | Decodes the bytestring to the 'PathData', using the passed TrashEntryFileName
--- as the 'fieldName'.
---
--- @since 0.1
-decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
-decode name bs = case result of
-  Right pd -> Right $ toPD pd
-  Left err -> Left err
-  where
-    result = Asn.eitherDecode' (BSL.fromStrict bs)
-    toPD :: PathData' -> PathData
-    toPD pd' =
-      UnsafePathData
-        { fileName = name,
-          pathType = pd' ^. #pathType,
-          originalPath = pd' ^. #originalPath,
-          size = pd' ^. #size,
-          created = pd' ^. #created
-        }
+  encode :: PathData -> ByteString
+  encode pd =
+    C8.unlines
+      [ "[Trash Info]",
+        "Path=" <> encode (pd ^. (#originalPath)),
+        "DeletionDate=" <> encode (pd ^. #created),
+        "Size=" <> pd ^. (#size % _MkBytes % shown % packed % packedbs),
+        "Type=" <> encode (pd ^. #pathType)
+      ]
+
+  decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
+  decode name bs = do
+    case C8.lines bs of
+      [] -> Left "Received empty pathdata"
+      (h : rest) | isHeader h -> do
+        let mp = Map.fromList (fmap breakEq rest)
+
+        originalPath <- decodeUnit =<< lookup "Path" mp
+        created <- decodeUnit =<< lookup "DeletionDate" mp
+        size <- decodeSize =<< lookup "Size" mp
+        pathType <- decodeUnit =<< lookup "Type" mp
+
+        Right $
+          UnsafePathData
+            { fileName = name,
+              originalPath,
+              pathType,
+              size,
+              created
+            }
+      _ -> Left $ "Did not receive header [Trash Info]: " <> bsToStr bs
+    where
+      isHeader = (== "[Trash Info]")
+
+      decodeSize bs' = do
+        let bytesStr = C8.unpack bs'
+        case TR.readMaybe bytesStr of
+          Nothing -> Left $ "Could not read bytes: " <> bytesStr
+          Just n -> Right $ MkBytes n
+
+      lookup k mp = case Map.lookup k mp of
+        Nothing -> Left $ "Could not find key: " <> bsToStr k
+        Just v -> Right v
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
@@ -333,3 +280,11 @@ throwIfIllegal p =
         | Paths.isRoot p -> $(logError) "Path is root!" *> throwCS MkRootE
         | Paths.isEmpty p -> $(logError) "Path is empty!" *> throwCS MkEmptyPathE
         | otherwise -> pure ()
+
+breakEq :: ByteString -> (ByteString, ByteString)
+breakEq bs = (left, right')
+  where
+    (left, right) = C8.break (== '=') bs
+    right' = case C8.uncons right of
+      Nothing -> ""
+      Just (_, rest) -> rest

@@ -26,7 +26,6 @@ module Test.Utils
   )
 where
 
-import Data.ByteString.Char8 qualified as Char8
 import Data.List qualified as L
 import Data.Text qualified as T
 import SafeRm.Data.Paths (PathI)
@@ -69,7 +68,7 @@ createFileContents paths = for_ paths $
             [ "[Test.Utils.createFileContents] Exception for file '",
               p,
               "' and contents '",
-              Char8.unpack c,
+              bsToStr c,
               "': ",
               displayException ex
             ]

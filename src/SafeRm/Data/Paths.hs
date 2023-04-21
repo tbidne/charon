@@ -35,6 +35,7 @@ where
 
 import Data.List qualified as L
 import Data.Text qualified as T
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Prelude
 
 -- | Types of filepaths used in SafeRm.
@@ -65,7 +66,7 @@ data PathIndex
     --
     -- @since 0.1
     TrashEntryPath
-  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.json@.
+  | -- | The full trash info path i.e. @\<trash-home\>\/info\/'\<trash-name\>.trashinfo@.
     --
     -- @since 0.1
     TrashEntryInfo
@@ -105,19 +106,24 @@ newtype PathI (i :: PathIndex) = MkPathI
     )
   deriving
     ( -- | @since 0.1
-      FromJSON,
-      -- | @since 0.1
       IsString,
       -- | @since 0.1
       Monoid,
       -- | @since 0.1
-      Semigroup,
-      -- | @since 0.1
-      ToJSON
+      Semigroup
     )
     via FilePath
 
 makeFieldLabelsNoPrefix ''PathI
+
+-- | @since 0.1
+instance Serialize (PathI i) where
+  type DecodeExtra (PathI i) = ()
+
+  -- encode = C8.pack . view #unPathI
+  encode = encodeUtf8 . view (#unPathI % packed)
+
+  decode _ bs = bimap displayException (MkPathI . T.unpack) (decodeUtf8 bs)
 
 -- | Modifies the index.
 --

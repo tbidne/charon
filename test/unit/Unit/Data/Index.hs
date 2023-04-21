@@ -153,7 +153,7 @@ testFormatTabularAutoApprox = testGoldenFormat desc fileName mkIdx formatTabular
     desc = "Auto tabular falls back to estimates for large paths"
     fileName = "tabular-auto-large-approx"
     mkIdx = do
-      ts <- fromText "2020-05-31 12:00:00"
+      ts <- fromText "2020-05-31T12:00:00"
       pure $
         MkIndex
           [ UnsafePathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
@@ -292,7 +292,7 @@ mkIndex = do
     -- 5,000 Y
     largeFile = afromInteger 5_000_000_000_000_000_000_000_000_000
     ts' :: (MonadFail f) => f Timestamp
-    ts' = fromText "2020-05-31 12:00:00"
+    ts' = fromText "2020-05-31T12:00:00"
 
 toBS :: Text -> ByteString
 toBS = TEnc.encodeUtf8

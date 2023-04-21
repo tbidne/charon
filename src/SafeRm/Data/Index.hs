@@ -45,6 +45,7 @@ import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
+    TrashEntryInfoBadExtE (..),
     TrashEntryInfoNotFoundE (..),
   )
 import SafeRm.Prelude
@@ -113,6 +114,12 @@ readIndex trashHome = addNamespace "readIndex" $ do
         m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->
         m (Seq PathData, HashSet (PathI TrashEntryFileName))
       seqify p macc = do
+        let ext = FP.takeExtension p
+
+        when (ext /= Env.trashInfoExtension) $
+          throwCS $
+            MkTrashEntryInfoBadExtE (MkPathI p) ext
+
         let path = trashInfoDir' </> p
         $(logDebug) ("Path: " <> T.pack path)
 
