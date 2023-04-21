@@ -74,14 +74,6 @@ lint:
 lintc:
 	hlint . --ignore-glob=dist-newstyle --ignore-glob=stack-work
 
-# linting
-
-lint:
-	nix run github:tbidne/nix-hs-tools/0.8#hlint -- --refact
-
-lintc:
-	nix run github:tbidne/nix-hs-tools/0.8#hlint
-
 # generate docs for main package, copy to docs/
 haddock:
 	cabal haddock --haddock-hyperlink-source --haddock-quickjump ;\
