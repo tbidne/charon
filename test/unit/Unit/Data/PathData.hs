@@ -13,18 +13,39 @@ import SafeRm.Data.PathData.Internal
 import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
+import SafeRm.Data.Timestamp qualified as Timestamp
 import Unit.Prelude
 
 tests :: TestTree
 tests =
   testGroup
     "Data.PathData"
-    [ serializeRoundtrip
+    [ serializeRoundtripSpecs,
+      serializeRoundtripProp
     ]
 
-serializeRoundtrip :: TestTree
-serializeRoundtrip =
-  testPropertyNamed "decode . encode ~ id" "serializeRoundtrip" $ do
+serializeRoundtripSpecs :: TestTree
+serializeRoundtripSpecs = testCase "decode . encode ~ id (specs)" $ do
+  ts <- Timestamp.fromText "1858-11-17T00:00:00"
+
+  let (pd1, encoded1) = mkPd ts "\NUL" "\t"
+  "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded1
+  Right pd1 @=? PathData.decode (MkPathI "\NUL") encoded1
+  where
+    mkPd ts fileName' originalPath' =
+      let pd =
+            UnsafePathData
+              { pathType = PathTypeDirectory,
+                fileName = MkPathI fileName',
+                originalPath = MkPathI originalPath',
+                size = MkBytes 0,
+                created = ts
+              }
+       in (pd, PathData.encode pd)
+
+serializeRoundtripProp :: TestTree
+serializeRoundtripProp =
+  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripProp" $ do
     property $ do
       pathData@(UnsafePathData _ fileName _ _ _) <- forAll genPathData
       -- NOTE:
@@ -42,6 +63,8 @@ serializeRoundtrip =
       -- precision > second.
       let encoded = PathData.encode pathData
           decoded = PathData.decode fileName encoded
+
+      annotateShow encoded
 
       annotateShow encoded
 
