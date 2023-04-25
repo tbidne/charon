@@ -25,11 +25,11 @@ import Effects.FileSystem.PathWriter (removeFile)
 import Effects.System.Terminal (MonadTerminal (..))
 import SafeRm.Data.Index (Index (..))
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData (PathData)
+import SafeRm.Data.PathData (PathData, PathDataBackend (..))
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI (..), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env (HasTrashHome (..))
 import SafeRm.Env qualified as Env
@@ -129,7 +129,8 @@ mvOriginalToTrash ::
   m ()
 mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
   -- 1. Transform path to PathData
-  pd <- PathData.toPathData currTime trashHome path
+  -- TODO: configurable
+  pd <- PathData.toPathData PathDataBackendDefault currTime trashHome path
   $(logDebug) ("Deleting: " <> showt pd)
 
   let MkPathI trashPath = PathData.pathDataToTrashPath trashHome pd
@@ -139,11 +140,11 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   --
   -- Perform this before the actual move to be safe i.e. path is only moved
   -- if info is already created.
-  let encoded = PathData.encode pd
+  let encoded = encode pd
   writeBinaryFile trashInfoPath encoded
 
   -- 4. Move file to trash
-  let moveFn = mvPathData pd (pd ^. #originalPath % #unPathI) trashPath
+  let moveFn = PathData.moveFn pd (pd ^. #originalPath % #unPathI) trashPath
 
   -- 5. If move failed, roll back info file
   moveFn `onException` removeFile trashInfoPath
@@ -217,11 +218,9 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
   readIORef anyFailedRef
   where
     deleteFn' pd = do
-      let delFn = PathData.getDeleteFn pd
-          MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
-          MkPathI trashInfoPath' = Env.getTrashInfoPath trashHome (pd ^. #fileName)
+      let MkPathI trashInfoPath' = Env.getTrashInfoPath trashHome (pd ^. #fileName)
 
-      delFn trashPath'
+      PathData.deleteFileName trashHome pd
       $(logDebug) ("Deleted: " <> showt pd)
       removeFile trashInfoPath'
 
@@ -283,7 +282,7 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
           MkPathI trashInfoPath' = Env.getTrashInfoPath trashHome (pd ^. #fileName)
 
       -- 3. Attempt restore
-      mvPathData pd trashPath' (pd ^. #originalPath % #unPathI)
+      PathData.moveFn pd trashPath' (pd ^. #originalPath % #unPathI)
 
       -- 4. Delete info
       --
@@ -308,19 +307,18 @@ findOnePathData trashHome pathName = do
       MkTrashEntryNotFoundE pathName trashInfoPath
 
   contents <- readBinaryFile trashInfoPath'
-  pathData <- case PathData.decode pathName contents of
+  -- TODO: configurable
+  pathData <- case decode (PathDataBackendDefault, pathName) contents of
     Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
     Right pd -> pure pd
 
-  let existsFn = PathData.getExistsFn pathData
-  pathExists <- existsFn trashPath'
+  pathExists <- PathData.trashPathExists trashHome pathData
   unless pathExists $
     throwCS $
       MkTrashEntryFileNotFoundE trashHome pathName
 
   pure pathData
   where
-    MkPathI trashPath' = Env.getTrashPath trashHome pathName
     trashInfoPath@(MkPathI trashInfoPath') = Env.getTrashInfoPath trashHome pathName
 
 findManyPathData ::
@@ -346,20 +344,6 @@ findManyPathData trashHome pathName = do
         . view (#fileName % #unPathI)
 
     pathNameText = T.pack $ pathName ^. #unPathI
-
-mvPathData ::
-  ( HasCallStack,
-    MonadPathWriter m
-  ) =>
-  PathData ->
-  Path ->
-  Path ->
-  m ()
-mvPathData pd = renameFn
-  where
-    renameFn = case pd ^. #pathType of
-      PathTypeFile -> renameFile
-      PathTypeDirectory -> renameDirectory
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout

@@ -9,7 +9,7 @@ module Unit.Runner
 where
 
 import SafeRm.Data.Index (Sort (Name))
-import SafeRm.Data.PathData (ColFormat (..), PathDataFormat (..))
+import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
   ( _Delete,

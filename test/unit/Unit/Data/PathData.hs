@@ -8,10 +8,11 @@ import Data.Time (LocalTime (LocalTime), TimeOfDay (..))
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Internal
+import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI (..))
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import Unit.Prelude
@@ -20,34 +21,42 @@ tests :: TestTree
 tests =
   testGroup
     "Data.PathData"
-    [ serializeRoundtripSpecs,
-      serializeRoundtripProp
+    [ defaultTests,
+      fdoTests
     ]
 
-serializeRoundtripSpecs :: TestTree
-serializeRoundtripSpecs = testCase "decode . encode ~ id (specs)" $ do
+defaultTests :: TestTree
+defaultTests =
+  testGroup
+    "Default"
+    [ serializeRoundtripSpecsDefault,
+      serializeRoundtripPropDefault
+    ]
+
+serializeRoundtripSpecsDefault :: TestTree
+serializeRoundtripSpecsDefault = testCase "decode . encode ~ id (specs)" $ do
   ts <- Timestamp.fromText "1858-11-17T00:00:00"
 
   let (pd1, encoded1) = mkPd ts "\NUL" "\t"
   "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded1
-  Right pd1 @=? PathData.decode (MkPathI "\NUL") encoded1
+  Right pd1 @=? decode (MkPathI "\NUL") encoded1
   where
     mkPd ts fileName' originalPath' =
       let pd =
-            UnsafePathData
+            Default.UnsafePathData
               { pathType = PathTypeDirectory,
                 fileName = MkPathI fileName',
                 originalPath = MkPathI originalPath',
                 size = MkBytes 0,
                 created = ts
               }
-       in (pd, PathData.encode pd)
+       in (pd, encode pd)
 
-serializeRoundtripProp :: TestTree
-serializeRoundtripProp =
-  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripProp" $ do
+serializeRoundtripPropDefault :: TestTree
+serializeRoundtripPropDefault =
+  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripPropDefault" $ do
     property $ do
-      pathData@(UnsafePathData _ fileName _ _ _) <- forAll genPathData
+      pathData@(Default.UnsafePathData _ fileName _ _ _) <- forAll genDefaultPathData
       -- NOTE:
       -- Two caveats on injectivity:
       --
@@ -61,8 +70,8 @@ serializeRoundtripProp =
       -- precision whereas the timestamp field technically has picosecond
       -- resolution. This is acceptable, as we do not care about
       -- precision > second.
-      let encoded = PathData.encode pathData
-          decoded = PathData.decode fileName encoded
+      let encoded = encode pathData
+          decoded = decode fileName encoded
 
       annotateShow encoded
 
@@ -70,9 +79,61 @@ serializeRoundtripProp =
 
       Right pathData === decoded
 
-genPathData :: Gen PathData
-genPathData =
-  UnsafePathData
+fdoTests :: TestTree
+fdoTests =
+  testGroup
+    "FDO"
+    [ serializeRoundtripSpecsFdo,
+      serializeRoundtripPropFdo
+    ]
+
+serializeRoundtripSpecsFdo :: TestTree
+serializeRoundtripSpecsFdo = testCase "decode . encode ~ id (specs)" $ do
+  ts <- Timestamp.fromText "1858-11-17T00:00:00"
+
+  let (pd1, encoded1) = mkPd ts "\NUL" "\t"
+  "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\n" @=? encoded1
+  Right pd1 @=? decode (MkPathI "\NUL") encoded1
+  where
+    mkPd ts fileName' originalPath' =
+      let pd =
+            Fdo.UnsafePathData
+              { fileName = MkPathI fileName',
+                originalPath = MkPathI originalPath',
+                created = ts
+              }
+       in (pd, encode pd)
+
+serializeRoundtripPropFdo :: TestTree
+serializeRoundtripPropFdo =
+  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripPropFdo" $ do
+    property $ do
+      pathData@(Fdo.UnsafePathData fileName _ _) <- forAll genFdoPathData
+      -- NOTE:
+      -- Two caveats on injectivity:
+      --
+      -- 1. The fileName is thrown away. However this is intentional as we
+      -- want it in the actual file name only (otherwise it is redundant).
+      --
+      -- We can thus think of the actual injection in terms of the implicit
+      -- file name that is created by the encoding.
+      --
+      -- 2. We lose precision in the created timestamp, as we encode to second
+      -- precision whereas the timestamp field technically has picosecond
+      -- resolution. This is acceptable, as we do not care about
+      -- precision > second.
+      let encoded = encode pathData
+          decoded = decode fileName encoded
+
+      annotateShow encoded
+
+      annotateShow encoded
+
+      Right pathData === decoded
+
+genDefaultPathData :: Gen Default.PathData
+genDefaultPathData =
+  Default.UnsafePathData
     <$> genPathType
     <*> genFileName
     <*> genOriginalPath
@@ -83,6 +144,16 @@ genPathData =
     genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) Gen.unicode
     genPathType = Gen.element [PathTypeDirectory, PathTypeFile]
     genSize = MkBytes <$> Gen.integral (Range.exponential 0 1_000_000_000_000)
+
+genFdoPathData :: Gen Fdo.PathData
+genFdoPathData =
+  Fdo.UnsafePathData
+    <$> genFileName
+    <*> genOriginalPath
+    <*> genTimestamp
+  where
+    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) Gen.unicode
+    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) Gen.unicode
 
 genTimestamp :: Gen Timestamp
 genTimestamp = MkTimestamp <$> genLocalTime

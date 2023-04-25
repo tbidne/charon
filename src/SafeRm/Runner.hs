@@ -22,7 +22,7 @@ import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData (PathDataFormat)
+import SafeRm.Data.PathData.Formatting (PathDataFormat)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
@@ -204,8 +204,9 @@ printIndex ::
     HasTrashHome env,
     MonadCatch m,
     MonadFileReader m,
-    MonadPathReader m,
     MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathSize m,
     MonadReader env m,
     MonadTerminal m
   ) =>

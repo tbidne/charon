@@ -48,7 +48,8 @@ import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import PathSize qualified
 import SafeRm qualified
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData.Internal (PathData (..))
+import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData (PathData (..))
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
@@ -310,7 +311,7 @@ captureSafeRmExceptionLogs argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-runIndexMetadata :: FilePath -> IO (HashSet PathData, Metadata)
+runIndexMetadata :: FilePath -> IO (HashSet Default.PathData, Metadata)
 runIndexMetadata testDir = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
@@ -333,6 +334,7 @@ runIndexMetadata testDir = do
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
+    addSet :: String -> HashSet Default.PathData -> PathData -> HashSet Default.PathData
     addSet tmp acc pd =
       let fixPath =
             MkPathI
@@ -340,23 +342,18 @@ runIndexMetadata testDir = do
               . T.replace (T.pack tmp) ""
               . T.pack
               . view #unPathI
-          pd' =
-            UnsafePathData
-              { pathType = pd ^. #pathType,
-                fileName = pd ^. #fileName,
-                originalPath = fixPath (pd ^. #originalPath),
-                size = pd ^. #size,
-                created = pd ^. #created
-              }
-       in HSet.insert pd' acc
+          -- TODO: Replace this with over' once we change the Getter to a Lens
+       in case pd of
+            PathDataDefault d -> HSet.insert (over' #originalPath fixPath d) acc
+            PathDataFdo _ -> acc --HSet.insert (over' #originalPath fixPath d) acc
 
 mkPathData ::
   PathType ->
   PathI TrashEntryFileName ->
   PathI TrashEntryOriginalPath ->
-  PathData
+  Default.PathData
 mkPathData pathType fileName originalPath =
-  UnsafePathData
+  Default.UnsafePathData
     { pathType,
       fileName,
       originalPath = U.massagePathI originalPath,

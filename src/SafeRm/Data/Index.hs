@@ -33,14 +33,19 @@ import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (..))
 import SafeRm.Data.PathData
-  ( ColFormat (..),
-    PathData,
-    PathDataFormat (..),
-    sortCreatedName,
+  ( PathData,
+    PathDataBackend (..),
   )
 import SafeRm.Data.PathData qualified as PathData
+import SafeRm.Data.PathData.Default qualified as PathDataDefault
+import SafeRm.Data.PathData.Formatting
+  ( ColFormat (..),
+    PathDataFormat (..),
+  )
+import SafeRm.Data.PathData.Formatting qualified as Formatting
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
@@ -50,6 +55,8 @@ import SafeRm.Exception
   )
 import SafeRm.Prelude
 import System.FilePath qualified as FP
+
+type PathDataDefault = PathDataDefault.PathData
 
 -- | Index that stores the trash data.
 --
@@ -79,15 +86,6 @@ newtype Index = MkIndex
 
 -- | @since 0.1
 makeFieldLabelsNoPrefix ''Index
-
--- | @since 0.1
-instance Pretty Index where
-  pretty =
-    vsep
-      . fmap pretty
-      . toList
-      . Seq.sortBy sortCreatedName
-      . view #unIndex
 
 -- | Reads the trash directory into the 'Index'. If this succeeds then
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
@@ -126,7 +124,8 @@ readIndex trashHome = addNamespace "readIndex" $ do
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
             fileName = FP.dropExtension $ FP.takeFileName path
-            decoded = PathData.decode (MkPathI fileName) contents
+            -- TODO: Configurable
+            decoded = decode (PathDataBackendDefault, MkPathI fileName) contents
         case decoded of
           Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
           Right pd -> do
@@ -206,13 +205,13 @@ readSort "name" = pure Name
 readSort "size" = pure Size
 readSort other = fail $ "Unrecognized sort: " <> T.unpack other
 
-sortFn :: Bool -> Sort -> PathData -> PathData -> Ordering
+sortFn :: Bool -> Sort -> PathDataDefault -> PathDataDefault -> Ordering
 sortFn b = \case
-  Name -> rev PathData.sortNameCreated
-  Size -> rev PathData.sortSizeName
+  Name -> rev Formatting.sortNameCreated
+  Size -> rev Formatting.sortSizeName
   where
     rev
-      | b = PathData.sortReverse
+      | b = Formatting.sortReverse
       | otherwise = id
 
 -- | Formats the 'Index' in a pretty way.
@@ -223,19 +222,21 @@ formatIndex ::
   ( HasCallStack,
     MonadCatch m,
     MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathSize m,
     MonadTerminal m
   ) =>
   -- | Format to use
   PathDataFormat ->
   -- | How to sort
   Sort ->
-  -- | If true, reverses the sort
+  -- | If true, reverses the sortPathData
   Bool ->
   -- | The index to format
   Index ->
   m Text
 formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
-  FormatMultiline -> pure $ multiline (sortFn revSort sort) idx
+  FormatMultiline -> multiline (sortFn revSort sort) <$> indexToSeq idx
   FormatTabular nameFormat origFormat -> do
     -- NOTE: We want to format the table such that we (concisely) display as
     -- much information as possible while trying to avoid ugly text wrapping
@@ -283,18 +284,18 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     -- maxLenForDynCols := available combined length for our dynamic
     -- columns (fileName + originalPath)
     maxLenForDynCols <-
-      if maxLen < PathData.minTableWidth
+      if maxLen < Formatting.minTableWidth
         then
           throwString $
             mconcat
               [ "Terminal width (",
                 show maxLen,
                 ") is less than minimum width (",
-                show PathData.minTableWidth,
+                show Formatting.minTableWidth,
                 ") for automatic tabular display.",
                 " Perhaps try multiline."
               ]
-        else pure $ maxLen - PathData.reservedLineLen
+        else pure $ maxLen - Formatting.reservedLineLen
 
     -- Basically: if an option is explicitly specified; use it. Otherwise,
     -- try to calculate a "good" value.
@@ -311,7 +312,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 
-    pure $ tabular (sortFn revSort sort) nameLen origLen idx
+    tabular (sortFn revSort sort) nameLen origLen <$> indexToSeq idx
     where
       -- Search the index; find the longest name and orig path
       (maxNameLen, maxOrigLen) = foldl' foldMap maxStart (idx ^. #unIndex)
@@ -320,7 +321,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
         ( max maxNameSoFar (pathLen $ pd ^. #fileName),
           max maxOrigSoFar (pathLen $ pd ^. #originalPath)
         )
-      maxStart = (PathData.formatFileNameLenMin, PathData.formatOriginalPathLenMin)
+      maxStart = (Formatting.formatFileNameLenMin, Formatting.formatOriginalPathLenMin)
       pathLen = fromIntegral . Paths.applyPathI length
 
       -- Map the name format to its strategy
@@ -341,7 +342,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
           else do
             -- 2. MaxOrigLen will not fit; use all remaining space to print
             -- as much as we can. As we require at least
-            -- PathData.formatOriginalPathLenMin, this could lead to wrapping.
+            -- Formatting.formatOriginalPathLenMin, this could lead to wrapping.
             if nLen < maxLenForDynCols
               then do
                 $(logDebug) $
@@ -354,7 +355,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure (nLen, max (maxLenForDynCols - nLen) PathData.formatOriginalPathLenMin)
+                pure (nLen, max (maxLenForDynCols - nLen) Formatting.formatOriginalPathLenMin)
               else -- 3. Requested nameLen > available space. We are going to wrap
               -- regardless, so use it and the minimum orig.
               do
@@ -365,9 +366,9 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       ") > calculated terminal space (",
                       showt maxLenForDynCols,
                       "). Falling back to minimum original path len: ",
-                      showt PathData.formatOriginalPathLenMin
+                      showt Formatting.formatOriginalPathLenMin
                     ]
-                pure (nLen, PathData.formatOriginalPathLenMin)
+                pure (nLen, Formatting.formatOriginalPathLenMin)
 
       -- Given a fixed origLen, derive a "good" nameLen
       mkNameLen maxLenForDynCols oLen =
@@ -377,7 +378,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
           else do
             -- 2. MaxNameLen will not fit; use all remaining space to print
             -- as much as we can. As we require at least
-            -- PathData.formatFileNameLenMin, this could lead to wrapping.
+            -- Formatting.formatFileNameLenMin, this could lead to wrapping.
             if oLen < maxLenForDynCols
               then do
                 $(logDebug) $
@@ -390,7 +391,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       showt maxLenForDynCols,
                       ")"
                     ]
-                pure (max (maxLenForDynCols - oLen) PathData.formatFileNameLenMin, oLen)
+                pure (max (maxLenForDynCols - oLen) Formatting.formatFileNameLenMin, oLen)
               else -- 3. Requested origLen > available space. We are going to wrap
               -- regardless, so use it and the minimum name.
               do
@@ -401,9 +402,9 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                       ") > calculated terminal space (",
                       showt maxLenForDynCols,
                       "). Falling back to minimum name len: ",
-                      showt PathData.formatFileNameLenMin
+                      showt Formatting.formatFileNameLenMin
                     ]
-                pure (PathData.formatFileNameLenMin, oLen)
+                pure (Formatting.formatFileNameLenMin, oLen)
 
 getMaxLen :: (MonadCatch m, MonadLogger m, MonadTerminal m) => m Natural
 getMaxLen = do
@@ -415,30 +416,31 @@ getMaxLen = do
           <> displayExceptiont err
       pure 80
 
-multiline :: (PathData -> PathData -> Ordering) -> Index -> Text
+multiline :: (PathDataDefault -> PathDataDefault -> Ordering) -> Seq PathDataDefault -> Text
 multiline sort =
   T.intercalate "\n\n"
-    . fmap PathData.formatMultiLine
+    . fmap Formatting.formatMultiLine
     . toList
     . getElems sort
 
 tabular ::
-  (PathData -> PathData -> Ordering) ->
+  (PathDataDefault -> PathDataDefault -> Ordering) ->
   Natural ->
   Natural ->
-  Index ->
+  Seq PathDataDefault ->
   Text
 tabular sort nameLen origLen =
-  ((PathData.formatTabularHeader nameLen origLen <> "\n") <>)
+  ((Formatting.formatTabularHeader nameLen origLen <> "\n") <>)
     . T.intercalate "\n"
-    . fmap (PathData.formatTabularRow nameLen origLen)
+    . fmap (Formatting.formatTabularRow nameLen origLen)
     . toList
     . getElems sort
 
-getElems :: (PathData -> PathData -> Ordering) -> Index -> Seq PathData
-getElems sort =
-  Seq.sortBy sort
-    . view #unIndex
+getElems ::
+  (PathDataDefault -> PathDataDefault -> Ordering) ->
+  Seq PathDataDefault ->
+  Seq PathDataDefault
+getElems = Seq.sortBy
 
 -- | @since 0.1
 fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
@@ -450,3 +452,13 @@ insert ::
   HashMap (PathI 'TrashEntryFileName) PathData ->
   HashMap (PathI 'TrashEntryFileName) PathData
 insert pd = HMap.insert (pd ^. #fileName) pd
+
+indexToSeq ::
+  ( MonadLogger m,
+    MonadPathReader m,
+    MonadPathSize m,
+    MonadTerminal m
+  ) =>
+  Index ->
+  m (Seq PathDataDefault)
+indexToSeq = traverse PathData.normalizeDefault . view #unIndex

@@ -5,7 +5,8 @@ module Main (main) where
 
 import Test.Tasty qualified as Tasty
 import Test.Tasty.Golden (DeleteOutputFile (OnPass))
-import Unit.Data.Index qualified as Data.Index
+import Unit.Data.Index.Default qualified as Data.Index.Default
+import Unit.Data.Index.Fdo qualified as Data.Index.Fdo
 import Unit.Data.PathData qualified as Data.PathData
 import Unit.Data.UniqueSeq qualified as Data.UniqueSeq
 import Unit.Prelude
@@ -22,7 +23,8 @@ main =
     Tasty.localOption OnPass $
       testGroup
         "Unit Tests"
-        [ Data.Index.tests,
+        [ Data.Index.Default.tests,
+          Data.Index.Fdo.tests,
           Data.PathData.tests,
           Data.UniqueSeq.tests,
           Runner.tests,

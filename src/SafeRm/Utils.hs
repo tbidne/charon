@@ -15,9 +15,11 @@ module SafeRm.Utils
     matchesWildcards,
     stripInfix,
     setRefIfTrue,
+    breakEqBS,
   )
 where
 
+import Data.ByteString.Char8 qualified as C8
 import Data.Bytes qualified as Bytes
 import Data.Bytes.Class.Wrapper (Unwrapper (Unwrapped))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
@@ -179,3 +181,13 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
 setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
 setRefIfTrue _ False = pure ()
 setRefIfTrue ref True = writeIORef ref True
+
+-- | Breaks a bytestring on the first '='. The '=' is removed from the second
+-- element.
+breakEqBS :: ByteString -> (ByteString, ByteString)
+breakEqBS bs = (left, right')
+  where
+    (left, right) = C8.break (== '=') bs
+    right' = case C8.uncons right of
+      Nothing -> ""
+      Just (_, rest) -> rest

@@ -3,9 +3,13 @@
 -- @since 0.1
 module SafeRm.Data.PathType
   ( PathType (..),
+    deleteFn,
+    existsFn,
+    renameFn,
   )
 where
 
+import Effects.FileSystem.PathWriter (MonadPathWriter (..))
 import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Prelude
 
@@ -50,3 +54,34 @@ instance Serialize PathType where
   decode _ "f" = Right PathTypeFile
   decode _ "d" = Right PathTypeDirectory
   decode _ other = Left $ "Could not decode path type: '" <> bsToStr other <> "'"
+
+existsFn ::
+  ( HasCallStack,
+    MonadPathReader m
+  ) =>
+  PathType ->
+  Path ->
+  m Bool
+existsFn PathTypeFile = doesFileExist
+existsFn PathTypeDirectory = doesDirectoryExist
+
+renameFn ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathType ->
+  Path ->
+  Path ->
+  m ()
+renameFn PathTypeFile = renameFile
+renameFn PathTypeDirectory = renameDirectory
+
+deleteFn ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathType ->
+  Path ->
+  m ()
+deleteFn PathTypeFile = removeFile
+deleteFn PathTypeDirectory = removeDirectoryRecursive

@@ -42,8 +42,8 @@ import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import SafeRm.Data.Index (Sort, readSort)
-import SafeRm.Data.PathData (ColFormat (..))
-import SafeRm.Data.PathData qualified as PathData
+import SafeRm.Data.PathData.Formatting (ColFormat (..))
+import SafeRm.Data.PathData.Formatting qualified as PathData
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude

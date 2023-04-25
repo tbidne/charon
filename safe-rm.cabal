@@ -50,7 +50,10 @@ library
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData
-    SafeRm.Data.PathData.Internal
+    SafeRm.Data.PathData.Common
+    SafeRm.Data.PathData.Default
+    SafeRm.Data.PathData.Fdo
+    SafeRm.Data.PathData.Formatting
     SafeRm.Data.Paths
     SafeRm.Data.PathType
     SafeRm.Data.Serialize
@@ -135,7 +138,8 @@ test-suite unit
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
-    Unit.Data.Index
+    Unit.Data.Index.Default
+    Unit.Data.Index.Fdo
     Unit.Data.PathData
     Unit.Data.UniqueSeq
     Unit.Prelude
