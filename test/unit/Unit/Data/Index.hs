@@ -451,7 +451,9 @@ testGolden
       (gpath, apath) = mkGoldenPaths backend fileName
 
 mkGoldenPaths :: Backend -> FilePath -> (FilePath, FilePath)
-mkGoldenPaths b fp = (goldenPath </> fp' <> ".golden", goldenPath </> fp' <> ".actual")
+-- NOTE: Using the same goldens for all backends since we want formatting to be
+-- consistent.
+mkGoldenPaths b fp = (goldenPath </> fp <> ".golden", goldenPath </> fpBackend <> ".actual")
   where
-    fp' = fp ++ "-" ++ Backend.backendArg b
+    fpBackend = fp ++ "-" ++ Backend.backendArg b
     goldenPath = "test/unit/Unit/Data/Index"
