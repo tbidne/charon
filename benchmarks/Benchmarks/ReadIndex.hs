@@ -1,6 +1,4 @@
 -- | Benchmarks for reading the index.
---
--- @since 0.1
 module Benchmarks.ReadIndex
   ( setup,
     benchmarks,
@@ -15,8 +13,6 @@ import SafeRm.Runner.Env (Env (MkEnv, logEnv, trashHome), LogEnv (MkLogEnv))
 import SafeRm.Runner.SafeRmT (runSafeRmT)
 
 -- | Index reading benchmarks.
---
--- @since 0.1
 benchmarks :: FilePath -> Benchmark
 benchmarks tmpDir = do
   bgroup
@@ -27,8 +23,6 @@ benchmarks tmpDir = do
     ]
 
 -- | Setup for index reading.
---
--- @since 0.1
 setup :: FilePath -> IO ()
 setup testDir = do
   setupRead r1 [1 .. 1_000]

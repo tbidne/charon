@@ -2,8 +2,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides the 'Command' type.
---
--- @since 0.1
 module SafeRm.Runner.Command
   ( -- * Types
     Command (..),
@@ -39,56 +37,35 @@ instance AdvancePhase (Command Phase1) where
   advancePhase (Convert dest) = Convert dest
 
 -- | Action to run.
---
--- @since 0.1
 type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
-    --
-    -- @since 0.1
     Delete !(UniqueSeq (PathI TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
-    --
-    -- @since 0.1
     DeletePerm
       !Bool
       !(UniqueSeq (PathI TrashEntryFileName))
   | -- | Empties the trash.
-    --
-    -- @since 0.1
     Empty !Bool
   | -- | Restores a path.
-    --
-    -- @since 0.1
     Restore (UniqueSeq (PathI TrashEntryFileName))
   | -- | List all trash contents.
-    --
-    -- @since 0.1
     List !(ListCmd s)
   | -- | Prints trash metadata.
-    --
-    -- @since 0.1
     Metadata
   | -- | Converts backend files.
     Convert !Backend
 
--- | @since 0.1
 makePrisms ''Command
 
--- | @since 0.1
 deriving stock instance Eq (Command Phase1)
 
--- | @since 0.1
 deriving stock instance Show (Command Phase1)
 
--- | @since 0.1
 deriving stock instance Eq (Command Phase2)
 
--- | @since 0.1
 deriving stock instance Show (Command Phase2)
 
--- | @since 0.1
 type CommandP1 = Command Phase1
 
--- | @since 0.1
 type CommandP2 = Command Phase2

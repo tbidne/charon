@@ -2,8 +2,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides CLI args functionality.
---
--- @since 0.1
 module SafeRm.Runner.Args
   ( getArgs,
     Args (..),
@@ -60,73 +58,41 @@ import SafeRm.Utils qualified as Utils
 import Text.Read qualified as TR
 
 -- | Toml path config.
---
--- @since 0.1
 data TomlConfigPath
   = -- | Do not use any Toml config.
-    --
-    -- @since 0.1
     TomlNone
   | -- | Attempts to read the Toml file at the default path.
-    --
-    -- @since 0.1
     TomlDefault
   | -- | Path to Toml file.
-    --
-    -- @since 0.1
     TomlPath !FilePath
   deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
+    ( Eq,
       Show
     )
 
 makePrisms ''TomlConfigPath
 
 -- | CLI args.
---
--- @since 0.1
 data Args = MkArgs
   { -- | Path to toml config.
-    --
-    -- @since 0.1
     tomlConfigPath :: !TomlConfigPath,
     -- | Backend to use.
     backend :: !(Maybe Backend),
     -- | Path to trash home.
-    --
-    -- @since 0.1
     trashHome :: !(Maybe (PathI TrashHome)),
     -- | The file logging level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
-    --
-    -- @since 0.1
     logLevel :: !(Maybe (Maybe LogLevel)),
     -- | Whether to warn/delete for large log files.
-    --
-    -- @since 0.1
     logSizeMode :: !(Maybe FileSizeMode),
     -- | Command to run.
-    --
-    -- @since 0.1
     command :: !CommandP1
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Generic,
-      -- | @since 0.1
-      Show
-    )
+  deriving stock (Eq, Generic, Show)
 
--- | @since 0.1
 makeFieldLabelsNoPrefix ''Args
 
 -- | Retrieves CLI args.
---
--- @since 0.1
 getArgs :: (MonadOptparse m) => m Args
 getArgs = execParser parserInfoArgs
 

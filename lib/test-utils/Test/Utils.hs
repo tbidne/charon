@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
 
 -- | Provides utils for file system actions.
---
--- @since 0.1
 module Test.Utils
   ( -- * File System Operations
     createFiles,
@@ -34,14 +32,10 @@ import SafeRm.Prelude
 import Test.Tasty.HUnit (assertFailure)
 
 -- | Creates empty files at the specified paths.
---
--- @since 0.1
 createFiles :: (Foldable f, Functor f, HasCallStack) => f FilePath -> IO ()
 createFiles = createFilesMap fmap
 
 -- | Creates empty files at the specified paths.
---
--- @since 0.1
 createFilesMap ::
   (Foldable f, HasCallStack) =>
   ( (FilePath -> (FilePath, ByteString)) ->
@@ -53,8 +47,6 @@ createFilesMap ::
 createFilesMap mapper = createFileContents . mapper (,"")
 
 -- | Creates files at the specified paths.
---
--- @since 0.1
 createFileContents ::
   (Foldable f, HasCallStack) =>
   f (FilePath, ByteString) ->
@@ -75,15 +67,11 @@ createFileContents paths = for_ paths $
         throwCS ex
 
 -- | Creates empty files at the specified paths.
---
--- @since 0.1
 createDirectories :: (Foldable f, HasCallStack) => f FilePath -> IO ()
 createDirectories paths =
   for_ paths $ \p -> createDirectoryIfMissing False (massagePath p)
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
---
--- @since 0.1
 clearDirectory :: (HasCallStack) => FilePath -> IO ()
 clearDirectory path = do
   exists <- doesDirectoryExist path'
@@ -93,8 +81,6 @@ clearDirectory path = do
     path' = massagePath path
 
 -- | Data type used for testing text matches.
---
--- @since 0.1
 data TextMatch
   = Exact !Text
   | Prefix !Text
@@ -103,9 +89,7 @@ data TextMatch
   | Outfix !Text !Text
   | Outfixes !Text ![Text] !Text
   deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
+    ( Eq,
       Show
     )
 
@@ -122,8 +106,6 @@ mapTextMatch f (Outfixes s ins e) = Outfixes (f s) (f <$> ins) (f e)
 -- This function automatically replaces backslashes with forward slashes
 -- for posix/windows path compatibility. Take care that any tests do not
 -- rely on having actual backslash chars (as opposed to "path separators").
---
--- @since 0.1
 assertMatches :: [TextMatch] -> [Text] -> IO ()
 assertMatches expectations results = case matches expectations results of
   Nothing -> pure ()
@@ -142,8 +124,6 @@ assertMatches expectations results = case matches expectations results of
 -- This function automatically replaces backslashes with forward slashes
 -- for posix/windows path compatibility. Take care that any tests do not
 -- rely on having actual backslash chars (as opposed to "path separators").
---
--- @since 0.1
 assertMatch :: TextMatch -> Text -> IO ()
 assertMatch expectation result =
   unless (isMatchHelper expectation result) $
@@ -157,8 +137,6 @@ assertMatch expectation result =
 
 -- | If the texts do not match, returns an error string. Otherwise
 -- returns 'Nothing'.
---
--- @since 0.1
 matches :: [TextMatch] -> [Text] -> Maybe String
 matches [] [] = Nothing
 matches s@(_ : _) [] =
@@ -169,8 +147,6 @@ matches (e : es) (t : ts) = isMatch (e :| es) (t :| ts)
 
 -- | If the texts do not match, returns an error string. Otherwise
 -- returns 'Nothing'.
---
--- @since 0.1
 isMatch :: NonEmpty TextMatch -> NonEmpty Text -> Maybe String
 isMatch (s :| es) (r :| rs) =
   if isMatchHelper s (T.strip r)
@@ -199,8 +175,6 @@ isMatchHelper' (Outfixes start ins end) r =
     && end `T.isSuffixOf` r
 
 -- | Pretty show for multiple text matches.
---
--- @since 0.1
 unlineMatches :: [TextMatch] -> String
 unlineMatches [] = ""
 unlineMatches (t : ts) = showTextMatch t <> "\n" <> unlineMatches ts
@@ -222,15 +196,12 @@ showTextMatch (Outfixes start ins end) =
 wc :: String
 wc = "**"
 
--- | @since 0.1
 massagePathI :: PathI i -> PathI i
 massagePathI = Paths.liftPathI' massagePath
 
--- | @since 0.1
 massagePath :: FilePath -> FilePath
 massagePath = T.unpack . massageTextPath . T.pack
 
--- | @since 0.1
 massageTextPath :: Text -> Text
 #if WINDOWS
 massageTextPath = T.replace "/" "\\"

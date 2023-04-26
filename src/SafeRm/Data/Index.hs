@@ -3,8 +3,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides types.
---
--- @since 0.1
 module SafeRm.Data.Index
   ( Index (..),
 
@@ -57,39 +55,20 @@ import System.FilePath qualified as FP
 type PathDataDefault = PathDataDefault.PathData
 
 -- | Index that stores the trash data.
---
--- @since 0.1
 newtype Index = MkIndex
   { unIndex :: Seq PathData
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Generic,
-      -- | @since 0.1
-      Show
-    )
-  deriving anyclass
-    ( -- | @since 0.1
-      NFData
-    )
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (NFData)
   deriving
-    ( -- | @since 0.1
-      Semigroup,
-      -- | @since 0.1
-      Monoid
-    )
+    (Semigroup, Monoid)
     via (Seq PathData)
 
--- | @since 0.1
 makeFieldLabelsNoPrefix ''Index
 
 -- | Reads the trash directory into the 'Index'. If this succeeds then
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
 -- and trash/info.
---
--- @since 0.1
 readIndex ::
   forall m env.
   ( HasBackend env,
@@ -150,8 +129,6 @@ readIndex trashHome = addNamespace "readIndex" $ do
     MkPathI trashInfoDir' = Env.getTrashInfoDir trashHome
 
 -- | Verifies that the 'PathData'\'s @fileName@ actually exists.
---
--- @since 0.1
 throwIfTrashNonExtant ::
   ( HasCallStack,
     MonadPathReader m,
@@ -169,37 +146,25 @@ throwIfTrashNonExtant trashHome pd = do
     filePath = pd ^. #fileName
 
 -- | How to sort the index list.
---
--- @since 0.1
 data Sort
   = -- | Sort by name.
-    --
-    -- @since 0.1
     Name
   | -- | Sort by size.
-    --
-    -- @since 0.1
     Size
   deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
+    ( Eq,
       Show
     )
 
--- | @since 0.1
 makePrisms ''Sort
 
--- | @since 0.1
 instance Semigroup Sort where
   l <> Name = l
   _ <> Size = Size
 
--- | @since 0.1
 instance Monoid Sort where
   mempty = Name
 
--- | @since 0.1
 readSort :: (MonadFail m) => Text -> m Sort
 readSort "name" = pure Name
 readSort "size" = pure Size
@@ -215,8 +180,6 @@ sortFn b = \case
       | otherwise = id
 
 -- | Formats the 'Index' in a pretty way.
---
--- @since 0.1
 formatIndex ::
   forall m env.
   ( HasCallStack,
@@ -444,11 +407,9 @@ getElems ::
   Seq PathDataDefault
 getElems = Seq.sortBy
 
--- | @since 0.1
 fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
 fromList = foldr insert HMap.empty
 
--- | @since 0.1
 insert ::
   PathData ->
   HashMap (PathI 'TrashEntryFileName) PathData ->

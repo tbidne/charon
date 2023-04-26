@@ -2,8 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Provides functionality for moving a file to a trash location.
---
--- @since 0.1
 module SafeRm
   ( -- * Delete
     delete,
@@ -51,8 +49,6 @@ import System.IO qualified as IO
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
 -- defaults to XDG data e.g. @~\/.local/share/safe-rm/@.
---
--- @since 0.1
 delete ::
   forall env m.
   ( HasBackend env,
@@ -98,8 +94,6 @@ delete paths = addNamespace "delete" $ do
   when anyFailed exitFailure
 
 -- | Permanently deletes the paths from the trash.
---
--- @since 0.1
 deletePermanently ::
   forall env m.
   ( HasBackend env,
@@ -144,8 +138,6 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
---
--- @since 0.1
 getIndex ::
   forall env m.
   ( HasBackend env,
@@ -170,8 +162,6 @@ getIndex = addNamespace "getIndex" $ do
       pure mempty
 
 -- | Retrieves metadata for the trash directory.
---
--- @since 0.1
 getMetadata ::
   forall m env.
   ( HasBackend env,
@@ -198,8 +188,6 @@ getMetadata = addNamespace "getMetadata" $ do
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
---
--- @since 0.1
 restore ::
   forall env m.
   ( HasBackend env,
@@ -241,8 +229,6 @@ restore paths = addNamespace "restore" $ do
   when anyFailed exitFailure
 
 -- | Empties the trash.
---
--- @since 0.1
 emptyTrash ::
   forall m env.
   ( HasBackend env,

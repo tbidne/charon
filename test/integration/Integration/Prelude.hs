@@ -4,8 +4,6 @@
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Prelude for integration test suite.
---
--- @since 0.1
 module Integration.Prelude
   ( module X,
 
@@ -54,8 +52,6 @@ import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils as X
 
 -- | Asserts that files exist.
---
--- @since 0.1
 assertFilesExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
 assertFilesExist paths =
   for_ paths $ \p -> do
@@ -64,8 +60,6 @@ assertFilesExist paths =
     assert exists
 
 -- | Asserts that files do not exist.
---
--- @since 0.1
 assertFilesDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
 assertFilesDoNotExist paths =
   for_ paths $ \p -> do

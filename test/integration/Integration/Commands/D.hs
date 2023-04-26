@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
 
 -- | Tests for d command.
---
--- @since 0.1
 module Integration.Commands.D
   ( tests,
   )
@@ -13,7 +11,6 @@ import Integration.Prelude
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 
--- | @since 0.1
 tests :: TestTree
 tests =
   testGroup

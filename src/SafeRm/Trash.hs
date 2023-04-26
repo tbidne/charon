@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Interface for the trash directory
---
--- @since 0.1
 module SafeRm.Trash
   ( -- * Trash directory
     createTrash,
@@ -53,8 +51,6 @@ import SafeRm.Utils qualified as Utils
 import System.IO qualified as IO
 
 -- | Creates the trash directory if it does not exist.
---
--- @since 0.1
 createTrash ::
   ( HasCallStack,
     HasTrashHome env,
@@ -80,8 +76,6 @@ createTrash = do
 -- does not, throws 'TrashDirFilesNotFoundE' or 'TrashDirInfoNotFoundE'.
 --
 -- If all three dirs exist, returns 'True'.
---
--- @since 0.1
 doesTrashExist ::
   ( HasCallStack,
     HasTrashHome env,
@@ -117,8 +111,6 @@ doesTrashExist = do
             MkTrashDirFilesNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
---
--- @since 0.1
 mvOriginalToTrash ::
   ( HasBackend env,
     HasCallStack,
@@ -162,8 +154,6 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
 -- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
 -- In this case, the error has already been reported, so this is purely for
 -- signaling (i.e. should we exit with an error).
---
--- @since 0.1
 permDeleteFromTrash ::
   ( HasBackend env,
     HasCallStack,
@@ -239,8 +229,6 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
 -- Returns 'True' if any failed. In this case, the error has already been
 -- reported, so this is purely for signaling (i.e. should we exit with
 -- an error).
---
--- @since 0.1
 restoreTrashToOriginal ::
   ( HasBackend env,
     HasCallStack,
@@ -369,8 +357,6 @@ noBuffering = buffOff IO.stdin *> buffOff IO.stdout
     buffOff h = hSetBuffering h NoBuffering
 
 -- | Searches for the given trash name in the trash.
---
--- @since 0.1
 findPathData ::
   ( HasBackend env,
     HasCallStack,

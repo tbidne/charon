@@ -397,7 +397,7 @@ testGoldenFormatParams backend desc fileName style sortCol rev =
 -- Golden tests for different combinations of PathDataFormat + Index +
 -- Terminal size.
 --
--- @since 0.1
+--
 testGoldenFormat ::
   -- | Backend
   Backend ->
@@ -416,8 +416,6 @@ testGoldenFormat backend desc fileName mkIdx style =
   testGolden backend desc fileName mkIdx style Name False
 
 -- | General function for running golden tests.
---
--- @since 0.1
 testGolden ::
   -- | Backend to use
   Backend ->

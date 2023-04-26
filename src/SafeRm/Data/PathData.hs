@@ -4,8 +4,6 @@
 
 -- | Interface for backend-agnostic 'PathData' operations. Modules should
 -- generally use this instead of the backend-specific modules.
---
--- @since 0.1
 module SafeRm.Data.PathData
   ( -- * PathData
     PathData (..),
@@ -109,8 +107,6 @@ instance
 -- creation for choosing the correct move function (renameFile vs.
 -- renameDirectory). We cannot rely on pathDataToType as that function is
 -- only valid when the PathData entry has already been created in the trash.
---
--- @since 0.1
 toPathData ::
   ( HasCallStack,
     MonadLoggerNS m,
@@ -129,8 +125,6 @@ toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.
---
--- @since 0.1
 trashPathExists ::
   ( HasCallStack,
     MonadPathReader m
@@ -147,8 +141,6 @@ trashPathExists th pd = doesPathExist trashPath'
 
 -- | Returns 'True' if the 'PathData'\'s @originalPath@ corresponds to a real
 -- path that exists.
---
--- @since 0.1
 originalPathExists ::
   ( HasCallStack,
     MonadPathReader m,
@@ -181,8 +173,6 @@ deleteFileName trashHome pd = do
     MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
 
 -- | Header names.
---
--- @since 0.1
 headerNames :: (Exts.IsList a, IsString (Exts.Item a)) => Backend -> a
 headerNames BackendDefault = Default.headerNames
 headerNames BackendFdo = Fdo.headerNames
@@ -260,13 +250,11 @@ pathDataToType trashHome (PathDataFdo pd) = Fdo.pathDataToType trashHome pd
 
 -- \| Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --
--- @since 0.1
+--
 pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashEntryPath
 pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
 
 -- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
---
--- @since 0.1
 pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashEntryInfo
 pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
 

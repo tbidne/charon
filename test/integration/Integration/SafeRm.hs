@@ -5,8 +5,6 @@
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Property tests for the SafeRm API.
---
--- @since 0.1
 module Integration.SafeRm
   ( tests,
   )

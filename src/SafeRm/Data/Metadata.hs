@@ -2,8 +2,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides metadata functionality.
---
--- @since 0.1
 module SafeRm.Data.Metadata
   ( Metadata (..),
     toMetadata,
@@ -31,52 +29,29 @@ import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 
 -- | Holds trash metadata.
---
--- @since 0.1
 data Metadata = MkMetadata
   { -- | Number of top level entries in the trash index. This should be the
     -- same as the index length.
-    --
-    -- @since 0.1
     numEntries :: !Natural,
     -- | Number of total files in the trash.
-    --
-    -- @since 0.1
     numFiles :: !Natural,
     -- | Size of the log file.
-    --
-    -- @since 0.1
     logSize :: !(SomeSize Double),
     -- | Total size of the trash directory.
-    --
-    -- @since 0.1
     size :: !(SomeSize Double)
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Generic,
-      -- | @since 0.1
-      Show
-    )
-  deriving anyclass
-    ( -- | @since 0.1
-      NFData
-    )
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (NFData)
 
 makeFieldLabelsNoPrefix ''Metadata
 
--- | @since 0.1
 instance Semigroup Metadata where
   MkMetadata a b c d <> MkMetadata a' b' c' d' =
     MkMetadata (a + a') (b + b') (c .+. c') (d .+. d')
 
--- | @since 0.1
 instance Monoid Metadata where
   mempty = MkMetadata 0 0 zero zero
 
--- | @since 0.1
 instance Pretty Metadata where
   pretty stats = vsep strs <+> line
     where
@@ -88,8 +63,6 @@ instance Pretty Metadata where
         ]
 
 -- | Returns metadata for the trash directory.
---
--- @since 0.1
 toMetadata ::
   ( HasBackend env,
     HasCallStack,

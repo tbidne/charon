@@ -1,6 +1,4 @@
 -- | Main module.
---
--- @since 0.1
 module Main (main) where
 
 import GHC.Conc.Sync (setUncaughtExceptionHandler)

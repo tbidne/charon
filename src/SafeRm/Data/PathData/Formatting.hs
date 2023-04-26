@@ -31,24 +31,13 @@ import SafeRm.Data.Timestamp qualified as Timestamp
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 
--- | @since 0.1
 data ColFormat
   = -- | Fixed length format.
-    --
-    -- @since 0.1
     ColFormatFixed !Natural
   | -- | Format the column according to its longest entry, if possible.
-    --
-    -- @since 0.1
     ColFormatMax
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
+  deriving stock (Eq, Show)
 
--- | @since 0.1
 _ColFormatFixed :: Prism' ColFormat Natural
 _ColFormatFixed =
   prism
@@ -59,7 +48,6 @@ _ColFormatFixed =
     )
 {-# INLINE _ColFormatFixed #-}
 
--- | @since 0.1
 _ColFormatMax :: Prism' ColFormat ()
 _ColFormatMax =
   prism
@@ -71,23 +59,12 @@ _ColFormatMax =
 {-# INLINE _ColFormatMax #-}
 
 -- | Determines how to format a textual 'PathData'.
---
--- @since 0.1
 data PathDataFormat
   = -- | Formats each file on its own line.
-    --
-    -- @since 0.1
     FormatMultiline
   | -- | Formats all fields on the same line.
-    --
-    -- @since 0.1
     FormatTabular !(Maybe ColFormat) !(Maybe ColFormat)
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
+  deriving stock (Eq, Show)
 
 sortNameCreated :: PathData -> PathData -> Ordering
 sortNameCreated x y = case sortName x y of
@@ -106,27 +83,20 @@ sortReverse f x y = case f x y of
   GT -> LT
 
 -- | Sorts by the created date.
---
--- @since 0.1
 sortCreated :: PathData -> PathData -> Ordering
 sortCreated = mapOrd (view #created)
 
 -- | Sorts by the name.
---
--- @since 0.1
 sortName :: PathData -> PathData -> Ordering
 sortName = mapOrd (fmap Ch.toLower . view (#fileName % #unPathI))
 
 -- | Sorts by the name.
---
--- @since 0.1
 sortSize :: PathData -> PathData -> Ordering
 sortSize = mapOrd (view #size)
 
 mapOrd :: (Ord b) => (a -> b) -> a -> a -> Ordering
 mapOrd f x y = f x `compare` f y
 
--- | @since 0.1
 formatMultiLine :: PathData -> Text
 formatMultiLine pd = T.intercalate "\n" strs
   where
@@ -143,7 +113,6 @@ typeToText :: PathType -> Text
 typeToText PathTypeFile = "File"
 typeToText PathTypeDirectory = "Directory"
 
--- | @since 0.1
 formatTabularHeader :: Natural -> Natural -> Text
 formatTabularHeader nameLen origLen =
   mconcat
@@ -178,20 +147,15 @@ formatTabularHeader nameLen origLen =
 --
 -- This does not include the minimum necessary total space (i.e. minimum
 -- 4 for name and 8 for original).
---
--- @since 0.1
 reservedLineLen :: Natural
 reservedLineLen =
   formatTypeLen + formatSizeLen + formatCreatedLen + formatSeparatorsLen
 
 -- | Minimum length needed to display the table.
---
--- @since 0.1
 minTableWidth :: Natural
 minTableWidth =
   reservedLineLen + formatFileNameLenMin + formatOriginalPathLenMin
 
--- | @since 0.1
 formatTabularRow :: Natural -> Natural -> PathData -> Text
 formatTabularRow nameLen origLen pd =
   mconcat
@@ -215,7 +179,6 @@ sep = " | "
 fixLen' :: Natural -> String -> Text
 fixLen' w s = fixLen w (T.pack s)
 
--- | @since 0.1
 fixLen :: Natural -> Text -> Text
 fixLen w t
   | w' < T.length t = T.take (w' - 3) t <> "..."
@@ -223,26 +186,20 @@ fixLen w t
   where
     w' = fromIntegral w
 
--- | @since 0.1
 formatTypeLen :: Natural
 formatTypeLen = 4
 
--- | @since 0.1
 formatFileNameLenMin :: Natural
 formatFileNameLenMin = 4
 
--- | @since 0.1
 formatOriginalPathLenMin :: Natural
 formatOriginalPathLenMin = 8
 
--- | @since 0.1
 formatSizeLen :: Natural
 formatSizeLen = 7
 
--- | @since 0.1
 formatCreatedLen :: Natural
 formatCreatedLen = 19
 
--- | @since 0.1
 formatSeparatorsLen :: Natural
 formatSeparatorsLen = 12

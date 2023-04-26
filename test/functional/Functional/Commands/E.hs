@@ -1,6 +1,4 @@
 -- | Tests for m command.
---
--- @since 0.1
 module Functional.Commands.E
   ( tests,
   )
@@ -13,7 +11,6 @@ import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
 import SafeRm.Data.PathType (PathType (..))
 
--- | @since 0.1
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup

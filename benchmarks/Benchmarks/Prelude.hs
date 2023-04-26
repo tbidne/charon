@@ -1,6 +1,4 @@
 -- | Prelude for benchmarks.
---
--- @since 0.1
 module Benchmarks.Prelude
   ( module X,
     header,
@@ -22,7 +20,5 @@ import Test.Tasty.Bench as X
 import Test.Utils as X (clearDirectory)
 
 -- | Csv header.
---
--- @since 0.1
 header :: ByteString
 header = encodeUtf8 . T.pack $ L.intercalate "," headerNames

@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
 
 -- | Provides exceptions used by SafeRm.
---
--- @since 0.1
 module SafeRm.Exception
   ( -- * General
     FileNotFoundE (..),
@@ -39,15 +37,9 @@ import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 
 -- | Path is not found.
---
--- @since 0.1
 newtype FileNotFoundE = MkFileNotFoundE FilePath
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception FileNotFoundE where
   displayException (MkFileNotFoundE f) =
     mconcat
@@ -57,15 +49,9 @@ instance Exception FileNotFoundE where
       ]
 
 -- | Could not rename file due to duplicate names.
---
--- @since 0.1
 newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashEntryPath)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception RenameDuplicateE where
   displayException (MkRenameDuplicateE n) =
     mconcat
@@ -77,18 +63,12 @@ instance Exception RenameDuplicateE where
 -- the latter indicates that the entry exists in @trash\/info@ but not
 -- @trash\/files@, whereas this exception is less specific i.e. we found nothing
 -- in @trash\/info@ but did not look in @trash\/files@.
---
--- @since 0.1
 data TrashEntryNotFoundE
   = MkTrashEntryNotFoundE
       !(PathI TrashEntryFileName)
       !(PathI TrashEntryInfo)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashEntryNotFoundE where
   displayException (MkTrashEntryNotFoundE name path) =
     mconcat
@@ -100,16 +80,10 @@ instance Exception TrashEntryNotFoundE where
       ]
 
 -- | Error for not finding any files via wildcard search.
---
--- @since 0.1
 newtype TrashEntryWildcardNotFoundE
   = MkTrashEntryWildcardNotFoundE (PathI TrashEntryFileName)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashEntryWildcardNotFoundE where
   displayException (MkTrashEntryWildcardNotFoundE name) =
     mconcat
@@ -119,18 +93,12 @@ instance Exception TrashEntryWildcardNotFoundE where
       ]
 
 -- | Path found in @trash\/info@ but not @trash\/files@ error.
---
--- @since 0.1
 data TrashEntryFileNotFoundE
   = MkTrashEntryFileNotFoundE
       !(PathI TrashHome)
       !(PathI TrashEntryFileName)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashEntryFileNotFoundE where
   displayException (MkTrashEntryFileNotFoundE thome name) =
     mconcat
@@ -148,18 +116,12 @@ instance Exception TrashEntryFileNotFoundE where
       ]
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
---
--- @since 0.1
 data TrashEntryInfoNotFoundE
   = MkTrashEntryInfoNotFoundE
       !(PathI TrashHome)
       !(PathI TrashEntryFileName)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashEntryInfoNotFoundE where
   displayException (MkTrashEntryInfoNotFoundE thome name) =
     mconcat
@@ -178,18 +140,12 @@ instance Exception TrashEntryInfoNotFoundE where
       ]
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
---
--- @since 0.1
 data TrashEntryInfoBadExtE
   = MkTrashEntryInfoBadExtE
       !(PathI TrashEntryFileName)
       !FilePath
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashEntryInfoBadExtE where
   displayException (MkTrashEntryInfoBadExtE name ext) =
     mconcat
@@ -203,15 +159,9 @@ instance Exception TrashEntryInfoBadExtE where
       ]
 
 -- | Trash path dir not found error.
---
--- @since 0.1
 newtype TrashDirFilesNotFoundE = MkTrashDirFilesNotFoundE (PathI TrashHome)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashDirFilesNotFoundE where
   displayException (MkTrashDirFilesNotFoundE th) =
     mconcat
@@ -223,15 +173,9 @@ instance Exception TrashDirFilesNotFoundE where
       ]
 
 -- | Trash info dir not found error.
---
--- @since 0.1
 newtype TrashDirInfoNotFoundE = MkTrashDirInfoNotFoundE (PathI TrashHome)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception TrashDirInfoNotFoundE where
   displayException (MkTrashDirInfoNotFoundE th) =
     mconcat
@@ -243,18 +187,12 @@ instance Exception TrashDirInfoNotFoundE where
       ]
 
 -- | Collision with existing file when attempting a restore.
---
--- @since 0.1
 data RestoreCollisionE
   = MkRestoreCollisionE
       !(PathI TrashEntryFileName)
       !(PathI TrashEntryOriginalPath)
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception RestoreCollisionE where
   displayException (MkRestoreCollisionE n o) =
     mconcat
@@ -265,41 +203,23 @@ instance Exception RestoreCollisionE where
       ]
 
 -- | Exception for deleting the root.
---
--- @since 0.1
 data RootE = MkRootE
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception RootE where
   displayException _ = "Attempted to delete root! This is not allowed."
 
 -- | Exception for deleting an empty path.
---
--- @since 0.1
 data EmptyPathE = MkEmptyPathE
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception EmptyPathE where
   displayException _ = "Attempted to delete the empty path! This is not allowed."
 
 -- | Exception for decoding.
---
--- @since 0.1
 data InfoDecodeE = MkInfoDecodeE (PathI TrashEntryInfo) ByteString String
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
@@ -313,32 +233,14 @@ instance Exception InfoDecodeE where
 
 -- | Could not rename file due to duplicate names.
 newtype PathNotFileDirE = MkPathNotFileDirE FilePath
-  deriving stock
-    ( -- | @since 0.1
-      Show
-    )
+  deriving stock (Show)
 
--- | @since 0.1
 instance Exception PathNotFileDirE where
   displayException (MkPathNotFileDirE p) =
     mconcat
       [ "Path exists but is not a file or directory: '",
         p,
         "'"
-      ]
-
--- | Unexpected key when deserializing trash info.
-data UnexpectedKey = MkUnexpectedKey (PathI TrashEntryFileName) ByteString
-  deriving stock (Show)
-
--- | @since 0.1
-instance Exception UnexpectedKey where
-  displayException (MkUnexpectedKey fileName k) =
-    mconcat
-      [ "Unexpected key when deserializing trash info file: '",
-        fileName ^. #unPathI,
-        "': ",
-        bsToStrLenient k
       ]
 
 slash :: FilePath

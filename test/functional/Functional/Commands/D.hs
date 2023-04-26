@@ -1,6 +1,4 @@
 -- | Tests for d command.
---
--- @since 0.1
 module Functional.Commands.D
   ( tests,
   )
@@ -18,7 +16,6 @@ import SafeRm.Data.PathType (PathType (..))
 -- paths. Evidently the tests did not catch this, presumably because
 -- relative paths are sufficient here.
 
--- | @since 0.1
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup

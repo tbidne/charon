@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | This modules provides an executable for running safe-rm.
---
--- @since 0.1
 module SafeRm.Runner
   ( -- * Main functions
     runSafeRm,
@@ -60,8 +58,6 @@ import TOML qualified
 -- | Entry point for running SafeRm. Does everything: reads CLI args,
 -- optional Toml config, and creates the environment before running
 -- SafeRm.
---
--- @since 0.1
 runSafeRm ::
   ( HasCallStack,
     MonadFileReader m,
@@ -163,8 +159,6 @@ withEnv mergedConfig onEnv = do
 --
 -- For example, if both the CLI and Toml file specify the trash home, then
 -- the CLI's value will be used.
---
--- @since 0.1
 getConfiguration ::
   ( HasCallStack,
     MonadFileReader m,
@@ -244,8 +238,6 @@ prettyDel = putTextLn . U.renderPretty
 
 -- | If the argument is given, returns it. Otherwise searches for the default
 -- trash location.
---
--- @since 0.1
 trashOrDefault ::
   ( HasCallStack,
     MonadPathReader m
@@ -255,8 +247,6 @@ trashOrDefault ::
 trashOrDefault = maybe getTrashHome pure
 
 -- | Retrieves the default trash directory.
---
--- @since 0.1
 getTrashHome ::
   ( HasCallStack,
     MonadPathReader m

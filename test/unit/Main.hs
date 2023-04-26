@@ -1,6 +1,4 @@
 -- | Entrypoint for unit tests.
---
--- @since 0.1
 module Main (main) where
 
 import Test.Tasty qualified as Tasty
@@ -14,8 +12,6 @@ import Unit.Trash qualified as Trash
 import Unit.Utils qualified as Utils
 
 -- | Runs unit tests.
---
--- @since 0.1
 main :: IO ()
 main =
   Tasty.defaultMain $

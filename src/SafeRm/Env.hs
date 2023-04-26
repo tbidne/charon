@@ -1,6 +1,4 @@
 -- | Provides classes for running SafeRm with an environment.
---
--- @since 0.1
 module SafeRm.Env
   ( HasTrashHome (..),
     getTrashLog,
@@ -24,12 +22,8 @@ import SafeRm.Data.Paths
 import SafeRm.Prelude
 
 -- | Class for retrieving the trash home.
---
--- @since 0.1
 class HasTrashHome a where
   -- | Retrieves the trash home path.
-  --
-  -- @since 0.1
   getTrashHome :: a -> PathI TrashHome
   default getTrashHome ::
     ( Is k A_Getter,
@@ -40,16 +34,12 @@ class HasTrashHome a where
   getTrashHome = view #trashHome
 
 -- | Retrieves the trash log path.
---
--- @since 0.1
 getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
 getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
 
--- | @since 0.1
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
 getTrashPath trashHome name = trashHome <//> "files" <//> name
 
--- | @since 0.1
 getTrashInfoPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
 getTrashInfoPath trashHome name =
   trashHome
@@ -57,28 +47,20 @@ getTrashInfoPath trashHome name =
     <//> liftPathI' (<> trashInfoExtension) name
 
 -- | Retrieves the trash path dir.
---
--- @since 0.1
 getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
 getTrashPathDir trashHome = trashHome <//> "files"
 
 -- | Retrieves the trash info dir.
---
--- @since 0.1
 getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
 getTrashInfoDir trashHome = trashHome <//> "info"
 
 -- | Returns the extension for the trash info files.
---
--- @since 0.1
 trashInfoExtension :: (IsString a) => a
 trashInfoExtension = ".trashinfo"
 
 -- | Class for retrieving the backend.
 class HasBackend a where
   -- | Retrieves the trash home path.
-  --
-  -- @since 0.1
   getBackend :: a -> Backend
   default getBackend ::
     ( Is k A_Getter,

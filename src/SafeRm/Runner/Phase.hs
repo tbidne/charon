@@ -27,8 +27,6 @@
 -- initially parse a data type as Foo1 (phase 1) but then further process
 -- this data type into Foo2 (phase 2). Using this phase approach avoids
 -- duplication of constructors and fields.
---
--- @since 0.1
 module SafeRm.Runner.Phase
   ( Phase (..),
     AdvancePhase (..),
@@ -39,34 +37,24 @@ where
 import SafeRm.Prelude
 
 -- | Index for data that has a "phased" evolution.
---
--- @since 0.1
 data Phase
   = Phase1
   | Phase2
   deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
+    ( Eq,
       Show
     )
 
 -- | Advances phased data.
---
--- @since 0.1
 class AdvancePhase a where
   -- | The next phase.
   type NextPhase a
 
   -- | Advances the data.
-  --
-  -- @since 0.1
   advancePhase :: a -> NextPhase a
 
 -- | Type family for the common case of evolving an optional type @Maybe a@
 -- into a definite @a@ (i.e. after default substitution).
---
--- @since 0.1
 type MaybePhaseF :: Phase -> Type -> Type
 type family MaybePhaseF s a where
   MaybePhaseF Phase1 a = Maybe a

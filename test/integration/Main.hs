@@ -1,6 +1,4 @@
 -- | Entrypoint for integration tests.
---
--- @since 0.1
 module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
@@ -14,8 +12,6 @@ import Test.Tasty qualified as T
 import Test.Tasty.Options (OptionDescription (..))
 
 -- | Runs integration tests.
---
--- @since 0.1
 main :: IO ()
 main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)

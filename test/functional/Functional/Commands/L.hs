@@ -1,6 +1,4 @@
 -- | Tests for l command.
---
--- @since 0.1
 module Functional.Commands.L
   ( tests,
   )
@@ -20,7 +18,6 @@ import SafeRm.Exception
 
 -- import Data.ByteString qualified as BS
 
--- | @since 0.1
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup

@@ -86,8 +86,6 @@ getPathInfo trashHome origPath = do
 -- @
 -- "file1", "file2", "file3", ...
 -- @
---
--- @since 0.1
 mkUniqPath ::
   forall m.
   ( HasCallStack,
@@ -114,7 +112,6 @@ mkUniqPath fp = do
             else pure fp'
     mkSuffix i = " (" <> show i <> ")"
 
--- | @since 0.1
 throwIfIllegal ::
   ( HasCallStack,
     MonadLoggerNS m,

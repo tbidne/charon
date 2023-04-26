@@ -2,8 +2,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides TOML configuration.
---
--- @since 0.1
 module SafeRm.Runner.Toml
   ( TomlConfig (..),
     mergeConfigs,
@@ -26,40 +24,24 @@ import TOML
   )
 
 -- | Holds TOML configuration.
---
--- @since 0.1
 data TomlConfig = MkTomlConfig
   { -- | Trash home.
-    --
-    -- @since 0.1
     trashHome :: !(Maybe (PathI TrashHome)),
     -- | Backend.
     backend :: !(Maybe Backend),
     -- | Log level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
-    --
-    -- @since 0.1
     logLevel :: !(Maybe (Maybe LogLevel)),
     -- | Whether to warn/delete large log files.
-    --
-    -- @since 0.1
     logSizeMode :: !(Maybe FileSizeMode)
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
+  deriving stock (Eq, Show)
 
--- | @since 0.1
 makeFieldLabelsNoPrefix ''TomlConfig
 
--- | @since 0.1
 defaultTomlConfig :: TomlConfig
 defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing Nothing
 
--- | @since 0.5
 instance DecodeTOML TomlConfig where
   tomlDecoder =
     MkTomlConfig
@@ -76,8 +58,6 @@ instance DecodeTOML TomlConfig where
 
 -- | Merges the args and toml config into a single toml config. If some field
 -- F is specified by both args and toml config, then args takes precedence.
---
--- @since 0.1
 mergeConfigs :: Args -> TomlConfig -> (TomlConfig, CommandP2)
 mergeConfigs args toml = (mergedConfig, advancePhase cmd)
   where

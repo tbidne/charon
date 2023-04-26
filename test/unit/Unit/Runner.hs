@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 
 -- | Runner unit tests.
---
--- @since 0.1
 module Unit.Runner
   ( tests,
   )

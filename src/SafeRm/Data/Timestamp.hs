@@ -3,8 +3,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Provides the 'Timestamp' data type.
---
--- @since 0.1
 module SafeRm.Data.Timestamp
   ( Timestamp (..),
     toText,
@@ -29,39 +27,18 @@ import SafeRm.Prelude
 -- altogether.
 
 -- | Represents a point in time.
---
--- @since 0.1
 newtype Timestamp = MkTimestamp
   { unTimestamp :: LocalTime
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Generic,
-      -- | @since 0.1
-      Ord,
-      -- | @since 0.1
-      Show
-    )
-  deriving anyclass
-    ( -- | @since 0.1
-      NFData
-    )
-  deriving
-    ( -- | @since 0.1
-      Hashable
-    )
-    via LocalTime
+  deriving stock (Eq, Generic, Ord, Show)
+  deriving anyclass (NFData)
+  deriving (Hashable) via LocalTime
 
--- | @since 0.1
 makeFieldLabelsNoPrefix ''Timestamp
 
--- | @since 0.1
 instance Pretty Timestamp where
   pretty = fromString . formatLocalTimeSpace . view #unTimestamp
 
--- | @since 0.1
 instance Serialize Timestamp where
   type DecodeExtra Timestamp = ()
   encode = encodeUtf8 . toText
@@ -72,20 +49,15 @@ instance Serialize Timestamp where
       Just t -> Right $ MkTimestamp t
 
 -- | Formats the time.
---
--- @since 0.1
 toText :: Timestamp -> Text
 toText = T.pack . formatLocalTime . view #unTimestamp
 
--- | @since 0.1
 fromText :: (MonadFail f) => Text -> f Timestamp
 fromText = fmap MkTimestamp . parseLocalTime . T.unpack
 
--- | @since 0.1
 formatLocalTime :: LocalTime -> String
 formatLocalTime = Format.formatTime Format.defaultTimeLocale localTimeFormat
 
--- | @since 0.1
 parseLocalTime :: (MonadFail f) => String -> f LocalTime
 parseLocalTime =
   Format.parseTimeM
@@ -98,15 +70,11 @@ localTimeFormat = "%0Y-%m-%dT%H:%M:%S"
 
 -- | Like 'toText' except adds a space between date and time. Used for
 -- pretty-printing.
---
--- @since 0.1
 toTextSpace :: Timestamp -> Text
 toTextSpace = T.pack . formatLocalTimeSpace . view #unTimestamp
 
 -- | Like 'toText' except adds a space between date and time. Used for
 -- pretty-printing.
---
--- @since 0.1
 formatLocalTimeSpace :: LocalTime -> String
 formatLocalTimeSpace =
   Format.formatTime Format.defaultTimeLocale localTimeFormatSpace

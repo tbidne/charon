@@ -1,6 +1,4 @@
 -- | Entrypoint for functional tests.
---
--- @since 0.1
 module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
@@ -16,8 +14,6 @@ import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as Tasty
 
 -- | Runs functional tests.
---
--- @since 0.1
 main :: IO ()
 main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)

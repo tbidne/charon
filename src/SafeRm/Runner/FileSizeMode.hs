@@ -19,14 +19,8 @@ data FileSizeMode
     FileSizeModeWarn (Bytes B Natural)
   | -- | Delete the file.
     FileSizeModeDelete (Bytes B Natural)
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Show
-    )
+  deriving stock (Eq, Show)
 
--- | @since 0.1
 defaultSizeMode :: FileSizeMode
 defaultSizeMode = FileSizeModeDelete $ Bytes.convert Proxy fiftyMb
   where

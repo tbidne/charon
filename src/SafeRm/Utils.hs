@@ -1,6 +1,4 @@
 -- | Provides internal utility functions
---
--- @since 0.1
 module SafeRm.Utils
   ( whenLeft,
     allM1,
@@ -33,15 +31,11 @@ import SafeRm.Prelude
 import Text.Printf (PrintfArg)
 
 -- | Applies the function when we have a Left.
---
--- @since 0.1
 whenLeft :: (Applicative f) => Either e a -> (e -> f ()) -> f ()
 whenLeft (Right _) _ = pure ()
 whenLeft (Left x) f = f x
 
 -- | 'allM' that must have at least one 'True'.
---
--- @since 0.1
 allM1 :: (Monad m) => NonEmpty (m Bool) -> m Bool
 allM1 (m :| ms) =
   m >>= \case
@@ -49,8 +43,6 @@ allM1 (m :| ms) =
     False -> pure False
 
 -- | 'Prelude.all' lifted to monads.
---
--- @since 0.1
 allM :: (Foldable t, Monad m) => t (m Bool) -> m Bool
 allM = foldr f (pure True)
   where
@@ -60,8 +52,6 @@ allM = foldr f (pure True)
         False -> pure False
 
 -- | Normalizes and formats the bytes.
---
--- @since 0.1
 normalizedFormat :: Bytes B Natural -> Text
 normalizedFormat =
   formatBytes
@@ -72,8 +62,6 @@ normalizedFormat =
     toDouble = fmap fromIntegral
 
 -- | Formats the bytes.
---
--- @since 0.1
 formatBytes ::
   ( BaseFormatter (Unwrapped a) ~ FloatingFormatter,
     PrintfArg (Unwrapped a),
@@ -88,14 +76,10 @@ formatBytes =
     Bytes.sizedFormatterUnix
 
 -- | 'fromMaybe' for 'Monoid'.
---
--- @since 0.1
 fromMaybeMonoid :: (Monoid a) => Maybe a -> a
 fromMaybeMonoid = fromMaybe mempty
 
 -- | Reads the 'LogLevel'.
---
--- @since 0.1
 readLogLevel :: (MonadFail m) => Text -> m (Maybe LogLevel)
 readLogLevel "none" = pure Nothing
 readLogLevel "error" = pure $ Just LevelError
@@ -112,12 +96,9 @@ readLogLevel other =
       ]
 
 -- | String description of possible log levels parsed by 'readLogLevel'.
---
--- @since 0.1
 logLevelStrings :: String
 logLevelStrings = "(none|error|warn|info|debug)"
 
--- | @since 0.1
 mergeAlt ::
   (Alternative f) =>
   Lens' s (f a) ->
@@ -127,7 +108,6 @@ mergeAlt ::
   f a
 mergeAlt = merge (<|>)
 
--- | @since 0.1
 merge ::
   (a -> a -> a) ->
   Lens' s a ->
@@ -137,14 +117,12 @@ merge ::
   a
 merge f sLens tLens s t = (s ^. sLens) `f` (t ^. tLens)
 
--- | @since 0.1
 renderPretty :: (Pretty a) => a -> Text
 renderPretty =
   renderStrict
     . layoutCompact
     . pretty
 
--- | @since 0.1
 matchesWildcards :: Text -> Text -> Bool
 matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
   -- Impossible
@@ -169,7 +147,6 @@ matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
         . T.split (== '*')
         . T.replace "\\*" "\0"
 
--- | @since 0.1
 stripInfix :: Text -> Text -> Maybe (Text, Text)
 stripInfix "" t = Just ("", t)
 stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
@@ -177,7 +154,6 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
     [] -> Nothing
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
 
--- | @since 0.1
 setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
 setRefIfTrue _ False = pure ()
 setRefIfTrue ref True = writeIORef ref True

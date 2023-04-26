@@ -31,41 +31,19 @@ import SafeRm.Utils qualified as U
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
---
--- @since 0.1
 data PathData = UnsafePathData
   { -- | The path to be used in the trash directory.
-    --
-    -- @since 0.1
     fileName :: !(PathI TrashEntryFileName),
     -- | The original path on the file system.
-    --
-    -- @since 0.1
     originalPath :: !(PathI TrashEntryOriginalPath),
     -- | Time this entry was created.
-    --
-    -- @since 0.1
     created :: !Timestamp
   }
-  deriving stock
-    ( -- | @since 0.1
-      Eq,
-      -- | @since 0.1
-      Generic,
-      -- | @since 0.1
-      Show
-    )
-  deriving anyclass
-    ( -- | @since 0.1
-      Hashable,
-      -- | @since 0.1
-      NFData
-    )
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (Hashable, NFData)
 
--- | @since 0.1
 makeFieldLabelsNoPrefix ''PathData
 
--- | @since 0.1
 instance Pretty PathData where
   pretty pd = vsep strs <+> line
     where
@@ -77,8 +55,6 @@ instance Pretty PathData where
         ]
 
 -- | Header names.
---
--- @since 0.1
 headerNames :: (IsList a, IsString (Exts.Item a)) => a
 headerNames = ["Name", "Original", "Created"]
 
@@ -87,8 +63,6 @@ headerNames = ["Name", "Original", "Created"]
 -- * Canonical path.
 -- * Unique name to be used in the trash directory.
 -- * File/directory type.
---
--- @since 0.1
 toPathData ::
   ( HasCallStack,
     MonadLoggerNS m,

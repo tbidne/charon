@@ -1,6 +1,4 @@
 -- | Prelude for unit test suite.
---
--- @since 0.1
 module Unit.Prelude
   ( module X,
     TextMatch (..),
@@ -45,6 +43,5 @@ getDefaultTrash = (</> ".trash") <$> getHomeDirectory
 diff :: FilePath -> FilePath -> [FilePath]
 diff ref new = ["diff", "-u", ref, new]
 
--- | @since 0.1
 assertFalse :: String -> Bool -> IO ()
 assertFalse d = assertBool d . not

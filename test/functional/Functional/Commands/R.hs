@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
 
 -- | Tests for r command.
---
--- @since 0.1
 module Functional.Commands.R
   ( tests,
   )

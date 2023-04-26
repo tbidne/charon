@@ -1,6 +1,4 @@
 -- | Benchmark suite.
---
--- @since 0.1
 module Main (main) where
 
 import Benchmarks.Prelude
