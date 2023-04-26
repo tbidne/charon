@@ -109,13 +109,21 @@ missingPathError backend args = testCase "Entry Missing Path" $ do
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["l", "--format", "m"]
       missingInfo =
-        Char8.unlines
-          [ "[Trash Info]",
-            "Path=" <> encodeUtf8 (T.pack $ escapeBackslashes $ testDir </> "missing"),
-            "DeletionDate=2020-05-31T12:00:00",
-            "Size=5",
-            "Type=f"
-          ]
+        case backend of
+          BackendDefault ->
+            Char8.unlines
+              [ "[Trash Info]",
+                "Path=" <> encodeUtf8 (T.pack $ escapeBackslashes $ testDir </> "missing"),
+                "DeletionDate=2020-05-31T12:00:00",
+                "Size=5",
+                "Type=f"
+              ]
+          BackendFdo ->
+            Char8.unlines
+              [ "[Trash Info]",
+                "Path=" <> encodeUtf8 (T.pack $ escapeBackslashes $ testDir </> "missing"),
+                "DeletionDate=2020-05-31T12:00:00"
+              ]
 
   -- setup
   clearDirectory testDir
