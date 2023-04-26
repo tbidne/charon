@@ -7,9 +7,10 @@ where
 
 import Benchmarks.Prelude
 import SafeRm qualified
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq qualified as UniqueSeq
-import SafeRm.Runner.Env (Env (MkEnv, logEnv, trashHome), LogEnv (MkLogEnv))
+import SafeRm.Runner.Env (Env (..), LogEnv (MkLogEnv))
 import SafeRm.Runner.SafeRmT (runSafeRmT)
 
 -- | Index reading benchmarks.
@@ -62,5 +63,6 @@ mkEnv trashHome = do
   pure $
     MkEnv
       { trashHome = trashHome,
+        backend = BackendDefault,
         logEnv = MkLogEnv Nothing ""
       }

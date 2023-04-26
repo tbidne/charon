@@ -5,9 +5,9 @@ module Benchmarks.Prelude
   )
 where
 
-import Data.ByteString.Char8 qualified as Char8
 import Data.List qualified as L
 import Data.Text qualified as T
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.PathData (headerNames)
 import SafeRm.Prelude as X
 import Test.Tasty.Bench as X
@@ -21,4 +21,4 @@ import Test.Utils as X (clearDirectory)
 
 -- | Csv header.
 header :: ByteString
-header = encodeUtf8 . T.pack $ L.intercalate "," headerNames
+header = encodeUtf8 . T.pack . L.intercalate "," $ headerNames BackendDefault
