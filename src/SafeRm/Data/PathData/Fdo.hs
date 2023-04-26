@@ -20,10 +20,11 @@ import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
 import SafeRm.Data.Timestamp (Timestamp)
-import SafeRm.Exception (FileNotFoundE (..))
+import SafeRm.Env qualified as Env
+import SafeRm.Exception (FileNotFoundE (..), PathNotFileDirE (..))
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 
@@ -96,16 +97,18 @@ toPathData ::
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m PathData
+  m (PathData, PathType)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
-  (fileName', originalPath', _) <- Common.getPathInfo trashHome origPath
+  (fileName', originalPath', pathType) <- Common.getPathInfo trashHome origPath
 
-  pure $
-    UnsafePathData
-      { fileName = fileName',
-        originalPath = originalPath',
-        created = currTime
-      }
+  pure
+    ( UnsafePathData
+        { fileName = fileName',
+          originalPath = originalPath',
+          created = currTime
+        },
+      pathType
+    )
 
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
@@ -139,22 +142,31 @@ instance Serialize PathData where
       isHeader = (== "[Trash Info]")
 
 -- | Derives the 'PathType' from the 'PathData'.
+--
+-- __IMPORTANT:__ This function is only guaranteed to work if the 'PathData'
+-- corresponds to an extant trash entry. In particular, if the 'PathData' has
+-- not been created yet, this can fail.
 pathDataToType ::
   ( HasCallStack,
     MonadPathReader m,
     MonadThrow m
   ) =>
+  PathI TrashHome ->
   PathData ->
   m PathType
-pathDataToType pd = do
-  fileExists <- doesFileExist fileName
+pathDataToType trashHome pd = do
+  fileExists <- doesFileExist path
   if fileExists
     then pure PathTypeFile
     else do
-      dirExists <- doesDirectoryExist fileName
+      dirExists <- doesDirectoryExist path
       if dirExists
         then pure PathTypeDirectory
-        else -- TODO: This should be a better type
-          throwCS $ MkFileNotFoundE fileName
+        else do
+          -- for a better error message
+          pathExists <- doesPathExist path
+          if pathExists
+            then throwCS $ MkPathNotFileDirE path
+            else throwCS $ MkFileNotFoundE path
   where
-    fileName = pd ^. (#fileName % #unPathI)
+    MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)

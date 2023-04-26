@@ -107,7 +107,7 @@ toPathData ::
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m PathData
+  m (PathData, PathType)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   (fileName', originalPath', pathType) <- Common.getPathInfo trashHome origPath
 
@@ -121,14 +121,16 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
           for_ errs $ \e -> $(logError) (T.pack $ displayException e)
           pure n
 
-  pure $
-    UnsafePathData
-      { fileName = fileName',
-        originalPath = originalPath',
-        pathType,
-        size,
-        created = currTime
-      }
+  pure
+    ( UnsafePathData
+        { fileName = fileName',
+          originalPath = originalPath',
+          pathType,
+          size,
+          created = currTime
+        },
+      pathType
+    )
 
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName

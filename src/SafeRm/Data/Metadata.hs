@@ -22,6 +22,7 @@ import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome, TrashLog),
   )
+import SafeRm.Env (HasBackend)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( FileNotFoundE (MkFileNotFoundE),
@@ -90,11 +91,13 @@ instance Pretty Metadata where
 --
 -- @since 0.1
 toMetadata ::
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     MonadFileReader m,
     MonadPathReader m,
     MonadPathSize m,
     MonadLoggerNS m,
+    MonadReader env m,
     MonadTerminal m,
     MonadThrow m
   ) =>

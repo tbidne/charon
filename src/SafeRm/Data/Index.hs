@@ -32,10 +32,7 @@ import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (..))
-import SafeRm.Data.PathData
-  ( PathData,
-    PathDataBackend (..),
-  )
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathData.Default qualified as PathDataDefault
 import SafeRm.Data.PathData.Formatting
@@ -46,6 +43,7 @@ import SafeRm.Data.PathData.Formatting qualified as Formatting
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Env (HasBackend (..))
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
@@ -93,11 +91,13 @@ makeFieldLabelsNoPrefix ''Index
 --
 -- @since 0.1
 readIndex ::
-  forall m.
-  ( HasCallStack,
+  forall m env.
+  ( HasBackend env,
+    HasCallStack,
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadReader env m,
     MonadThrow m
   ) =>
   PathI TrashHome ->
@@ -106,6 +106,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
   paths <- listDirectory trashInfoDir'
   $(logDebug) ("Trash info: " <> T.pack trashInfoDir')
   $(logDebug) ("Info: " <> T.pack (show paths))
+  backend <- asks getBackend
 
   let seqify ::
         Path ->
@@ -124,8 +125,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
             fileName = FP.dropExtension $ FP.takeFileName path
-            -- TODO: Configurable
-            decoded = decode (PathDataBackendDefault, MkPathI fileName) contents
+            decoded = decode (backend, MkPathI fileName) contents
         case decoded of
           Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
           Right pd -> do

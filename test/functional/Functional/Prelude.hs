@@ -13,6 +13,7 @@ module Functional.Prelude
     FuncEnv.runSafeRm,
     FuncEnv.runSafeRmException,
     FuncEnv.runIndexMetadata,
+    FuncEnv.runIndexMetadata',
 
     -- *** Data capture
     FuncEnv.captureSafeRm,
@@ -27,8 +28,10 @@ module Functional.Prelude
     assertSetEq,
 
     -- * Misc
+    withSrArgs,
     createTestDir,
     FuncEnv.mkPathData,
+    FuncEnv.mkPathData',
     mkAllTrashPaths,
     mkTrashPaths,
     mkTrashInfoPaths,
@@ -36,11 +39,12 @@ module Functional.Prelude
 where
 
 import Data.HashSet qualified as HSet
-import Data.List ((++))
 import Data.Text.Lazy qualified as TL
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import GHC.Exts (IsList (Item, fromList, toList))
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
+import SafeRm.Data.Backend (Backend)
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
@@ -156,3 +160,7 @@ createTestDir args modDir testDir = do
   let rootMod = root </> modDir
   createDirectoryIfMissing False rootMod
   pure $ rootMod </> testDir
+
+withSrArgs :: String -> Backend -> [String] -> [String]
+withSrArgs trashDir backend as =
+  ["-t", trashDir, "-b", Backend.backendArg backend] ++ as

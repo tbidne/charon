@@ -9,10 +9,12 @@ module SafeRm.Env
     getTrashPath,
     getTrashInfoPath,
     trashInfoExtension,
+    HasBackend (..),
   )
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (..),
@@ -71,3 +73,17 @@ getTrashInfoDir trashHome = trashHome <//> "info"
 -- @since 0.1
 trashInfoExtension :: (IsString a) => a
 trashInfoExtension = ".trashinfo"
+
+-- | Class for retrieving the backend.
+class HasBackend a where
+  -- | Retrieves the trash home path.
+  --
+  -- @since 0.1
+  getBackend :: a -> Backend
+  default getBackend ::
+    ( Is k A_Getter,
+      LabelOptic' "backend" k a Backend
+    ) =>
+    a ->
+    Backend
+  getBackend = view #backend

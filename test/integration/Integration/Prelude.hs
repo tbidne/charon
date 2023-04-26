@@ -41,8 +41,9 @@ import Hedgehog as X
     withTests,
     (===),
   )
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
-import SafeRm.Env (HasTrashHome)
+import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude as X
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
@@ -74,12 +75,15 @@ assertFilesDoNotExist paths =
 
 -- | Environment for running pure integration tests.
 data IntPureEnv = MkIntPureEnv
-  { trashHome :: !(PathI TrashHome),
+  { backend :: !Backend,
+    trashHome :: !(PathI TrashHome),
     terminalRef :: !(IORef Text),
     deletedPathsRef :: !(IORef String)
   }
 
 makeFieldLabelsNoPrefix ''IntPureEnv
+
+deriving anyclass instance HasBackend IntPureEnv
 
 deriving anyclass instance HasTrashHome IntPureEnv
 
@@ -204,7 +208,8 @@ mkIntPureEnv toml terminalRef deletedPathsRef = do
   trashHome <- getTrashHome'
   pure $
     MkIntPureEnv
-      { trashHome = trashHome,
+      { backend = fromMaybe BackendDefault (toml ^. #backend),
+        trashHome = trashHome,
         terminalRef,
         deletedPathsRef
       }

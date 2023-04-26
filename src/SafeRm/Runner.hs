@@ -20,6 +20,7 @@ import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData.Formatting (PathDataFormat)
@@ -27,7 +28,7 @@ import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
   )
-import SafeRm.Env (HasTrashHome)
+import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Runner.Args
@@ -40,7 +41,7 @@ import SafeRm.Runner.Args
   )
 import SafeRm.Runner.Command (Command (..), CommandP2)
 import SafeRm.Runner.Env
-  ( Env (MkEnv, trashHome),
+  ( Env (..),
     LogEnv (MkLogEnv),
     LogFile (MkLogFile),
     handle,
@@ -85,7 +86,8 @@ runSafeRm = do
 -- custom env.
 runCmd ::
   forall m env.
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadLoggerNS m,
     MonadCatch m,
@@ -146,6 +148,7 @@ withEnv mergedConfig onEnv = do
      in onEnv $
           MkEnv
             { trashHome,
+              backend = fromMaybe BackendDefault (mergedConfig ^. #backend),
               logEnv =
                 MkLogEnv
                   { logFile,
@@ -200,7 +203,8 @@ getConfiguration = do
         Left tomlErr -> throwCS tomlErr
 
 printIndex ::
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadCatch m,
     MonadFileReader m,
@@ -220,7 +224,8 @@ printIndex style sort revSort = do
   putTextLn formatted
 
 printMetadata ::
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
     MonadLoggerNS m,

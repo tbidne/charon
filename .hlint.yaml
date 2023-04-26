@@ -5,6 +5,7 @@
       - "Functional.Prelude.FuncEnv"
       - "Integration.SafeRm.natToInt"
       - "SafeRm.Data.PathData"
+      - "SafeRm.Data.PathData.Common"
       - "SafeRm.Data.PathData.Internal"
       - "SafeRm.Data.Paths.applyPathI"
       - "SafeRm.Data.Paths.liftPathIF"

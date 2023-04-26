@@ -14,6 +14,7 @@ import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( EmptyPathE (MkEmptyPathE),
     FileNotFoundE (MkFileNotFoundE),
+    PathNotFileDirE (..),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
   )
@@ -72,7 +73,11 @@ getPathInfo trashHome origPath = do
               Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
               PathTypeDirectory
             )
-        else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
+        else do
+          pathExists <- Paths.applyPathI doesPathExist originalPath
+          if pathExists
+            then throwCS $ MkPathNotFileDirE (originalPath ^. #unPathI)
+            else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.

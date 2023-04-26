@@ -12,8 +12,9 @@ module SafeRm.Runner.Env
 where
 
 import Effects.LoggerNS (Namespace)
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
-import SafeRm.Env (HasTrashHome)
+import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 
 -- | Data for file logging.
@@ -70,6 +71,8 @@ data Env m = MkEnv
     --
     -- @since 0.1
     trashHome :: !(PathI TrashHome),
+    -- | Backend.
+    backend :: !Backend,
     -- | The logging environment.
     --
     -- @since 0.1
@@ -84,3 +87,5 @@ makeFieldLabelsNoPrefix ''Env
 
 -- | @since 0.1
 deriving anyclass instance HasTrashHome (Env m)
+
+deriving anyclass instance HasBackend (Env m)

@@ -8,25 +8,32 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
 import SafeRm.Data.PathType (PathType (..))
 
--- | @since 0.1
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
     "Metadata (m)"
-    [ metadata args,
-      empty args
+    (backendTests args <$> [minBound .. maxBound])
+
+backendTests :: IO FilePath -> Backend -> TestTree
+backendTests args backend =
+  testGroup
+    (Backend.backendTestDesc backend)
+    [ metadata backend args,
+      empty backend args
     ]
 
-metadata :: IO FilePath -> TestTree
-metadata args = testCase "Prints metadata" $ do
+metadata :: Backend -> IO FilePath -> TestTree
+metadata backend args = testCase "Prints metadata" $ do
   testDir <- getTestPath args "metadata"
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -46,13 +53,13 @@ metadata args = testCase "Prints metadata" $ do
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet delIdxSet
   delExpectedMetadata @=? delMetadata
 
   -- METADATA
 
-  let metaArgList = ["m", "-t", trashDir]
+  let metaArgList = withSrArgs trashDir backend ["m"]
   (metadataResult, _) <- captureSafeRmLogs metaArgList
 
   -- assert nothing changed
@@ -65,17 +72,17 @@ metadata args = testCase "Prints metadata" $ do
   assertMatches expectedMetadata metadataResult
 
   -- trash structure assertions
-  (metadataIdxSet, metadatMetadata) <- runIndexMetadata testDir
+  (metadataIdxSet, metadatMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet metadataIdxSet
   delExpectedMetadata @=? metadatMetadata
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/m/metadata/f1",
-          mkPathData PathTypeFile "f2" "/safe-rm/functional/m/metadata/f2",
-          mkPathData PathTypeFile "f3" "/safe-rm/functional/m/metadata/f3",
-          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/m/metadata/dir1",
-          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/m/metadata/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/m/metadata/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/m/metadata/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/m/metadata/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/m/metadata/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/m/metadata/dir2"
         ]
 
     delExpectedMetadata =
@@ -95,15 +102,15 @@ metadata args = testCase "Prints metadata" $ do
               ""
             ]
 
-empty :: IO FilePath -> TestTree
-empty args = testCase "Prints empty metadata" $ do
+empty :: Backend -> IO FilePath -> TestTree
+empty backend args = testCase "Prints empty metadata" $ do
   testDir <- getTestPath args "empty"
   let trashDir = testDir </> ".trash"
 
   createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
   createFiles [trashDir </> "log"]
 
-  let metaArgList = ["m", "-t", trashDir]
+  let metaArgList = withSrArgs trashDir backend ["m"]
   (result, _) <- captureSafeRmLogs metaArgList
 
   assertMatches expectedTerminal result

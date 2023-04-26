@@ -47,6 +47,7 @@ library
   import:           common-lang
   exposed-modules:
     SafeRm
+    SafeRm.Data.Backend
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData
@@ -138,8 +139,7 @@ test-suite unit
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
-    Unit.Data.Index.Default
-    Unit.Data.Index.Fdo
+    Unit.Data.Index
     Unit.Data.PathData
     Unit.Data.UniqueSeq
     Unit.Prelude
@@ -152,6 +152,7 @@ test-suite unit
     , base
     , containers
     , effects-fs
+    , effects-logger-ns
     , effects-terminal
     , hedgehog              >=1.0.2    && <1.3
     , nonempty-containers

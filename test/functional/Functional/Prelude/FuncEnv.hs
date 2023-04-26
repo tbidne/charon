@@ -16,6 +16,7 @@ module Functional.Prelude.FuncEnv
     runSafeRm,
     runSafeRmException,
     runIndexMetadata,
+    runIndexMetadata',
 
     -- *** Data capture
     captureSafeRm,
@@ -24,6 +25,7 @@ module Functional.Prelude.FuncEnv
 
     -- * Misc
     mkPathData,
+    mkPathData',
   )
 where
 
@@ -47,13 +49,15 @@ import Effects.Time
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import PathSize qualified
 import SafeRm qualified
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData.Default qualified as Default
 import SafeRm.Data.PathData (PathData (..))
+import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
-import SafeRm.Env (HasTrashHome)
+import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
@@ -76,6 +80,7 @@ altAnswers = 'n' :> 'y' :> altAnswers
 data FuncEnv = MkFuncEnv
   { -- | Trash home.
     trashHome :: !(PathI TrashHome),
+    backend :: !Backend,
     -- | Log namespace.
     logNamespace :: !Namespace,
     -- | Saves the terminal output.
@@ -87,16 +92,20 @@ data FuncEnv = MkFuncEnv
   }
 
 instance Show FuncEnv where
-  show (MkFuncEnv th ns _ _ _) =
+  show (MkFuncEnv th backend ns _ _ _) =
     mconcat
       [ "MkFuncEnv {trashHome = ",
         show th,
+        ", backend = ",
+        show backend,
         ", logNamespace = ",
         show ns,
         ", terminalRef = <ref>, logsRef = <ref>, charStream = <ref> }"
       ]
 
 makeFieldLabelsNoPrefix ''FuncEnv
+
+deriving anyclass instance HasBackend FuncEnv
 
 deriving anyclass instance HasTrashHome FuncEnv
 
@@ -223,6 +232,7 @@ mkFuncEnv toml logsRef terminalRef = do
   pure $
     MkFuncEnv
       { trashHome = trashHome,
+        backend = fromMaybe BackendDefault (toml ^. #backend),
         terminalRef,
         logsRef,
         logNamespace = "functional",
@@ -320,6 +330,7 @@ runIndexMetadata testDir = do
   let funcEnv =
         MkFuncEnv
           { trashHome = MkPathI (testDir </> ".trash"),
+            backend = BackendDefault,
             logNamespace = "functional",
             terminalRef,
             logsRef,
@@ -342,10 +353,49 @@ runIndexMetadata testDir = do
               . T.replace (T.pack tmp) ""
               . T.pack
               . view #unPathI
-          -- TODO: Replace this with over' once we change the Getter to a Lens
-       in case pd of
+       in -- TODO: Replace this with over' once we change the Getter to a Lens
+          case pd of
             PathDataDefault d -> HSet.insert (over' #originalPath fixPath d) acc
-            PathDataFdo _ -> acc --HSet.insert (over' #originalPath fixPath d) acc
+            PathDataFdo _ -> acc -- HSet.insert (over' #originalPath fixPath d) acc
+            -- FIXME: This fails the fdo tests since we throw everything away.
+            -- Really don't want
+
+runIndexMetadata' :: Backend -> FilePath -> IO (HashSet PathData, Metadata)
+runIndexMetadata' backend testDir = do
+  terminalRef <- newIORef ""
+  logsRef <- newIORef ""
+  charStream <- newIORef altAnswers
+
+  let funcEnv =
+        MkFuncEnv
+          { trashHome = MkPathI (testDir </> ".trash"),
+            backend,
+            logNamespace = "functional",
+            terminalRef,
+            logsRef,
+            charStream
+          }
+
+  -- Need to canonicalize due to windows aliases
+  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+
+  idx <- view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
+  mdata <- runFuncIO SafeRm.getMetadata funcEnv
+
+  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
+  where
+    addSet :: String -> HashSet PathData -> PathData -> HashSet PathData
+    addSet tmp acc pd =
+      let fixPath =
+            MkPathI
+              . T.unpack
+              . T.replace (T.pack tmp) ""
+              . T.pack
+              . view #unPathI
+       in -- TODO: Replace this with over' once we change the Getter to a Lens
+          case pd of
+            PathDataDefault d -> HSet.insert (PathDataDefault $ over' #originalPath fixPath d) acc
+            PathDataFdo d -> HSet.insert (PathDataFdo $ over' #originalPath fixPath d) acc
 
 mkPathData ::
   PathType ->
@@ -360,3 +410,28 @@ mkPathData pathType fileName originalPath =
       size = afromInteger 5,
       created = fixedTimestamp
     }
+
+mkPathData' ::
+  Backend ->
+  PathType ->
+  PathI TrashEntryFileName ->
+  PathI TrashEntryOriginalPath ->
+  PathData
+mkPathData' backend pathType fileName originalPath =
+  case backend of
+    BackendDefault ->
+      PathDataDefault $
+        Default.UnsafePathData
+          { pathType,
+            fileName,
+            originalPath = U.massagePathI originalPath,
+            size = afromInteger 5,
+            created = fixedTimestamp
+          }
+    BackendFdo ->
+      PathDataFdo $
+        Fdo.UnsafePathData
+          { fileName,
+            originalPath = U.massagePathI originalPath,
+            created = fixedTimestamp
+          }

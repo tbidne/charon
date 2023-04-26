@@ -8,6 +8,7 @@ module Unit.Runner
   )
 where
 
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
 import SafeRm.Runner (getConfiguration)
@@ -189,6 +190,7 @@ parsesExample = testCase "Parses example" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
   Just "./tmp" @=? cfg ^. #trashHome
+  Just BackendFdo @=? cfg ^. #backend
   Just (Just LevelInfo) @=? cfg ^. #logLevel
   Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^. #logSizeMode
   where
@@ -199,6 +201,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
   Just "not-tmp" @=? cfg ^. #trashHome
+  Just BackendDefault @=? cfg ^. #backend
   Just (Just LevelError) @=? cfg ^. #logLevel
   Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^. #logSizeMode
   where
@@ -207,6 +210,8 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "examples/config.toml",
         "-t",
         "not-tmp",
+        "-b",
+        "default",
         "--log-level",
         "error",
         "--log-size-mode",

@@ -36,7 +36,7 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
-import SafeRm.Env (HasTrashHome (getTrashHome))
+import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
@@ -50,7 +50,8 @@ import System.IO qualified as IO
 -- @since 0.1
 delete ::
   forall env m.
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadCatch m,
     MonadFileWriter m,
@@ -96,7 +97,8 @@ delete paths = addNamespace "delete" $ do
 -- @since 0.1
 deletePermanently ::
   forall env m.
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadCatch m,
     MonadFileReader m,
@@ -141,10 +143,11 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
 -- @since 0.1
 getIndex ::
   forall env m.
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
+    HasTrashHome env,
     MonadFileReader m,
     MonadPathReader m,
-    HasTrashHome env,
     MonadLoggerNS m,
     MonadReader env m,
     MonadThrow m
@@ -165,8 +168,9 @@ getIndex = addNamespace "getIndex" $ do
 --
 -- @since 0.1
 getMetadata ::
-  forall env m.
-  ( HasCallStack,
+  forall m env.
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
     MonadLoggerNS m,
@@ -193,7 +197,8 @@ getMetadata = addNamespace "getMetadata" $ do
 -- @since 0.1
 restore ::
   forall env m.
-  ( HasCallStack,
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadCatch m,
     MonadFileReader m,
@@ -234,8 +239,9 @@ restore paths = addNamespace "restore" $ do
 --
 -- @since 0.1
 emptyTrash ::
-  forall env m.
-  ( HasCallStack,
+  forall m env.
+  ( HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
     MonadHandleWriter m,

@@ -10,3 +10,8 @@ log-level = "info"
 # exceeds it. Examples include "delete 20.5 gigabytes", "warn 10 KB".
 # Defaults to "delete 50 mb".
 log-size-mode = "warn 10 mb"
+
+# Uses the FreeDesktop.org backend i.e. changes how the trash data is
+# represented to match the FDO spec. This can be used to integrate safe-rm
+# with an FDO-compliant trash implementation.
+backend = "fdo"

@@ -9,6 +9,8 @@ where
 import Data.ByteString.Char8 qualified as Char8
 import Data.Text qualified as T
 import Functional.Prelude
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Exception
   ( TrashDirFilesNotFoundE,
     TrashDirInfoNotFoundE,
@@ -23,17 +25,24 @@ tests :: IO FilePath -> TestTree
 tests args =
   testGroup
     "List (l)"
-    [ emptySucceeds args,
-      noPathsError args,
-      noInfoError args,
-      missingPathError args,
-      missingInfoError args
+    (backendTests args <$> [minBound .. maxBound])
+
+backendTests :: IO FilePath -> Backend -> TestTree
+backendTests args backend =
+  testGroup
+    (Backend.backendTestDesc backend)
+    [ emptySucceeds backend args,
+      noPathsError backend args,
+      noInfoError backend args,
+      missingPathError backend args,
+      missingInfoError backend args
     ]
 
-emptySucceeds :: IO FilePath -> TestTree
-emptySucceeds args = testCase "List on empty directory succeeds" $ do
+emptySucceeds :: Backend -> IO FilePath -> TestTree
+emptySucceeds backend args = testCase "List on empty directory succeeds" $ do
   testDir <- getTestPath args "emptySucceeds"
-  let argList = ["-t", testDir </> ".trash", "l", "--format", "m"]
+  let trashDir = testDir </> ".trash"
+      argList = withSrArgs trashDir backend ["l", "--format", "m"]
 
   (result, logs) <- captureSafeRmLogs argList
 
@@ -49,11 +58,11 @@ emptySucceeds args = testCase "List on empty directory succeeds" $ do
         Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist."
       ]
 
-noPathsError :: IO FilePath -> TestTree
-noPathsError args = testCase "No Paths Error" $ do
+noPathsError :: Backend -> IO FilePath -> TestTree
+noPathsError backend args = testCase "No Paths Error" $ do
   testDir <- getTestPath args "noPathsError"
   let trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
+      argList = withSrArgs trashDir backend ["l", "--format", "m"]
 
   -- setup
   clearDirectory testDir
@@ -73,11 +82,11 @@ noPathsError args = testCase "No Paths Error" $ do
         Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash files directory was not found at '" "/safe-rm/functional/l/noPathsError/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
-noInfoError :: IO FilePath -> TestTree
-noInfoError args = testCase "No Info Error" $ do
+noInfoError :: Backend -> IO FilePath -> TestTree
+noInfoError backend args = testCase "No Info Error" $ do
   testDir <- getTestPath args "noInfoError"
   let trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
+      argList = withSrArgs trashDir backend ["l", "--format", "m"]
 
   -- setup
   clearDirectory testDir
@@ -97,11 +106,11 @@ noInfoError args = testCase "No Info Error" $ do
         Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" "/safe-rm/functional/l/noInfoError/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. sr e -f)."
       ]
 
-missingPathError :: IO FilePath -> TestTree
-missingPathError args = testCase "Entry Missing Path" $ do
+missingPathError :: Backend -> IO FilePath -> TestTree
+missingPathError backend args = testCase "Entry Missing Path" $ do
   testDir <- getTestPath args "missingPathError"
   let trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
+      argList = withSrArgs trashDir backend ["l", "--format", "m"]
       missingInfo =
         Char8.unlines
           [ "[Trash Info]",
@@ -150,11 +159,11 @@ missingPathError args = testCase "Entry Missing Path" $ do
     escapeBackslashes ('\\' : xs) = '\\' : '\\' : escapeBackslashes xs
     escapeBackslashes (x : xs) = x : escapeBackslashes xs
 
-missingInfoError :: IO FilePath -> TestTree
-missingInfoError args = testCase "Entry Missing Info" $ do
+missingInfoError :: Backend -> IO FilePath -> TestTree
+missingInfoError backend args = testCase "Entry Missing Info" $ do
   testDir <- getTestPath args "missingInfoError"
   let trashDir = testDir </> ".trash"
-      argList = ["-t", trashDir, "l", "--format", "m"]
+      argList = withSrArgs trashDir backend ["l", "--format", "m"]
 
   -- setup
   clearDirectory testDir

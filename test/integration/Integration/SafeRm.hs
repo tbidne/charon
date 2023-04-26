@@ -28,16 +28,16 @@ import Integration.AsciiOnly (AsciiOnly (..))
 import Integration.Prelude
 import PathSize qualified
 import SafeRm qualified
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
-import SafeRm.Env (HasTrashHome (getTrashHome))
+import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
 import SafeRm.Runner.Env
-  ( Env (MkEnv),
+  ( Env (..),
     LogEnv (MkLogEnv),
-    logEnv,
-    trashHome,
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (..))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
@@ -55,6 +55,9 @@ data IntEnv = MkIntEnv
   }
 
 makeFieldLabelsNoPrefix ''IntEnv
+
+instance HasBackend IntEnv where
+  getBackend = view (#coreEnv % #backend)
 
 instance HasTrashHome IntEnv where
   getTrashHome = view (#coreEnv % #trashHome)
@@ -144,18 +147,24 @@ tests :: IO FilePath -> TestTree
 tests testDir =
   testGroup
     "SafeRm"
-    [ delete testDir,
-      deleteSome testDir,
-      deletePermanently testDir,
-      deleteSomePermanently testDir,
-      restore testDir,
-      restoreSome testDir,
-      emptyTrash testDir,
-      metadata testDir
+    (testsBackend testDir <$> [minBound .. maxBound])
+
+testsBackend :: IO FilePath -> Backend -> TestTree
+testsBackend testDir b =
+  testGroup
+    (Backend.backendTestDesc b)
+    [ delete b testDir,
+      deleteSome b testDir,
+      deletePermanently b testDir,
+      deleteSomePermanently b testDir,
+      restore b testDir,
+      restoreSome b testDir,
+      emptyTrash b testDir,
+      metadata b testDir
     ]
 
-delete :: IO FilePath -> TestTree
-delete mtestDir = askOption $ \(MkAsciiOnly b) -> do
+delete :: Backend -> IO FilePath -> TestTree
+delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "All paths are deleted" "delete" $ do
     property $ do
       testDir <- (</> "d1") <$> getTestPath mtestDir
@@ -163,7 +172,7 @@ delete mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
           αTrash = mkTrashPaths trashDir α
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
@@ -190,8 +199,8 @@ delete mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       αTest ^. #set === indexOrigPaths
 
-deleteSome :: IO FilePath -> TestTree
-deleteSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
+deleteSome :: Backend -> IO FilePath -> TestTree
+deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
       testDir <- (</> "d2") <$> getTestPath mtestDir
@@ -202,7 +211,7 @@ deleteSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
           trashDir = testDir </> ".trash"
           αTrash = mkTrashPaths trashDir α
           βTrash = mkTrashPaths trashDir β
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
@@ -247,8 +256,8 @@ deleteSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
       -- index should exactly match α
       αTest ^. #set === indexOrigPaths
 
-deletePermanently :: IO FilePath -> TestTree
-deletePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
+deletePermanently :: Backend -> IO FilePath -> TestTree
+deletePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deletePermanently" $ do
     property $ do
       testDir <- (</> "x1") <$> getTestPath mtestDir
@@ -256,7 +265,7 @@ deletePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let trashDir = testDir </> ".trash"
           αTest = USeq.map (testDir </>) α
           αTrash = mkTrashPaths trashDir α
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
@@ -288,8 +297,8 @@ deletePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "All trash entries are permanently deleted"
 
-deleteSomePermanently :: IO FilePath -> TestTree
-deleteSomePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
+deleteSomePermanently :: Backend -> IO FilePath -> TestTree
+deleteSomePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "deleteSomePermanently" $ do
     property $ do
       testDir <- (</> "x2") <$> getTestPath mtestDir
@@ -302,7 +311,7 @@ deleteSomePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
           αTrash = mkTrashPaths trashDir α
           βTrash = mkTrashPaths trashDir β
           γTrash = mkTrashPaths trashDir γ
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
       annotateShow toDelete
@@ -354,8 +363,8 @@ deleteSomePermanently mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "Some trash entries are permanently deleted, others error"
 
-restore :: IO FilePath -> TestTree
-restore mtestDir = askOption $ \(MkAsciiOnly b) -> do
+restore :: Backend -> IO FilePath -> TestTree
+restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
       testDir <- (</> "r1") <$> getTestPath mtestDir
@@ -363,7 +372,7 @@ restore mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
           αTrash = mkTrashPaths trashDir α
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
@@ -396,8 +405,8 @@ restore mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotate "Assert files do not exist"
       assertFilesDoNotExist αTrash
 
-restoreSome :: IO FilePath -> TestTree
-restoreSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
+restoreSome :: Backend -> IO FilePath -> TestTree
+restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
       testDir <- (</> "r2") <$> getTestPath mtestDir
@@ -408,7 +417,7 @@ restoreSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
           trashDir = testDir </> ".trash"
           αTrash = mkTrashPaths trashDir α
           γTrash = mkTrashPaths trashDir γ
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
       annotateShow toDelete
@@ -460,8 +469,8 @@ restoreSome mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "Some trash entries are restored, others error"
 
-emptyTrash :: IO FilePath -> TestTree
-emptyTrash mtestDir = askOption $ \(MkAsciiOnly b) -> do
+emptyTrash :: Backend -> IO FilePath -> TestTree
+emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
       testDir <- (</> "e1") <$> getTestPath mtestDir
@@ -469,7 +478,7 @@ emptyTrash mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
           aTrash = mkTrashPaths trashDir α
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
       annotateShow aTest
@@ -500,8 +509,8 @@ emptyTrash mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotate "Assert files do not exist"
       assertFilesDoNotExist (aTest `USeq.union` aTrash)
 
-metadata :: IO FilePath -> TestTree
-metadata mtestDir = askOption $ \(MkAsciiOnly b) -> do
+metadata :: Backend -> IO FilePath -> TestTree
+metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
       testDir <- (</> "m1") <$> getTestPath mtestDir
@@ -509,7 +518,7 @@ metadata mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let aTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
           aTrash = mkTrashPaths trashDir α
-      env <- liftIO $ mkEnv trashDir
+      env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
       annotateShow aTest
@@ -630,15 +639,17 @@ genChar asciiOnly = Gen.filterT f (mapper <$> g)
 toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 
-mkEnv :: FilePath -> IO IntEnv
-mkEnv fp = do
+mkEnv :: Backend -> FilePath -> IO IntEnv
+mkEnv backend fp = do
   termLogsRef <- newIORef []
   logsRef <- newIORef []
+
   pure $
     MkIntEnv
       { coreEnv =
           MkEnv
             { trashHome = MkPathI fp,
+              backend,
               logEnv = MkLogEnv Nothing ""
             },
         termLogsRef,

@@ -41,6 +41,7 @@ import Options.Applicative.Help.Chunk (Chunk (Chunk))
 import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
+import SafeRm.Data.Backend (Backend (..), parseBackend)
 import SafeRm.Data.Index (Sort, readSort)
 import SafeRm.Data.PathData.Formatting (ColFormat (..))
 import SafeRm.Data.PathData.Formatting qualified as PathData
@@ -91,6 +92,8 @@ data Args = MkArgs
     --
     -- @since 0.1
     tomlConfigPath :: !TomlConfigPath,
+    -- | Backend to use.
+    backend :: !(Maybe Backend),
     -- | Path to trash home.
     --
     -- @since 0.1
@@ -154,6 +157,7 @@ argsParser :: Parser Args
 argsParser =
   MkArgs
     <$> configParser
+    <*> backendParser
     <*> trashParser
     <*> logLevelParser
     <*> logSizeModeParser
@@ -175,6 +179,26 @@ version = OA.infoOption txt (OA.long "version")
 
 versNum :: String
 versNum = "Version: " <> $$(PV.packageVersionStringTH "safe-rm.cabal")
+
+backendParser :: Parser (Maybe Backend)
+backendParser =
+  OA.optional $
+    OA.option (OA.str >>= parseBackend) $
+      mconcat
+        [ OA.long "backend",
+          OA.short 'b',
+          OA.metavar "(default|fdo)",
+          mkHelp helpTxt
+        ]
+  where
+    helpTxt =
+      mconcat
+        [ "Backend to use with safe-rm. This option affects how path metadata ",
+          "is stored. The fdo option is compatible with the FreeDesktop.org ",
+          "trash specification file format. Defaults to 'default', which ",
+          "captures more information when a path is moved to the trash, at the ",
+          "expense of compatibility."
+        ]
 
 configParser :: Parser TomlConfigPath
 configParser =

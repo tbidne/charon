@@ -8,6 +8,8 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
 import SafeRm.Data.PathType (PathType (..))
 
@@ -16,20 +18,26 @@ tests :: IO FilePath -> TestTree
 tests args =
   testGroup
     "Empty (e)"
-    [ emptyTrash args,
-      emptyTrashTwice args,
-      emptyNoForce args,
-      missingInfoForcesDelete args,
-      missingPathsForcesDelete args
+    (backendTests args <$> [minBound .. maxBound])
+
+backendTests :: IO FilePath -> Backend -> TestTree
+backendTests args backend =
+  testGroup
+    (Backend.backendTestDesc backend)
+    [ emptyTrash backend args,
+      emptyTrashTwice backend args,
+      emptyNoForce backend args,
+      missingInfoForcesDelete backend args,
+      missingPathsForcesDelete backend args
     ]
 
-emptyTrash :: IO FilePath -> TestTree
-emptyTrash args = testCase "Empties trash" $ do
+emptyTrash :: Backend -> IO FilePath -> TestTree
+emptyTrash backend args = testCase "Empties trash" $ do
   testDir <- getTestPath args "emptyTrash"
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -51,13 +59,13 @@ emptyTrash args = testCase "Empties trash" $ do
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet delIdxSet
   delExpectedMetadata @=? delMetadata
 
   -- EMPTY
 
-  let emptyArgList = ["e", "-f", "-t", trashDir]
+  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -68,17 +76,17 @@ emptyTrash args = testCase "Empties trash" $ do
   assertDirectoriesDoNotExist ["", "dir1", "dir2", "dir2/dir3"]
 
   -- trash structure assertions
-  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata' backend testDir
   assertSetEq emptyExpectedIdxSet emptyIdxSet
   emptyExpectedMetadata @=? emptyMetadata
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/emptyTrash/f1",
-          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/emptyTrash/f2",
-          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/emptyTrash/f3",
-          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/emptyTrash/dir1",
-          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/emptyTrash/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/emptyTrash/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/emptyTrash/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/emptyTrash/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/emptyTrash/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/emptyTrash/dir2"
         ]
 
     delExpectedMetadata =
@@ -92,21 +100,21 @@ emptyTrash args = testCase "Empties trash" $ do
     emptyExpectedIdxSet = HashSet.empty
     emptyExpectedMetadata = mempty
 
-emptyTrashTwice :: IO FilePath -> TestTree
-emptyTrashTwice args = testCase "Calling empty twice does not error" $ do
+emptyTrashTwice :: Backend -> IO FilePath -> TestTree
+emptyTrashTwice backend args = testCase "Calling empty twice does not error" $ do
   testDir <- getTestPath args "emptyTrashTwice"
   let trashDir = testDir </> ".trash"
 
-  runSafeRm ["e", "-f", "-t", trashDir]
-  runSafeRm ["e", "-f", "-t", trashDir]
+  runSafeRm $ withSrArgs trashDir backend ["e", "-f"]
+  runSafeRm $ withSrArgs trashDir backend ["e", "-f"]
 
-emptyNoForce :: IO FilePath -> TestTree
-emptyNoForce args = testCase "Empties trash without force" $ do
+emptyNoForce :: Backend -> IO FilePath -> TestTree
+emptyNoForce backend args = testCase "Empties trash without force" $ do
   testDir <- getTestPath args "emptyNoForce"
   let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
-      delArgList = ["-t", trashDir, "d"] <> fileDeletePaths
+      delArgList = withSrArgs trashDir backend $ "d" : fileDeletePaths
 
   -- setup
   clearDirectory testDir
@@ -121,13 +129,13 @@ emptyNoForce args = testCase "Empties trash without force" $ do
   assertFilesDoNotExist fileDeletePaths
 
   -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet delIdxSet
   delExpectedMetadata @=? delMetadata
 
   -- EMPTY
 
-  let emptyArgList = ["-t", trashDir, "e"]
+  let emptyArgList = withSrArgs trashDir backend ["e"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -135,17 +143,17 @@ emptyNoForce args = testCase "Empties trash without force" $ do
   assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
 
   -- trash structure assertions
-  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet emptyIdxSet
   delExpectedMetadata @=? emptyMetadata
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData PathTypeFile "1" "/safe-rm/functional/e/emptyNoForce/1",
-          mkPathData PathTypeFile "2" "/safe-rm/functional/e/emptyNoForce/2",
-          mkPathData PathTypeFile "3" "/safe-rm/functional/e/emptyNoForce/3",
-          mkPathData PathTypeFile "4" "/safe-rm/functional/e/emptyNoForce/4",
-          mkPathData PathTypeFile "5" "/safe-rm/functional/e/emptyNoForce/5"
+        [ mkPathData' backend PathTypeFile "1" "/safe-rm/functional/e/emptyNoForce/1",
+          mkPathData' backend PathTypeFile "2" "/safe-rm/functional/e/emptyNoForce/2",
+          mkPathData' backend PathTypeFile "3" "/safe-rm/functional/e/emptyNoForce/3",
+          mkPathData' backend PathTypeFile "4" "/safe-rm/functional/e/emptyNoForce/4",
+          mkPathData' backend PathTypeFile "5" "/safe-rm/functional/e/emptyNoForce/5"
         ]
 
     delExpectedMetadata =
@@ -156,13 +164,13 @@ emptyNoForce args = testCase "Empties trash without force" $ do
           size = afromInteger 0
         }
 
-missingInfoForcesDelete :: IO FilePath -> TestTree
-missingInfoForcesDelete args = testCase "empty --force overwrites bad directory (no info.)" $ do
+missingInfoForcesDelete :: Backend -> IO FilePath -> TestTree
+missingInfoForcesDelete backend args = testCase "empty --force overwrites bad directory (no info.)" $ do
   testDir <- getTestPath args "missingInfoForcesDelete"
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -183,14 +191,14 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet delIdxSet
   delExpectedMetadata @=? delMetadata
 
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "info")
 
-  let emptyArgList = ["-t", trashDir, "e", "-f"]
+  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -203,17 +211,17 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
   assertDirectoriesExist $ fmap (trashDir </>) ["info", "files"]
 
   -- trash structure assertions
-  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata' backend testDir
   assertSetEq emptyExpectedIdxSet emptyIdxSet
   emptyExpectedMetadata @=? emptyMetadata
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/missingInfoForcesDelete/f1",
-          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/missingInfoForcesDelete/f2",
-          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/missingInfoForcesDelete/f3",
-          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/missingInfoForcesDelete/dir1",
-          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/missingInfoForcesDelete/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/missingInfoForcesDelete/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/missingInfoForcesDelete/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/missingInfoForcesDelete/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/missingInfoForcesDelete/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/missingInfoForcesDelete/dir2"
         ]
 
     delExpectedMetadata =
@@ -227,13 +235,13 @@ missingInfoForcesDelete args = testCase "empty --force overwrites bad directory 
     emptyExpectedIdxSet = HashSet.empty
     emptyExpectedMetadata = mempty
 
-missingPathsForcesDelete :: IO FilePath -> TestTree
-missingPathsForcesDelete args = testCase "empty --force overwrites bad directory (no paths/)" $ do
+missingPathsForcesDelete :: Backend -> IO FilePath -> TestTree
+missingPathsForcesDelete backend args = testCase "empty --force overwrites bad directory (no paths/)" $ do
   testDir <- getTestPath args "missingPathsForcesDelete"
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = ("d" : filesToDelete <> dirsToDelete) <> ["-t", trashDir]
+      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -254,14 +262,14 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
   assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
 
   -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata testDir
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
   assertSetEq delExpectedIdxSet delIdxSet
   delExpectedMetadata @=? delMetadata
 
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "files")
 
-  let emptyArgList = ["-t", trashDir, "e", "-f"]
+  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -274,17 +282,17 @@ missingPathsForcesDelete args = testCase "empty --force overwrites bad directory
   assertDirectoriesExist $ fmap (trashDir </>) ["info", "files"]
 
   -- trash structure assertions
-  (emptyIdxSet, emptyMetadata) <- runIndexMetadata testDir
+  (emptyIdxSet, emptyMetadata) <- runIndexMetadata' backend testDir
   assertSetEq emptyExpectedIdxSet emptyIdxSet
   emptyExpectedMetadata @=? emptyMetadata
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData PathTypeFile "f1" "/safe-rm/functional/e/missingPathsForcesDelete/f1",
-          mkPathData PathTypeFile "f2" "/safe-rm/functional/e/missingPathsForcesDelete/f2",
-          mkPathData PathTypeFile "f3" "/safe-rm/functional/e/missingPathsForcesDelete/f3",
-          mkPathData PathTypeDirectory "dir1" "/safe-rm/functional/e/missingPathsForcesDelete/dir1",
-          mkPathData PathTypeDirectory "dir2" "/safe-rm/functional/e/missingPathsForcesDelete/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/missingPathsForcesDelete/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/missingPathsForcesDelete/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/missingPathsForcesDelete/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/missingPathsForcesDelete/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/missingPathsForcesDelete/dir2"
         ]
 
     delExpectedMetadata =

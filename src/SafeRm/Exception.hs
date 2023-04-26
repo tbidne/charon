@@ -30,6 +30,7 @@ module SafeRm.Exception
     RootE (..),
     EmptyPathE (..),
     InfoDecodeE (..),
+    PathNotFileDirE (..),
   )
 where
 
@@ -311,6 +312,22 @@ instance Exception InfoDecodeE where
         bsToStr bs,
         "\n: ",
         err
+      ]
+
+-- | Could not rename file due to duplicate names.
+newtype PathNotFileDirE = MkPathNotFileDirE FilePath
+  deriving stock
+    ( -- | @since 0.1
+      Show
+    )
+
+-- | @since 0.1
+instance Exception PathNotFileDirE where
+  displayException (MkPathNotFileDirE p) =
+    mconcat
+      [ "Path exists but is not a file or directory: '",
+        p,
+        "'"
       ]
 
 slash :: FilePath

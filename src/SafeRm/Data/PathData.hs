@@ -9,7 +9,6 @@
 module SafeRm.Data.PathData
   ( -- * PathData
     PathData (..),
-    PathDataBackend (..),
 
     -- * Creation
     toPathData,
@@ -22,7 +21,7 @@ module SafeRm.Data.PathData
     originalPathExists,
 
     -- * Operations
-    moveFn,
+    pathDataToType,
 
     -- * Miscellaneous
     headerNames,
@@ -32,9 +31,11 @@ module SafeRm.Data.PathData
   )
 where
 
+import Data.Bifunctor (first)
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Exts qualified as Exts
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.PathData.Default qualified as Default
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
@@ -50,19 +51,19 @@ data PathData
   = PathDataDefault Default.PathData
   | PathDataFdo Fdo.PathData
   deriving stock (Eq, Generic, Show)
-  deriving anyclass (NFData)
+  deriving anyclass (Hashable, NFData)
 
 instance Pretty PathData where
   pretty (PathDataDefault pd) = pretty pd
   pretty (PathDataFdo pd) = pretty pd
 
 instance Serialize PathData where
-  type DecodeExtra PathData = (PathDataBackend, PathI TrashEntryFileName)
+  type DecodeExtra PathData = (Backend, PathI TrashEntryFileName)
   encode (PathDataDefault pd) = encode pd
   encode (PathDataFdo pd) = encode pd
 
-  decode (PathDataBackendDefault, fileName) bs = PathDataDefault <$> decode fileName bs
-  decode (PathDataBackendFdo, fileName) bs = PathDataFdo <$> decode fileName bs
+  decode (BackendDefault, fileName) bs = PathDataDefault <$> decode fileName bs
+  decode (BackendFdo, fileName) bs = PathDataFdo <$> decode fileName bs
 
 instance
   (k ~ A_Getter, a ~ PathI TrashEntryFileName, b ~ PathI TrashEntryFileName) =>
@@ -94,19 +95,18 @@ instance
       getter (PathDataFdo pd) = pd ^. #created
   {-# INLINE labelOptic #-}
 
--- | Type of PathData.
-data PathDataBackend
-  = -- | PathData for use with the default backend.
-    PathDataBackendDefault
-  | -- | PathData for use with the FreeDesktopOrg backend.
-    PathDataBackendFdo
-  deriving stock (Eq, Show)
-
 -- | For a given filepath, attempts to capture the following data:
 --
 -- * Canonical path.
 -- * Unique name to be used in the trash directory.
--- * File/directory type.
+-- * Created time.
+-- * Any extra backend-specific fields (i.e. path type and size for default).
+--
+-- Additionally, we explicitly return the PathType. We do this because
+-- the PathType does not exist on all backends (e.g. fdo) yet we need it upon
+-- creation for choosing the correct move function (renameFile vs.
+-- renameDirectory). We cannot rely on pathDataToType as that function is
+-- only valid when the PathData entry has already been created in the trash.
 --
 -- @since 0.1
 toPathData ::
@@ -117,13 +117,13 @@ toPathData ::
     MonadTerminal m,
     MonadThrow m
   ) =>
-  PathDataBackend ->
+  Backend ->
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m PathData
-toPathData PathDataBackendDefault ts th = fmap PathDataDefault . Default.toPathData ts th
-toPathData PathDataBackendFdo ts th = fmap PathDataFdo . Fdo.toPathData ts th
+  m (PathData, PathType)
+toPathData BackendDefault ts th = fmap (first PathDataDefault) . Default.toPathData ts th
+toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.
@@ -131,19 +131,16 @@ toPathData PathDataBackendFdo ts th = fmap PathDataFdo . Fdo.toPathData ts th
 -- @since 0.1
 trashPathExists ::
   ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    MonadPathReader m
   ) =>
   PathI TrashHome ->
   PathData ->
   m Bool
-trashPathExists th pd = do
-  pathType <- case pd of
-    PathDataDefault pd' -> pure (pd' ^. #pathType)
-    PathDataFdo pd' -> Fdo.pathDataToType pd'
-
-  PathType.existsFn pathType trashPath'
+trashPathExists th pd = doesPathExist trashPath'
   where
+    -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
+    -- the path type. See Note [PathData PathType conditions].
+
     MkPathI trashPath' = Env.getTrashPath th (pd ^. #fileName)
 
 -- | Returns 'True' if the 'PathData'\'s @originalPath@ corresponds to a real
@@ -155,12 +152,12 @@ originalPathExists ::
     MonadPathReader m,
     MonadThrow m
   ) =>
+  PathI TrashHome ->
   PathData ->
   m Bool
-originalPathExists pd = do
-  pathType <- case pd of
-    PathDataDefault pd' -> pure (pd' ^. #pathType)
-    PathDataFdo pd' -> Fdo.pathDataToType pd'
+originalPathExists th pd = do
+  -- See Note [PathData PathType conditions].
+  pathType <- pathDataToType th pd
 
   PathType.existsFn pathType (pd ^. (#originalPath % #unPathI))
 
@@ -175,35 +172,18 @@ deleteFileName ::
   PathData ->
   m ()
 deleteFileName trashHome pd = do
-  pathType <- case pd of
-    PathDataDefault pd' -> pure (pd' ^. #pathType)
-    PathDataFdo pd' -> Fdo.pathDataToType pd'
+  -- See Note [PathData PathType conditions].
+  pathType <- pathDataToType trashHome pd
   PathType.deleteFn pathType trashPath'
   where
     MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
 
--- | Returns the move function to be used with this PathData.
-moveFn ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadThrow m
-  ) =>
-  PathData ->
-  Path ->
-  Path ->
-  m ()
-moveFn (PathDataDefault pd) x y = PathType.renameFn (pd ^. #pathType) x y
-moveFn (PathDataFdo pd) x y = do
-  ty <- Fdo.pathDataToType pd
-  PathType.renameFn ty x y
-
 -- | Header names.
 --
 -- @since 0.1
-headerNames :: (Exts.IsList a, IsString (Exts.Item a)) => PathDataBackend -> a
-headerNames PathDataBackendDefault = Default.headerNames
-headerNames PathDataBackendFdo = Fdo.headerNames
+headerNames :: (Exts.IsList a, IsString (Exts.Item a)) => Backend -> a
+headerNames BackendDefault = Default.headerNames
+headerNames BackendFdo = Fdo.headerNames
 
 -- | Normalizes the wrapper 'PathData' into the specific default backend's
 -- 'Default.PathData'. This is so we can functionality that relies on this
@@ -245,6 +225,36 @@ normalizeDefault (PathDataFdo pd) = do
       }
   where
     MkPathI originalPath = pd ^. #originalPath
+
+-- | Returns the path type.
+--
+-- NOTE: [PathData PathType conditions]
+--
+-- __IMPORTANT:__ This function is only guaranteed to work if the 'PathData'
+-- corresponds to an extant trash entry. In particular, if the 'PathData' has
+-- not been created yet, this can fail with the fdo backend.
+--
+-- Also, this function should not be used when we are testing to see if a
+-- a path exists e.g. to see if a path exists in both files/ and info/.
+--
+-- For instance, we want to give a precise error message when a path p exists
+-- in info/ but not files/. Notice this requires successfully testing the
+-- existence of both files/p and info/p.trashinfo. If we use pathDataToType
+-- to grab the "right" existence function (doesFileExist vs. doesDirectoryExist),
+-- then we will inadvertently be performing the existence check here, with one
+-- key difference: we throw an exception rather than return a Bool! This will
+-- in turn cause the error to degrade to a basic FileNotFound, obviously not
+-- what we want.
+pathDataToType ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  PathData ->
+  m PathType
+pathDataToType _ (PathDataDefault pd) = pure $ pd ^. #pathType
+pathDataToType trashHome (PathDataFdo pd) = Fdo.pathDataToType trashHome pd
 
 -- \| Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --

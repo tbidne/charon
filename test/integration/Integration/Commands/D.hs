@@ -10,34 +10,35 @@ where
 
 import Data.Text qualified as T
 import Integration.Prelude
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 
 -- | @since 0.1
 tests :: TestTree
 tests =
   testGroup
     "Delete (d)"
-    [ testRoot
-    ]
+    (testRoot <$> [minBound .. maxBound])
 
-testRoot :: TestTree
-testRoot =
+testRoot :: Backend -> TestTree
+testRoot b =
   testGroup
-    "Delete root throws error"
+    ("Delete root throws error " ++ Backend.backendTestDesc b)
 #if WINDOWS
-    [ deletesRootError "C:\\",
-      deletesRootError "d:",
-      deletesRootError "X:\\   ",
-      deletesRootError "  g:   "
+    [ deletesRootError b "C:\\",
+      deletesRootError b "d:",
+      deletesRootError b "X:\\   ",
+      deletesRootError b "  g:   "
     ]
 #else
-    [ deletesRootError "/",
-      deletesRootError "/   ",
-      deletesRootError " /   "
+    [ deletesRootError b "/",
+      deletesRootError b "/   ",
+      deletesRootError b " /   "
     ]
 #endif
 
-deletesRootError :: String -> TestTree
-deletesRootError r = testCase ("delete '" <> r <> "'") $ do
+deletesRootError :: Backend -> String -> TestTree
+deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
   (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @ExitCode argList
 
   "ExitFailure 1" @=? ex
@@ -51,4 +52,4 @@ deletesRootError r = testCase ("delete '" <> r <> "'") $ do
         <> "': Attempted to delete root! This is not allowed.\n"
 
     argList :: [String]
-    argList = "d" : r : ["-t", "/dev/null"]
+    argList = "d" : r : ["-t", "/dev/null", "--backend", Backend.backendArg b]

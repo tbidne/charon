@@ -11,6 +11,7 @@ module SafeRm.Runner.Toml
   )
 where
 
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
 import SafeRm.Runner.Args (Args)
@@ -32,6 +33,8 @@ data TomlConfig = MkTomlConfig
     --
     -- @since 0.1
     trashHome :: !(Maybe (PathI TrashHome)),
+    -- | Backend.
+    backend :: !(Maybe Backend),
     -- | Log level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
     --
@@ -54,17 +57,19 @@ makeFieldLabelsNoPrefix ''TomlConfig
 
 -- | @since 0.1
 defaultTomlConfig :: TomlConfig
-defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing
+defaultTomlConfig = MkTomlConfig Nothing Nothing Nothing Nothing
 
 -- | @since 0.5
 instance DecodeTOML TomlConfig where
   tomlDecoder =
     MkTomlConfig
       <$> decodeTrashHome
+      <*> decodeBackend
       <*> decodeLogLevel
       <*> decodeSizeMode
     where
       decodeTrashHome = fmap MkPathI <$> getFieldOpt "trash-home"
+      decodeBackend = getFieldOptWith tomlDecoder "backend"
       decodeLogLevel =
         getFieldOptWith (tomlDecoder >>= U.readLogLevel) "log-level"
       decodeSizeMode = getFieldOptWith (tomlDecoder >>= parseFileSizeMode) "log-size-mode"
@@ -80,6 +85,7 @@ mergeConfigs args toml = (mergedConfig, advancePhase cmd)
     mergedConfig =
       MkTomlConfig
         { trashHome = U.mergeAlt #trashHome #trashHome args toml,
+          backend = U.mergeAlt #backend #backend args toml,
           logLevel = U.mergeAlt #logLevel #logLevel args toml,
           logSizeMode = U.mergeAlt #logSizeMode #logSizeMode args toml
         }
