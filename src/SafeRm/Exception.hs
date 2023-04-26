@@ -34,10 +34,7 @@ module SafeRm.Exception
   )
 where
 
-import SafeRm.Data.Paths
-  ( PathI,
-    PathIndex (..),
-  )
+import SafeRm.Data.Paths (PathI, PathIndex (..))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 
@@ -308,9 +305,9 @@ instance Exception InfoDecodeE where
     mconcat
       [ "Could not decode file '",
         path ^. #unPathI,
-        "' contents\n",
-        bsToStr bs,
-        "\n: ",
+        "' with contents:\n",
+        bsToStrLenient bs,
+        "\nError: ",
         err
       ]
 
@@ -328,6 +325,20 @@ instance Exception PathNotFileDirE where
       [ "Path exists but is not a file or directory: '",
         p,
         "'"
+      ]
+
+-- | Unexpected key when deserializing trash info.
+data UnexpectedKey = MkUnexpectedKey (PathI TrashEntryFileName) ByteString
+  deriving stock (Show)
+
+-- | @since 0.1
+instance Exception UnexpectedKey where
+  displayException (MkUnexpectedKey fileName k) =
+    mconcat
+      [ "Unexpected key when deserializing trash info file: '",
+        fileName ^. #unPathI,
+        "': ",
+        bsToStrLenient k
       ]
 
 slash :: FilePath

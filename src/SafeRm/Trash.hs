@@ -12,6 +12,9 @@ module SafeRm.Trash
     mvOriginalToTrash,
     restoreTrashToOriginal,
     permDeleteFromTrash,
+
+    -- * Convert
+    convertBackend,
   )
 where
 
@@ -21,8 +24,10 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.Exception (onException)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
-import Effects.FileSystem.PathWriter (removeFile)
+import Effects.FileSystem.PathWriter (MonadPathWriter (..), removeFile)
 import Effects.System.Terminal (MonadTerminal (..))
+import SafeRm.Data.Backend (Backend)
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index (..))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData (PathData)
@@ -410,3 +415,84 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
     hasWildcard ('\\' : '*' : xs) = hasWildcard xs
     hasWildcard ('*' : _) = True
     hasWildcard (_ : xs) = hasWildcard xs
+
+convertBackend ::
+  ( HasBackend env,
+    HasCallStack,
+    HasTrashHome env,
+    MonadCatch m,
+    MonadFileReader m,
+    MonadFileWriter m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathSize m,
+    MonadPathWriter m,
+    MonadReader env m,
+    MonadTerminal m
+  ) =>
+  Backend ->
+  m ()
+convertBackend dest = addNamespace "convertBackend" $ do
+  $(logDebug) $ "Converting backend to: " <> T.pack (Backend.backendArg dest)
+  trashHome@(MkPathI th) <- asks getTrashHome
+  MkIndex index <- Index.readIndex trashHome
+
+  let newInfo = th </> "tmp_info_new"
+  createDirectory newInfo
+
+  -- NOTE: This is not in-place.
+
+  let createTmp = for_ index $ \pd -> do
+        pd' <- PathData.convert pd dest
+        let encoded = encode pd'
+            filePath = newInfo </> (pd' ^. (#fileName % #unPathI)) <> Env.trashInfoExtension
+
+        writeBinaryFile filePath encoded
+
+  -- 1. create converted copy at trash/tmp_info_new
+  createTmp `catchAny` \ex -> do
+    let msg =
+          mconcat
+            [ "Exception during conversion:\n",
+              displayException ex
+            ]
+    $(logError) $ T.pack msg
+    $(logError) $ "Deleting tmp dir: " <> T.pack newInfo
+    putStrLn msg
+    removeDirectoryRecursive newInfo
+    throwM ex
+
+  let MkPathI trashInfoDir = Env.getTrashInfoDir trashHome
+      oldInfo = th </> "tmp_info_old"
+
+  -- 2. Move current trash/info to trash/tmp_info_old
+  renameDirectory trashInfoDir oldInfo
+    `catchAny` \ex -> do
+      let msg =
+            mconcat
+              [ "Exception moving old trash/info dir:\n",
+                displayException ex
+              ]
+      $(logError) $ T.pack msg
+      putStrLn msg
+      -- cleanup: remove tmp_info_new
+      removeDirectoryRecursive newInfo
+      throwM ex
+
+  -- 3. Move trash/tmp_info_new to trash/info
+  renameDirectory newInfo trashInfoDir
+    `catchAny` \ex -> do
+      let msg =
+            mconcat
+              [ "Exception moving new trash/info dir:\n",
+                displayException ex
+              ]
+      $(logError) $ T.pack msg
+      putStrLn msg
+      -- cleanup: remove tmp_info_new, move tmp_info_old back
+      removeDirectoryRecursive newInfo
+      renameDirectory oldInfo trashInfoDir
+      throwM ex
+
+  -- 4. Delete trash/tmp_info_old
+  removeDirectoryRecursive oldInfo

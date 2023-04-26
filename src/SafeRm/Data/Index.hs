@@ -43,7 +43,7 @@ import SafeRm.Data.PathData.Formatting qualified as Formatting
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Serialize (Serialize (..))
-import SafeRm.Env (HasBackend (..))
+import SafeRm.Env (HasBackend (..), HasTrashHome)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
@@ -218,12 +218,14 @@ sortFn b = \case
 --
 -- @since 0.1
 formatIndex ::
-  forall m.
+  forall m env.
   ( HasCallStack,
+    HasTrashHome env,
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathSize m,
+    MonadReader env m,
     MonadTerminal m
   ) =>
   -- | Format to use
@@ -454,10 +456,14 @@ insert ::
 insert pd = HMap.insert (pd ^. #fileName) pd
 
 indexToSeq ::
-  ( MonadLogger m,
+  ( HasCallStack,
+    HasTrashHome env,
+    MonadLogger m,
     MonadPathReader m,
     MonadPathSize m,
-    MonadTerminal m
+    MonadReader env m,
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   Index ->
   m (Seq PathDataDefault)

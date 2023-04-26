@@ -8,6 +8,7 @@ module SafeRm.Prelude
 
     -- * Text
     bsToStr,
+    bsToStrLenient,
     showt,
     displayExceptiont,
 
@@ -268,6 +269,9 @@ shown = to show
 
 bsToStr :: ByteString -> String
 bsToStr = either displayException T.unpack . decodeUtf8
+
+bsToStrLenient :: ByteString -> String
+bsToStrLenient = T.unpack . decodeUtf8Lenient
 
 -- Vendoring optics-extra Data.Text.Strict.Optics
 

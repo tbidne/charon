@@ -20,6 +20,7 @@ module SafeRm.Runner.Command
   )
 where
 
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashEntryFileName, TrashEntryOriginalPath))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
@@ -35,6 +36,7 @@ instance AdvancePhase (Command Phase1) where
   advancePhase (Restore paths) = Restore paths
   advancePhase Metadata = Metadata
   advancePhase (List cfg) = List $ advancePhase cfg
+  advancePhase (Convert dest) = Convert dest
 
 -- | Action to run.
 --
@@ -67,6 +69,8 @@ data Command s
     --
     -- @since 0.1
     Metadata
+  | -- | Converts backend files.
+    Convert !Backend
 
 -- | @since 0.1
 makePrisms ''Command

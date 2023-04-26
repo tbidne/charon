@@ -200,6 +200,22 @@ backendParser =
           "expense of compatibility."
         ]
 
+backendDest :: Parser Backend
+backendDest =
+  OA.option (OA.str >>= parseBackend) $
+    mconcat
+      [ OA.long "dest",
+        OA.short 'd',
+        OA.metavar "(default|fdo)",
+        mkHelp helpTxt
+      ]
+  where
+    helpTxt =
+      mconcat
+        [ "Backend to which we convert the current backend. See --backend ",
+          "for more details"
+        ]
+
 configParser :: Parser TomlConfigPath
 configParser =
   OA.option
@@ -249,6 +265,13 @@ commandParser =
             OA.hidden
           ]
       )
+    <|> OA.hsubparser
+      ( mconcat
+          [ mkCommand "c" convertParser convertTxt,
+            OA.commandGroup "Transform Commands",
+            OA.hidden
+          ]
+      )
   where
     delTxt = mkCmdDesc "Moves the path(s) to the trash."
     permDelTxt =
@@ -270,6 +293,7 @@ commandParser =
           ]
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
+    convertTxt = mkCmdDesc "Converts the backend."
 
     delParser = Delete <$> pathsParser
     permDelParser = DeletePerm <$> forceParser <*> pathsParser
@@ -286,6 +310,7 @@ commandParser =
           <*> sortParser
           <*> reverseSortParser
     metadataParser = pure Metadata
+    convertParser = Convert <$> backendDest
 
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =

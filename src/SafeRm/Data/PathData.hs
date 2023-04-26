@@ -22,6 +22,7 @@ module SafeRm.Data.PathData
 
     -- * Operations
     pathDataToType,
+    convert,
 
     -- * Miscellaneous
     headerNames,
@@ -38,11 +39,12 @@ import GHC.Exts qualified as Exts
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.PathData.Default qualified as Default
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp)
+import SafeRm.Env (HasTrashHome (..))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 
@@ -190,24 +192,26 @@ headerNames BackendFdo = Fdo.headerNames
 -- more specific type e.g. formatting.
 normalizeDefault ::
   ( HasCallStack,
+    HasTrashHome env,
     MonadLogger m,
     MonadPathReader m,
     MonadPathSize m,
-    MonadTerminal m
+    MonadReader env m,
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   PathData ->
   m Default.PathData
 normalizeDefault (PathDataDefault pd) = pure pd
 normalizeDefault (PathDataFdo pd) = do
-  isFile <- doesFileExist originalPath
-  let pathType =
-        if isFile
-          then PathTypeFile
-          else PathTypeDirectory
+  trashHome <- asks getTrashHome
+  pathType <- Fdo.pathDataToType trashHome pd
+
+  let MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
 
   size <-
     fmap (MkBytes @B) $
-      pathSizeRecursive originalPath >>= \case
+      pathSizeRecursive path >>= \case
         PathSizeSuccess n -> pure n
         PathSizePartial errs n -> do
           -- We received a value but had some errors.
@@ -223,8 +227,6 @@ normalizeDefault (PathDataFdo pd) = do
         pathType,
         size
       }
-  where
-    MkPathI originalPath = pd ^. #originalPath
 
 -- | Returns the path type.
 --
@@ -267,3 +269,30 @@ pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
 -- @since 0.1
 pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashEntryInfo
 pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
+
+-- | Converts the given 'PathData' to the corresponding 'Backend'. If they
+-- are already in sync then this is a no-op.
+convert ::
+  ( HasCallStack,
+    HasTrashHome env,
+    MonadLogger m,
+    MonadPathReader m,
+    MonadPathSize m,
+    MonadReader env m,
+    MonadTerminal m,
+    MonadThrow m
+  ) =>
+  PathData ->
+  Backend ->
+  m PathData
+convert pd@(PathDataDefault _) BackendDefault = pure pd
+convert pd@(PathDataFdo _) BackendFdo = pure pd
+convert pd@(PathDataDefault _) BackendFdo =
+  pure $
+    PathDataFdo $
+      Fdo.UnsafePathData
+        { fileName = pd ^. #fileName,
+          originalPath = pd ^. #originalPath,
+          created = pd ^. #created
+        }
+convert pd@(PathDataFdo _) BackendDefault = PathDataDefault <$> normalizeDefault pd

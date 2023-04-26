@@ -16,6 +16,9 @@ module SafeRm
     -- * Information
     getIndex,
     getMetadata,
+
+    -- * Misc
+    convert,
   )
 where
 
@@ -26,6 +29,8 @@ import Effects.System.Terminal
   ( MonadTerminal (getChar),
   )
 import Effects.Time (getSystemTime)
+import SafeRm.Data.Backend (Backend)
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)
@@ -36,7 +41,7 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
-import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
+import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
@@ -286,6 +291,40 @@ emptyTrash force = addNamespace "emptyTrash" $ do
                   $(logDebug) "Not deleting contents."
                   putStrLn ""
               | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+
+convert ::
+  ( HasBackend env,
+    HasCallStack,
+    HasTrashHome env,
+    MonadCatch m,
+    MonadFileReader m,
+    MonadFileWriter m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathSize m,
+    MonadPathWriter m,
+    MonadReader env m,
+    MonadTerminal m
+  ) =>
+  Backend ->
+  m ()
+convert dest = addNamespace "convert" $ do
+  trashHome <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+
+  src <- asks getBackend
+  if src == dest
+    then do
+      let msg =
+            mconcat
+              [ "--backend == requested conversion type: " <> Backend.backendArg dest,
+                ". Nothing to do."
+              ]
+      $(logDebug) $ T.pack msg
+      putStrLn msg
+    else do
+      $(logDebug) $ "Current backend: " <> T.pack (Backend.backendArg src)
+      Trash.convertBackend dest
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout

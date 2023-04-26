@@ -16,6 +16,7 @@ where
 
 import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
+import Data.HashSet qualified as Set
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathData.Common qualified as Common
@@ -127,6 +128,14 @@ instance Serialize PathData where
       [] -> Left "Received empty pathdata"
       (h : rest) | isHeader h -> do
         let mp = Map.fromList (fmap U.breakEqBS rest)
+            keys = Map.keysSet mp
+            expectedKeys = Set.fromList ["Path", "DeletionDate"]
+            unexpectedKeys = Set.difference keys expectedKeys
+            unexpectedKeysStr = C8.intercalate ", " $ Set.toList unexpectedKeys
+
+        unless (Set.null unexpectedKeys) $
+          Left $
+            "Unexpected keys: " <> bsToStrLenient unexpectedKeysStr
 
         originalPath <- decodeUnit =<< Common.lookup "Path" mp
         created <- decodeUnit =<< Common.lookup "DeletionDate" mp

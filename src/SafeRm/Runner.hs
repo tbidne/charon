@@ -118,6 +118,7 @@ runCmd cmd =
       List listCmd ->
         printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
       Metadata -> printMetadata
+      Convert dest -> SafeRm.convert dest
 
     logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do

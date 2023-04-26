@@ -8,6 +8,7 @@ module Unit.Data.Index
   )
 where
 
+import Data.Bifunctor (first)
 import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
@@ -29,8 +30,9 @@ import SafeRm.Data.PathData.Default qualified as Default
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
-import SafeRm.Data.Paths (PathI (MkPathI))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
+import SafeRm.Env (HasTrashHome (..))
 import Unit.Prelude
 
 tests :: TestTree
@@ -99,25 +101,30 @@ testFormatTabularFixed4 b = testGoldenFormatParams b "Tabular, size, desc" "tabu
 fixedTabularFormat :: PathDataFormat
 fixedTabularFormat = FormatTabular (Just $ ColFormatFixed 10) (Just $ ColFormatFixed 22)
 
-newtype ConfigIO a = MkConfigIO (ReaderT Natural IO a)
+data TestEnv = MkTestEnv Natural (PathI TrashHome)
+
+instance HasTrashHome TestEnv where
+  getTrashHome (MkTestEnv _ th) = th
+
+newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
   deriving
     ( Applicative,
       Functor,
       Monad,
       MonadCatch,
       MonadIO,
-      MonadReader Natural,
+      MonadReader TestEnv,
       MonadThrow
     )
-    via ReaderT Natural IO
+    via ReaderT TestEnv IO
 
 instance MonadPathReader ConfigIO where
-  doesFileExist "/some/really/really/long/dir" = pure False
-  doesFileExist "/d" = pure False
+  doesFileExist "test/unit/index/trash/files/dir" = pure False
+  doesFileExist "test/unit/index/trash/files/d" = pure False
   doesFileExist _ = pure True
 
-  doesDirectoryExist "/some/really/really/long/dir" = pure True
-  doesDirectoryExist "/d" = pure True
+  doesDirectoryExist "test/unit/index/trash/files/dir" = pure True
+  doesDirectoryExist "test/unit/index/trash/files/d" = pure True
   doesDirectoryExist _ = pure False
 
 instance MonadPathSize ConfigIO where
@@ -128,16 +135,18 @@ instance MonadPathSize ConfigIO where
           psd :^| []
     where
       sizes =
-        Map.fromList
-          [ (L.replicate 80 'f', 10),
-            ("bar", 10),
-            ("/d", 5_000_000_000_000_000_000_000_000_000),
-            ("/path/foo", 70),
-            ("/path/bar/bazzz", 5_000),
-            ("/some/really/really/long/dir", 20_230),
-            ("/foo/path/f", 13_070_000),
-            ("/z", 200_120)
-          ]
+        Map.fromList $
+          first ((trashPath </> "files") </>)
+            <$> [ (L.replicate 80 'f', 10),
+                  (L.replicate 50 'b', 10),
+                  ("bar", 10),
+                  ("d", 5_000_000_000_000_000_000_000_000_000),
+                  ("foo", 70),
+                  ("bazzz", 5_000),
+                  ("dir", 20_230),
+                  ("f", 13_070_000),
+                  ("z", 200_120)
+                ]
       psd =
         PathSize.MkPathData
           { path = "",
@@ -149,11 +158,14 @@ instance MonadPathSize ConfigIO where
           }
 
 runConfigIO :: ConfigIO a -> Natural -> IO a
-runConfigIO (MkConfigIO x) = runReaderT x
+runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` trashPath)
+
+trashPath :: (IsString a) => a
+trashPath = "test/unit/index/trash"
 
 instance MonadTerminal ConfigIO where
   getTerminalSize =
-    ask >>= \n ->
+    ask >>= \(MkTestEnv n _) ->
       pure $
         Window
           { height = 50,
@@ -203,7 +215,7 @@ testFormatTabularAutoApprox b = testGoldenFormat b desc fileName mkIdx formatTab
         MkIndex $
           case b of
             BackendDefault ->
-              [ PathData.PathDataDefault $ Default.UnsafePathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 10) ts,
+              [ PathData.PathDataDefault $ Default.UnsafePathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 70) ts,
                 PathData.PathDataDefault $ Default.UnsafePathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
               ]
             BackendFdo ->
