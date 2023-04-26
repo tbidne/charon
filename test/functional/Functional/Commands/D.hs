@@ -11,9 +11,6 @@ import Functional.Prelude
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathData.Default qualified as Default
-import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType (..))
 
 -- TODO: It would be nice if we could verify that the original location

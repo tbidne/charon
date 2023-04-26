@@ -8,7 +8,6 @@ module Unit.Data.Index
   )
 where
 
-import Data.HashMap.Strict ((!))
 import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
