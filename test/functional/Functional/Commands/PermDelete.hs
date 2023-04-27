@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wunused-top-binds #-}
 
 -- | Tests for x command.
 module Functional.Commands.PermDelete

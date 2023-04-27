@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wunused-top-binds #-}
 
 -- | Tests for r command.
 module Functional.Commands.Restore
