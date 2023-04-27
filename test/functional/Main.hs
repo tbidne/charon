@@ -2,6 +2,7 @@
 module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
+import Functional.Commands.Convert qualified as Convert
 import Functional.Commands.Delete qualified as Delete
 import Functional.Commands.Empty qualified as Empty
 import Functional.Commands.List qualified as List
@@ -27,7 +28,8 @@ main = do
           Empty.tests args,
           Restore.tests args,
           List.tests args,
-          Metadata.tests args
+          Metadata.tests args,
+          Convert.tests args
         ]
 
 setup :: IO FilePath

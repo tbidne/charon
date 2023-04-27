@@ -14,7 +14,7 @@ import SafeRm.Data.PathType (PathType (..))
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
-    "Empty (e)"
+    "Empty Command"
     (backendTests args <$> [minBound .. maxBound])
 
 backendTests :: IO FilePath -> Backend -> TestTree
@@ -30,7 +30,7 @@ backendTests args backend =
 
 emptyTrash :: Backend -> IO FilePath -> TestTree
 emptyTrash backend args = testCase "Empties trash" $ do
-  testDir <- getTestPath args "emptyTrash"
+  testDir <- getTestPath args (withBackendDir backend "emptyTrash")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -79,11 +79,11 @@ emptyTrash backend args = testCase "Empties trash" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/emptyTrash/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/emptyTrash/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/emptyTrash/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/emptyTrash/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/emptyTrash/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "empty/emptyTrash" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "empty/emptyTrash" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "empty/emptyTrash" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "empty/emptyTrash" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "empty/emptyTrash" "dir2")
         ]
 
     delExpectedMetadata =
@@ -99,7 +99,7 @@ emptyTrash backend args = testCase "Empties trash" $ do
 
 emptyTrashTwice :: Backend -> IO FilePath -> TestTree
 emptyTrashTwice backend args = testCase "Calling empty twice does not error" $ do
-  testDir <- getTestPath args "emptyTrashTwice"
+  testDir <- getTestPath args (withBackendDir backend "emptyTrashTwice")
   let trashDir = testDir </> ".trash"
 
   runSafeRm $ withSrArgs trashDir backend ["empty", "-f"]
@@ -107,7 +107,7 @@ emptyTrashTwice backend args = testCase "Calling empty twice does not error" $ d
 
 emptyNoForce :: Backend -> IO FilePath -> TestTree
 emptyNoForce backend args = testCase "Empties trash without force" $ do
-  testDir <- getTestPath args "emptyNoForce"
+  testDir <- getTestPath args (withBackendDir backend "emptyNoForce")
   let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
@@ -146,11 +146,11 @@ emptyNoForce backend args = testCase "Empties trash without force" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "1" "/safe-rm/functional/e/emptyNoForce/1",
-          mkPathData' backend PathTypeFile "2" "/safe-rm/functional/e/emptyNoForce/2",
-          mkPathData' backend PathTypeFile "3" "/safe-rm/functional/e/emptyNoForce/3",
-          mkPathData' backend PathTypeFile "4" "/safe-rm/functional/e/emptyNoForce/4",
-          mkPathData' backend PathTypeFile "5" "/safe-rm/functional/e/emptyNoForce/5"
+        [ mkPathData' backend PathTypeFile "1" (withBackendBaseDir backend "empty/emptyNoForce" "1"),
+          mkPathData' backend PathTypeFile "2" (withBackendBaseDir backend "empty/emptyNoForce" "2"),
+          mkPathData' backend PathTypeFile "3" (withBackendBaseDir backend "empty/emptyNoForce" "3"),
+          mkPathData' backend PathTypeFile "4" (withBackendBaseDir backend "empty/emptyNoForce" "4"),
+          mkPathData' backend PathTypeFile "5" (withBackendBaseDir backend "empty/emptyNoForce" "5")
         ]
 
     delExpectedMetadata =
@@ -163,7 +163,7 @@ emptyNoForce backend args = testCase "Empties trash without force" $ do
 
 missingInfoForcesDelete :: Backend -> IO FilePath -> TestTree
 missingInfoForcesDelete backend args = testCase "empty --force overwrites bad directory (no info.)" $ do
-  testDir <- getTestPath args "missingInfoForcesDelete"
+  testDir <- getTestPath args (withBackendDir backend "missingInfoForcesDelete")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -214,11 +214,11 @@ missingInfoForcesDelete backend args = testCase "empty --force overwrites bad di
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/missingInfoForcesDelete/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/missingInfoForcesDelete/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/missingInfoForcesDelete/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/missingInfoForcesDelete/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/missingInfoForcesDelete/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "empty/missingInfoForcesDelete" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "empty/missingInfoForcesDelete" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "empty/missingInfoForcesDelete" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "empty/missingInfoForcesDelete" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "empty/missingInfoForcesDelete" "dir2")
         ]
 
     delExpectedMetadata =
@@ -234,7 +234,7 @@ missingInfoForcesDelete backend args = testCase "empty --force overwrites bad di
 
 missingPathsForcesDelete :: Backend -> IO FilePath -> TestTree
 missingPathsForcesDelete backend args = testCase "empty --force overwrites bad directory (no paths/)" $ do
-  testDir <- getTestPath args "missingPathsForcesDelete"
+  testDir <- getTestPath args (withBackendDir backend "missingPathsForcesDelete")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -285,11 +285,11 @@ missingPathsForcesDelete backend args = testCase "empty --force overwrites bad d
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/e/missingPathsForcesDelete/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/e/missingPathsForcesDelete/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/e/missingPathsForcesDelete/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/e/missingPathsForcesDelete/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/e/missingPathsForcesDelete/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "empty/missingPathsForcesDelete" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "empty/missingPathsForcesDelete" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "empty/missingPathsForcesDelete" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "empty/missingPathsForcesDelete" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "empty/missingPathsForcesDelete" "dir2")
         ]
 
     delExpectedMetadata =
@@ -304,4 +304,4 @@ missingPathsForcesDelete backend args = testCase "empty --force overwrites bad d
     emptyExpectedMetadata = mempty
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "e"
+getTestPath mroot = createTestDir mroot "empty"

@@ -16,12 +16,10 @@ import SafeRm.Exception
     TrashEntryInfoNotFoundE,
   )
 
--- import Data.ByteString qualified as BS
-
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
-    "List (l)"
+    "List Command"
     (backendTests args <$> [minBound .. maxBound])
 
 backendTests :: IO FilePath -> Backend -> TestTree
@@ -37,7 +35,7 @@ backendTests args backend =
 
 emptySucceeds :: Backend -> IO FilePath -> TestTree
 emptySucceeds backend args = testCase "List on empty directory succeeds" $ do
-  testDir <- getTestPath args "emptySucceeds"
+  testDir <- getTestPath args (withBackendDir backend "emptySucceeds")
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["list", "--format", "m"]
 
@@ -51,13 +49,13 @@ emptySucceeds backend args = testCase "List on empty directory succeeds" $ do
       ]
 
     expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/list/emptySucceeds/.trash",
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
         Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist."
       ]
 
 noPathsError :: Backend -> IO FilePath -> TestTree
 noPathsError backend args = testCase "No Paths Error" $ do
-  testDir <- getTestPath args "noPathsError"
+  testDir <- getTestPath args (withBackendDir backend "noPathsError")
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["list", "--format", "m"]
 
@@ -72,16 +70,16 @@ noPathsError backend args = testCase "No Paths Error" $ do
   assertMatches expectedLogs logs
   where
     expectedErr =
-      Outfix "The trash files directory was not found at '" "/safe-rm/functional/list/noPathsError/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
+      Outfix "The trash files directory was not found at '" ".trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
 
     expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/list/noPathsError/.trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash files directory was not found at '" "/safe-rm/functional/list/noPathsError/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash files directory was not found at '" ".trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
 
 noInfoError :: Backend -> IO FilePath -> TestTree
 noInfoError backend args = testCase "No Info Error" $ do
-  testDir <- getTestPath args "noInfoError"
+  testDir <- getTestPath args (withBackendDir backend "noInfoError")
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["list", "--format", "m"]
 
@@ -96,16 +94,16 @@ noInfoError backend args = testCase "No Info Error" $ do
   assertMatches expectedLogs logs
   where
     expectedErr =
-      Outfix "The trash info directory was not found at '" "/safe-rm/functional/list/noInfoError/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
+      Outfix "The trash info directory was not found at '" ".trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
 
     expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/list/noInfoError/.trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" "/safe-rm/functional/list/noInfoError/.trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
+        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" ".trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
 
 missingPathError :: Backend -> IO FilePath -> TestTree
 missingPathError backend args = testCase "Entry Missing Path" $ do
-  testDir <- getTestPath args "missingPathError"
+  testDir <- getTestPath args (withBackendDir backend "missingPathError")
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["list", "--format", "m"]
       missingInfo =
@@ -144,18 +142,18 @@ missingPathError backend args = testCase "Entry Missing Path" $ do
     expectedErr =
       Outfixes
         "The file 'missing' was not found in '"
-        ["/safe-rm/functional/list/missingPathError/.trash/files' despite being listed in '"]
-        "/safe-rm/functional/list/missingPathError/.trash/info'. This can be fixed by manually deleting the .trashinfo file or deleting everything (i.e. safe-rm empty -f)."
+        [".trash/files' despite being listed in '"]
+        "/.trash/info'. This can be fixed by manually deleting the .trashinfo file or deleting everything (i.e. safe-rm empty -f)."
 
     expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/list/missingPathError/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/list/missingPathError/.trash/info",
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " ".trash/info",
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: [\"missing.trashinfo\"]",
-        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: " "/safe-rm/functional/list/missingPathError/.trash/info/missing.trashinfo",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: " ".trash/info/missing.trashinfo",
         Outfixes
           "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'missing' was not found in '"
-          ["/safe-rm/functional/list/missingPathError/.trash/files' despite being listed in '"]
-          "/safe-rm/functional/list/missingPathError/.trash/info'. This can be fixed by manually deleting the .trashinfo file or deleting everything (i.e. safe-rm empty -f)."
+          [".trash/files' despite being listed in '"]
+          ".trash/info'. This can be fixed by manually deleting the .trashinfo file or deleting everything (i.e. safe-rm empty -f)."
       ]
 
     -- Windows paths have backslashes which isn't valid json. Need to escape
@@ -166,7 +164,7 @@ missingPathError backend args = testCase "Entry Missing Path" $ do
 
 missingInfoError :: Backend -> IO FilePath -> TestTree
 missingInfoError backend args = testCase "Entry Missing Info" $ do
-  testDir <- getTestPath args "missingInfoError"
+  testDir <- getTestPath args (withBackendDir backend "missingInfoError")
   let trashDir = testDir </> ".trash"
       argList = withSrArgs trashDir backend ["list", "--format", "m"]
 
@@ -185,18 +183,18 @@ missingInfoError backend args = testCase "Entry Missing Info" $ do
     expectedErr =
       Outfixes
         "The file 'bar.trashinfo' was not found in '"
-        ["/safe-rm/functional/list/missingInfoError/.trash/info' despite being listed in '"]
-        "/safe-rm/functional/list/missingInfoError/.trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. safe-rm empty -f)."
+        [".trash/info' despite being listed in '"]
+        "/.trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. safe-rm empty -f)."
 
     expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " "/safe-rm/functional/list/missingInfoError/.trash",
-        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " "/safe-rm/functional/list/missingInfoError/.trash/info",
+      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
+        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " ".trash/info",
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: []",
         Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: [\"bar\"]",
         Outfixes
           "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'bar.trashinfo' was not found in '"
-          ["/safe-rm/functional/list/missingInfoError/.trash/info' despite being listed in '"]
-          "/safe-rm/functional/list/missingInfoError/.trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. safe-rm empty -f)."
+          [".trash/info' despite being listed in '"]
+          ".trash/files'. This can be fixed by manually deleting the /files entry or deleting everything (i.e. safe-rm empty -f)."
       ]
 
 getTestPath :: IO FilePath -> FilePath -> IO String

@@ -27,6 +27,8 @@ module Functional.Prelude
 
     -- * Misc
     withSrArgs,
+    withBackendDir,
+    withBackendBaseDir,
     createTestDir,
     FuncEnv.mkPathData,
     FuncEnv.mkPathData',
@@ -43,6 +45,7 @@ import GHC.Exts (IsList (Item, fromList, toList))
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Data.Paths (PathI (..))
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
@@ -162,3 +165,23 @@ createTestDir args modDir testDir = do
 withSrArgs :: String -> Backend -> [String] -> [String]
 withSrArgs trashDir backend as =
   ["-t", trashDir, "-b", Backend.backendArg backend] ++ as
+
+-- e.g. withBackendDir BackendFdo "deletesOne" -> "deletesOne-fdo"
+withBackendDir :: Backend -> String -> String
+withBackendDir backend s = s ++ "-" ++ Backend.backendArg backend
+
+-- e.g. withBackendBaseDir BackendFdo "delete/deletesOne" "f1"
+--   -> "/safe-rm/functional/delete/deletesOne-fdo/f1"
+withBackendBaseDir :: Backend -> String -> String -> PathI i
+withBackendBaseDir backend dir = MkPathI . withBackendBaseDir' backend dir
+
+withBackendBaseDir' :: Backend -> String -> String -> String
+withBackendBaseDir' backend dir f =
+  mconcat
+    [ "/safe-rm/functional/",
+      dir,
+      "-",
+      Backend.backendArg backend,
+      "/",
+      f
+    ]

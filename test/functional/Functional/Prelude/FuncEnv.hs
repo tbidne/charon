@@ -149,6 +149,7 @@ instance
   getXdgDirectory xdg p = liftIO $ getXdgDirectory xdg p
 
 instance MonadPathWriter (FuncIO env) where
+  createDirectory = liftIO . createDirectory
   createDirectoryIfMissing b = liftIO . createDirectoryIfMissing b
   renameDirectory x = liftIO . renameDirectory x
   renameFile x = liftIO . renameFile x

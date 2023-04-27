@@ -16,7 +16,7 @@ import SafeRm.Data.PathType (PathType (..))
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
-    "Permanent Delete (x)"
+    "Permanent Delete Command"
     (backendTests args <$> [minBound .. maxBound])
 
 backendTests :: IO FilePath -> Backend -> TestTree
@@ -40,7 +40,7 @@ backendTests args backend =
 
 deletesOne :: Backend -> IO FilePath -> TestTree
 deletesOne backend args = testCase "Permanently deletes a single file" $ do
-  testDir <- getTestPath args "deletesOne"
+  testDir <- getTestPath args (withBackendDir backend "deletesOne")
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
       delArgList = withSrArgs trashDir backend ["delete", f1]
@@ -80,7 +80,7 @@ deletesOne backend args = testCase "Permanently deletes a single file" $ do
   where
     delExpectedIdxSet =
       HashSet.singleton
-        (mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesOne/f1")
+        (mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesOne" "f1"))
 
     delExpectedMetadata =
       MkMetadata
@@ -95,7 +95,7 @@ deletesOne backend args = testCase "Permanently deletes a single file" $ do
 
 deletesMany :: Backend -> IO FilePath -> TestTree
 deletesMany backend args = testCase "Permanently deletes several paths" $ do
-  testDir <- getTestPath args "deletesMany"
+  testDir <- getTestPath args (withBackendDir backend "deletesMany")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -142,11 +142,11 @@ deletesMany backend args = testCase "Permanently deletes several paths" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesMany/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesMany/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/perm-delete/deletesMany/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/perm-delete/deletesMany/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/perm-delete/deletesMany/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesMany" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesMany" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesMany" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "perm-delete/deletesMany" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "perm-delete/deletesMany" "dir2")
         ]
 
     delExpectedMetadata =
@@ -159,7 +159,7 @@ deletesMany backend args = testCase "Permanently deletes several paths" $ do
 
     permDelExpectedIdxSet =
       HashSet.singleton
-        (mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesMany/f2")
+        (mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesMany" "f2"))
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -170,7 +170,7 @@ deletesMany backend args = testCase "Permanently deletes several paths" $ do
 
 deleteUnknownError :: Backend -> IO FilePath -> TestTree
 deleteUnknownError backend args = testCase "Delete unknown prints error" $ do
-  testDir <- getTestPath args "deleteUnknownError"
+  testDir <- getTestPath args (withBackendDir backend "deleteUnknownError")
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
       delArgList = withSrArgs trashDir backend ["delete", f1]
@@ -214,7 +214,7 @@ deleteUnknownError backend args = testCase "Delete unknown prints error" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deleteUnknownError/f1"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deleteUnknownError" "f1")
         ]
 
     delExpectedMetadata =
@@ -227,7 +227,7 @@ deleteUnknownError backend args = testCase "Delete unknown prints error" $ do
 
 deletesSome :: Backend -> IO FilePath -> TestTree
 deletesSome backend args = testCase "Deletes some, errors on others" $ do
-  testDir <- getTestPath args "deletesSome"
+  testDir <- getTestPath args (withBackendDir backend "deletesSome")
   let trashDir = testDir </> ".trash"
       realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
       filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
@@ -271,9 +271,9 @@ deletesSome backend args = testCase "Deletes some, errors on others" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesSome/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesSome/f2",
-          mkPathData' backend PathTypeFile "f5" "/safe-rm/functional/perm-delete/deletesSome/f5"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesSome" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesSome" "f2"),
+          mkPathData' backend PathTypeFile "f5" (withBackendBaseDir backend "perm-delete/deletesSome" "f5")
         ]
 
     delExpectedMetadata =
@@ -289,7 +289,7 @@ deletesSome backend args = testCase "Deletes some, errors on others" $ do
 
 deletesNoForce :: Backend -> IO FilePath -> TestTree
 deletesNoForce backend args = testCase "Permanently deletes several paths without --force" $ do
-  testDir <- getTestPath args "deletesNoForce"
+  testDir <- getTestPath args (withBackendDir backend "deletesNoForce")
   let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
@@ -330,11 +330,11 @@ deletesNoForce backend args = testCase "Permanently deletes several paths withou
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "1" "/safe-rm/functional/perm-delete/deletesNoForce/1",
-          mkPathData' backend PathTypeFile "2" "/safe-rm/functional/perm-delete/deletesNoForce/2",
-          mkPathData' backend PathTypeFile "3" "/safe-rm/functional/perm-delete/deletesNoForce/3",
-          mkPathData' backend PathTypeFile "4" "/safe-rm/functional/perm-delete/deletesNoForce/4",
-          mkPathData' backend PathTypeFile "5" "/safe-rm/functional/perm-delete/deletesNoForce/5"
+        [ mkPathData' backend PathTypeFile "1" (withBackendBaseDir backend "perm-delete/deletesNoForce" "1"),
+          mkPathData' backend PathTypeFile "2" (withBackendBaseDir backend "perm-delete/deletesNoForce" "2"),
+          mkPathData' backend PathTypeFile "3" (withBackendBaseDir backend "perm-delete/deletesNoForce" "3"),
+          mkPathData' backend PathTypeFile "4" (withBackendBaseDir backend "perm-delete/deletesNoForce" "4"),
+          mkPathData' backend PathTypeFile "5" (withBackendBaseDir backend "perm-delete/deletesNoForce" "5")
         ]
 
     delExpectedMetadata =
@@ -347,9 +347,9 @@ deletesNoForce backend args = testCase "Permanently deletes several paths withou
 
     permDelExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "1" "/safe-rm/functional/perm-delete/deletesNoForce/1",
-          mkPathData' backend PathTypeFile "3" "/safe-rm/functional/perm-delete/deletesNoForce/3",
-          mkPathData' backend PathTypeFile "5" "/safe-rm/functional/perm-delete/deletesNoForce/5"
+        [ mkPathData' backend PathTypeFile "1" (withBackendBaseDir backend "perm-delete/deletesNoForce" "1"),
+          mkPathData' backend PathTypeFile "3" (withBackendBaseDir backend "perm-delete/deletesNoForce" "3"),
+          mkPathData' backend PathTypeFile "5" (withBackendBaseDir backend "perm-delete/deletesNoForce" "5")
         ]
     permDelExpectedMetadata =
       MkMetadata
@@ -361,7 +361,7 @@ deletesNoForce backend args = testCase "Permanently deletes several paths withou
 
 deletesWildcards :: Backend -> IO FilePath -> TestTree
 deletesWildcards backend args = testCase "Permanently deletes several paths via wildcards" $ do
-  testDir <- getTestPath args "deletesWildcards"
+  testDir <- getTestPath args (withBackendDir backend "deletesWildcards")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
       otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
@@ -404,18 +404,18 @@ deletesWildcards backend args = testCase "Permanently deletes several paths via 
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesWildcards/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesWildcards/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/perm-delete/deletesWildcards/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/perm-delete/deletesWildcards/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/perm-delete/deletesWildcards/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/perm-delete/deletesWildcards/3f",
-          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/perm-delete/deletesWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/perm-delete/deletesWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/perm-delete/deletesWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/perm-delete/deletesWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/perm-delete/deletesWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/perm-delete/deletesWildcards/3g"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f3"),
+          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1f"),
+          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2f"),
+          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3f"),
+          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g1"),
+          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g2"),
+          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g3"),
+          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1g"),
+          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2g"),
+          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3g")
         ]
 
     delExpectedMetadata =
@@ -428,12 +428,12 @@ deletesWildcards backend args = testCase "Permanently deletes several paths via 
 
     permDelExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/perm-delete/deletesWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/perm-delete/deletesWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/perm-delete/deletesWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/perm-delete/deletesWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/perm-delete/deletesWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/perm-delete/deletesWildcards/3g"
+        [ mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g1"),
+          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g2"),
+          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g3"),
+          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1g"),
+          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2g"),
+          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3g")
         ]
     permDelExpectedMetadata =
       MkMetadata
@@ -445,7 +445,7 @@ deletesWildcards backend args = testCase "Permanently deletes several paths via 
 
 deletesSomeWildcards :: Backend -> IO FilePath -> TestTree
 deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" $ do
-  testDir <- getTestPath args "deletesSomeWildcards"
+  testDir <- getTestPath args (withBackendDir backend "deletesSomeWildcards")
   let trashDir = testDir </> ".trash"
       files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
       testFiles = (testDir </>) <$> files
@@ -487,15 +487,15 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "foobar" "/safe-rm/functional/perm-delete/deletesSomeWildcards/foobar",
-          mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/perm-delete/deletesSomeWildcards/fooBadbar",
-          mkPathData' backend PathTypeFile "fooXbar" "/safe-rm/functional/perm-delete/deletesSomeWildcards/fooXbar",
-          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/perm-delete/deletesSomeWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/perm-delete/deletesSomeWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/perm-delete/deletesSomeWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/perm-delete/deletesSomeWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/perm-delete/deletesSomeWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/perm-delete/deletesSomeWildcards/3g"
+        [ mkPathData' backend PathTypeFile "foobar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "foobar"),
+          mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooBadbar"),
+          mkPathData' backend PathTypeFile "fooXbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooXbar"),
+          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g1"),
+          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g2"),
+          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g3"),
+          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "1g"),
+          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "2g"),
+          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "3g")
         ]
 
     delExpectedMetadata =
@@ -508,7 +508,7 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
 
     permDelExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/perm-delete/deletesSomeWildcards/fooBadbar"
+        [ mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooBadbar")
         ]
     permDelExpectedMetadata =
       MkMetadata
@@ -522,7 +522,7 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
 
 deletesLiteralWildcardOnly :: Backend -> IO FilePath -> TestTree
 deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename w/ literal wildcard" $ do
-  testDir <- getTestPath args "deletesLiteralWildcardOnly"
+  testDir <- getTestPath args (withBackendDir backend "deletesLiteralWildcardOnly")
   let trashDir = testDir </> ".trash"
       files = ["f1", "f2", "f3", "1f", "2f", "3f"]
       testFiles = (testDir </>) <$> files
@@ -562,13 +562,13 @@ deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/3f",
-          mkPathData' backend PathTypeFile "*" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/*"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f3"),
+          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "1f"),
+          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "2f"),
+          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "3f"),
+          mkPathData' backend PathTypeFile "*" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "*")
         ]
 
     delExpectedMetadata =
@@ -581,12 +581,12 @@ deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename
 
     permDelExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/perm-delete/deletesLiteralWildcardOnly/3f"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f3"),
+          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "1f"),
+          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "2f"),
+          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "3f")
         ]
     permDelExpectedMetadata =
       MkMetadata
@@ -598,7 +598,7 @@ deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename
 
 deletesCombinedWildcardLiteral :: Backend -> IO FilePath -> TestTree
 deletesCombinedWildcardLiteral backend args = testCase desc $ do
-  testDir <- getTestPath args "deletesCombinedWildcardLiteral"
+  testDir <- getTestPath args (withBackendDir backend "deletesCombinedWildcardLiteral")
   let trashDir = testDir </> ".trash"
       files = ["xxfoo", "xxbar", "xxbaz"]
       wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
@@ -640,12 +640,12 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
     desc = "Permanently deletes filename w/ literal * and wildcard"
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "xxfoo" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxfoo",
-          mkPathData' backend PathTypeFile "xxbar" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxbar",
-          mkPathData' backend PathTypeFile "xxbaz" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxbaz",
-          mkPathData' backend PathTypeFile "y*xxfoo" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/y*xxfoo",
-          mkPathData' backend PathTypeFile "y*xxbar" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/y*xxbar",
-          mkPathData' backend PathTypeFile "y*xxbaz" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/y*xxbaz"
+        [ mkPathData' backend PathTypeFile "xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxfoo"),
+          mkPathData' backend PathTypeFile "xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbar"),
+          mkPathData' backend PathTypeFile "xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbaz"),
+          mkPathData' backend PathTypeFile "y*xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxfoo"),
+          mkPathData' backend PathTypeFile "y*xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxbar"),
+          mkPathData' backend PathTypeFile "y*xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxbaz")
         ]
 
     delExpectedMetadata =
@@ -658,9 +658,9 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
 
     permDelExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "xxfoo" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxfoo",
-          mkPathData' backend PathTypeFile "xxbar" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxbar",
-          mkPathData' backend PathTypeFile "xxbaz" "/safe-rm/functional/perm-delete/deletesCombinedWildcardLiteral/xxbaz"
+        [ mkPathData' backend PathTypeFile "xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxfoo"),
+          mkPathData' backend PathTypeFile "xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbar"),
+          mkPathData' backend PathTypeFile "xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbaz")
         ]
     permDelExpectedMetadata =
       MkMetadata

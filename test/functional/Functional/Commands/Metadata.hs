@@ -14,7 +14,7 @@ import SafeRm.Data.PathType (PathType (..))
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
-    "Metadata (m)"
+    "Metadata Command"
     (backendTests args <$> [minBound .. maxBound])
 
 backendTests :: IO FilePath -> Backend -> TestTree
@@ -27,7 +27,7 @@ backendTests args backend =
 
 metadata :: Backend -> IO FilePath -> TestTree
 metadata backend args = testCase "Prints metadata" $ do
-  testDir <- getTestPath args "metadata"
+  testDir <- getTestPath args (withBackendDir backend "metadata")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -76,11 +76,11 @@ metadata backend args = testCase "Prints metadata" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/metadata/metadata/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/metadata/metadata/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/metadata/metadata/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/metadata/metadata/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/metadata/metadata/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "metadata/metadata" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "metadata/metadata" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "metadata/metadata" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "metadata/metadata" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "metadata/metadata" "dir2")
         ]
 
     delExpectedMetadata =
@@ -102,7 +102,7 @@ metadata backend args = testCase "Prints metadata" $ do
 
 empty :: Backend -> IO FilePath -> TestTree
 empty backend args = testCase "Prints empty metadata" $ do
-  testDir <- getTestPath args "empty"
+  testDir <- getTestPath args (withBackendDir backend "empty")
   let trashDir = testDir </> ".trash"
 
   createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]

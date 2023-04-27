@@ -19,7 +19,7 @@ import SafeRm.Data.PathType (PathType (..))
 tests :: IO FilePath -> TestTree
 tests args =
   testGroup
-    "Delete (d)"
+    "Delete Command"
     (backendTests args <$> [minBound .. maxBound])
 
 backendTests :: IO FilePath -> Backend -> TestTree
@@ -35,7 +35,7 @@ backendTests args backend =
 
 deletesOne :: Backend -> IO FilePath -> TestTree
 deletesOne backend args = testCase "Deletes a single file" $ do
-  testDir <- getTestPath args "deletesOne"
+  testDir <- getTestPath args (withBackendDir backend "deletesOne")
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
       argList = withSrArgs trashDir backend ["delete", f1]
@@ -60,7 +60,7 @@ deletesOne backend args = testCase "Deletes a single file" $ do
   where
     expectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/delete/deletesOne/f1"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesOne" "f1")
         ]
 
     expectedMetadata =
@@ -73,7 +73,7 @@ deletesOne backend args = testCase "Deletes a single file" $ do
 
 deletesMany :: Backend -> IO FilePath -> TestTree
 deletesMany backend args = testCase "Deletes many paths" $ do
-  testDir <- getTestPath args "deletesMany"
+  testDir <- getTestPath args (withBackendDir backend "deletesMany")
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
@@ -104,11 +104,11 @@ deletesMany backend args = testCase "Deletes many paths" $ do
   where
     expectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/delete/deletesMany/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/delete/deletesMany/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/delete/deletesMany/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/delete/deletesMany/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/delete/deletesMany/dir2"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesMany" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "delete/deletesMany" "f2"),
+          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "delete/deletesMany" "f3"),
+          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "delete/deletesMany" "dir1"),
+          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "delete/deletesMany" "dir2")
         ]
 
     expectedMetadata =
@@ -121,7 +121,7 @@ deletesMany backend args = testCase "Deletes many paths" $ do
 
 deleteUnknownError :: Backend -> IO FilePath -> TestTree
 deleteUnknownError backend args = testCase "Deletes unknown prints error" $ do
-  testDir <- getTestPath args "deleteUnknownError"
+  testDir <- getTestPath args (withBackendDir backend "deleteUnknownError")
   let trashDir = testDir </> ".trash"
       file = testDir </> "bad file"
       argList = withSrArgs trashDir backend ["delete", file]
@@ -144,7 +144,7 @@ deleteUnknownError backend args = testCase "Deletes unknown prints error" $ do
 
 deleteDuplicateFile :: Backend -> IO FilePath -> TestTree
 deleteDuplicateFile backend args = testCase "Deletes duplicate file" $ do
-  testDir <- getTestPath args "deleteDuplicateFile"
+  testDir <- getTestPath args (withBackendDir backend "deleteDuplicateFile")
   let trashDir = testDir </> ".trash"
       file = testDir </> "f1"
       argList = withSrArgs trashDir backend ["delete", file]
@@ -174,8 +174,8 @@ deleteDuplicateFile backend args = testCase "Deletes duplicate file" $ do
   where
     expectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/delete/deleteDuplicateFile/f1",
-          mkPathData' backend PathTypeFile "f1 (1)" "/safe-rm/functional/delete/deleteDuplicateFile/f1"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deleteDuplicateFile" "f1"),
+          mkPathData' backend PathTypeFile "f1 (1)" (withBackendBaseDir backend "delete/deleteDuplicateFile" "f1")
         ]
 
     expectedMetadata =
@@ -188,7 +188,7 @@ deleteDuplicateFile backend args = testCase "Deletes duplicate file" $ do
 
 deletesSome :: Backend -> IO FilePath -> TestTree
 deletesSome backend args = testCase "Deletes some files with errors" $ do
-  testDir <- getTestPath args "deletesSome"
+  testDir <- getTestPath args (withBackendDir backend "deletesSome")
   let trashDir = testDir </> ".trash"
       realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
       filesTryDelete = (testDir </>) <$> ["f1", "f2", "f3", "f4", "f5"]
@@ -215,9 +215,9 @@ deletesSome backend args = testCase "Deletes some files with errors" $ do
   where
     expectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/delete/deletesSome/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/delete/deletesSome/f2",
-          mkPathData' backend PathTypeFile "f5" "/safe-rm/functional/delete/deletesSome/f5"
+        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesSome" "f1"),
+          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "delete/deletesSome" "f2"),
+          mkPathData' backend PathTypeFile "f5" (withBackendBaseDir backend "delete/deletesSome" "f5")
         ]
 
     expectedMetadata =
