@@ -595,7 +595,7 @@ genChar asciiOnly = Gen.filterT f (mapper <$> g)
     -- so we know which set to generate, but for now, just generate the
     -- printable chars.
     --
-    -- Note: paths that previous caused failures were \x19ad and \x2800.
+    -- Note: paths that previously caused failures were \x19ad and \x2800.
     -- ':' was also excluded, though it hadn't caused a test failure (yet)
     f c = Ch.isPrint c && notBadChar c
 
@@ -671,7 +671,7 @@ mkTrashPaths trashHome =
 
 -- NOTE: [OSX temp symlink]
 --
--- This exists because in the osx tests', canoncialize transforms a path
+-- This exists because in the osx tests', canonicalize transforms a path
 --
 --    /var/...
 --
@@ -686,6 +686,6 @@ mkTrashPaths trashHome =
 -- Thus we canonicalize the test path as well, allowing our
 -- "deleted paths match expected paths" checks to succeed.
 --
--- This is not needed on linux but also appears unharmful..
+-- This is not needed on linux but also appears unharmful.
 getTestPath :: (MonadIO m) => IO Path -> m Path
 getTestPath mtestPath = liftIO (canonicalizePath =<< mtestPath)
