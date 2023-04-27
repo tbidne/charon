@@ -40,6 +40,10 @@ serializeRoundtripSpecsDefault = testCase "decode . encode ~ id (specs)" $ do
   let (pd1, encoded1) = mkPd ts "\NUL" "\t"
   "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded1
   Right pd1 @=? decode (MkPathI "\NUL") encoded1
+
+  let (pd2, encoded2) = mkPd ts "\NUL" "\n"
+  "[Trash Info]\nPath=\n\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded2
+  Right pd2 @=? decode (MkPathI "\NUL") encoded2
   where
     mkPd ts fileName' originalPath' =
       let pd =
@@ -94,6 +98,10 @@ serializeRoundtripSpecsFdo = testCase "decode . encode ~ id (specs)" $ do
   let (pd1, encoded1) = mkPd ts "\NUL" "\t"
   "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\n" @=? encoded1
   Right pd1 @=? decode (MkPathI "\NUL") encoded1
+
+  let (pd2, encoded2) = mkPd ts "\NUL" "\n"
+  "[Trash Info]\nPath=\n\nDeletionDate=1858-11-17T00:00:00\n" @=? encoded2
+  Right pd2 @=? decode (MkPathI "\NUL") encoded2
   where
     mkPd ts fileName' originalPath' =
       let pd =

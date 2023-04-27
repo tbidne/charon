@@ -12,7 +12,8 @@ tests =
   testGroup
     "Utils"
     [ testMatchesWildcards,
-      testStripInfix
+      testStripInfix,
+      testLines'
     ]
 
 testMatchesWildcards :: TestTree
@@ -70,3 +71,8 @@ testStripInfix = testCase "stripInfix" $ do
   -- failures
   Nothing @=? Utils.stripInfix "aa" "foobar"
   Nothing @=? Utils.stripInfix "perm-delete" "foobar"
+
+testLines' :: TestTree
+testLines' = testCase "lines'" $ do
+  ["111\n\n", "222", "333\n", "444"] @=? Utils.lines' "111\n\n\n222\n333\n\n444"
+  ["111", "222"] @=? Utils.lines' "111\n222\n"

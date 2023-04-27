@@ -2,11 +2,14 @@
 
 module SafeRm.Data.PathData.Common
   ( getPathInfo,
+    parseTrashInfoMap,
     lookup,
   )
 where
 
+import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
+import Data.HashSet qualified as Set
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
@@ -19,6 +22,7 @@ import SafeRm.Exception
     RootE (MkRootE),
   )
 import SafeRm.Prelude
+import SafeRm.Utils qualified as U
 import System.FilePath qualified as FP
 
 -- | For a given path, retrieves its unique trash entry file name,
@@ -125,6 +129,48 @@ throwIfIllegal p =
         | Paths.isRoot p -> $(logError) "Path is root!" *> throwCS MkRootE
         | Paths.isEmpty p -> $(logError) "Path is empty!" *> throwCS MkEmptyPathE
         | otherwise -> pure ()
+
+-- | Parses a ByteString like:
+--
+-- @
+-- [Trash Info]
+-- k1=v1
+-- k2=v2
+-- ...
+-- @
+--
+-- into a map of @{ ki => vi }@.
+--
+-- Verifies that the parameter key set is exactly the key set in the map.
+parseTrashInfoMap ::
+  -- | Expected keys
+  HashSet ByteString ->
+  -- | ByteString
+  ByteString ->
+  Either String (HashMap ByteString ByteString)
+parseTrashInfoMap expectedKeys bs =
+  case U.lines' bs of
+    [] -> Left "Received empty pathdata"
+    (h : rest) | isHeader h -> do
+      let mp = Map.fromList (fmap U.breakEqBS rest)
+          keys = Map.keysSet mp
+          missingKeys = Set.difference expectedKeys keys
+          missingKeysStr = C8.intercalate ", " $ Set.toList missingKeys
+          unexpectedKeys = Set.difference keys expectedKeys
+          unexpectedKeysStr = C8.intercalate ", " $ Set.toList unexpectedKeys
+
+      unless (Set.null unexpectedKeys) $
+        Left $
+          "Unexpected keys: '" <> bsToStrLenient unexpectedKeysStr <> "'"
+
+      unless (Set.null missingKeys) $
+        Left $
+          "Missing keys: '" <> bsToStrLenient missingKeysStr <> "'"
+
+      Right mp
+    _ -> Left $ "Did not receive header [Trash Info]: " <> bsToStr bs
+  where
+    isHeader = (== "[Trash Info]")
 
 lookup :: ByteString -> HashMap ByteString b -> Either String b
 lookup k mp = case Map.lookup k mp of

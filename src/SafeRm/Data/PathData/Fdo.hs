@@ -15,7 +15,6 @@ module SafeRm.Data.PathData.Fdo
 where
 
 import Data.ByteString.Char8 qualified as C8
-import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
@@ -27,7 +26,6 @@ import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception (FileNotFoundE (..), PathNotFileDirE (..))
 import SafeRm.Prelude
-import SafeRm.Utils qualified as U
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -98,31 +96,19 @@ instance Serialize PathData where
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    case C8.lines bs of
-      [] -> Left "Received empty pathdata"
-      (h : rest) | isHeader h -> do
-        let mp = Map.fromList (fmap U.breakEqBS rest)
-            keys = Map.keysSet mp
-            expectedKeys = Set.fromList ["Path", "DeletionDate"]
-            unexpectedKeys = Set.difference keys expectedKeys
-            unexpectedKeysStr = C8.intercalate ", " $ Set.toList unexpectedKeys
+    mp <- Common.parseTrashInfoMap expectedKeys bs
 
-        unless (Set.null unexpectedKeys) $
-          Left $
-            "Unexpected keys: " <> bsToStrLenient unexpectedKeysStr
+    originalPath <- decodeUnit =<< Common.lookup "Path" mp
+    created <- decodeUnit =<< Common.lookup "DeletionDate" mp
 
-        originalPath <- decodeUnit =<< Common.lookup "Path" mp
-        created <- decodeUnit =<< Common.lookup "DeletionDate" mp
-
-        Right $
-          UnsafePathData
-            { fileName = name,
-              originalPath,
-              created
-            }
-      _ -> Left $ "Did not receive header [Trash Info]: " <> bsToStr bs
+    Right $
+      UnsafePathData
+        { fileName = name,
+          originalPath,
+          created
+        }
     where
-      isHeader = (== "[Trash Info]")
+      expectedKeys = Set.fromList ["Path", "DeletionDate"]
 
 -- | Derives the 'PathType' from the 'PathData'.
 --

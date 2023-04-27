@@ -12,7 +12,7 @@ module SafeRm.Data.PathData.Default
 where
 
 import Data.ByteString.Char8 qualified as C8
-import Data.HashMap.Strict qualified as Map
+import Data.HashSet qualified as Set
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Exts (IsList)
@@ -117,27 +117,23 @@ instance Serialize PathData where
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    case C8.lines bs of
-      [] -> Left "Received empty pathdata"
-      (h : rest) | isHeader h -> do
-        let mp = Map.fromList (fmap U.breakEqBS rest)
+    mp <- Common.parseTrashInfoMap expectedKeys bs
 
-        originalPath <- decodeUnit =<< Common.lookup "Path" mp
-        created <- decodeUnit =<< Common.lookup "DeletionDate" mp
-        size <- decodeSize =<< Common.lookup "Size" mp
-        pathType <- decodeUnit =<< Common.lookup "Type" mp
+    originalPath <- decodeUnit =<< Common.lookup "Path" mp
+    created <- decodeUnit =<< Common.lookup "DeletionDate" mp
+    size <- decodeSize =<< Common.lookup "Size" mp
+    pathType <- decodeUnit =<< Common.lookup "Type" mp
 
-        Right $
-          UnsafePathData
-            { fileName = name,
-              originalPath,
-              pathType,
-              size,
-              created
-            }
-      _ -> Left $ "Did not receive header [Trash Info]: " <> bsToStr bs
+    Right $
+      UnsafePathData
+        { fileName = name,
+          originalPath,
+          pathType,
+          size,
+          created
+        }
     where
-      isHeader = (== "[Trash Info]")
+      expectedKeys = Set.fromList ["Path", "DeletionDate", "Size", "Type"]
 
       decodeSize bs' = do
         let bytesStr = C8.unpack bs'
