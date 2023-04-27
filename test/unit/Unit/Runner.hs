@@ -54,7 +54,7 @@ delete = testCase "Parses delete" $ do
   Nothing @=? cfg ^. #trashHome
   Just ["foo", "bar"] @=? cmd ^? _Delete
   where
-    argList = ["d", "foo", "bar", "-c", "none"]
+    argList = ["delete", "foo", "bar", "-c", "none"]
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
@@ -63,7 +63,7 @@ permDelete = testCase "Parses perm delete" $ do
   Nothing @=? cfg ^. #trashHome
   Just (False, ["foo", "bar"]) @=? cmd ^? _DeletePerm
   where
-    argList = ["x", "foo", "bar", "-c", "none"]
+    argList = ["perm-delete", "foo", "bar", "-c", "none"]
 
 permDeleteForce :: TestTree
 permDeleteForce = testCase "Parses perm delete with force" $ do
@@ -72,7 +72,7 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
   Nothing @=? cfg ^. #trashHome
   Just (True, ["foo", "bar"]) @=? cmd ^? _DeletePerm
   where
-    argList = ["x", "-f", "foo", "bar", "-c", "none"]
+    argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
@@ -81,7 +81,7 @@ emptyTrash = testCase "Parses empty" $ do
   Nothing @=? cfg ^. #trashHome
   Just False @=? cmd ^? _Empty
   where
-    argList = ["e", "-c", "none"]
+    argList = ["empty", "-c", "none"]
 
 emptyTrashForce :: TestTree
 emptyTrashForce = testCase "Parses empty with force" $ do
@@ -90,7 +90,7 @@ emptyTrashForce = testCase "Parses empty with force" $ do
   Nothing @=? cfg ^. #trashHome
   Just True @=? cmd ^? _Empty
   where
-    argList = ["e", "-f", "-c", "none"]
+    argList = ["empty", "-f", "-c", "none"]
 
 restore :: TestTree
 restore = testCase "Parses restore" $ do
@@ -99,7 +99,7 @@ restore = testCase "Parses restore" $ do
   Nothing @=? cfg ^. #trashHome
   Just ["foo", "bar"] @=? cmd ^? _Restore
   where
-    argList = ["r", "foo", "bar", "-c", "none"]
+    argList = ["restore", "foo", "bar", "-c", "none"]
 
 list :: TestTree
 list = testCase "Parses list" $ do
@@ -108,7 +108,7 @@ list = testCase "Parses list" $ do
   Nothing @=? cfg ^. #trashHome
   Just defList @=? cmd ^? _List
   where
-    argList = ["l", "-c", "none"]
+    argList = ["list", "-c", "none"]
     defList =
       MkListCmd
         { format = FormatTabular Nothing Nothing,
@@ -126,7 +126,7 @@ listNonDefaults = testCase "List non-default args" $ do
     argList =
       [ "-c",
         "none",
-        "l",
+        "list",
         "--format",
         "t",
         "--name-len",
@@ -151,7 +151,7 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
     argList =
       [ "-c",
         "none",
-        "l",
+        "list",
         "--name-len",
         "80",
         "--orig-len",
@@ -171,7 +171,7 @@ metadata = testCase "Parses metadata" $ do
   Nothing @=? cfg ^. #trashHome
   Just () @=? cmd ^? _Metadata
   where
-    argList = ["m", "-c", "none"]
+    argList = ["metadata", "-c", "none"]
 
 tomlTests :: TestTree
 tomlTests =
@@ -192,7 +192,7 @@ parsesExample = testCase "Parses example" $ do
   Just (Just LevelInfo) @=? cfg ^. #logLevel
   Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^. #logSizeMode
   where
-    argList = ["-c", "examples/config.toml", "d", "foo"]
+    argList = ["-c", "examples/config.toml", "delete", "foo"]
 
 argsOverridesToml :: TestTree
 argsOverridesToml = testCase "Args overrides Toml" $ do
@@ -214,7 +214,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "error",
         "--log-size-mode",
         "delete 5 mb",
-        "d",
+        "delete",
         "foo"
       ]
 
@@ -229,7 +229,7 @@ argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
         "examples/config.toml",
         "--log-level",
         "none",
-        "d",
+        "delete",
         "foo"
       ]
 
@@ -243,6 +243,6 @@ defaultConfig = testCase "Default config" $ do
     argList =
       [ "-c",
         "none",
-        "d",
+        "delete",
         "foo"
       ]

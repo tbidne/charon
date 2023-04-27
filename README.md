@@ -33,6 +33,8 @@
   - [Information Commands](#information-commands)
     - [List](#list)
     - [Metadata](#metadata)
+  - [Transform Commands](#transform-commands)
+    - [Convert](#convert)
 - [Building](#building)
   - [Cabal](#cabal)
   - [Nix](#nix)
@@ -47,9 +49,9 @@
 ```
 Safe-rm: A tool for deleting files to a trash directory.
 
-Usage: sr [-c|--config (none|PATH)] [-t|--trash-home PATH]
-          [--log-level (none|error|warn|info|debug)]
-          [--log-size-mode (warn SIZE | delete SIZE)] COMMAND [--version]
+Usage: safe-rm [-c|--config (none|PATH)] [-b|--backend (default|fdo)]
+               [-t|--trash-home PATH] [--log-level (none|error|warn|info|debug)]
+               [--log-size-mode (warn SIZE | delete SIZE)] [--version] COMMAND
 
   Safe-rm moves files to a trash directory, so they can later be restored or
   permanently deleted. It is intended as a safer alternative to rm. See
@@ -61,6 +63,14 @@ Available options:
                            a path to the config file. If not specified then we
                            look in the XDG config directory e.g.
                            ~/.config/safe-rm/config.toml
+
+  -b,--backend (default|fdo)
+                           Backend to use with safe-rm. This option affects how
+                           path metadata is stored. The fdo option is compatible
+                           with the FreeDesktop.org trash specification file
+                           format. Defaults to 'default', which captures more
+                           information when a path is moved to the trash, at the
+                           expense of compatibility.
 
   -t,--trash-home PATH     Path to the trash directory. This overrides the toml
                            config, if it exists. If neither is given then we use
@@ -81,30 +91,47 @@ Available options:
   -h,--help                Show this help text
 
 Delete Commands
-  d                        Moves the path(s) to the trash.
+  delete                   Moves the path(s) to the trash.
 
-  x                        Permanently deletes path(s) from the trash. Can use
-                           wildcards to match trash paths e.g. '*foo*bar' matches
-                           foobar, xxxfooyyybar, etc. To match a filename with a
-                           literal * not representing a wildcard -- e.g. '*foo'
-                           -- the * must be escaped (sr x '\*foo').
+  d                        Alias for delete.
 
-  e                        Empties the trash.
+  perm-delete              Permanently deletes path(s) from the trash. Can use
+                           wildcards to match trash paths e.g. '*foo*bar'
+                           matches foobar, xxxfooyyybar, etc. To match a
+                           filename with a literal * not representing a wildcard
+                           -- e.g. '*foo' -- the * must be escaped (safe-rm x
+                           '\*foo').
+
+  x                        Alias for perm-delete.
+
+  empty                    Empties the trash.
+
+  e                        Alias for empty.
 
 
 Restore Commands
-  r                        Restores the trash path(s) to their original
+  restore                  Restores the trash path(s) to their original
                            location. Can use wildcards to match trash paths e.g.
-                           '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
-                           a filename with a literal * not representing a
-                           wildcard -- e.g. '*foo' -- the * must be escaped (sr
-                           r '\*foo').
+                           '*foo*bar' matches foobar, xxxfooyyybar, etc. To
+                           match a filename with a literal * not representing a
+                           wildcard -- e.g. '*foo' -- the * must be escaped
+                           (safe-rm r '\*foo').
+
+  r                        Alias for restore.
 
 
 Information Commands
-  l                        Lists all trash contents.
+  list                     Lists all trash contents.
 
-  m                        Prints trash metadata.
+  l                        Alias for list.
+
+  metadata                 Prints trash metadata.
+
+  m                        Alias for metadata.
+
+
+Transform Commands
+  convert                  Converts the backend.
 
 
 Version: 0.1
@@ -127,7 +154,7 @@ This section describes the possible commands, along with their specific options.
 **Usage:**
 
 ```
-Usage: sr d PATHS...
+Usage: safe-rm delete PATHS...
 
   Moves the path(s) to the trash.
 
@@ -140,7 +167,7 @@ Available options:
 
 ```
 # moves paths "foo", "bar", and "baz" to the trash
-$ sr d foo bar baz
+$ safe-rm delete foo bar baz
 ```
 
 ### Permanent Delete
@@ -148,12 +175,12 @@ $ sr d foo bar baz
 **Usage:**
 
 ```
-Usage: sr x [-f|--force] PATHS...
+Usage: safe-rm perm-delete [-f|--force] PATHS...
 
   Permanently deletes path(s) from the trash. Can use wildcards to match trash
   paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
   with a literal * not representing a wildcard -- e.g. '*foo' -- the * must be
-  escaped (sr x '\*foo').
+  escaped (safe-rm perm-delete '\*foo').
 
 
 Available options:
@@ -166,7 +193,7 @@ Available options:
 
 ```
 # permanently deletes "foo", "bar", and "baz" from the trash directory
-$ sr x foo bar baz
+$ safe-rm perm-delete foo bar baz
 
 Type:      File
 Name:      foo
@@ -182,7 +209,7 @@ Permanently delete (y/n)?
 **Usage:**
 
 ```
-Usage: sr e [-f|--force]
+Usage: safe-rm empty [-f|--force]
 
   Empties the trash.
 
@@ -196,7 +223,7 @@ Available options:
 **Examples**
 
 ```
-$ sr e
+$ safe-rm empty
 
 Entries:      8
 Total Files:  12
@@ -213,12 +240,12 @@ Permanently delete all contents (y/n)?
 **Usage:**
 
 ```
-Usage: sr r PATHS...
+Usage: safe-rm restore PATHS...
 
   Restores the trash path(s) to their original location. Can use wildcards to
-  match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a
-  filename with a literal * not representing a wildcard -- e.g. '*foo' -- the *
-  must be escaped (sr r '\*foo').
+  match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
+  a filename with a literal * not representing a wildcard -- e.g. '*foo' -- the
+  * must be escaped (safe-rm restore '\*foo').
 
 
 Available options:
@@ -229,10 +256,10 @@ Available options:
 
 ```
 # deleting "foo" and "baz" first
-$ sr d foo baz
+$ safe-rm delete foo baz
 
 # restore "foo" and "baz" to their original locations
-$ sr r foo baz
+$ safe-rm restore foo baz
 ```
 
 ## Information Commands
@@ -242,9 +269,9 @@ $ sr r foo baz
 **Usage:**
 
 ```
-Usage: sr l [--format (t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
-            [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
-            [-r|--reverse-sort]
+Usage: safe-rm list [--format (t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
+                    [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
+                    [-r|--reverse-sort]
 
   Lists all trash contents.
 
@@ -279,16 +306,16 @@ Available options:
 
 ```
 # deleting files/directories first
-$ sr d foo bar baz
+$ safe-rm delete foo bar baz
 
 # list contents
-$ sr l
+$ safe-rm list
 
-Name | Type      | Size    | Original            | Created
+Name | Type | Size    | Original            | Created
 ----------------------------------------------------------------------
-bar  | File      | 410.35G | /bar                | 2022-10-28 15:33:18
-baz  | File      | 45.61M  | /a/long/path/to/baz | 2022-10-28 15:33:18
-foo  | Directory | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
+bar  | F    | 410.35G | /bar                | 2022-10-28 15:33:18
+baz  | F    | 45.61M  | /a/long/path/to/baz | 2022-10-28 15:33:18
+foo  | D    | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
 ```
 
 ### Metadata
@@ -296,7 +323,7 @@ foo  | Directory | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
 **Usage:**
 
 ```
-Usage: sr m
+Usage: safe-rm metadata
 
   Prints trash metadata.
 
@@ -309,15 +336,40 @@ Available options:
 
 ```
 # deleting files/directories first
-$ sr d foo bar baz
+$ safe-rm delete foo bar baz
 
 # print metadata
-$ sr m
+$ safe-rm metadata
 
 Entries:      3
 Total Files:  3
 Log size:     4.89K
 Size:         111.35M
+```
+
+## Transform Commands
+
+### Convert
+
+```
+Usage: safe-rm convert (-d|--dest (default|fdo))
+
+  Converts the backend.
+
+
+Available options:
+  -d,--dest (default|fdo)  Backend to which we convert the current backend. See
+                           --backend for more details
+
+  -h,--help                Show this help text
+```
+
+**Examples**
+
+```
+# converting our trash info files from the default serialization to the
+# FreeDesktop.org spec.
+$ safe-rm convert -b default -d fdo
 ```
 
 # Building

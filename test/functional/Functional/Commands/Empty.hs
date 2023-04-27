@@ -1,5 +1,5 @@
 -- | Tests for m command.
-module Functional.Commands.E
+module Functional.Commands.Empty
   ( tests,
   )
 where
@@ -34,7 +34,7 @@ emptyTrash backend args = testCase "Empties trash" $ do
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -62,7 +62,7 @@ emptyTrash backend args = testCase "Empties trash" $ do
 
   -- EMPTY
 
-  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
+  let emptyArgList = withSrArgs trashDir backend ["empty", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -102,8 +102,8 @@ emptyTrashTwice backend args = testCase "Calling empty twice does not error" $ d
   testDir <- getTestPath args "emptyTrashTwice"
   let trashDir = testDir </> ".trash"
 
-  runSafeRm $ withSrArgs trashDir backend ["e", "-f"]
-  runSafeRm $ withSrArgs trashDir backend ["e", "-f"]
+  runSafeRm $ withSrArgs trashDir backend ["empty", "-f"]
+  runSafeRm $ withSrArgs trashDir backend ["empty", "-f"]
 
 emptyNoForce :: Backend -> IO FilePath -> TestTree
 emptyNoForce backend args = testCase "Empties trash without force" $ do
@@ -111,7 +111,7 @@ emptyNoForce backend args = testCase "Empties trash without force" $ do
   let trashDir = testDir </> ".trash"
       fileDeleteNames = show @Int <$> [1 .. 5]
       fileDeletePaths = (testDir </>) <$> fileDeleteNames
-      delArgList = withSrArgs trashDir backend $ "d" : fileDeletePaths
+      delArgList = withSrArgs trashDir backend $ "delete" : fileDeletePaths
 
   -- setup
   clearDirectory testDir
@@ -132,7 +132,7 @@ emptyNoForce backend args = testCase "Empties trash without force" $ do
 
   -- EMPTY
 
-  let emptyArgList = withSrArgs trashDir backend ["e"]
+  let emptyArgList = withSrArgs trashDir backend ["empty"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -167,7 +167,7 @@ missingInfoForcesDelete backend args = testCase "empty --force overwrites bad di
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -195,7 +195,7 @@ missingInfoForcesDelete backend args = testCase "empty --force overwrites bad di
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "info")
 
-  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
+  let emptyArgList = withSrArgs trashDir backend ["empty", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions
@@ -238,7 +238,7 @@ missingPathsForcesDelete backend args = testCase "empty --force overwrites bad d
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -266,7 +266,7 @@ missingPathsForcesDelete backend args = testCase "empty --force overwrites bad d
   -- delete info dir, leaving trash dir in bad state
   clearDirectory (trashDir </> "files")
 
-  let emptyArgList = withSrArgs trashDir backend ["e", "-f"]
+  let emptyArgList = withSrArgs trashDir backend ["empty", "-f"]
   runSafeRm emptyArgList
 
   -- file assertions

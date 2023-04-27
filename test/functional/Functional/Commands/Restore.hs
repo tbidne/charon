@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 -- | Tests for r command.
-module Functional.Commands.R
+module Functional.Commands.Restore
   ( tests,
   )
 where
@@ -43,7 +43,7 @@ restoreOne backend args = testCase "Restores a single file" $ do
   testDir <- getTestPath args "restoreOne"
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["d", f1]
+      delArgList = withSrArgs trashDir backend ["delete", f1]
 
   -- SETUP
 
@@ -66,7 +66,7 @@ restoreOne backend args = testCase "Restores a single file" $ do
 
   -- RESTORE
 
-  let restoreArgList = withSrArgs trashDir backend ["r", "f1"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "f1"]
   runSafeRm restoreArgList
 
   -- file assertions
@@ -81,7 +81,7 @@ restoreOne backend args = testCase "Restores a single file" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoreOne/f1"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoreOne/f1"
         ]
 
     delExpectedMetadata =
@@ -101,7 +101,7 @@ restoreMany backend args = testCase "Restores several paths" $ do
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
 
   -- SETUP
   clearDirectory testDir
@@ -131,7 +131,7 @@ restoreMany backend args = testCase "Restores several paths" $ do
 
   let restoreArgList =
         -- do not restore f2
-        withSrArgs trashDir backend ["r", "f1", "f3", "dir1", "dir2"]
+        withSrArgs trashDir backend ["restore", "f1", "f3", "dir1", "dir2"]
   runSafeRm restoreArgList
 
   -- file assertions
@@ -147,11 +147,11 @@ restoreMany backend args = testCase "Restores several paths" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoreMany/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoreMany/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/r/restoreMany/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/r/restoreMany/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/r/restoreMany/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoreMany/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoreMany/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/restore/restoreMany/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/restore/restoreMany/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/restore/restoreMany/dir2"
         ]
 
     delExpectedMetadata =
@@ -162,7 +162,7 @@ restoreMany backend args = testCase "Restores several paths" $ do
           size = afromInteger 0
         }
 
-    restoreExpectedIdxSet = HashSet.singleton (mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoreMany/f2")
+    restoreExpectedIdxSet = HashSet.singleton (mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoreMany/f2")
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -176,7 +176,7 @@ restoreUnknownError backend args = testCase "Restore unknown prints error" $ do
   testDir <- getTestPath args "restoreUnknownError"
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["d", f1]
+      delArgList = withSrArgs trashDir backend ["delete", f1]
 
   -- SETUP
 
@@ -201,7 +201,7 @@ restoreUnknownError backend args = testCase "Restore unknown prints error" $ do
   delExpectedMetadata @=? delMetadata
 
   -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ["r", "bad file"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "bad file"]
   (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
@@ -215,7 +215,7 @@ restoreUnknownError backend args = testCase "Restore unknown prints error" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoreUnknownError/f1"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoreUnknownError/f1"
         ]
 
     delExpectedMetadata =
@@ -231,7 +231,7 @@ restoreCollisionError backend args = testCase "Restore collision prints error" $
   testDir <- getTestPath args "restoreCollisionError"
   let trashDir = testDir </> ".trash"
       f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["d", f1]
+      delArgList = withSrArgs trashDir backend ["delete", f1]
 
   -- SETUP
 
@@ -252,7 +252,7 @@ restoreCollisionError backend args = testCase "Restore collision prints error" $
   delExpectedMetadata @=? delMetadata
 
   -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ["r", "f1"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "f1"]
   (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
@@ -266,7 +266,7 @@ restoreCollisionError backend args = testCase "Restore collision prints error" $
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoreCollisionError/f1"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoreCollisionError/f1"
         ]
 
     delExpectedMetadata =
@@ -283,7 +283,7 @@ restoresSome backend args = testCase "Restores some, errors on others" $ do
   let trashDir = testDir </> ".trash"
       realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
       filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
-      delArgList = withSrArgs trashDir backend ("d" : realFiles)
+      delArgList = withSrArgs trashDir backend ("delete" : realFiles)
 
   -- setup
   clearDirectory testDir
@@ -304,7 +304,7 @@ restoresSome backend args = testCase "Restores some, errors on others" $ do
   delExpectedMetadata @=? delMetadata
 
   -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ("r" : filesTryRestore)
+  let restoreArgList = withSrArgs trashDir backend ("restore" : filesTryRestore)
   (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
   -- file assertions
@@ -321,9 +321,9 @@ restoresSome backend args = testCase "Restores some, errors on others" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoresSome/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoresSome/f2",
-          mkPathData' backend PathTypeFile "f5" "/safe-rm/functional/r/restoresSome/f5"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoresSome/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoresSome/f2",
+          mkPathData' backend PathTypeFile "f5" "/safe-rm/functional/restore/restoresSome/f5"
         ]
 
     delExpectedMetadata =
@@ -343,7 +343,7 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
   let trashDir = testDir </> ".trash"
       filesToRestore = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
       otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToRestore <> otherFiles)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToRestore <> otherFiles)
 
   -- SETUP
   clearDirectory testDir
@@ -367,7 +367,7 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
   -- RESTORE
 
   -- leave g alone
-  let restoreArgList = withSrArgs trashDir backend ["r", "*f*"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "*f*"]
   runSafeRm restoreArgList
 
   -- file assertions
@@ -381,18 +381,18 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoresWildcards/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoresWildcards/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/r/restoresWildcards/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/r/restoresWildcards/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/r/restoresWildcards/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/r/restoresWildcards/3f",
-          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/r/restoresWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/r/restoresWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/r/restoresWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/r/restoresWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/r/restoresWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/r/restoresWildcards/3g"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoresWildcards/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoresWildcards/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/restore/restoresWildcards/f3",
+          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/restore/restoresWildcards/1f",
+          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/restore/restoresWildcards/2f",
+          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/restore/restoresWildcards/3f",
+          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/restore/restoresWildcards/g1",
+          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/restore/restoresWildcards/g2",
+          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/restore/restoresWildcards/g3",
+          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/restore/restoresWildcards/1g",
+          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/restore/restoresWildcards/2g",
+          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/restore/restoresWildcards/3g"
         ]
 
     delExpectedMetadata =
@@ -405,12 +405,12 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
 
     restoreExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/r/restoresWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/r/restoresWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/r/restoresWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/r/restoresWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/r/restoresWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/r/restoresWildcards/3g"
+        [ mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/restore/restoresWildcards/g1",
+          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/restore/restoresWildcards/g2",
+          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/restore/restoresWildcards/g3",
+          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/restore/restoresWildcards/1g",
+          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/restore/restoresWildcards/2g",
+          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/restore/restoresWildcards/3g"
         ]
     restoreExpectedMetadata =
       MkMetadata
@@ -426,7 +426,7 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
   let trashDir = testDir </> ".trash"
       files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
       testFiles = (testDir </>) <$> files
-      delArgList = withSrArgs trashDir backend ("d" : testFiles)
+      delArgList = withSrArgs trashDir backend ("delete" : testFiles)
 
   -- SETUP
   clearDirectory testDir
@@ -450,7 +450,7 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
   -- from trash but fooBadBar
   createFiles [testDir </> "fooBadbar"]
 
-  let restoreArgList = withSrArgs trashDir backend ["r", "foo**bar", "*g*"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "foo**bar", "*g*"]
   runSafeRmException @ExitCode restoreArgList
 
   -- file assertions
@@ -467,15 +467,15 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "foobar" "/safe-rm/functional/r/restoresSomeWildcards/foobar",
-          mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/r/restoresSomeWildcards/fooBadbar",
-          mkPathData' backend PathTypeFile "fooXbar" "/safe-rm/functional/r/restoresSomeWildcards/fooXbar",
-          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/r/restoresSomeWildcards/g1",
-          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/r/restoresSomeWildcards/g2",
-          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/r/restoresSomeWildcards/g3",
-          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/r/restoresSomeWildcards/1g",
-          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/r/restoresSomeWildcards/2g",
-          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/r/restoresSomeWildcards/3g"
+        [ mkPathData' backend PathTypeFile "foobar" "/safe-rm/functional/restore/restoresSomeWildcards/foobar",
+          mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/restore/restoresSomeWildcards/fooBadbar",
+          mkPathData' backend PathTypeFile "fooXbar" "/safe-rm/functional/restore/restoresSomeWildcards/fooXbar",
+          mkPathData' backend PathTypeFile "g1" "/safe-rm/functional/restore/restoresSomeWildcards/g1",
+          mkPathData' backend PathTypeFile "g2" "/safe-rm/functional/restore/restoresSomeWildcards/g2",
+          mkPathData' backend PathTypeFile "g3" "/safe-rm/functional/restore/restoresSomeWildcards/g3",
+          mkPathData' backend PathTypeFile "1g" "/safe-rm/functional/restore/restoresSomeWildcards/1g",
+          mkPathData' backend PathTypeFile "2g" "/safe-rm/functional/restore/restoresSomeWildcards/2g",
+          mkPathData' backend PathTypeFile "3g" "/safe-rm/functional/restore/restoresSomeWildcards/3g"
         ]
 
     delExpectedMetadata =
@@ -488,7 +488,7 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
 
     restoreExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/r/restoresSomeWildcards/fooBadbar"
+        [ mkPathData' backend PathTypeFile "fooBadbar" "/safe-rm/functional/restore/restoresSomeWildcards/fooBadbar"
         ]
     restoreExpectedMetadata =
       MkMetadata
@@ -507,7 +507,7 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
       files = ["f1", "f2", "f3", "1f", "2f", "3f"]
       testFiles = (testDir </>) <$> files
       testWcLiteral = testDir </> "*"
-      delArgList = withSrArgs trashDir backend ("d" : testWcLiteral : testFiles)
+      delArgList = withSrArgs trashDir backend ("delete" : testWcLiteral : testFiles)
 
   -- SETUP
   clearDirectory testDir
@@ -528,7 +528,7 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
   -- RESTORE
 
   -- leave f alone
-  let restoreArgList = withSrArgs trashDir backend ["r", "\\*"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "\\*"]
   runSafeRm restoreArgList
 
   -- file assertions
@@ -543,13 +543,13 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/3f",
-          mkPathData' backend PathTypeFile "*" "/safe-rm/functional/r/restoresLiteralWildcardOnly/*"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f3",
+          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/1f",
+          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/2f",
+          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/3f",
+          mkPathData' backend PathTypeFile "*" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/*"
         ]
 
     delExpectedMetadata =
@@ -562,12 +562,12 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
 
     restoreExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/r/restoresLiteralWildcardOnly/f3",
-          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/1f",
-          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/2f",
-          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/r/restoresLiteralWildcardOnly/3f"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/f3",
+          mkPathData' backend PathTypeFile "1f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/1f",
+          mkPathData' backend PathTypeFile "2f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/2f",
+          mkPathData' backend PathTypeFile "3f" "/safe-rm/functional/restore/restoresLiteralWildcardOnly/3f"
         ]
     restoreExpectedMetadata =
       MkMetadata
@@ -585,7 +585,7 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
       wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
       testFiles = (testDir </>) <$> files
       testWcLiterals = (testDir </>) <$> wcLiterals
-      delArgList = withSrArgs trashDir backend ("d" : testWcLiterals <> testFiles)
+      delArgList = withSrArgs trashDir backend ("delete" : testWcLiterals <> testFiles)
 
   -- SETUP
   clearDirectory testDir
@@ -605,7 +605,7 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
 
   -- RESTORE
 
-  let restoreArgList = withSrArgs trashDir backend ["r", "y\\*xx*"]
+  let restoreArgList = withSrArgs trashDir backend ["restore", "y\\*xx*"]
   runSafeRm restoreArgList
 
   -- file assertions
@@ -621,12 +621,12 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
     desc = "Restores filename w/ literal * and wildcard"
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "yxxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxfoo",
-          mkPathData' backend PathTypeFile "yxxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbar",
-          mkPathData' backend PathTypeFile "yxxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbaz",
-          mkPathData' backend PathTypeFile "y*xxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxfoo",
-          mkPathData' backend PathTypeFile "y*xxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxbar",
-          mkPathData' backend PathTypeFile "y*xxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/y*xxbaz"
+        [ mkPathData' backend PathTypeFile "yxxfoo" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxfoo",
+          mkPathData' backend PathTypeFile "yxxbar" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxbar",
+          mkPathData' backend PathTypeFile "yxxbaz" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxbaz",
+          mkPathData' backend PathTypeFile "y*xxfoo" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/y*xxfoo",
+          mkPathData' backend PathTypeFile "y*xxbar" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/y*xxbar",
+          mkPathData' backend PathTypeFile "y*xxbaz" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/y*xxbaz"
         ]
 
     delExpectedMetadata =
@@ -639,9 +639,9 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
 
     restoreArgListExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "yxxfoo" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxfoo",
-          mkPathData' backend PathTypeFile "yxxbar" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbar",
-          mkPathData' backend PathTypeFile "yxxbaz" "/safe-rm/functional/r/restoresCombinedWildcardLiteral/yxxbaz"
+        [ mkPathData' backend PathTypeFile "yxxfoo" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxfoo",
+          mkPathData' backend PathTypeFile "yxxbar" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxbar",
+          mkPathData' backend PathTypeFile "yxxbaz" "/safe-rm/functional/restore/restoresCombinedWildcardLiteral/yxxbaz"
         ]
     restoreArgListExpectedMetadata =
       MkMetadata
@@ -652,4 +652,4 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
         }
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "r"
+getTestPath mroot = createTestDir mroot "restore"

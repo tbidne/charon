@@ -69,4 +69,4 @@ testStripInfix = testCase "stripInfix" $ do
 
   -- failures
   Nothing @=? Utils.stripInfix "aa" "foobar"
-  Nothing @=? Utils.stripInfix "x" "foobar"
+  Nothing @=? Utils.stripInfix "perm-delete" "foobar"

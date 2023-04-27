@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 
 -- | Tests for d command.
-module Integration.Commands.D
+module Integration.Commands.Delete
   ( tests,
   )
 where
@@ -49,4 +49,4 @@ deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
         <> "': Attempted to delete root! This is not allowed.\n"
 
     argList :: [String]
-    argList = "d" : r : ["-t", "/dev/null", "--backend", Backend.backendArg b]
+    argList = "delete" : r : ["-t", "/dev/null", "--backend", Backend.backendArg b]

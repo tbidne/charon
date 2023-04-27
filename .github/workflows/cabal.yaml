@@ -40,7 +40,7 @@ jobs:
         run: cabal configure --enable-tests --enable-benchmarks
 
       - name: Compile
-        run: cabal build safe-rm:exe:sr
+        run: cabal build safe-rm:exe:safe-rm
 
       - name: Unit Tests
         run: cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'

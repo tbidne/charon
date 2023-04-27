@@ -112,7 +112,7 @@ instance Exception TrashEntryFileNotFoundE where
         slash,
         "info'. This can be fixed by manually deleting the ",
         Env.trashInfoExtension,
-        " file or deleting everything (i.e. sr e -f)."
+        " file or deleting everything (i.e. safe-rm empty -f)."
       ]
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
@@ -136,7 +136,7 @@ instance Exception TrashEntryInfoNotFoundE where
         slash,
         "files'. This can be fixed by manually deleting the ",
         slash,
-        "files entry or deleting everything (i.e. sr e -f)."
+        "files entry or deleting everything (i.e. safe-rm empty -f)."
       ]
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
@@ -169,7 +169,7 @@ instance Exception TrashDirFilesNotFoundE where
         th ^. #unPathI,
         slash,
         "files' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. sr e -f)."
+        "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
 
 -- | Trash info dir not found error.
@@ -183,7 +183,7 @@ instance Exception TrashDirInfoNotFoundE where
         th ^. #unPathI,
         slash,
         "info' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. sr e -f)."
+        "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
 
 -- | Collision with existing file when attempting a restore.

@@ -38,7 +38,7 @@ getPathInfo trashHome origPath = do
   -- NOTE: It is VERY important that this check is first i.e. we perform it
   -- on the original given path, before any processing. As an example of
   -- what can go wrong, if someone attempts to delete a blank path
-  -- (i.e. sr d ""), then canonicalizePath will turn this into the current
+  -- (i.e. safe-rm d ""), then canonicalizePath will turn this into the current
   -- directory, as in, will delete the entire working directory. This is
   -- not what we want!
   throwIfIllegal origPath

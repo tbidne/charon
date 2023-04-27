@@ -4,7 +4,7 @@ module Main (main) where
 import Effects.FileSystem.PathReader qualified as Dir
 import GHC.Conc (setUncaughtExceptionHandler)
 import Integration.AsciiOnly (AsciiOnly)
-import Integration.Commands.D qualified as D
+import Integration.Commands.Delete qualified as Delete
 import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
@@ -23,7 +23,7 @@ main = do
         [ SafeRm.tests args,
           testGroup
             "Root Tests"
-            [ D.tests
+            [ Delete.tests
             ]
         ]
   where

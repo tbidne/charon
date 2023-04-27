@@ -1,5 +1,5 @@
 -- | Tests for m command.
-module Functional.Commands.M
+module Functional.Commands.Metadata
   ( tests,
   )
 where
@@ -31,7 +31,7 @@ metadata backend args = testCase "Prints metadata" $ do
   let trashDir = testDir </> ".trash"
       filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
       dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("d" : filesToDelete <> dirsToDelete)
+      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
 
   -- setup
   clearDirectory testDir
@@ -57,7 +57,7 @@ metadata backend args = testCase "Prints metadata" $ do
 
   -- METADATA
 
-  let metaArgList = withSrArgs trashDir backend ["m"]
+  let metaArgList = withSrArgs trashDir backend ["metadata"]
   (metadataResult, _) <- captureSafeRmLogs metaArgList
 
   -- assert nothing changed
@@ -76,11 +76,11 @@ metadata backend args = testCase "Prints metadata" $ do
   where
     delExpectedIdxSet =
       HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/m/metadata/f1",
-          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/m/metadata/f2",
-          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/m/metadata/f3",
-          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/m/metadata/dir1",
-          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/m/metadata/dir2"
+        [ mkPathData' backend PathTypeFile "f1" "/safe-rm/functional/metadata/metadata/f1",
+          mkPathData' backend PathTypeFile "f2" "/safe-rm/functional/metadata/metadata/f2",
+          mkPathData' backend PathTypeFile "f3" "/safe-rm/functional/metadata/metadata/f3",
+          mkPathData' backend PathTypeDirectory "dir1" "/safe-rm/functional/metadata/metadata/dir1",
+          mkPathData' backend PathTypeDirectory "dir2" "/safe-rm/functional/metadata/metadata/dir2"
         ]
 
     delExpectedMetadata =
@@ -108,7 +108,7 @@ empty backend args = testCase "Prints empty metadata" $ do
   createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
   createFiles [trashDir </> "log"]
 
-  let metaArgList = withSrArgs trashDir backend ["m"]
+  let metaArgList = withSrArgs trashDir backend ["metadata"]
   (result, _) <- captureSafeRmLogs metaArgList
 
   assertMatches expectedTerminal result
@@ -123,4 +123,4 @@ empty backend args = testCase "Prints empty metadata" $ do
             ]
 
 getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "m"
+getTestPath mroot = createTestDir mroot "metadata"

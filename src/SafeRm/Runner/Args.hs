@@ -127,9 +127,9 @@ argsParser =
     <*> trashParser
     <*> logLevelParser
     <*> logSizeModeParser
-    <*> commandParser
-    <**> OA.helper
     <**> version
+    <**> OA.helper
+    <*> commandParser
 
 version :: Parser (a -> a)
 version = OA.infoOption txt (OA.long "version")
@@ -210,30 +210,36 @@ commandParser :: Parser CommandP1
 commandParser =
   OA.hsubparser
     ( mconcat
-        [ mkCommand "d" delParser delTxt,
-          mkCommand "x" permDelParser permDelTxt,
-          mkCommand "e" emptyParser emptyTxt,
+        [ mkCommand "delete" delParser delTxt,
+          mkCommand "d" delParser (mkCmdDesc "Alias for delete."),
+          mkCommand "perm-delete" permDelParser permDelTxt,
+          mkCommand "x" permDelParser (mkCmdDesc "Alias for perm-delete."),
+          mkCommand "empty" emptyParser emptyTxt,
+          mkCommand "e" emptyParser (mkCmdDesc "Alias for empty."),
           OA.commandGroup "Delete Commands"
         ]
     )
     <|> OA.hsubparser
       ( mconcat
-          [ mkCommand "r" restoreParser restoreTxt,
+          [ mkCommand "restore" restoreParser restoreTxt,
+            mkCommand "r" restoreParser (mkCmdDesc "Alias for restore."),
             OA.commandGroup "Restore Commands",
             OA.hidden
           ]
       )
     <|> OA.hsubparser
       ( mconcat
-          [ mkCommand "l" listParser listTxt,
-            mkCommand "m" metadataParser metadataTxt,
+          [ mkCommand "list" listParser listTxt,
+            mkCommand "l" listParser (mkCmdDesc "Alias for list."),
+            mkCommand "metadata" metadataParser metadataTxt,
+            mkCommand "m" metadataParser (mkCmdDesc "Alias for metadata."),
             OA.commandGroup "Information Commands",
             OA.hidden
           ]
       )
     <|> OA.hsubparser
       ( mconcat
-          [ mkCommand "c" convertParser convertTxt,
+          [ mkCommand "convert" convertParser convertTxt,
             OA.commandGroup "Transform Commands",
             OA.hidden
           ]
@@ -246,7 +252,7 @@ commandParser =
           [ "Permanently deletes path(s) from the trash. Can use wildcards ",
             "to match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, ",
             "etc. To match a filename with a literal * not representing a ",
-            " wildcard -- e.g. '*foo' -- the * must be escaped (sr x '\\*foo')."
+            " wildcard -- e.g. '*foo' -- the * must be escaped (safe-rm perm-delete '\\*foo')."
           ]
     emptyTxt = mkCmdDesc "Empties the trash."
     restoreTxt =
@@ -255,7 +261,7 @@ commandParser =
           [ "Restores the trash path(s) to their original location. Can use ",
             "wildcards to match trash paths e.g. '*foo*bar' matches foobar, ",
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
-            " wildcard -- e.g. '*foo' -- the * must be escaped (sr r '\\*foo')."
+            " wildcard -- e.g. '*foo' -- the * must be escaped (safe-rm restore '\\*foo')."
           ]
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."

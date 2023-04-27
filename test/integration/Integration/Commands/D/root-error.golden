@@ -1,8 +1,0 @@
-EXCEPTION DELETE
-ExitFailure 1
-
-TERMINAL DELETE
-Error deleting path '/': Attempted to delete root! This is not allowed.
-
-
-DELETED DELETE

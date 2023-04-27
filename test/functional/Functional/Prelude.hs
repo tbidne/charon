@@ -150,7 +150,7 @@ assertSetEq x y = do
 --
 -- E.g.
 --
--- @createTestDir args "d" "someDeleteTest" @
+-- @createTestDir args "delete" "someDeleteTest" @
 createTestDir :: IO FilePath -> FilePath -> FilePath -> IO FilePath
 createTestDir args modDir testDir = do
   -- See Note [OSX temp symlink]

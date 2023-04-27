@@ -2,12 +2,12 @@
 module Main (main) where
 
 import Effects.FileSystem.PathReader qualified as Dir
-import Functional.Commands.D qualified as D
-import Functional.Commands.E qualified as E
-import Functional.Commands.L qualified as L
-import Functional.Commands.M qualified as M
-import Functional.Commands.R qualified as R
-import Functional.Commands.X qualified as X
+import Functional.Commands.Delete qualified as Delete
+import Functional.Commands.Empty qualified as Empty
+import Functional.Commands.List qualified as List
+import Functional.Commands.Metadata qualified as Metadata
+import Functional.Commands.PermDelete qualified as PermDelete
+import Functional.Commands.Restore qualified as Restore
 import Functional.Prelude
 import GHC.Conc (setUncaughtExceptionHandler)
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
@@ -22,12 +22,12 @@ main = do
     Tasty.withResource setup teardown $ \args ->
       testGroup
         "Functional Tests"
-        [ D.tests args,
-          X.tests args,
-          E.tests args,
-          R.tests args,
-          L.tests args,
-          M.tests args
+        [ Delete.tests args,
+          PermDelete.tests args,
+          Empty.tests args,
+          Restore.tests args,
+          List.tests args,
+          Metadata.tests args
         ]
 
 setup :: IO FilePath

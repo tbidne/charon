@@ -122,7 +122,7 @@ library test-utils
   hs-source-dirs:   lib/test-utils
   default-language: GHC2021
 
-executable sr
+executable safe-rm
   import:             common-lang
   default-extensions: ImplicitPrelude
   main-is:            Main.hs
@@ -176,7 +176,7 @@ test-suite integration
   main-is:          Main.hs
   other-modules:
     Integration.AsciiOnly
-    Integration.Commands.D
+    Integration.Commands.Delete
     Integration.Prelude
     Integration.SafeRm
 
@@ -209,12 +209,12 @@ test-suite functional
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
-    Functional.Commands.D
-    Functional.Commands.E
-    Functional.Commands.L
-    Functional.Commands.M
-    Functional.Commands.R
-    Functional.Commands.X
+    Functional.Commands.Delete
+    Functional.Commands.Empty
+    Functional.Commands.List
+    Functional.Commands.Metadata
+    Functional.Commands.PermDelete
+    Functional.Commands.Restore
     Functional.Prelude
     Functional.Prelude.FuncEnv
 
