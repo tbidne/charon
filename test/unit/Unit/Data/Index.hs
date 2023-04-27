@@ -119,13 +119,15 @@ newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
     via ReaderT TestEnv IO
 
 instance MonadPathReader ConfigIO where
-  doesFileExist "test/unit/index/trash/files/dir" = pure False
-  doesFileExist "test/unit/index/trash/files/d" = pure False
-  doesFileExist _ = pure True
+  doesFileExist = pure . not . (`L.elem` dirs)
+  doesDirectoryExist = pure . (`L.elem` dirs)
 
-  doesDirectoryExist "test/unit/index/trash/files/dir" = pure True
-  doesDirectoryExist "test/unit/index/trash/files/d" = pure True
-  doesDirectoryExist _ = pure False
+dirs :: [FilePath]
+dirs =
+  (\f -> trashPath </> "files" </> f)
+    <$> [ "dir",
+          "d"
+        ]
 
 instance MonadPathSize ConfigIO where
   findLargestPaths _ p =
@@ -158,10 +160,10 @@ instance MonadPathSize ConfigIO where
           }
 
 runConfigIO :: ConfigIO a -> Natural -> IO a
-runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` trashPath)
+runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` (MkPathI trashPath))
 
-trashPath :: (IsString a) => a
-trashPath = "test/unit/index/trash"
+trashPath :: String
+trashPath = "test" </> "unit" </> "index" </> "trash"
 
 instance MonadTerminal ConfigIO where
   getTerminalSize =
@@ -456,4 +458,4 @@ mkGoldenPaths :: Backend -> FilePath -> (FilePath, FilePath)
 mkGoldenPaths b fp = (goldenPath </> fp <> ".golden", goldenPath </> fpBackend <> ".actual")
   where
     fpBackend = fp ++ "-" ++ Backend.backendArg b
-    goldenPath = "test/unit/Unit/Data/Index"
+    goldenPath = "test" </> "unit" </> "Unit" </> "Data" </> "Index"
