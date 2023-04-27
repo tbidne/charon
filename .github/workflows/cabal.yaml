@@ -43,7 +43,15 @@ jobs:
         run: cabal build safe-rm:exe:safe-rm
 
       - name: Unit Tests
+        id: unit
         run: cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'
+
+      - uses: actions/upload-artifact@v3
+        name: Unit Tests Upload
+        if: ${{ failure() && steps.unit.conclusion == 'failure' }}
+        with:
+          name: unit-artifacts
+          path: test/unit/Unit/Data/Index/*
 
       - name: Integration Tests
         run: |
@@ -65,6 +73,7 @@ jobs:
             --fail-if-faster 50'
 
       - uses: actions/upload-artifact@v3
+        name: Benchmarks Upload
         if: ${{ failure() && steps.bench.conclusion == 'failure' }}
         with:
           name: build-artifacts
