@@ -4,10 +4,14 @@ module Unit.Data.PathData
 where
 
 import Data.Fixed (Fixed (MkFixed))
+import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), TimeOfDay (..))
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Data.PathData (PathData (..))
 import SafeRm.Data.PathData.Default qualified as Default
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType (..))
@@ -15,52 +19,68 @@ import SafeRm.Data.Paths (PathI (..))
 import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
 import SafeRm.Data.Timestamp qualified as Timestamp
+import Text.Pretty.Simple qualified as Pretty
 import Unit.Prelude
 
 tests :: TestTree
 tests =
   testGroup
     "Data.PathData"
-    [ defaultTests,
-      fdoTests
-    ]
+    ( serializeRoundtripProp
+        : [serializeRoundtripSpecs b specs | b <- backends]
+    )
+  where
+    backends = [minBound .. maxBound]
+    specs =
+      [ ("\NUL", "\t"),
+        ("\NUL", "\NUL")
+      ]
 
-defaultTests :: TestTree
-defaultTests =
-  testGroup
-    "Default"
-    [ serializeRoundtripSpecsDefault,
-      serializeRoundtripPropDefault
-    ]
-
-serializeRoundtripSpecsDefault :: TestTree
-serializeRoundtripSpecsDefault = testCase "decode . encode ~ id (specs)" $ do
+serializeRoundtripSpecs :: Backend -> [(String, String)] -> TestTree
+serializeRoundtripSpecs backend params = testCase desc $ do
   ts <- Timestamp.fromText "1858-11-17T00:00:00"
 
-  let (pd1, encoded1) = mkPd ts "\NUL" "\t"
-  "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded1
-  Right pd1 @=? decode (MkPathI "\NUL") encoded1
+  for_ params $ \(fileName, originalPath) -> do
+    let pd = backendToMk backend fileName originalPath ts
+        encoded = encode pd
 
-  let (pd2, encoded2) = mkPd ts "\NUL" "\n"
-  "[Trash Info]\nPath=\n\nDeletionDate=1858-11-17T00:00:00\nSize=0\nType=d\n" @=? encoded2
-  Right pd2 @=? decode (MkPathI "\NUL") encoded2
+    case decode (backend, MkPathI fileName) encoded of
+      Left err ->
+        assertFailure $
+          mconcat
+            [ "PathData:\n\n",
+              TL.unpack (Pretty.pShow pd),
+              "\n\nEncoded:\n\n",
+              bsToStrLenient encoded,
+              "\n\nError: ",
+              err
+            ]
+      Right decoded -> pd @=? decoded
   where
-    mkPd ts fileName' originalPath' =
-      let pd =
-            Default.UnsafePathData
-              { pathType = PathTypeDirectory,
-                fileName = MkPathI fileName',
-                originalPath = MkPathI originalPath',
-                size = MkBytes 0,
-                created = ts
-              }
-       in (pd, encode pd)
+    desc = "decode . encode ~ id (specs) " ++ Backend.backendTestDesc backend
+    backendToMk BackendDefault name opath ts =
+      PathDataDefault $
+        Default.UnsafePathData
+          { pathType = PathTypeFile,
+            fileName = MkPathI name,
+            originalPath = MkPathI opath,
+            size = MkBytes 0,
+            created = ts
+          }
+    backendToMk BackendFdo name opath ts =
+      PathDataFdo $
+        Fdo.UnsafePathData
+          { fileName = MkPathI name,
+            originalPath = MkPathI opath,
+            created = ts
+          }
 
-serializeRoundtripPropDefault :: TestTree
-serializeRoundtripPropDefault =
-  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripPropDefault" $ do
+serializeRoundtripProp :: TestTree
+serializeRoundtripProp =
+  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripProp" $ do
     property $ do
-      pathData@(Default.UnsafePathData _ fileName _ _ _) <- forAll genDefaultPathData
+      (pathData, backend) <- forAll genPathData
+      let fileName = pathData ^. #fileName
       -- NOTE:
       -- Two caveats on injectivity:
       --
@@ -75,69 +95,19 @@ serializeRoundtripPropDefault =
       -- resolution. This is acceptable, as we do not care about
       -- precision > second.
       let encoded = encode pathData
-          decoded = decode fileName encoded
+          decoded = decode (backend, fileName) encoded
 
       annotateShow encoded
-
-      annotateShow encoded
+      annotateShow decoded
 
       Right pathData === decoded
 
-fdoTests :: TestTree
-fdoTests =
-  testGroup
-    "FDO"
-    [ serializeRoundtripSpecsFdo,
-      serializeRoundtripPropFdo
+genPathData :: Gen (PathData, Backend)
+genPathData =
+  Gen.choice
+    [ (\x -> (PathDataDefault x, BackendDefault)) <$> genDefaultPathData,
+      (\x -> (PathDataFdo x, BackendFdo)) <$> genFdoPathData
     ]
-
-serializeRoundtripSpecsFdo :: TestTree
-serializeRoundtripSpecsFdo = testCase "decode . encode ~ id (specs)" $ do
-  ts <- Timestamp.fromText "1858-11-17T00:00:00"
-
-  let (pd1, encoded1) = mkPd ts "\NUL" "\t"
-  "[Trash Info]\nPath=\t\nDeletionDate=1858-11-17T00:00:00\n" @=? encoded1
-  Right pd1 @=? decode (MkPathI "\NUL") encoded1
-
-  let (pd2, encoded2) = mkPd ts "\NUL" "\n"
-  "[Trash Info]\nPath=\n\nDeletionDate=1858-11-17T00:00:00\n" @=? encoded2
-  Right pd2 @=? decode (MkPathI "\NUL") encoded2
-  where
-    mkPd ts fileName' originalPath' =
-      let pd =
-            Fdo.UnsafePathData
-              { fileName = MkPathI fileName',
-                originalPath = MkPathI originalPath',
-                created = ts
-              }
-       in (pd, encode pd)
-
-serializeRoundtripPropFdo :: TestTree
-serializeRoundtripPropFdo =
-  testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripPropFdo" $ do
-    property $ do
-      pathData@(Fdo.UnsafePathData fileName _ _) <- forAll genFdoPathData
-      -- NOTE:
-      -- Two caveats on injectivity:
-      --
-      -- 1. The fileName is thrown away. However this is intentional as we
-      -- want it in the actual file name only (otherwise it is redundant).
-      --
-      -- We can thus think of the actual injection in terms of the implicit
-      -- file name that is created by the encoding.
-      --
-      -- 2. We lose precision in the created timestamp, as we encode to second
-      -- precision whereas the timestamp field technically has picosecond
-      -- resolution. This is acceptable, as we do not care about
-      -- precision > second.
-      let encoded = encode pathData
-          decoded = decode fileName encoded
-
-      annotateShow encoded
-
-      annotateShow encoded
-
-      Right pathData === decoded
 
 genDefaultPathData :: Gen Default.PathData
 genDefaultPathData =
