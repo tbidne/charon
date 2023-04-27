@@ -33,10 +33,14 @@ backendTests args backend =
       ]
       <> wildcardLiteralTests
   where
+#if WINDOWS
+    wildcardLiteralTests = []
+#else
     wildcardLiteralTests =
       [ deletesLiteralWildcardOnly backend args,
         deletesCombinedWildcardLiteral backend args
       ]
+#endif
 
 deletesOne :: Backend -> IO FilePath -> TestTree
 deletesOne backend args = testCase "Permanently deletes a single file" $ do

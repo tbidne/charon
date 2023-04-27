@@ -33,10 +33,14 @@ backendTests args backend =
       ]
       <> wildcardLiteralTests
   where
+#if WINDOWS
+    wildcardLiteralTests = []
+#else
     wildcardLiteralTests =
       [ restoresLiteralWildcardOnly backend args,
         restoresCombinedWildcardLiteral backend args
       ]
+#endif
 
 restoreOne :: Backend -> IO FilePath -> TestTree
 restoreOne backend args = testCase "Restores a single file" $ do
