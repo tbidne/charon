@@ -160,7 +160,7 @@ instance MonadPathSize ConfigIO where
           }
 
 runConfigIO :: ConfigIO a -> Natural -> IO a
-runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` (MkPathI trashPath))
+runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` MkPathI trashPath)
 
 trashPath :: String
 trashPath = "test" </> "unit" </> "index" </> "trash"
