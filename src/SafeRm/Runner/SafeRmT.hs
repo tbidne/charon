@@ -24,6 +24,7 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       MonadHandleWriter,
       MonadIO,
       MonadIORef,
+      MonadMask,
       MonadPathReader,
       MonadPathSize,
       MonadPathWriter,

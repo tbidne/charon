@@ -6,6 +6,7 @@ import Functional.Commands.Convert qualified as Convert
 import Functional.Commands.Delete qualified as Delete
 import Functional.Commands.Empty qualified as Empty
 import Functional.Commands.List qualified as List
+import Functional.Commands.Merge qualified as Merge
 import Functional.Commands.Metadata qualified as Metadata
 import Functional.Commands.PermDelete qualified as PermDelete
 import Functional.Commands.Restore qualified as Restore
@@ -29,7 +30,8 @@ main = do
           Restore.tests args,
           List.tests args,
           Metadata.tests args,
-          Convert.tests args
+          Convert.tests args,
+          Merge.tests args
         ]
 
 setup :: IO FilePath

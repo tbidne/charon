@@ -86,11 +86,11 @@ runCmd ::
     HasCallStack,
     HasTrashHome env,
     MonadLoggerNS m,
-    MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
     MonadIORef m,
+    MonadMask m,
     MonadPathReader m,
     MonadPathSize m,
     MonadPathWriter m,
@@ -115,6 +115,7 @@ runCmd cmd =
         printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
       Metadata -> printMetadata
       Convert dest -> SafeRm.convert dest
+      Merge dest -> SafeRm.merge dest
 
     logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do

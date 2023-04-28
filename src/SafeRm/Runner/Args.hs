@@ -166,8 +166,8 @@ backendParser =
           "expense of compatibility."
         ]
 
-backendDest :: Parser Backend
-backendDest =
+backendDestParser :: Parser Backend
+backendDestParser =
   OA.option (OA.str >>= parseBackend) $
     mconcat
       [ OA.long "dest",
@@ -240,6 +240,7 @@ commandParser =
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "convert" convertParser convertTxt,
+            mkCommand "merge" mergeParser mergeTxt,
             OA.commandGroup "Transform Commands",
             OA.hidden
           ]
@@ -266,6 +267,7 @@ commandParser =
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
     convertTxt = mkCmdDesc "Converts the backend."
+    mergeTxt = mkCmdDesc "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     delParser = Delete <$> pathsParser
     permDelParser = DeletePerm <$> forceParser <*> pathsParser
@@ -282,7 +284,8 @@ commandParser =
           <*> sortParser
           <*> reverseSortParser
     metadataParser = pure Metadata
-    convertParser = Convert <$> backendDest
+    convertParser = Convert <$> backendDestParser
+    mergeParser = Merge <$> trashDestParser
 
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =
@@ -406,6 +409,19 @@ trashParser =
           "it exists. If neither is given then we use the XDG data directory ",
           "e.g. ~/.local/share/safe-rm."
         ]
+
+trashDestParser :: Parser (PathI TrashHome)
+trashDestParser =
+  OA.option
+    OA.str
+    $ mconcat
+      [ OA.long "dest",
+        OA.short 'd',
+        OA.metavar "PATH",
+        mkHelp helpTxt
+      ]
+  where
+    helpTxt = "Path to the dest trash directory."
 
 logLevelParser :: Parser (Maybe (Maybe LogLevel))
 logLevelParser =

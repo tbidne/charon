@@ -12,6 +12,7 @@ module Functional.Prelude
     FuncEnv.runSafeRmException,
     FuncEnv.runIndexMetadata,
     FuncEnv.runIndexMetadata',
+    FuncEnv.runIndexMetadataBackendTrash,
 
     -- *** Data capture
     FuncEnv.captureSafeRm,

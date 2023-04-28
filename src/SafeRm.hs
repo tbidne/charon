@@ -15,8 +15,9 @@ module SafeRm
     getIndex,
     getMetadata,
 
-    -- * Misc
+    -- * Transformations
     convert,
+    merge,
   )
 where
 
@@ -35,8 +36,9 @@ import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashEntryOriginalPath),
+    PathIndex (..),
   )
+import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
@@ -45,6 +47,9 @@ import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
 import SafeRm.Utils qualified as U
 import System.IO qualified as IO
+
+-- TODO: Might be a good idea to throw the first exception encountered,
+-- rather than ExitCode.
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
@@ -311,6 +316,43 @@ convert dest = addNamespace "convert" $ do
     else do
       $(logDebug) $ "Current backend: " <> T.pack (Backend.backendArg src)
       Trash.convertBackend dest
+
+merge ::
+  ( HasCallStack,
+    HasTrashHome env,
+    MonadFileReader m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadMask m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadReader env m,
+    MonadTerminal m
+  ) =>
+  PathI TrashHome ->
+  m ()
+merge dest = addNamespace "merge" $ do
+  src <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> T.pack (src ^. #unPathI))
+
+  src' <- Paths.liftPathIF' canonicalizePath src
+  dest' <- Paths.liftPathIF' canonicalizePath dest
+
+  if src' == dest'
+    then do
+      let msg =
+            mconcat
+              [ "Source path '",
+                src' ^. #unPathI,
+                "' is the same as dest path '",
+                dest' ^. #unPathI,
+                "'. Nothing to do."
+              ]
+      $(logDebug) $ T.pack msg
+      putStrLn msg
+    else do
+      $(logDebug) $ "Dest path: " <> T.pack (dest' ^. #unPathI)
+      Trash.mergeTrashDirs src dest
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout

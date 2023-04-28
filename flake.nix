@@ -125,9 +125,16 @@
                     "effects-exceptions" "${monad-effects}/effects-exceptions"
                     { };
                 effects-fs =
-                  final.callCabal2nix
-                    "effects-fs" "${monad-effects}/effects-fs"
-                    { };
+                  let
+                    drv = final.callCabal2nix
+                      "effects-fs" "${monad-effects}/effects-fs"
+                      { };
+                  in
+                  hlib.overrideCabal drv
+                    (old: {
+                      # Remove once flag is removed with GHC 9.6
+                      configureFlags = (old.configureFlags or [ ]) ++ [ "-f -os_path" ];
+                    });
                 effects-ioref =
                   final.callCabal2nix
                     "effects-ioref" "${monad-effects}/effects-ioref"

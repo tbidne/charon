@@ -17,6 +17,7 @@ module Functional.Prelude.FuncEnv
     runSafeRmException,
     runIndexMetadata,
     runIndexMetadata',
+    runIndexMetadataBackendTrash,
 
     -- *** Data capture
     captureSafeRm,
@@ -121,6 +122,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadHandleWriter,
       MonadIO,
       MonadIORef,
+      MonadMask,
       MonadThrow,
       MonadReader env
     )
@@ -155,6 +157,7 @@ instance MonadPathWriter (FuncIO env) where
   renameFile x = liftIO . renameFile x
   removeDirectory = liftIO . removeDirectory
   removeDirectoryRecursive = liftIO . removeDirectoryRecursive
+  copyFileWithMetadata src = liftIO . copyFileWithMetadata src
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
@@ -361,15 +364,19 @@ runIndexMetadata testDir = do
             -- FIXME: This fails the fdo tests since we throw everything away.
             -- Really don't want
 
+-- FIXME: These are terrible names
 runIndexMetadata' :: Backend -> FilePath -> IO (HashSet PathData, Metadata)
-runIndexMetadata' backend testDir = do
+runIndexMetadata' = runIndexMetadataBackendTrash ".trash"
+
+runIndexMetadataBackendTrash :: String -> Backend -> FilePath -> IO (HashSet PathData, Metadata)
+runIndexMetadataBackendTrash trashDir backend testDir = do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
   charStream <- newIORef altAnswers
 
   let funcEnv =
         MkFuncEnv
-          { trashHome = MkPathI (testDir </> ".trash"),
+          { trashHome = MkPathI (testDir </> trashDir),
             backend,
             logNamespace = "functional",
             terminalRef,

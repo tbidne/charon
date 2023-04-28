@@ -11,8 +11,9 @@ module SafeRm.Trash
     restoreTrashToOriginal,
     permDeleteFromTrash,
 
-    -- * Convert
+    -- * Transformations
     convertBackend,
+    mergeTrashDirs,
   )
 where
 
@@ -22,7 +23,13 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.Exception (onException)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
-import Effects.FileSystem.PathWriter (MonadPathWriter (..), removeFile)
+import Effects.FileSystem.PathWriter
+  ( CopyDirConfig (..),
+    MonadPathWriter (..),
+    Overwrite (..),
+    TargetName (..),
+  )
+import Effects.FileSystem.PathWriter qualified as WDir
 import Effects.System.Terminal (MonadTerminal (..))
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
@@ -482,3 +489,28 @@ convertBackend dest = addNamespace "convertBackend" $ do
 
   -- 4. Delete trash/tmp_info_old
   removeDirectoryRecursive oldInfo
+
+-- | Merges source into dest, failing if there are any collisions.
+mergeTrashDirs ::
+  ( HasCallStack,
+    MonadFileReader m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadMask m,
+    MonadPathReader m,
+    MonadPathWriter m
+  ) =>
+  -- | src
+  PathI TrashHome ->
+  -- | dest
+  PathI TrashHome ->
+  m ()
+mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
+  WDir.copyDirectoryRecursiveConfig config src dest
+  $(logDebug) "Merge successful"
+  where
+    config =
+      MkCopyDirConfig
+        { overwrite = OverwriteTarget,
+          targetName = TargetNameDest
+        }

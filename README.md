@@ -35,6 +35,7 @@
     - [Metadata](#metadata)
   - [Transform Commands](#transform-commands)
     - [Convert](#convert)
+    - [Merge](#merge)
 - [Building](#building)
   - [Cabal](#cabal)
   - [Nix](#nix)
@@ -99,8 +100,8 @@ Delete Commands
                            wildcards to match trash paths e.g. '*foo*bar'
                            matches foobar, xxxfooyyybar, etc. To match a
                            filename with a literal * not representing a wildcard
-                           -- e.g. '*foo' -- the * must be escaped (safe-rm x
-                           '\*foo').
+                           -- e.g. '*foo' -- the * must be escaped (safe-rm
+                           perm-delete '\*foo').
 
   x                        Alias for perm-delete.
 
@@ -115,7 +116,7 @@ Restore Commands
                            '*foo*bar' matches foobar, xxxfooyyybar, etc. To
                            match a filename with a literal * not representing a
                            wildcard -- e.g. '*foo' -- the * must be escaped
-                           (safe-rm r '\*foo').
+                           (safe-rm restore '\*foo').
 
   r                        Alias for restore.
 
@@ -132,6 +133,9 @@ Information Commands
 
 Transform Commands
   convert                  Converts the backend.
+
+  merge                    Merges src (implicit or -t) trash home into dest.
+                           Collisions will throw an error.
 
 
 Version: 0.1
@@ -370,6 +374,28 @@ Available options:
 # converting our trash info files from the default serialization to the
 # FreeDesktop.org spec.
 $ safe-rm convert -b default -d fdo
+```
+
+### Merge
+
+```
+Usage: safe-rm merge (-d|--dest PATH)
+
+  Merges src (implicit or -t) trash home into dest. Collisions will throw an
+  error.
+
+
+Available options:
+  -d,--dest PATH           Path to the dest trash directory.
+
+  -h,--help                Show this help text
+```
+
+**Examples**
+
+```
+# merging default trash (~/.local/share/safe-rm/ or toml file config) into FDO location
+$ safe-rm merge -d ~/.local/share/Trash
 ```
 
 # Building

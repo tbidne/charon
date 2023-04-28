@@ -19,7 +19,7 @@ module SafeRm.Runner.Command
 where
 
 import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Paths (PathI, PathIndex (TrashEntryFileName, TrashEntryOriginalPath))
+import SafeRm.Data.Paths (PathI, PathIndex (..))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import SafeRm.Runner.Command.List (ListCmd)
@@ -35,6 +35,7 @@ instance AdvancePhase (Command Phase1) where
   advancePhase Metadata = Metadata
   advancePhase (List cfg) = List $ advancePhase cfg
   advancePhase (Convert dest) = Convert dest
+  advancePhase (Merge dest) = Merge dest
 
 -- | Action to run.
 type Command :: Phase -> Type
@@ -55,6 +56,8 @@ data Command s
     Metadata
   | -- | Converts backend files.
     Convert !Backend
+  | -- | Merges trash home directories.
+    Merge !(PathI TrashHome)
 
 makePrisms ''Command
 

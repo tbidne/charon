@@ -214,6 +214,7 @@ test-suite functional
     Functional.Commands.Delete
     Functional.Commands.Empty
     Functional.Commands.List
+    Functional.Commands.Merge
     Functional.Commands.Metadata
     Functional.Commands.PermDelete
     Functional.Commands.Restore
