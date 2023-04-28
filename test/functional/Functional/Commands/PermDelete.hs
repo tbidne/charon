@@ -719,7 +719,8 @@ displaysAllData backend args = testCase "Displays all data for each backend" $ d
       [ Exact "",
         Exact "Type:      File",
         Exact "Name:      f1",
-        Outfixes "Original:  /tmp/"
+        Outfixes
+          "Original:  /tmp/"
           ["/safe-rm/functional/perm-delete/displaysAllData"]
           "/f1",
         Exact "Size:      5.00B",

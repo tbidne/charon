@@ -149,7 +149,7 @@ parseTrashInfoMap ::
   ByteString ->
   Either String (HashMap ByteString ByteString)
 parseTrashInfoMap expectedKeys bs =
-  case U.lines' bs of
+  case C8.lines bs of
     [] -> Left "Received empty pathdata"
     (h : rest) | isHeader h -> do
       let mp = Map.fromList (fmap U.breakEqBS rest)

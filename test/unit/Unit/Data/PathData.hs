@@ -32,8 +32,9 @@ tests =
   where
     backends = [minBound .. maxBound]
     specs =
-      [ ("\NUL", "\t"),
-        ("\NUL", "\NUL")
+      [ ("1", "\t"),
+        ("2", "path\\nnew\\n\\nlines"),
+        ("3", "path\\n\\n")
       ]
 
 serializeRoundtripSpecs :: Backend -> [(String, String)] -> TestTree
@@ -118,8 +119,8 @@ genDefaultPathData =
     <*> genSize
     <*> genTimestamp
   where
-    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) Gen.unicode
-    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) Gen.unicode
+    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) genPathChar
+    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) genPathChar
     genPathType = Gen.element [PathTypeDirectory, PathTypeFile]
     genSize = MkBytes <$> Gen.integral (Range.exponential 0 1_000_000_000_000)
 
@@ -130,8 +131,11 @@ genFdoPathData =
     <*> genOriginalPath
     <*> genTimestamp
   where
-    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) Gen.unicode
-    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) Gen.unicode
+    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) genPathChar
+    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) genPathChar
+
+genPathChar :: Gen Char
+genPathChar = Gen.filter (/= '\NUL') Gen.unicode
 
 genTimestamp :: Gen Timestamp
 genTimestamp = MkTimestamp <$> genLocalTime
