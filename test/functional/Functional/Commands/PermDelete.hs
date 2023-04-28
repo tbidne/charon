@@ -526,6 +526,7 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
 
 -- Wildcard literals are not valid in windows paths
 
+#if !WINDOWS
 deletesLiteralWildcardOnly :: Backend -> IO FilePath -> TestTree
 deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename w/ literal wildcard" $ do
   testDir <- getTestPath args (withBackendDir backend "deletesLiteralWildcardOnly")
@@ -675,6 +676,7 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#endif
 
 displaysAllData :: Backend -> IO FilePath -> TestTree
 displaysAllData backend args = testCase "Displays all data for each backend" $ do

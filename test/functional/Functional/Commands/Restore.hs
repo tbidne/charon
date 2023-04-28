@@ -505,6 +505,7 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
 
 -- Wildcard literals are not valid in windows paths
 
+#if !WINDOWS
 restoresLiteralWildcardOnly :: Backend -> IO FilePath -> TestTree
 restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ literal wildcard" $ do
   testDir <- getTestPath args (withBackendDir backend "restoresLiteralWildcardOnly")
@@ -655,6 +656,7 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#endif
 
 getTestPath :: IO FilePath -> FilePath -> IO String
 getTestPath mroot = createTestDir mroot "restore"
