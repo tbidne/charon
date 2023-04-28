@@ -109,6 +109,7 @@ deletePermanently ::
     MonadHandleWriter m,
     MonadIORef m,
     MonadPathReader m,
+    MonadPathSize m,
     MonadPathWriter m,
     MonadLoggerNS m,
     MonadReader env m,

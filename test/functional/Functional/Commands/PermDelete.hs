@@ -30,7 +30,8 @@ backendTests args backend =
         deletesSome backend args,
         deletesNoForce backend args,
         deletesWildcards backend args,
-        deletesSomeWildcards backend args
+        deletesSomeWildcards backend args,
+        displaysAllData backend args
       ]
       <> wildcardLiteralTests
   where
@@ -671,6 +672,68 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
       MkMetadata
         { numEntries = 3,
           numFiles = 3,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+displaysAllData :: Backend -> IO FilePath -> TestTree
+displaysAllData backend args = testCase "Displays all data for each backend" $ do
+  testDir <- getTestPath args (withBackendDir backend "displaysAllData")
+  let trashDir = testDir </> ".trash"
+      f1 = testDir </> "f1"
+      delArgList = withSrArgs trashDir backend ["delete", f1]
+
+  -- SETUP
+
+  clearDirectory testDir
+  createFiles [f1]
+  assertFilesExist [f1]
+
+  -- delete to trash first
+  runSafeRm delArgList
+
+  -- file assertions
+  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
+  assertFilesDoNotExist [f1]
+  assertDirectoriesExist [trashDir]
+
+  -- trash structure assertions
+  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
+  assertSetEq delExpectedIdxSet delIdxSet
+  delExpectedMetadata @=? delMetadata
+
+  -- PERMANENT DELETE
+
+  -- NOTE: we don't actually delete f1 as the first mocked answer is 'n'
+  -- (see altAnswers in FuncEnv), but it doesn't matter as this test is only
+  -- concerned with grabbing the terminal data for an unforced delete.
+  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "f1"]
+  (terminalResult, _) <- captureSafeRmLogs permDelArgList
+
+  -- assert terminal displays all data for f1
+  assertMatches expectedTerminal terminalResult
+  where
+    expectedTerminal =
+      [ Exact "",
+        Exact "Type:      File",
+        Exact "Name:      f1",
+        Outfixes "Original:  /tmp/"
+          ["/safe-rm/functional/perm-delete/displaysAllData"]
+          "/f1",
+        Exact "Size:      5.00B",
+        Exact "Created:   2020-05-31 12:00:00",
+        Exact "",
+        Exact "Permanently delete (y/n)?"
+      ]
+
+    delExpectedIdxSet =
+      HashSet.singleton
+        (mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/displaysAllData" "f1"))
+
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 1,
+          numFiles = 1,
           logSize = afromInteger 0,
           size = afromInteger 0
         }

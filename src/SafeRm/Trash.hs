@@ -164,12 +164,14 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
 permDeleteFromTrash ::
   ( HasBackend env,
     HasCallStack,
+    HasTrashHome env,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m
@@ -201,7 +203,9 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             --   printed w/o the newline.
             noBuffering
 
-            let pdStr = (renderStrict . layoutCompact . (line <>) . pretty) pathData
+            -- NOTE: We normalize the path data as we want to display all fields here.
+            pathData' <- PathData.normalizeDefault pathData
+            let pdStr = (renderStrict . layoutCompact . (line <>) . pretty) pathData'
             putTextLn pdStr
             putStr "Permanently delete (y/n)? "
             c <- Ch.toLower <$> getChar
