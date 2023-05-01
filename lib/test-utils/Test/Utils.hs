@@ -158,10 +158,11 @@ isMatch (s :| es) (r :| rs) =
     else
       Just $
         mconcat
-          [ "Expected: ",
+          [ "Expected: '",
             showTextMatch s,
-            "\nReceived: ",
-            T.unpack r
+            "'\nReceived: '",
+            T.unpack (T.strip r),
+            "'"
           ]
 
 isMatchHelper :: TextMatch -> Text -> Bool

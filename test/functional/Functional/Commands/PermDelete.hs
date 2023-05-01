@@ -725,7 +725,9 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         Exact "Size:      5.00B",
         Exact "Created:   2020-05-31 12:00:00",
         Exact "",
-        Exact "Permanently delete (y/n)?"
+        -- Leaving off the "(y/n)?" suffix as the windows tests replaces all
+        -- backslashes with forward slashes.
+        Prefix "Permanently delete"
       ]
 
     delExpectedMetadata =
