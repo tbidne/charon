@@ -50,7 +50,7 @@
 ```
 Safe-rm: A tool for deleting files to a trash directory.
 
-Usage: safe-rm [-c|--config (none|PATH)] [-b|--backend (default|fdo)]
+Usage: safe-rm [-c|--config (none|PATH)] [-b|--backend (cbor|fdo)]
                [-t|--trash-home PATH] [--log-level (none|error|warn|info|debug)]
                [--log-size-mode (warn SIZE | delete SIZE)] [--version] COMMAND
 
@@ -65,13 +65,10 @@ Available options:
                            look in the XDG config directory e.g.
                            ~/.config/safe-rm/config.toml
 
-  -b,--backend (default|fdo)
-                           Backend to use with safe-rm. This option affects how
+  -b,--backend (cbor|fdo)  Backend to use with safe-rm. This option affects how
                            path metadata is stored. The fdo option is compatible
                            with the FreeDesktop.org trash specification file
-                           format. Defaults to 'default', which captures more
-                           information when a path is moved to the trash, at the
-                           expense of compatibility.
+                           format. Defaults to 'cbor'.
 
   -t,--trash-home PATH     Path to the trash directory. This overrides the toml
                            config, if it exists. If neither is given then we use
@@ -356,13 +353,13 @@ Size:         111.35M
 ### Convert
 
 ```
-Usage: safe-rm convert (-d|--dest (default|fdo))
+Usage: safe-rm convert (-d|--dest (cbor|fdo))
 
   Converts the backend.
 
 
 Available options:
-  -d,--dest (default|fdo)  Backend to which we convert the current backend. See
+  -d,--dest (cbor|fdo)     Backend to which we convert the current backend. See
                            --backend for more details
 
   -h,--help                Show this help text
@@ -371,9 +368,9 @@ Available options:
 **Examples**
 
 ```
-# converting our trash info files from the default serialization to the
+# converting our trash info files from the cbor serialization to the
 # FreeDesktop.org spec.
-$ safe-rm convert -b default -d fdo
+$ safe-rm convert -b cbor -d fdo
 ```
 
 ### Merge
