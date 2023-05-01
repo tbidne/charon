@@ -54,10 +54,13 @@ testStripInfix = testCase "stripInfix" $ do
   -- infix
   Just ("foo", "baz") @=? Utils.stripInfix "bar" "foobarbaz"
 
+  -- first infix
+  Just ("foo", "blahbarbaz") @=? Utils.stripInfix "bar" "foobarblahbarbaz"
+
   -- complex
   case Utils.stripInfix "first" "firstsecondthird" of
     Just ("", suffix@"secondthird") ->
-      -- previous, we had a bug where this would erroneously be
+      -- previously, we had a bug where this would erroneously be
       -- Just ("se","second") because we failed to take the offset into
       -- account. I.e. for 2nd elem's first index we had
       --

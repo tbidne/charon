@@ -1,21 +1,38 @@
 -- | Provides internal utility functions
 module SafeRm.Utils
-  ( whenLeft,
+  ( -- * FAM combinators
+    whenLeft,
     allM1,
+
+    -- * Monoid
     fromMaybeMonoid,
-    formatBytes,
-    normalizedFormat,
-    readLogLevel,
-    logLevelStrings,
-    mergeAlt,
-    merge,
-    renderPretty,
+
+    -- * Text
     matchesWildcards,
     stripInfix,
-    setRefIfTrue,
+
+    -- * ByteString
     breakEqBS,
+
+    -- ** Percent encoding
     percentEncode,
     percentDecode,
+
+    -- * Optics
+    mergeAlt,
+    merge,
+
+    -- * Bytes formatting
+    normalizedFormat,
+    formatBytes,
+
+    -- * Logs
+    readLogLevel,
+    logLevelStrings,
+
+    -- * Misc
+    renderPretty,
+    setRefIfTrue,
   )
 where
 
@@ -105,6 +122,7 @@ readLogLevel other =
 logLevelStrings :: String
 logLevelStrings = "(none|error|warn|info|debug)"
 
+-- | Merge two fields using the 'Alternative' instance.
 mergeAlt ::
   (Alternative f) =>
   Lens' s (f a) ->
@@ -114,6 +132,7 @@ mergeAlt ::
   f a
 mergeAlt = merge (<|>)
 
+-- | Merge two fields using the given function.
 merge ::
   (a -> a -> a) ->
   Lens' s a ->
@@ -123,12 +142,16 @@ merge ::
   a
 merge f sLens tLens s t = (s ^. sLens) `f` (t ^. tLens)
 
+-- | Renders via pretty instance.
 renderPretty :: (Pretty a) => a -> Text
 renderPretty =
   renderStrict
     . layoutCompact
     . pretty
 
+-- | @matchesWildcards matchStr toMatch@ returns true if @toMatch@ "matches"
+-- the @matchStr@, where unescaped asterisks in @matchStr@ are interpreted
+-- as wildcards.
 matchesWildcards :: Text -> Text -> Bool
 matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
   -- Impossible
@@ -153,6 +176,8 @@ matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
         . T.split (== '*')
         . T.replace "\\*" "\0"
 
+-- | @stripInfix text needle@ strips the _first_ occurrence of needle
+-- from the text.
 stripInfix :: Text -> Text -> Maybe (Text, Text)
 stripInfix "" t = Just ("", t)
 stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
@@ -160,6 +185,7 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
     [] -> Nothing
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
 
+-- | Sets the ioref if the bool is true.
 setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
 setRefIfTrue _ False = pure ()
 setRefIfTrue ref True = writeIORef ref True
