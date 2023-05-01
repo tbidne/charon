@@ -14,13 +14,11 @@ module SafeRm.Utils
     stripInfix,
     setRefIfTrue,
     breakEqBS,
-    lines',
     percentEncode,
     percentDecode,
   )
 where
 
-import Data.ByteString qualified as BS
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Lazy qualified as BSL
@@ -175,30 +173,6 @@ breakEqBS bs = (left, right')
     right' = case C8.uncons right of
       Nothing -> ""
       Just (_, rest) -> rest
-
--- | Lines 'BS.lines', except this if we encounter consecutive newlines, only
--- the __last__ newline is used as a "break". The prior ones are considered
--- part of the preceeeding string. E.g.
---
--- @
--- ["111","","","222","333","","444"] === lines "111\n\n\n222\n333\n\n444"
--- ["111\n\n","222","333\n","444"] === lines' "111\n\n\n222\n333\n\n444"
--- @
-lines' :: ByteString -> [ByteString]
-lines' "" = []
-lines' bs = case BS.break (== c) bs of
-  (left, right) -> case BS.uncons right of
-    -- 1. No more new lines, end of the string
-    Nothing -> [left]
-    -- 2. Found at least one newline; check to see if there are any more
-    -- consecutive ones.
-    Just (_newline, rest) -> case BS.span (== c) rest of
-      -- 2.a. Only found a single (above _newline) line; recurse on the rest
-      ("", rest') -> left : lines' rest'
-      -- 2.b. Found multiple new lines; add these back then recurse on the rest
-      (newlines, rest') -> left <> newlines : lines' rest'
-  where
-    c = fromIntegral $ Ch.ord '\n'
 
 -- | Percent encoded a bytestring.
 percentEncode :: ByteString -> ByteString
