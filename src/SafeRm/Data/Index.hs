@@ -87,6 +87,8 @@ readIndex trashHome = addNamespace "readIndex" $ do
   $(logDebug) ("Info: " <> T.pack (show paths))
   backend <- asks getBackend
 
+  -- TODO: Maybe this shouldn't report errors eagerly
+
   let seqify ::
         Path ->
         m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->

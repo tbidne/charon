@@ -21,6 +21,7 @@ import SafeRm.Data.Paths (PathI, PathIndex (..))
 import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
+import SafeRm.Utils qualified as U
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -87,7 +88,7 @@ instance Serialize PathData where
     -- http://www.faqs.org/rfcs/rfc2396.html
     C8.unlines
       [ "[Trash Info]",
-        "Path=" <> encode (pd ^. #originalPath),
+        "Path=" <> U.percentEncode (encode (pd ^. #originalPath)),
         "DeletionDate=" <> encode (pd ^. #created)
       ]
 
@@ -95,7 +96,7 @@ instance Serialize PathData where
   decode name bs = do
     mp <- Common.parseTrashInfoMap expectedKeys bs
 
-    originalPath <- decodeUnit =<< Common.lookup "Path" mp
+    originalPath <- decodeUnit . U.percentDecode =<< Common.lookup "Path" mp
     created <- decodeUnit =<< Common.lookup "DeletionDate" mp
 
     Right $

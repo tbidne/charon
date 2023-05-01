@@ -15,11 +15,15 @@ module SafeRm.Utils
     setRefIfTrue,
     breakEqBS,
     lines',
+    percentEncode,
+    percentDecode,
   )
 where
 
 import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
+import Data.ByteString.Lazy qualified as BSL
 import Data.Bytes qualified as Bytes
 import Data.Bytes.Class.Wrapper (Unwrapper (Unwrapped))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
@@ -32,6 +36,7 @@ import Data.Text.Internal qualified as TI
 import Data.Text.Internal.Search qualified as TIS
 import SafeRm.Prelude
 import Text.Printf (PrintfArg)
+import URI.ByteString qualified as URI
 
 -- | Applies the function when we have a Left.
 whenLeft :: (Applicative f) => Either e a -> (e -> f ()) -> f ()
@@ -194,3 +199,37 @@ lines' bs = case BS.break (== c) bs of
       (newlines, rest') -> left <> newlines : lines' rest'
   where
     c = fromIntegral $ Ch.ord '\n'
+
+-- | Percent encoded a bytestring.
+percentEncode :: ByteString -> ByteString
+percentEncode =
+  BSL.toStrict
+    . Builder.toLazyByteString
+    . URI.urlEncode unreserved
+  where
+    -- NOTE: This is the 'mark' set defined by RFC2396 and the '/' character
+    -- with one modification: The mark characters !, *, ', (, ) are excluded.
+    --
+    -- As the successor RFC3986 notes, these characters can be dangerous
+    -- to decode, thus they were in fact moved to the 'reserved' section in
+    -- that RFC.
+    --
+    -- Moreover, KDE Plasma's trash implementation indeed encoded these chars
+    -- as well.
+    --
+    -- Thus we do the same thing here.
+    unreserved =
+      ord8
+        <$> [ '/',
+              '-',
+              '_',
+              '.',
+              '~'
+            ]
+
+    ord8 :: Char -> Word8
+    ord8 = fromIntegral . Ch.ord
+
+-- | Percent decodes a bytestring.
+percentDecode :: ByteString -> ByteString
+percentDecode = URI.urlDecode False

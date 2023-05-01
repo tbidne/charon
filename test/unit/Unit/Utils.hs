@@ -4,6 +4,9 @@ module Unit.Utils
   )
 where
 
+import Data.Text qualified as T
+import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as Range
 import SafeRm.Utils qualified as Utils
 import Unit.Prelude
 
@@ -13,7 +16,8 @@ tests =
     "Utils"
     [ testMatchesWildcards,
       testStripInfix,
-      testLines'
+      testLines',
+      percentEncodeRoundTrip
     ]
 
 testMatchesWildcards :: TestTree
@@ -76,3 +80,23 @@ testLines' :: TestTree
 testLines' = testCase "lines'" $ do
   ["111\n\n", "222", "333\n", "444"] @=? Utils.lines' "111\n\n\n222\n333\n\n444"
   ["111", "222"] @=? Utils.lines' "111\n222\n"
+
+percentEncodeRoundTrip :: TestTree
+percentEncodeRoundTrip =
+  testPropertyNamed "percentDecode . percentEncode ~ id" "percentEncodeRoundTrip" $ do
+    property $ do
+      path <- forAll genPath
+      let pathEncoded = Utils.percentEncode path
+
+      annotateShow pathEncoded
+
+      path === Utils.percentDecode pathEncoded
+
+genPath :: Gen ByteString
+genPath = encodeUtf8 . T.pack <$> genString
+
+genString :: Gen String
+genString = Gen.string (Range.linear 1 100) genPathChar
+
+genPathChar :: Gen Char
+genPathChar = Gen.filter (/= '\NUL') Gen.unicode

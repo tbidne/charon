@@ -107,6 +107,7 @@ library
     , time                  >=1.9.3     && <1.14
     , toml-reader           >=0.2.0.0   && <0.3
     , unordered-containers  ^>=0.2.14.0
+    , uri-bytestring        ^>=0.3.3.1
     , vector                >=0.12.3.0  && <0.14
 
   hs-source-dirs:   src
