@@ -9,86 +9,68 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathType (PathType (..))
 
-tests :: IO FilePath -> TestTree
-tests args =
+tests :: IO TestEnv -> TestTree
+tests testEnv =
   testGroup
     "Restore Command"
-    (backendTests args <$> [minBound .. maxBound])
-
-backendTests :: IO FilePath -> Backend -> TestTree
-backendTests args backend =
-  testGroup
-    (Backend.backendTestDesc backend)
-    $ [ restoreOne backend args,
-        restoreMany backend args,
-        restoreUnknownError backend args,
-        restoreCollisionError backend args,
-        restoresSome backend args,
-        restoresWildcards backend args,
-        restoresSomeWildcards backend args
+    $ [ restoreOne testEnv',
+        restoreMany testEnv',
+        restoreUnknownError testEnv',
+        restoreCollisionError testEnv',
+        restoresSome testEnv',
+        restoresWildcards testEnv',
+        restoresSomeWildcards testEnv'
       ]
-      <> wildcardLiteralTests
+      <> wildcardLiteralTests testEnv'
   where
-#if WINDOWS
-    wildcardLiteralTests = []
-#else
-    wildcardLiteralTests =
-      [ restoresLiteralWildcardOnly backend args,
-        restoresCombinedWildcardLiteral backend args
-      ]
-#endif
+    testEnv' = appendTestDir "restore" <$> testEnv
 
-restoreOne :: Backend -> IO FilePath -> TestTree
-restoreOne backend args = testCase "Restores a single file" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoreOne")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+restoreOne :: IO TestEnv -> TestTree
+restoreOne getTestEnv = testCase "Restores a single file" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreOne" $ do
+    testDir <- getTestDir
 
-  -- SETUP
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
 
-  clearDirectory testDir
-  createFiles [f1]
-  assertFilesExist [f1]
+    delArgList <- withSrArgsM ["delete", f1]
 
-  -- delete to trash first
-  runSafeRm delArgList
+    -- SETUP
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
+    createFiles [f1]
+    assertPathsExist [f1]
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- RESTORE
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist [f1]
 
-  let restoreArgList = withSrArgs trashDir backend ["restore", "f1"]
-  runSafeRm restoreArgList
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- file assertions
-  assertFilesExist [f1]
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1"]
-  assertDirectoriesExist [trashDir]
+    -- RESTORE
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
+    restoreArgList <- withSrArgsM ["restore", "f1"]
+    runSafeRm restoreArgList
+
+    -- file assertions
+    assertPathsExist [trashDir, f1]
+    assertPathsDoNotExist delTrashFiles
+
+    -- trash structure assertions
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoreOne" "f1")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -100,65 +82,59 @@ restoreOne backend args = testCase "Restores a single file" $ do
     restoreExpectedIdxSet = HashSet.empty
     restoreExpectedMetadata = mempty
 
-restoreMany :: Backend -> IO FilePath -> TestTree
-restoreMany backend args = testCase "Restores several paths" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoreMany")
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
+restoreMany :: IO TestEnv -> TestTree
+restoreMany getTestEnv = testCase "Restores several paths" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
+    testDir <- getTestDir
 
-  -- SETUP
-  clearDirectory testDir
-  -- test w/ a nested dir
-  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
-  -- test w/ a file in dir
-  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    let trashDir = testDir </> ".trash"
+        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
 
-  assertDirectoriesExist ((testDir </>) <$> ["dir1", "dir2/dir3"])
-  assertFilesExist ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
 
-  runSafeRm delArgList
+    -- SETUP
+    -- test w/ a nested dir
+    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    -- test w/ a file in dir
+    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertDirectoriesExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
+    assertPathsExist ((testDir </>) <$> ["dir1", "dir2/dir3"])
+    assertPathsExist ((testDir </> "dir2/dir3/foo") : filesToDelete)
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
+    runSafeRm delArgList
 
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
+    assertPathsExist delTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-  -- RESTORE
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "dir1", "dir2"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
 
-  let restoreArgList =
-        -- do not restore f2
-        withSrArgs trashDir backend ["restore", "f1", "f3", "dir1", "dir2"]
-  runSafeRm restoreArgList
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f2"]
-  assertDirectoriesExist [trashDir]
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f3"]
-  assertDirectoriesDoNotExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
+    -- RESTORE
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
+    -- do not restore f2
+    restoreArgList <- withSrArgsM ["restore", "f1", "f3", "dir1", "dir2"]
+    runSafeRm restoreArgList
+
+    -- file assertions
+    restoreTrashPaths <- mkAllTrashPathsM ["f1", "f3", "dir1", "dir2"]
+    notRestoreTrashFiles <- mkAllTrashPathsM ["f2"]
+    assertPathsExist (trashDir : notRestoreTrashFiles)
+    assertPathsDoNotExist restoreTrashPaths
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <- mkPathDataSetM ["f2"]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoreMany" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoreMany" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "restore/restoreMany" "f3"),
-          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "restore/restoreMany" "dir1"),
-          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "restore/restoreMany" "dir2")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 5,
@@ -166,8 +142,6 @@ restoreMany backend args = testCase "Restores several paths" $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    restoreExpectedIdxSet = HashSet.singleton (mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoreMany" "f2"))
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -176,53 +150,52 @@ restoreMany backend args = testCase "Restores several paths" $ do
           size = afromInteger 0
         }
 
-restoreUnknownError :: Backend -> IO FilePath -> TestTree
-restoreUnknownError backend args = testCase "Restore unknown prints error" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoreUnknownError")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+restoreUnknownError :: IO TestEnv -> TestTree
+restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
+    testDir <- getTestDir
 
-  -- SETUP
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
+    delArgList <- withSrArgsM ["delete", f1]
 
-  -- technically we do not need to have anything in the trash to attempt
-  -- a restore, but this way we can ensure the trash itself is set
-  -- up (i.e. dir exists w/ index), so that we can test the restore
-  -- failure only.
-  clearDirectory testDir
-  createFiles [f1]
+    -- SETUP
 
-  -- delete to trash first
-  runSafeRm delArgList
+    -- technically we do not need to have anything in the trash to attempt
+    -- a restore, but this way we can ensure the trash itself is set
+    -- up (i.e. dir exists w/ index), so that we can test the restore
+    -- failure only.
+    clearDirectory testDir
+    createFiles [f1]
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist [f1]
 
-  -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ["restore", "bad file"]
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
+    -- RESTORE
+    restoreArgList <- withSrArgsM ["restore", "bad file"]
+    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
-  "ExitFailure 1" @=? ex
+    assertPathsExist delTrashFiles
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet restoreIdxSet
-  delExpectedMetadata @=? restoreMetadata
+    "ExitFailure 1" @=? ex
+
+    -- trash structure assertions
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet restoreIdxSet
+    delExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoreUnknownError" "f1")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -231,49 +204,47 @@ restoreUnknownError backend args = testCase "Restore unknown prints error" $ do
           size = afromInteger 0
         }
 
-restoreCollisionError :: Backend -> IO FilePath -> TestTree
-restoreCollisionError backend args = testCase "Restore collision prints error" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoreCollisionError")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+restoreCollisionError :: IO TestEnv -> TestTree
+restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
+    testDir <- getTestDir
 
-  -- SETUP
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
+    delArgList <- withSrArgsM ["delete", f1]
 
-  clearDirectory testDir
-  createFiles [f1]
+    -- SETUP
 
-  -- delete to trash first and recreate
-  runSafeRm delArgList
-  createFiles [f1]
+    createFiles [f1]
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertDirectoriesExist [trashDir]
+    -- delete to trash first and recreate
+    runSafeRm delArgList
+    createFiles [f1]
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
 
-  -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ["restore", "f1"]
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
+    -- RESTORE
+    restoreArgList <- withSrArgsM ["restore", "f1"]
+    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
-  "ExitFailure 1" @=? ex
+    assertPathsExist delTrashFiles
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet restoreIdxSet
-  delExpectedMetadata @=? restoreMetadata
+    "ExitFailure 1" @=? ex
+
+    -- trash structure assertions
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet restoreIdxSet
+    delExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoreCollisionError" "f1")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -282,55 +253,51 @@ restoreCollisionError backend args = testCase "Restore collision prints error" $
           size = afromInteger 0
         }
 
-restoresSome :: Backend -> IO FilePath -> TestTree
-restoresSome backend args = testCase "Restores some, errors on others" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoresSome")
-  let trashDir = testDir </> ".trash"
-      realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
-      filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
-      delArgList = withSrArgs trashDir backend ("delete" : realFiles)
+restoresSome :: IO TestEnv -> TestTree
+restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
+    testDir <- getTestDir
 
-  -- setup
-  clearDirectory testDir
-  createFiles realFiles
-  assertFilesExist realFiles
+    let trashDir = testDir </> ".trash"
+        realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
+        filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
+    delArgList <- withSrArgsM ("delete" : realFiles)
 
-  -- delete to trash first
-  runSafeRm delArgList
+    -- setup
+    clearDirectory testDir
+    createFiles realFiles
+    assertPathsExist realFiles
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
-  assertFilesDoNotExist realFiles
-  assertDirectoriesExist [trashDir]
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f5"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist realFiles
 
-  -- RESTORE
-  let restoreArgList = withSrArgs trashDir backend ("restore" : filesTryRestore)
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f5"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
-  assertFilesDoNotExist ((testDir </>) <$> ["f3", "f4"])
-  assertFilesExist ((testDir </>) <$> ["f1", "f2", "f5"])
+    -- RESTORE
+    restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
+    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
 
-  "ExitFailure 1" @=? ex
+    -- file assertions
+    assertPathsDoNotExist ((testDir </>) <$> ["f3", "f4"] ++ delTrashFiles)
+    assertPathsExist ((testDir </>) <$> ["f1", "f2", "f5"])
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
+    "ExitFailure 1" @=? ex
+
+    -- trash structure assertions
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoresSome" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoresSome" "f2"),
-          mkPathData' backend PathTypeFile "f5" (withBackendBaseDir backend "restore/restoresSome" "f5")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -342,64 +309,72 @@ restoresSome backend args = testCase "Restores some, errors on others" $ do
     restoreExpectedIdxSet = HashSet.empty
     restoreExpectedMetadata = mempty
 
-restoresWildcards :: Backend -> IO FilePath -> TestTree
-restoresWildcards backend args = testCase "Restores several paths via wildcards" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoresWildcards")
-  let trashDir = testDir </> ".trash"
-      filesToRestore = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
-      otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-      delArgList = withSrArgs trashDir backend ("delete" : filesToRestore <> otherFiles)
+restoresWildcards :: IO TestEnv -> TestTree
+restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoresWildcards" $ do
+    testDir <- getTestDir
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (filesToRestore <> otherFiles)
-  assertFilesExist filesToRestore
-  assertFilesExist otherFiles
+    let filesToRestore = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
+        otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
+    delArgList <- withSrArgsM ("delete" : filesToRestore <> otherFiles)
 
-  runSafeRm delArgList
+    -- SETUP
+    createFiles (filesToRestore <> otherFiles)
+    assertPathsExist (filesToRestore ++ otherFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "1f", "2f", "3f"]
-  assertFilesExist $ mkAllTrashPaths trashDir ["g1", "g2", "g3", "1g", "2g", "3g"]
-  assertFilesDoNotExist filesToRestore
-  assertFilesDoNotExist otherFiles
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    restoreTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f3", "1f", "2f", "3f"]
+    noRestoreTrashFiles <- mkAllTrashPathsM ["g1", "g2", "g3", "1g", "2g", "3g"]
+    assertPathsExist (restoreTrashFiles ++ noRestoreTrashFiles)
+    assertPathsDoNotExist (filesToRestore ++ otherFiles)
 
-  -- RESTORE
-
-  -- leave g alone
-  let restoreArgList = withSrArgs trashDir backend ["restore", "*f*"]
-  runSafeRm restoreArgList
-
-  -- file assertions
-  assertFilesExist filesToRestore
-  assertFilesExist $ mkAllTrashPaths trashDir ["g1", "g2", "g3", "1g", "2g", "3g"]
-
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoresWildcards" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoresWildcards" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "restore/restoresWildcards" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "restore/restoresWildcards" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "restore/restoresWildcards" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "restore/restoresWildcards" "3f"),
-          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "restore/restoresWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "restore/restoresWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "restore/restoresWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "restore/restoresWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "restore/restoresWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "restore/restoresWildcards" "3g")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "1f",
+          "2f",
+          "3f",
+          "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
         ]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
+    -- RESTORE
+
+    -- leave g alone
+    restoreArgList <- withSrArgsM ["restore", "*f*"]
+    runSafeRm restoreArgList
+
+    -- file assertions
+    assertPathsExist (filesToRestore ++ noRestoreTrashFiles)
+    assertPathsDoNotExist restoreTrashFiles
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <-
+      mkPathDataSetM
+        [ "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
+        ]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 12,
@@ -407,16 +382,6 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    restoreExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "restore/restoresWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "restore/restoresWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "restore/restoresWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "restore/restoresWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "restore/restoresWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "restore/restoresWildcards" "3g")
-        ]
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 6,
@@ -425,64 +390,68 @@ restoresWildcards backend args = testCase "Restores several paths via wildcards"
           size = afromInteger 0
         }
 
-restoresSomeWildcards :: Backend -> IO FilePath -> TestTree
-restoresSomeWildcards backend args = testCase "Restores some paths via wildcards" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoresSomeWildcards")
-  let trashDir = testDir </> ".trash"
-      files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
-      testFiles = (testDir </>) <$> files
-      delArgList = withSrArgs trashDir backend ("delete" : testFiles)
+restoresSomeWildcards :: IO TestEnv -> TestTree
+restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoresSomeWildcards" $ do
+    testDir <- getTestDir
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles testFiles
-  assertFilesExist testFiles
+    let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
+        testFiles = (testDir </>) <$> files
 
-  runSafeRm delArgList
+    delArgList <- withSrArgsM ("delete" : testFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir files
-  assertFilesDoNotExist testFiles
+    -- SETUP
+    createFiles testFiles
+    assertPathsExist testFiles
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    runSafeRm delArgList
 
-  -- RESTORE
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM files
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist testFiles
 
-  -- We want a collision to force an error; everything should be restored
-  -- from trash but fooBadBar
-  createFiles [testDir </> "fooBadbar"]
-
-  let restoreArgList = withSrArgs trashDir backend ["restore", "foo**bar", "*g*"]
-  runSafeRmException @ExitCode restoreArgList
-
-  -- file assertions
-  -- 1. Everything restored but fooBarBar but that is because it already exists
-  -- at original location, so everything should be there
-  assertFilesExist testFiles
-  -- 2. Only fooBadBar should be left in trash
-  assertFilesExist $ mkAllTrashPaths trashDir ["fooBadbar"]
-
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "foobar" (withBackendBaseDir backend "restore/restoresSomeWildcards" "foobar"),
-          mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "restore/restoresSomeWildcards" "fooBadbar"),
-          mkPathData' backend PathTypeFile "fooXbar" (withBackendBaseDir backend "restore/restoresSomeWildcards" "fooXbar"),
-          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "restore/restoresSomeWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "restore/restoresSomeWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "restore/restoresSomeWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "restore/restoresSomeWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "restore/restoresSomeWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "restore/restoresSomeWildcards" "3g")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "foobar",
+          "fooBadbar",
+          "fooXbar",
+          "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
         ]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
+    -- RESTORE
+
+    -- We want a collision to force an error; everything should be restored
+    -- from trash but fooBadBar
+    createFiles [testDir </> "fooBadbar"]
+
+    restoreArgList <- withSrArgsM ["restore", "foo**bar", "*g*"]
+    runSafeRmException @ExitCode restoreArgList
+
+    -- file assertions
+    noRestoreTrashFiles <- mkAllTrashPathsM ["fooBadbar"]
+    -- 1. Everything restored but fooBarBar but that is because it already exists
+    -- at original location, so everything should be there
+    assertPathsExist testFiles
+    -- 2. Only fooBadBar should be left in trash
+    assertPathsExist noRestoreTrashFiles
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <- mkPathDataSetM ["fooBadbar"]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 9,
@@ -490,11 +459,6 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    restoreExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "restore/restoresSomeWildcards" "fooBadbar")
-        ]
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -506,58 +470,58 @@ restoresSomeWildcards backend args = testCase "Restores some paths via wildcards
 -- Wildcard literals are not valid in windows paths
 
 #if !WINDOWS
-restoresLiteralWildcardOnly :: Backend -> IO FilePath -> TestTree
-restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ literal wildcard" $ do
-  testDir <- getTestPath args (withBackendDir backend "restoresLiteralWildcardOnly")
-  let trashDir = testDir </> ".trash"
-      files = ["f1", "f2", "f3", "1f", "2f", "3f"]
-      testFiles = (testDir </>) <$> files
-      testWcLiteral = testDir </> "*"
-      delArgList = withSrArgs trashDir backend ("delete" : testWcLiteral : testFiles)
+wildcardLiteralTests :: IO TestEnv -> [TestTree]
+wildcardLiteralTests testEnv =
+  [ restoresLiteralWildcardOnly testEnv,
+    restoresCombinedWildcardLiteral testEnv
+  ]
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (testWcLiteral : testFiles)
-  assertFilesExist (testWcLiteral : testFiles)
+restoresLiteralWildcardOnly :: IO TestEnv -> TestTree
+restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal wildcard" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoresLiteralWildcardOnly" $ do
+    testDir <- getTestDir
 
-  runSafeRm delArgList
+    let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
+        testFiles = (testDir </>) <$> files
+        testWcLiteral = testDir </> "*"
+    delArgList <- withSrArgsM ("delete" : testWcLiteral : testFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ("*" : files)
-  assertFilesDoNotExist (testWcLiteral : testFiles)
+    -- SETUP
+    createFiles (testWcLiteral : testFiles)
+    assertPathsExist (testWcLiteral : testFiles)
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    runSafeRm delArgList
 
-  -- RESTORE
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ("*" : files)
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist (testWcLiteral : testFiles)
 
-  -- leave f alone
-  let restoreArgList = withSrArgs trashDir backend ["restore", "\\*"]
-  runSafeRm restoreArgList
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "1f", "2f", "3f", "*"]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["*"]
-  assertFilesExist [testWcLiteral]
-  assertFilesExist $ mkAllTrashPaths trashDir files
+    -- RESTORE
 
-  -- trash structure assertions
-  (restoreIdxSet, restoreMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreExpectedIdxSet restoreIdxSet
-  restoreExpectedMetadata @=? restoreMetadata
+    -- leave f alone
+    restoreArgList <- withSrArgsM ["restore", "\\*"]
+    runSafeRm restoreArgList
+
+    -- file assertions
+    restoreTrashFiles <- mkAllTrashPathsM ["*"]
+    noRestoreTrashFiles <- mkAllTrashPathsM files
+    assertPathsDoNotExist restoreTrashFiles
+    assertPathsExist (testWcLiteral : noRestoreTrashFiles)
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "1f", "2f", "3f"]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "3f"),
-          mkPathData' backend PathTypeFile "*" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "*")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 7,
@@ -565,16 +529,6 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    restoreExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "restore/restoresLiteralWildcardOnly" "3f")
-        ]
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 6,
@@ -583,57 +537,64 @@ restoresLiteralWildcardOnly backend args = testCase "Restores filename w/ litera
           size = afromInteger 0
         }
 
-restoresCombinedWildcardLiteral :: Backend -> IO FilePath -> TestTree
-restoresCombinedWildcardLiteral backend args = testCase desc $ do
-  testDir <- getTestPath args (withBackendDir backend "restoresCombinedWildcardLiteral")
-  let trashDir = testDir </> ".trash"
-      files = ["yxxfoo", "yxxbar", "yxxbaz"]
-      wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
-      testFiles = (testDir </>) <$> files
-      testWcLiterals = (testDir </>) <$> wcLiterals
-      delArgList = withSrArgs trashDir backend ("delete" : testWcLiterals <> testFiles)
+restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
+restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoresCombinedWildcardLiteral" $ do
+    testDir <- getTestDir
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (testWcLiterals <> testFiles)
-  assertFilesExist (testWcLiterals <> testFiles)
+    let files = ["yxxfoo", "yxxbar", "yxxbaz"]
+        wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
+        testFiles = (testDir </>) <$> files
+        testWcLiterals = (testDir </>) <$> wcLiterals
+    delArgList <- withSrArgsM ("delete" : testWcLiterals <> testFiles)
 
-  runSafeRm delArgList
+    -- SETUP
+    createFiles (testWcLiterals <> testFiles)
+    assertPathsExist (testWcLiterals <> testFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir (wcLiterals <> files)
-  assertFilesDoNotExist (testWcLiterals <> testFiles)
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM (wcLiterals <> files)
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist (testWcLiterals <> testFiles)
 
-  -- RESTORE
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM
+      [ "yxxfoo",
+        "yxxbar",
+        "yxxbaz",
+        "y*xxfoo",
+        "y*xxbar",
+        "y*xxbaz"
+      ]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  let restoreArgList = withSrArgs trashDir backend ["restore", "y\\*xx*"]
-  runSafeRm restoreArgList
+    -- RESTORE
 
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir wcLiterals
-  assertFilesExist testWcLiterals
-  assertFilesExist $ mkAllTrashPaths trashDir files
+    restoreArgList <- withSrArgsM ["restore", "y\\*xx*"]
+    runSafeRm restoreArgList
 
-  -- trash structure assertions
-  (restoreArgListIdxSet, restoreArgListMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq restoreArgListExpectedIdxSet restoreArgListIdxSet
-  restoreArgListExpectedMetadata @=? restoreArgListMetadata
+    -- file assertions
+    restoreTrashFiles <- mkAllTrashPathsM wcLiterals
+    noRestoreTrashFiles <- mkAllTrashPathsM files
+    assertPathsDoNotExist restoreTrashFiles
+    assertPathsExist (testWcLiterals ++ noRestoreTrashFiles)
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <- mkPathDataSetM
+      [ "yxxfoo",
+        "yxxbar",
+        "yxxbaz"
+      ]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreArgListExpectedMetadata @=? restoreMetadata
   where
     desc = "Restores filename w/ literal * and wildcard"
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "yxxfoo" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxfoo"),
-          mkPathData' backend PathTypeFile "yxxbar" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxbar"),
-          mkPathData' backend PathTypeFile "yxxbaz" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxbaz"),
-          mkPathData' backend PathTypeFile "y*xxfoo" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "y*xxfoo"),
-          mkPathData' backend PathTypeFile "y*xxbar" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "y*xxbar"),
-          mkPathData' backend PathTypeFile "y*xxbaz" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "y*xxbaz")
-        ]
 
     delExpectedMetadata =
       MkMetadata
@@ -643,12 +604,6 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
           size = afromInteger 0
         }
 
-    restoreArgListExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "yxxfoo" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxfoo"),
-          mkPathData' backend PathTypeFile "yxxbar" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxbar"),
-          mkPathData' backend PathTypeFile "yxxbaz" (withBackendBaseDir backend "restore/restoresCombinedWildcardLiteral" "yxxbaz")
-        ]
     restoreArgListExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -656,7 +611,7 @@ restoresCombinedWildcardLiteral backend args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#else
+wildcardLiteralTests :: IO TestEnv -> [TestTree]
+wildcardLiteralTests = const []
 #endif
-
-getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "restore"

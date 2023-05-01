@@ -2,24 +2,30 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Provides 'PathData' for use with the FreeDesktopOrg backend.
-module SafeRm.Data.PathData.Fdo
+-- | Provides 'PathData' for use with the Cbor backend.
+module SafeRm.Data.PathData.Cbor
   ( -- * PathData
     PathData (..),
     toPathData,
     headerNames,
+
+    -- * Misc
+    pathDataToType,
   )
 where
 
-import Data.ByteString.Char8 qualified as C8
-import Data.HashSet qualified as Set
+import Codec.Serialise qualified as Serialise
+import Data.Bifunctor (Bifunctor (..))
+import Data.ByteString.Lazy qualified as BSL
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI, PathIndex (..))
-import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp)
+import SafeRm.Env qualified as Env
+import SafeRm.Exception (FileNotFoundE (..), PathNotFileDirE (..))
 import SafeRm.Prelude
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
@@ -82,25 +88,46 @@ instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> ByteString
-  encode pd =
-    C8.unlines
-      [ "[Trash Info]",
-        "Path=" <> encode (pd ^. #originalPath),
-        "DeletionDate=" <> encode (pd ^. #created)
-      ]
+  encode (UnsafePathData _ (MkPathI opath) ts) =
+    BSL.toStrict $ Serialise.serialise (opath, ts)
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    mp <- Common.parseTrashInfoMap expectedKeys bs
-
-    originalPath <- decodeUnit =<< Common.lookup "Path" mp
-    created <- decodeUnit =<< Common.lookup "DeletionDate" mp
+    (originalPath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
 
     Right $
       UnsafePathData
         { fileName = name,
-          originalPath,
+          originalPath = MkPathI originalPath,
           created
         }
-    where
-      expectedKeys = Set.fromList ["Path", "DeletionDate"]
+
+-- | Derives the 'PathType' from the 'PathData'.
+--
+-- __IMPORTANT:__ This function is only guaranteed to work if the 'PathData'
+-- corresponds to an extant trash entry. In particular, if the 'PathData' has
+-- not been created yet, this can fail.
+pathDataToType ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  PathData ->
+  m PathType
+pathDataToType trashHome pd = do
+  fileExists <- doesFileExist path
+  if fileExists
+    then pure PathTypeFile
+    else do
+      dirExists <- doesDirectoryExist path
+      if dirExists
+        then pure PathTypeDirectory
+        else do
+          -- for a better error message
+          pathExists <- doesPathExist path
+          if pathExists
+            then throwCS $ MkPathNotFileDirE path
+            else throwCS $ MkFileNotFoundE path
+  where
+    MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)

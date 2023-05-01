@@ -32,7 +32,7 @@ import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (..))
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Default qualified as PathDataDefault
+import SafeRm.Data.PathData.Core qualified as PathDataCbor
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (..),
     PathDataFormat (..),
@@ -52,7 +52,7 @@ import SafeRm.Exception
 import SafeRm.Prelude
 import System.FilePath qualified as FP
 
-type PathDataDefault = PathDataDefault.PathData
+type PathDataCbor = PathDataCbor.PathData
 
 -- | Index that stores the trash data.
 newtype Index = MkIndex
@@ -92,11 +92,12 @@ readIndex trashHome = addNamespace "readIndex" $ do
         m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->
         m (Seq PathData, HashSet (PathI TrashEntryFileName))
       seqify p macc = do
-        let ext = FP.takeExtension p
+        let actualExt = FP.takeExtension p
+            expectedExt = Env.trashInfoExtension backend
 
-        when (ext /= Env.trashInfoExtension) $
+        when (actualExt /= expectedExt) $
           throwCS $
-            MkTrashEntryInfoBadExtE (MkPathI p) ext
+            MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
 
         let path = trashInfoDir' </> p
         $(logDebug) ("Path: " <> T.pack path)
@@ -170,7 +171,7 @@ readSort "name" = pure Name
 readSort "size" = pure Size
 readSort other = fail $ "Unrecognized sort: " <> T.unpack other
 
-sortFn :: Bool -> Sort -> PathDataDefault -> PathDataDefault -> Ordering
+sortFn :: Bool -> Sort -> PathDataCbor -> PathDataCbor -> Ordering
 sortFn b = \case
   Name -> rev Formatting.sortNameCreated
   Size -> rev Formatting.sortSizeName
@@ -381,7 +382,7 @@ getMaxLen = do
           <> displayExceptiont err
       pure 80
 
-multiline :: (PathDataDefault -> PathDataDefault -> Ordering) -> Seq PathDataDefault -> Text
+multiline :: (PathDataCbor -> PathDataCbor -> Ordering) -> Seq PathDataCbor -> Text
 multiline sort =
   T.intercalate "\n\n"
     . fmap Formatting.formatMultiLine
@@ -389,10 +390,10 @@ multiline sort =
     . getElems sort
 
 tabular ::
-  (PathDataDefault -> PathDataDefault -> Ordering) ->
+  (PathDataCbor -> PathDataCbor -> Ordering) ->
   Natural ->
   Natural ->
-  Seq PathDataDefault ->
+  Seq PathDataCbor ->
   Text
 tabular sort nameLen origLen =
   ((Formatting.formatTabularHeader nameLen origLen <> "\n") <>)
@@ -402,9 +403,9 @@ tabular sort nameLen origLen =
     . getElems sort
 
 getElems ::
-  (PathDataDefault -> PathDataDefault -> Ordering) ->
-  Seq PathDataDefault ->
-  Seq PathDataDefault
+  (PathDataCbor -> PathDataCbor -> Ordering) ->
+  Seq PathDataCbor ->
+  Seq PathDataCbor
 getElems = Seq.sortBy
 
 fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
@@ -427,5 +428,5 @@ indexToSeq ::
     MonadThrow m
   ) =>
   Index ->
-  m (Seq PathDataDefault)
-indexToSeq = traverse PathData.normalizeDefault . view #unIndex
+  m (Seq PathDataCbor)
+indexToSeq = traverse PathData.normalizeCore . view #unIndex

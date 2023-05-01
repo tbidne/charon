@@ -9,85 +9,70 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathType (PathType (..))
 
-tests :: IO FilePath -> TestTree
-tests args =
+tests :: IO TestEnv -> TestTree
+tests testEnv =
   testGroup
     "Permanent Delete Command"
-    (backendTests args <$> [minBound .. maxBound])
-
-backendTests :: IO FilePath -> Backend -> TestTree
-backendTests args backend =
-  testGroup
-    (Backend.backendTestDesc backend)
-    $ [ deletesOne backend args,
-        deletesMany backend args,
-        deleteUnknownError backend args,
-        deletesSome backend args,
-        deletesNoForce backend args,
-        deletesWildcards backend args,
-        deletesSomeWildcards backend args,
-        displaysAllData backend args
+    $ [ deletesOne testEnv',
+        deletesMany testEnv',
+        deleteUnknownError testEnv',
+        deletesSome testEnv',
+        deletesNoForce testEnv',
+        deletesWildcards testEnv',
+        deletesSomeWildcards testEnv',
+        displaysAllData testEnv'
       ]
-      <> wildcardLiteralTests
+      <> wildcardLiteralTests testEnv'
   where
-#if WINDOWS
-    wildcardLiteralTests = []
-#else
-    wildcardLiteralTests =
-      [ deletesLiteralWildcardOnly backend args,
-        deletesCombinedWildcardLiteral backend args
-      ]
-#endif
+    testEnv' = appendTestDir "perm-delete" <$> testEnv
 
-deletesOne :: Backend -> IO FilePath -> TestTree
-deletesOne backend args = testCase "Permanently deletes a single file" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesOne")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+deletesOne :: IO TestEnv -> TestTree
+deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> testEnv ^. #trashDir
+        f1 = testDir </> "f1"
 
-  -- SETUP
+    delArgList <- withSrArgsM ["delete", f1]
 
-  clearDirectory testDir
-  createFiles [f1]
-  assertFilesExist [f1]
+    -- SETUP
 
-  -- delete to trash first
-  runSafeRm delArgList
+    createFiles [f1]
+    assertPathsExist [f1]
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
+    -- delete to trash first
+    liftIO $ runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist [f1]
 
-  -- PERMANENT DELETE
+    -- trash structure assertions
+    (delIdxSet, delMetadata) <- runIndexMetadataM
 
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "f1", "-f"]
-  runSafeRm permDelArgList
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
 
-  -- file assertions
-  assertFilesDoNotExist $ f1 : mkAllTrashPaths trashDir ["f1"]
-  assertDirectoriesExist [trashDir]
+    assertSetEq delExpectedIdxSet delIdxSet
+    liftIO $ delExpectedMetadata @=? delMetadata
 
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
+    -- PERMANENT DELETE
+
+    permDelArgList <- withSrArgsM ["perm-delete", "f1", "-f"]
+    liftIO $ runSafeRm permDelArgList
+
+    -- file assertions
+    assertPathsDoNotExist $ f1 : delTrashFiles
+    assertPathsExist [trashDir]
+
+    -- trash structure assertions
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedIdxSet =
-      HashSet.singleton
-        (mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesOne" "f1"))
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -99,62 +84,64 @@ deletesOne backend args = testCase "Permanently deletes a single file" $ do
     permDelExpectedIdxSet = HashSet.empty
     permDelExpectedMetadata = mempty
 
-deletesMany :: Backend -> IO FilePath -> TestTree
-deletesMany backend args = testCase "Permanently deletes several paths" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesMany")
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
+deletesMany :: IO TestEnv -> TestTree
+deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> testEnv ^. #trashDir
+        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
 
-  -- SETUP
-  clearDirectory testDir
-  -- test w/ a nested dir
-  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
-  -- test w/ a file in dir
-  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
-  assertFilesExist filesToDelete
-  assertDirectoriesExist dirsToDelete
+    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
 
-  runSafeRm delArgList
+    -- SETUP
+    -- test w/ a nested dir
+    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    -- test w/ a file in dir
+    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    assertPathsExist (filesToDelete ++ dirsToDelete)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
+    liftIO $ runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
+    assertPathsExist delTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-  -- PERMANENT DELETE
-
-  -- leave f2 alone
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "f1", "f3", "dir1", "dir2", "-f"]
-  runSafeRm permDelArgList
-
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir filesToDelete
-  assertDirectoriesDoNotExist $ mkTrashPaths trashDir ["dir1", "dir2/dir3"]
-  assertFilesExist $ mkAllTrashPaths trashDir ["f2"]
-  assertDirectoriesExist [trashDir]
-
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesMany" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesMany" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesMany" "f3"),
-          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "perm-delete/deletesMany" "dir1"),
-          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "perm-delete/deletesMany" "dir2")
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "dir1",
+          "dir2"
         ]
 
+    -- trash structure assertions
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    liftIO $ delExpectedMetadata @=? delMetadata
+
+    -- PERMANENT DELETE
+
+    -- leave f2 alone
+    permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "-f"]
+    liftIO $ runSafeRm permDelArgList
+
+    -- file assertions
+    permDelTrashPaths <- mkAllTrashPathsM ["f1", "f3", "dir1", "dir2"]
+    notPermDelTrashFiles <- mkAllTrashPathsM ["f2"]
+    assertPathsDoNotExist permDelTrashPaths
+    assertPathsExist (trashDir : notPermDelTrashFiles)
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <- mkPathDataSetM ["f2"]
+
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 5,
@@ -163,9 +150,6 @@ deletesMany backend args = testCase "Permanently deletes several paths" $ do
           size = afromInteger 0
         }
 
-    permDelExpectedIdxSet =
-      HashSet.singleton
-        (mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesMany" "f2"))
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -174,55 +158,55 @@ deletesMany backend args = testCase "Permanently deletes several paths" $ do
           size = afromInteger 0
         }
 
-deleteUnknownError :: Backend -> IO FilePath -> TestTree
-deleteUnknownError backend args = testCase "Delete unknown prints error" $ do
-  testDir <- getTestPath args (withBackendDir backend "deleteUnknownError")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+deleteUnknownError :: IO TestEnv -> TestTree
+deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
+    testDir <- getTestDir
 
-  -- SETUP
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
 
-  -- technically we do not need to have anything in the trash to attempt
-  -- a permanent delete, but this way we can ensure the trash itself is set
-  -- up (i.e. dir exists w/ index), so that we can test the perm safe-rm
-  -- failure only.
-  clearDirectory testDir
-  createFiles [f1]
-  assertFilesExist [f1]
+    delArgList <- withSrArgsM ["delete", f1]
 
-  -- delete to trash first
-  runSafeRm delArgList
+    -- SETUP
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
+    -- technically we do not need to have anything in the trash to attempt
+    -- a permanent delete, but this way we can ensure the trash itself is set
+    -- up (i.e. dir exists w/ index), so that we can test the perm safe-rm
+    -- failure only.
+    createFiles [f1]
+    assertPathsExist [f1]
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- PERMANENT DELETE
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "bad file", "-f"]
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist [f1]
 
-  -- assert exception
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
 
-  "ExitFailure 1" @=? ex
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    liftIO $ delExpectedMetadata @=? delMetadata
 
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet permDelIdxSet
-  delExpectedMetadata @=? permDelMetadata
+    -- PERMANENT DELETE
+    permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode permDelArgList
+
+    -- assert exception
+    assertPathsExist delTrashFiles
+
+    liftIO $ "ExitFailure 1" @=? ex
+
+    -- trash structure assertions
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet permDelIdxSet
+    liftIO $ delExpectedMetadata @=? permDelMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deleteUnknownError" "f1")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -231,57 +215,59 @@ deleteUnknownError backend args = testCase "Delete unknown prints error" $ do
           size = afromInteger 0
         }
 
-deletesSome :: Backend -> IO FilePath -> TestTree
-deletesSome backend args = testCase "Deletes some, errors on others" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesSome")
-  let trashDir = testDir </> ".trash"
-      realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
-      filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
-      delArgList = withSrArgs trashDir backend ("delete" : realFiles)
+deletesSome :: IO TestEnv -> TestTree
+deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
+    testDir <- getTestDir
 
-  -- setup
-  clearDirectory testDir
-  createFiles realFiles
-  assertFilesExist realFiles
+    let trashDir = testDir </> ".trash"
+        realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
+        filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
 
-  -- delete to trash first
-  runSafeRm delArgList
+    delArgList <- withSrArgsM ("delete" : realFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
-  assertFilesDoNotExist realFiles
-  assertDirectoriesExist [trashDir]
+    -- setup
+    createFiles realFiles
+    assertPathsExist realFiles
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- PERMANENT DELETE
-  let permDelArgList =
-        withSrArgs
-          trashDir
-          backend
-          ("perm-delete" : filesTryPermDelete ++ ["-f"])
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f5"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist realFiles
 
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir filesTryPermDelete
-
-  "ExitFailure 1" @=? ex
-
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesSome" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesSome" "f2"),
-          mkPathData' backend PathTypeFile "f5" (withBackendBaseDir backend "perm-delete/deletesSome" "f5")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f5"
         ]
 
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    liftIO $ delExpectedMetadata @=? delMetadata
+
+    -- PERMANENT DELETE
+    permDelArgList <-
+      withSrArgsM
+        ("perm-delete" : filesTryPermDelete ++ ["-f"])
+    (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
+
+    -- file assertions
+    permDelTrashFiles <- mkAllTrashPathsM filesTryPermDelete
+    assertPathsDoNotExist permDelTrashFiles
+
+    liftIO $ "ExitFailure 1" @=? ex
+
+    -- trash structure assertions
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -293,56 +279,55 @@ deletesSome backend args = testCase "Deletes some, errors on others" $ do
     permDelExpectedIdxSet = HashSet.empty
     permDelExpectedMetadata = mempty
 
-deletesNoForce :: Backend -> IO FilePath -> TestTree
-deletesNoForce backend args = testCase "Permanently deletes several paths without --force" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesNoForce")
-  let trashDir = testDir </> ".trash"
-      fileDeleteNames = show @Int <$> [1 .. 5]
-      fileDeletePaths = (testDir </>) <$> fileDeleteNames
-      delArgList = withSrArgs trashDir backend ("delete" : fileDeletePaths)
+deletesNoForce :: IO TestEnv -> TestTree
+deletesNoForce getTestEnv = testCase "Permanently deletes several paths without --force" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesNoForce" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> ".trash"
+        fileDeleteNames = show @Int <$> [1 .. 5]
+        fileDeletePaths = (testDir </>) <$> fileDeleteNames
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles fileDeletePaths
-  assertFilesExist fileDeletePaths
+    delArgList <- withSrArgsM ("delete" : fileDeletePaths)
 
-  runSafeRm delArgList
+    -- SETUP
+    createFiles fileDeletePaths
+    assertPathsExist fileDeletePaths
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir fileDeleteNames
-  assertFilesDoNotExist fileDeletePaths
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM fileDeleteNames
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist fileDeletePaths
 
-  -- PERMANENT DELETE
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["1", "2", "3", "4", "5"]
 
-  let permDelArgList = withSrArgs trashDir backend ("perm-delete" : fileDeleteNames)
-  runSafeRm permDelArgList
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    liftIO $ delExpectedMetadata @=? delMetadata
 
-  -- file assertions
-  -- Our mock FuncIO alternates returning 'n' and 'y' to getChar, so without
-  -- the force option we should delete 2,4 and leave 1,3,5.
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["2", "4"]
-  assertFilesExist $ mkAllTrashPaths trashDir ["1", "3", "5"]
-  assertDirectoriesExist [trashDir]
+    -- PERMANENT DELETE
 
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
+    permDelArgList <- withSrArgsM ("perm-delete" : fileDeleteNames)
+    runSafeRm permDelArgList
+
+    -- file assertions
+    -- Our mock FuncIO alternates returning 'n' and 'y' to getChar, so without
+    -- the force option we should delete 2,4 and leave 1,3,5.
+    permDelTrashFiles <- mkAllTrashPathsM ["2", "4"]
+    notPermDelTrashFiles <- mkAllTrashPathsM ["1", "3", "5"]
+    assertPathsDoNotExist permDelTrashFiles
+    assertPathsExist (trashDir : notPermDelTrashFiles)
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <- mkPathDataSetM ["1", "3", "5"]
+
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "1" (withBackendBaseDir backend "perm-delete/deletesNoForce" "1"),
-          mkPathData' backend PathTypeFile "2" (withBackendBaseDir backend "perm-delete/deletesNoForce" "2"),
-          mkPathData' backend PathTypeFile "3" (withBackendBaseDir backend "perm-delete/deletesNoForce" "3"),
-          mkPathData' backend PathTypeFile "4" (withBackendBaseDir backend "perm-delete/deletesNoForce" "4"),
-          mkPathData' backend PathTypeFile "5" (withBackendBaseDir backend "perm-delete/deletesNoForce" "5")
-        ]
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 5,
@@ -350,13 +335,6 @@ deletesNoForce backend args = testCase "Permanently deletes several paths withou
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    permDelExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "1" (withBackendBaseDir backend "perm-delete/deletesNoForce" "1"),
-          mkPathData' backend PathTypeFile "3" (withBackendBaseDir backend "perm-delete/deletesNoForce" "3"),
-          mkPathData' backend PathTypeFile "5" (withBackendBaseDir backend "perm-delete/deletesNoForce" "5")
-        ]
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -365,65 +343,74 @@ deletesNoForce backend args = testCase "Permanently deletes several paths withou
           size = afromInteger 0
         }
 
-deletesWildcards :: Backend -> IO FilePath -> TestTree
-deletesWildcards backend args = testCase "Permanently deletes several paths via wildcards" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesWildcards")
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
-      otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> otherFiles)
+deletesWildcards :: IO TestEnv -> TestTree
+deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wildcards" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesWildcards" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> ".trash"
+        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
+        otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (filesToDelete <> otherFiles)
-  assertFilesExist filesToDelete
-  assertFilesExist otherFiles
+    delArgList <- withSrArgsM ("delete" : filesToDelete <> otherFiles)
 
-  runSafeRm delArgList
+    -- SETUP
+    createFiles (filesToDelete <> otherFiles)
+    assertPathsExist (filesToDelete ++ otherFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3", "1f", "2f", "3f"]
-  assertFilesExist $ mkAllTrashPaths trashDir ["g1", "g2", "g3", "1g", "2g", "3g"]
-  assertFilesDoNotExist filesToDelete
-  assertFilesDoNotExist otherFiles
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    permDelTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f3", "1f", "2f", "3f"]
+    noPermDelTrashFiles <- mkAllTrashPathsM ["g1", "g2", "g3", "1g", "2g", "3g"]
+    assertPathsExist (permDelTrashFiles ++ noPermDelTrashFiles)
+    assertPathsDoNotExist (filesToDelete ++ otherFiles)
 
-  -- PERMANENT DELETE
-
-  -- leave g alone
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "*f*", "-f"]
-  runSafeRm permDelArgList
-
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir filesToDelete
-  assertFilesExist $ mkAllTrashPaths trashDir ["g1", "g2", "g3", "1g", "2g", "3g"]
-  assertDirectoriesExist [trashDir]
-
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3f"),
-          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3g")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "1f",
+          "2f",
+          "3f",
+          "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
         ]
 
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- PERMANENT DELETE
+
+    -- leave g alone
+    permDelArgList <- withSrArgsM ["perm-delete", "*f*", "-f"]
+    runSafeRm permDelArgList
+
+    -- file assertions
+    assertPathsDoNotExist permDelTrashFiles
+    assertPathsExist (trashDir : noPermDelTrashFiles)
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
+        ]
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    permDelExpectedMetadata @=? permDelMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 12,
@@ -432,15 +419,6 @@ deletesWildcards backend args = testCase "Permanently deletes several paths via 
           size = afromInteger 0
         }
 
-    permDelExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesWildcards" "3g")
-        ]
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 6,
@@ -449,61 +427,65 @@ deletesWildcards backend args = testCase "Permanently deletes several paths via 
           size = afromInteger 0
         }
 
-deletesSomeWildcards :: Backend -> IO FilePath -> TestTree
-deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesSomeWildcards")
-  let trashDir = testDir </> ".trash"
-      files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
-      testFiles = (testDir </>) <$> files
-      delArgList = withSrArgs trashDir backend ("delete" : testFiles)
+deletesSomeWildcards :: IO TestEnv -> TestTree
+deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesSomeWildcards" $ do
+    testDir <- getTestDir
+    let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
+        testFiles = (testDir </>) <$> files
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles testFiles
-  assertFilesExist testFiles
+    delArgList <- withSrArgsM ("delete" : testFiles)
 
-  runSafeRm delArgList
+    -- SETUP
+    createFiles testFiles
+    assertPathsExist testFiles
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir files
-  assertFilesDoNotExist testFiles
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM files
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist testFiles
 
-  -- PERMANENT DELETE
-
-  -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
-  -- delete will fail. This is how this test works.
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "foo**bar", "*g*", "-f"]
-  runSafeRmException @ExitCode permDelArgList
-
-  -- file assertions
-  -- 1. Everything still gone from original location
-  assertFilesDoNotExist testFiles
-  -- 2. Only fooBadBar should be left in trash
-  assertFilesExist $ mkAllTrashPaths trashDir ["fooBadbar"]
-
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "foobar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "foobar"),
-          mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooBadbar"),
-          mkPathData' backend PathTypeFile "fooXbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooXbar"),
-          mkPathData' backend PathTypeFile "g1" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g1"),
-          mkPathData' backend PathTypeFile "g2" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g2"),
-          mkPathData' backend PathTypeFile "g3" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "g3"),
-          mkPathData' backend PathTypeFile "1g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "1g"),
-          mkPathData' backend PathTypeFile "2g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "2g"),
-          mkPathData' backend PathTypeFile "3g" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "3g")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "foobar",
+          "fooBadbar",
+          "fooXbar",
+          "g1",
+          "g2",
+          "g3",
+          "1g",
+          "2g",
+          "3g"
         ]
 
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- PERMANENT DELETE
+
+    -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
+    -- delete will fail. This is how this test works.
+    permDelArgList <- withSrArgsM ["perm-delete", "foo**bar", "*g*", "-f"]
+    runSafeRmException @ExitCode permDelArgList
+
+    -- file assertions
+    -- 1. Everything still gone from original location
+    assertPathsDoNotExist testFiles
+    -- 2. Only fooBadBar should be left in trash
+    noPermDelTrashFiles <- mkAllTrashPathsM ["fooBadbar"]
+    assertPathsExist noPermDelTrashFiles
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <- mkPathDataSetM ["fooBadbar"]
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    permDelExpectedMetadata @=? permDelMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 9,
@@ -511,11 +493,6 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    permDelExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "fooBadbar" (withBackendBaseDir backend "perm-delete/deletesSomeWildcards" "fooBadbar")
-        ]
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -527,57 +504,78 @@ deletesSomeWildcards backend args = testCase "Deletes some paths via wildcards" 
 -- Wildcard literals are not valid in windows paths
 
 #if !WINDOWS
-deletesLiteralWildcardOnly :: Backend -> IO FilePath -> TestTree
-deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename w/ literal wildcard" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesLiteralWildcardOnly")
-  let trashDir = testDir </> ".trash"
-      files = ["f1", "f2", "f3", "1f", "2f", "3f"]
-      testFiles = (testDir </>) <$> files
-      testWcLiteral = testDir </> "*"
-      delArgList = withSrArgs trashDir backend ("delete" : testWcLiteral : testFiles)
+wildcardLiteralTests :: IO TestEnv -> [TestTree]
+wildcardLiteralTests testEnv =
+  [ deletesLiteralWildcardOnly testEnv,
+    deletesCombinedWildcardLiteral testEnv
+  ]
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (testWcLiteral : testFiles)
-  assertFilesExist (testWcLiteral : testFiles)
+deletesLiteralWildcardOnly :: IO TestEnv -> TestTree
+deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w/ literal wildcard" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesLiteralWildcardOnly" $ do
+    testDir <- getTestDir
+    let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
+        testFiles = (testDir </>) <$> files
+        testWcLiteral = testDir </> "*"
+    
+    delArgList <- withSrArgsM ("delete" : testWcLiteral : testFiles)
 
-  runSafeRm delArgList
+    -- SETUP
+    clearDirectory testDir
+    createFiles (testWcLiteral : testFiles)
+    assertPathsExist (testWcLiteral : testFiles)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ("*" : files)
-  assertFilesDoNotExist (testWcLiteral : testFiles)
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ("*" : files)
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist (testWcLiteral : testFiles)
 
-  -- PERMANENT DELETE
-
-  -- leave f alone
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "\\*", "-f"]
-  runSafeRm permDelArgList
-
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir ["*"]
-  assertFilesExist $ mkAllTrashPaths trashDir files
-
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
-  where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "3f"),
-          mkPathData' backend PathTypeFile "*" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "*")
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "1f",
+          "2f",
+          "3f",
+          "*"
         ]
 
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- PERMANENT DELETE
+
+    -- leave f alone
+    permDelArgList <- withSrArgsM ["perm-delete", "\\*", "-f"]
+    runSafeRm permDelArgList
+
+    -- file assertions
+    permDelTrashFiles <- mkAllTrashPathsM ["*"]
+    noPermDelTrashFiles <- mkAllTrashPathsM files
+    assertPathsDoNotExist permDelTrashFiles
+    assertPathsExist noPermDelTrashFiles
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "1f",
+          "2f",
+          "3f"
+        ]
+
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    permDelExpectedMetadata @=? permDelMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 7,
@@ -585,16 +583,6 @@ deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    permDelExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "f3"),
-          mkPathData' backend PathTypeFile "1f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "1f"),
-          mkPathData' backend PathTypeFile "2f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "2f"),
-          mkPathData' backend PathTypeFile "3f" (withBackendBaseDir backend "perm-delete/deletesLiteralWildcardOnly" "3f")
-        ]
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 6,
@@ -603,57 +591,68 @@ deletesLiteralWildcardOnly backend args = testCase "Permanently deletes filename
           size = afromInteger 0
         }
 
-deletesCombinedWildcardLiteral :: Backend -> IO FilePath -> TestTree
-deletesCombinedWildcardLiteral backend args = testCase desc $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesCombinedWildcardLiteral")
-  let trashDir = testDir </> ".trash"
-      files = ["xxfoo", "xxbar", "xxbaz"]
-      wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
-      testFiles = (testDir </>) <$> files
-      testWcLiterals = (testDir </>) <$> wcLiterals
-      delArgList = withSrArgs trashDir backend ("delete" : testWcLiterals <> testFiles)
+deletesCombinedWildcardLiteral :: IO TestEnv -> TestTree
+deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesCombinedWildcardLiteral" $ do
+    testDir <- getTestDir
+    let files = ["xxfoo", "xxbar", "xxbaz"]
+        wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
+        testFiles = (testDir </>) <$> files
+        testWcLiterals = (testDir </>) <$> wcLiterals
+    
+    delArgList <- withSrArgsM ("delete" : testWcLiterals <> testFiles)
 
-  -- SETUP
-  clearDirectory testDir
-  createFiles (testWcLiterals <> testFiles)
-  assertFilesExist (testWcLiterals <> testFiles)
+    -- SETUP
+    createFiles (testWcLiterals <> testFiles)
+    assertPathsExist (testWcLiterals <> testFiles)
 
-  runSafeRm delArgList
+    runSafeRm delArgList
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir (wcLiterals <> files)
-  assertFilesDoNotExist (testWcLiterals <> testFiles)
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM (wcLiterals <> files)
+    assertPathsExist delTrashFiles
+    assertPathsDoNotExist (testWcLiterals <> testFiles)
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "xxfoo",
+          "xxbar",
+          "xxbaz",
+          "y*xxfoo",
+          "y*xxbar",
+          "y*xxbaz"
+        ]
 
-  -- PERMANENT DELETE
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- leave f alone
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "y\\*xx*", "-f"]
-  runSafeRm permDelArgList
+    -- PERMANENT DELETE
 
-  -- file assertions
-  assertFilesDoNotExist $ mkAllTrashPaths trashDir wcLiterals
-  assertFilesExist $ mkAllTrashPaths trashDir files
+    -- leave f alone
+    permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "-f"]
+    runSafeRm permDelArgList
 
-  -- trash structure assertions
-  (permDelIdxSet, permDelMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq permDelExpectedIdxSet permDelIdxSet
-  permDelExpectedMetadata @=? permDelMetadata
+    -- file assertions
+    permDelTrashFiles <- mkAllTrashPathsM wcLiterals
+    noPermDelTrashFiles <- mkAllTrashPathsM files
+    assertPathsDoNotExist permDelTrashFiles
+    assertPathsExist noPermDelTrashFiles
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ "xxfoo",
+          "xxbar",
+          "xxbaz"
+        ]
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    permDelExpectedMetadata @=? permDelMetadata
   where
     desc = "Permanently deletes filename w/ literal * and wildcard"
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxfoo"),
-          mkPathData' backend PathTypeFile "xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbar"),
-          mkPathData' backend PathTypeFile "xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbaz"),
-          mkPathData' backend PathTypeFile "y*xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxfoo"),
-          mkPathData' backend PathTypeFile "y*xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxbar"),
-          mkPathData' backend PathTypeFile "y*xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "y*xxbaz")
-        ]
 
     delExpectedMetadata =
       MkMetadata
@@ -662,13 +661,6 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    permDelExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "xxfoo" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxfoo"),
-          mkPathData' backend PathTypeFile "xxbar" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbar"),
-          mkPathData' backend PathTypeFile "xxbaz" (withBackendBaseDir backend "perm-delete/deletesCombinedWildcardLiteral" "xxbaz")
-        ]
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -676,44 +668,51 @@ deletesCombinedWildcardLiteral backend args = testCase desc $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
+#else
+wildcardLiteralTests :: IO TestEnv -> [TestTree]
+wildcardLiteralTests = const []
 #endif
 
-displaysAllData :: Backend -> IO FilePath -> TestTree
-displaysAllData backend args = testCase "Displays all data for each backend" $ do
-  testDir <- getTestPath args (withBackendDir backend "displaysAllData")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      delArgList = withSrArgs trashDir backend ["delete", f1]
+displaysAllData :: IO TestEnv -> TestTree
+displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "displaysAllData" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
 
-  -- SETUP
+    delArgList <- withSrArgsM ["delete", f1]
 
-  clearDirectory testDir
-  createFiles [f1]
-  assertFilesExist [f1]
+    -- SETUP
 
-  -- delete to trash first
-  runSafeRm delArgList
+    createFiles [f1]
+    assertPathsExist [f1]
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
+    -- delete to trash first
+    runSafeRm delArgList
 
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : delTrashFiles)
+    assertPathsDoNotExist [f1]
 
-  -- PERMANENT DELETE
+    -- trash structure assertions
+    delExpectedIdxSet <- mkPathDataSetM ["f1"]
 
-  -- NOTE: we don't actually delete f1 as the first mocked answer is 'n'
-  -- (see altAnswers in FuncEnv), but it doesn't matter as this test is only
-  -- concerned with grabbing the terminal data for an unforced delete.
-  let permDelArgList = withSrArgs trashDir backend ["perm-delete", "f1"]
-  (terminalResult, _) <- captureSafeRmLogs permDelArgList
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
 
-  -- assert terminal displays all data for f1
-  assertMatches expectedTerminal terminalResult
+    -- PERMANENT DELETE
+
+    -- NOTE: we don't actually delete f1 as the first mocked answer is 'n'
+    -- (see altAnswers in FuncEnv), but it doesn't matter as this test is only
+    -- concerned with grabbing the terminal data for an unforced delete.
+    permDelArgList <- withSrArgsM ["perm-delete", "f1"]
+    (terminalResult, _) <- captureSafeRmLogs permDelArgList
+
+    -- assert terminal displays all data for f1
+    assertMatches expectedTerminal terminalResult
   where
     expectedTerminal =
       [ Exact "",
@@ -729,10 +728,6 @@ displaysAllData backend args = testCase "Displays all data for each backend" $ d
         Exact "Permanently delete (y/n)?"
       ]
 
-    delExpectedIdxSet =
-      HashSet.singleton
-        (mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "perm-delete/displaysAllData" "f1"))
-
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -740,6 +735,3 @@ displaysAllData backend args = testCase "Displays all data for each backend" $ d
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "perm-delete"

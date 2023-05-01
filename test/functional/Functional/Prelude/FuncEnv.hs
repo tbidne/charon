@@ -11,13 +11,14 @@ module Functional.Prelude.FuncEnv
     mkFuncEnv,
 
     -- * Running SafeRm
+    TestM,
+    TestEnv (..),
 
     -- ** Runners
     runSafeRm,
     runSafeRmException,
-    runIndexMetadata,
-    runIndexMetadata',
-    runIndexMetadataBackendTrash,
+    runIndexMetadataM,
+    runIndexMetadataTestDirM,
 
     -- *** Data capture
     captureSafeRm,
@@ -25,8 +26,10 @@ module Functional.Prelude.FuncEnv
     captureSafeRmExceptionLogs,
 
     -- * Misc
-    mkPathData,
-    mkPathData',
+    mkPathDataSetM,
+    mkPathDataSetM2,
+    mkPathDataSetTestDirM,
+    getTestDir,
   )
 where
 
@@ -47,15 +50,14 @@ import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
-import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import PathSize qualified
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData (PathData (..))
-import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
 import SafeRm.Env (HasBackend, HasTrashHome)
@@ -64,7 +66,21 @@ import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import System.Exit (die)
-import Test.Utils qualified as U
+
+type TestM a = ReaderT TestEnv IO a
+
+data TestEnv = MkTestEnv
+  { backend :: Backend,
+    -- The relative test dir for a particular test e.g. delete/deletesMany
+    testDir :: FilePath,
+    -- The relative trash dir for a particular test e.g.
+    -- delete/deletesMany/.trash
+    trashDir :: FilePath,
+    -- Root.
+    testRoot :: FilePath
+  }
+
+makeFieldLabelsNoPrefix ''TestEnv
 
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
@@ -229,14 +245,14 @@ instance MonadLoggerNS (FuncIO FuncEnv) where
 runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
-mkFuncEnv :: (HasCallStack) => TomlConfig -> IORef Text -> IORef Text -> IO FuncEnv
+mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfig -> IORef Text -> IORef Text -> m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
-  trashHome <- getTrashHome
-  charStream <- newIORef altAnswers
+  trashHome <- liftIO getTrashHome
+  charStream <- liftIO $ newIORef altAnswers
   pure $
     MkFuncEnv
       { trashHome = trashHome,
-        backend = fromMaybe BackendDefault (toml ^. #backend),
+        backend = fromMaybe BackendCbor (toml ^. #backend),
         terminalRef,
         logsRef,
         logNamespace = "functional",
@@ -248,19 +264,20 @@ mkFuncEnv toml logsRef terminalRef = do
       Just th -> pure th
 
 -- | Runs safe-rm.
-runSafeRm :: [String] -> IO ()
+runSafeRm :: (MonadIO m) => [String] -> m ()
 runSafeRm = void . captureSafeRm
 
 -- | Runs safe-rm and captures terminal output.
-captureSafeRm :: [String] -> IO [Text]
+captureSafeRm :: (MonadIO m) => [String] -> m [Text]
 captureSafeRm = fmap (view _1) . captureSafeRmLogs
 
 -- | Runs safe-rm and captures (terminal output, logs).
 captureSafeRmLogs ::
+  (MonadIO m) =>
   -- Args.
   [String] ->
-  IO ([Text], [Text])
-captureSafeRmLogs argList = do
+  m ([Text], [Text])
+captureSafeRmLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -284,17 +301,18 @@ captureSafeRmLogs argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-runSafeRmException :: forall e. (Exception e) => [String] -> IO ()
+-- | Runs SafeRm, catching the expected exception.
+runSafeRmException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
 runSafeRmException = void . captureSafeRmExceptionLogs @e
 
 -- | Runs safe-rm and captures a thrown exception and logs.
 captureSafeRmExceptionLogs ::
-  forall e.
-  (Exception e) =>
+  forall e m.
+  (Exception e, MonadIO m) =>
   -- Args.
   [String] ->
-  IO (Text, [Text])
-captureSafeRmExceptionLogs argList = do
+  m (Text, [Text])
+captureSafeRmExceptionLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -325,56 +343,24 @@ captureSafeRmExceptionLogs argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-runIndexMetadata :: FilePath -> IO (HashSet Default.PathData, Metadata)
-runIndexMetadata testDir = do
+-- | Runs SafeRm's Index and Metadata commands, using the TestEnv to determine
+-- the test directory.
+runIndexMetadataM :: TestM (HashSet PathData, Metadata)
+runIndexMetadataM = do
+  testDir <- getTestDir
+  runIndexMetadataTestDirM testDir
+
+-- | Runs SafeRm's Index and Metadata commands with the given test directory.
+runIndexMetadataTestDirM :: FilePath -> TestM (HashSet PathData, Metadata)
+runIndexMetadataTestDirM testDir = do
+  env <- ask
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
   charStream <- newIORef altAnswers
 
-  let funcEnv =
-        MkFuncEnv
-          { trashHome = MkPathI (testDir </> ".trash"),
-            backend = BackendDefault,
-            logNamespace = "functional",
-            terminalRef,
-            logsRef,
-            charStream
-          }
-
-  -- Need to canonicalize due to windows aliases
-  tmpDir <- canonicalizePath =<< getTemporaryDirectory
-
-  idx <- view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
-  mdata <- runFuncIO SafeRm.getMetadata funcEnv
-
-  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
-  where
-    addSet :: String -> HashSet Default.PathData -> PathData -> HashSet Default.PathData
-    addSet tmp acc pd =
-      let fixPath =
-            MkPathI
-              . T.unpack
-              . T.replace (T.pack tmp) ""
-              . T.pack
-              . view #unPathI
-       in -- TODO: Replace this with over' once we change the Getter to a Lens
-          case pd of
-            PathDataDefault d -> HSet.insert (over' #originalPath fixPath d) acc
-            PathDataFdo _ -> acc -- HSet.insert (over' #originalPath fixPath d) acc
-            -- FIXME: This fails the fdo tests since we throw everything away.
-            -- Really don't want
-
--- FIXME: These are terrible names
-runIndexMetadata' :: Backend -> FilePath -> IO (HashSet PathData, Metadata)
-runIndexMetadata' = runIndexMetadataBackendTrash ".trash"
-
-runIndexMetadataBackendTrash :: String -> Backend -> FilePath -> IO (HashSet PathData, Metadata)
-runIndexMetadataBackendTrash trashDir backend testDir = do
-  terminalRef <- newIORef ""
-  logsRef <- newIORef ""
-  charStream <- newIORef altAnswers
-
-  let funcEnv =
+  let trashDir = env ^. #trashDir
+      backend = env ^. #backend
+      funcEnv =
         MkFuncEnv
           { trashHome = MkPathI (testDir </> trashDir),
             backend,
@@ -387,8 +373,8 @@ runIndexMetadataBackendTrash trashDir backend testDir = do
   -- Need to canonicalize due to windows aliases
   tmpDir <- canonicalizePath =<< getTemporaryDirectory
 
-  idx <- view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
-  mdata <- runFuncIO SafeRm.getMetadata funcEnv
+  idx <- liftIO $ view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
+  mdata <- liftIO $ runFuncIO SafeRm.getMetadata funcEnv
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
@@ -400,46 +386,111 @@ runIndexMetadataBackendTrash trashDir backend testDir = do
               . T.replace (T.pack tmp) ""
               . T.pack
               . view #unPathI
-       in -- TODO: Replace this with over' once we change the Getter to a Lens
-          case pd of
-            PathDataDefault d -> HSet.insert (PathDataDefault $ over' #originalPath fixPath d) acc
+       in case pd of
+            PathDataCbor d -> HSet.insert (PathDataCbor $ over' #originalPath fixPath d) acc
             PathDataFdo d -> HSet.insert (PathDataFdo $ over' #originalPath fixPath d) acc
 
-mkPathData ::
-  PathType ->
-  PathI TrashEntryFileName ->
-  PathI TrashEntryOriginalPath ->
-  Default.PathData
-mkPathData pathType fileName originalPath =
-  Default.UnsafePathData
-    { pathType,
-      fileName,
-      originalPath = U.massagePathI originalPath,
-      size = afromInteger 5,
-      created = fixedTimestamp
-    }
+-- | Transforms the list of filepaths into a Set PathData i.e. for each @p@,
+--
+-- @
+-- { fileName = p,
+--   originalPath = testDir </> p
+--   created = fixedTimestamp
+-- }
+-- @
+--
+-- The type of PathData that is returned depends on the test env's current
+-- backend.
+mkPathDataSetM :: [FilePath] -> TestM (HashSet PathData)
+mkPathDataSetM paths = do
+  testDir <- getTestDir
+  mkPathDataSetTestDirM testDir paths
 
-mkPathData' ::
-  Backend ->
-  PathType ->
-  PathI TrashEntryFileName ->
-  PathI TrashEntryOriginalPath ->
-  PathData
-mkPathData' backend pathType fileName originalPath =
-  case backend of
-    BackendDefault ->
-      PathDataDefault $
-        Default.UnsafePathData
-          { pathType,
-            fileName,
-            originalPath = U.massagePathI originalPath,
-            size = afromInteger 5,
-            created = fixedTimestamp
-          }
-    BackendFdo ->
-      PathDataFdo $
-        Fdo.UnsafePathData
-          { fileName,
-            originalPath = U.massagePathI originalPath,
-            created = fixedTimestamp
-          }
+-- | Like 'mkPathDataSetM', except uses the given path as the test directory,
+-- rather than having it determined by the TestEnv.
+mkPathDataSetTestDirM :: FilePath -> [FilePath] -> TestM (HashSet PathData)
+mkPathDataSetTestDirM testDir paths = do
+  env <- ask
+  let backend = env ^. #backend
+
+  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+  let testDir' = T.unpack $ T.replace (T.pack tmpDir) "" (T.pack testDir)
+
+  pure $
+    HSet.fromList $
+      paths
+        <&> \p -> case backend of
+          BackendCbor ->
+            PathDataCbor $
+              Cbor.UnsafePathData
+                { fileName = MkPathI p,
+                  originalPath = MkPathI (testDir' </> p),
+                  created = fixedTimestamp
+                }
+          BackendFdo ->
+            PathDataFdo $
+              Fdo.UnsafePathData
+                { fileName = MkPathI p,
+                  originalPath = MkPathI (testDir' </> p),
+                  created = fixedTimestamp
+                }
+
+-- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
+-- originalPath differ i.e. for each @(p, q)@
+--
+-- @
+-- { fileName = p,
+--   originalPath = testDir </> q
+--   created = fixedTimestamp
+-- }
+-- @
+mkPathDataSetM2 :: [(FilePath, FilePath)] -> TestM (HashSet PathData)
+mkPathDataSetM2 paths = do
+  env <- ask
+  let backend = env ^. #backend
+
+  testDir <- getTestDir
+  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+  let testDir' = T.unpack $ T.replace (T.pack tmpDir) "" (T.pack testDir)
+
+  pure $
+    HSet.fromList $
+      paths
+        <&> \(fn, opath) -> case backend of
+          BackendCbor ->
+            PathDataCbor $
+              Cbor.UnsafePathData
+                { fileName = MkPathI fn,
+                  originalPath = MkPathI (testDir' </> opath),
+                  created = fixedTimestamp
+                }
+          BackendFdo ->
+            PathDataFdo $
+              Fdo.UnsafePathData
+                { fileName = MkPathI fn,
+                  originalPath = MkPathI (testDir' </> opath),
+                  created = fixedTimestamp
+                }
+
+-- | Returns the full test dir for the given environment i.e.
+--
+-- <trashRoot>/<testDir>-<backend>
+--
+-- e.g.
+--
+-- /tmp/safe-rm/functional/delete/deleteOne-fdo
+getTestDir :: TestM String
+getTestDir = do
+  env <- ask
+
+  -- See Note [OSX temp symlink]
+  testRoot <- canonicalizePath (env ^. #testRoot)
+
+  let testDir =
+        testRoot
+          </> env ^. #testDir
+            <> "-"
+            <> Backend.backendArg (env ^. #backend)
+  createDirectoryIfMissing True testDir
+
+  pure testDir

@@ -153,7 +153,7 @@ backendParser =
       mconcat
         [ OA.long "backend",
           OA.short 'b',
-          OA.metavar "(default|fdo)",
+          OA.metavar "(cbor|fdo)",
           mkHelp helpTxt
         ]
   where
@@ -161,9 +161,7 @@ backendParser =
       mconcat
         [ "Backend to use with safe-rm. This option affects how path metadata ",
           "is stored. The fdo option is compatible with the FreeDesktop.org ",
-          "trash specification file format. Defaults to 'default', which ",
-          "captures more information when a path is moved to the trash, at the ",
-          "expense of compatibility."
+          "trash specification file format. Defaults to 'cbor'."
         ]
 
 backendDestParser :: Parser Backend
@@ -172,7 +170,7 @@ backendDestParser =
     mconcat
       [ OA.long "dest",
         OA.short 'd',
-        OA.metavar "(default|fdo)",
+        OA.metavar "(cbor|fdo)",
         mkHelp helpTxt
       ]
   where

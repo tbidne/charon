@@ -24,7 +24,7 @@ module SafeRm.Data.PathData
 
     -- * Miscellaneous
     headerNames,
-    normalizeDefault,
+    normalizeCore,
     pathDataToTrashPath,
     pathDataToTrashInfoPath,
   )
@@ -35,7 +35,9 @@ import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.Backend (Backend (..))
-import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Cbor qualified as Cbor
+import SafeRm.Data.PathData.Common qualified as Common
+import SafeRm.Data.PathData.Core qualified as Core
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
@@ -48,21 +50,21 @@ import SafeRm.Prelude
 
 -- | Holds information about a file path.
 data PathData
-  = PathDataDefault Default.PathData
+  = PathDataCbor Cbor.PathData
   | PathDataFdo Fdo.PathData
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)
 
 instance Pretty PathData where
-  pretty (PathDataDefault pd) = pretty pd
+  pretty (PathDataCbor pd) = pretty pd
   pretty (PathDataFdo pd) = pretty pd
 
 instance Serialize PathData where
   type DecodeExtra PathData = (Backend, PathI TrashEntryFileName)
-  encode (PathDataDefault pd) = encode pd
+  encode (PathDataCbor pd) = encode pd
   encode (PathDataFdo pd) = encode pd
 
-  decode (BackendDefault, fileName) bs = PathDataDefault <$> decode fileName bs
+  decode (BackendCbor, fileName) bs = PathDataCbor <$> decode fileName bs
   decode (BackendFdo, fileName) bs = PathDataFdo <$> decode fileName bs
 
 instance
@@ -71,7 +73,7 @@ instance
   where
   labelOptic = to getter
     where
-      getter (PathDataDefault pd) = pd ^. #fileName
+      getter (PathDataCbor pd) = pd ^. #fileName
       getter (PathDataFdo pd) = pd ^. #fileName
   {-# INLINE labelOptic #-}
 
@@ -81,7 +83,7 @@ instance
   where
   labelOptic = to getter
     where
-      getter (PathDataDefault pd) = pd ^. #originalPath
+      getter (PathDataCbor pd) = pd ^. #originalPath
       getter (PathDataFdo pd) = pd ^. #originalPath
   {-# INLINE labelOptic #-}
 
@@ -91,7 +93,7 @@ instance
   where
   labelOptic = to getter
     where
-      getter (PathDataDefault pd) = pd ^. #created
+      getter (PathDataCbor pd) = pd ^. #created
       getter (PathDataFdo pd) = pd ^. #created
   {-# INLINE labelOptic #-}
 
@@ -111,8 +113,6 @@ toPathData ::
   ( HasCallStack,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
-    MonadTerminal m,
     MonadThrow m
   ) =>
   Backend ->
@@ -120,7 +120,7 @@ toPathData ::
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
   m (PathData, PathType)
-toPathData BackendDefault ts th = fmap (first PathDataDefault) . Default.toPathData ts th
+toPathData BackendCbor ts th = fmap (first PathDataCbor) . Cbor.toPathData ts th
 toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
@@ -174,13 +174,13 @@ deleteFileName trashHome pd = do
 
 -- | Header names.
 headerNames :: (Exts.IsList a, IsString (Exts.Item a)) => Backend -> a
-headerNames BackendDefault = Default.headerNames
+headerNames BackendCbor = Cbor.headerNames
 headerNames BackendFdo = Fdo.headerNames
 
 -- | Normalizes the wrapper 'PathData' into the specific default backend's
 -- 'Default.PathData'. This is so we can functionality that relies on this
 -- more specific type e.g. formatting.
-normalizeDefault ::
+normalizeCore ::
   ( HasCallStack,
     HasTrashHome env,
     MonadLogger m,
@@ -191,11 +191,14 @@ normalizeDefault ::
     MonadThrow m
   ) =>
   PathData ->
-  m Default.PathData
-normalizeDefault (PathDataDefault pd) = pure pd
-normalizeDefault (PathDataFdo pd) = do
+  m Core.PathData
+normalizeCore pd = do
+  let fileName = pd ^. #fileName
+      originalPath = pd ^. #originalPath
+      created = pd ^. #created
+
   trashHome <- asks getTrashHome
-  pathType <- Fdo.pathDataToType trashHome pd
+  pathType <- Common.pathDataToType trashHome pd
 
   let MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
 
@@ -210,10 +213,10 @@ normalizeDefault (PathDataFdo pd) = do
           pure n
 
   pure $
-    Default.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created,
+    Core.UnsafePathData
+      { fileName,
+        originalPath,
+        created,
         pathType,
         size
       }
@@ -245,8 +248,8 @@ pathDataToType ::
   PathI TrashHome ->
   PathData ->
   m PathType
-pathDataToType _ (PathDataDefault pd) = pure $ pd ^. #pathType
-pathDataToType trashHome (PathDataFdo pd) = Fdo.pathDataToType trashHome pd
+pathDataToType trashHome (PathDataCbor pd) = Common.pathDataToType trashHome pd
+pathDataToType trashHome (PathDataFdo pd) = Common.pathDataToType trashHome pd
 
 -- \| Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --
@@ -255,32 +258,27 @@ pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashEntryPath
 pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
 
 -- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
-pathDataToTrashInfoPath :: PathI TrashHome -> PathData -> PathI TrashEntryInfo
-pathDataToTrashInfoPath trashHome = Env.getTrashInfoPath trashHome . view #fileName
+pathDataToTrashInfoPath :: PathI TrashHome -> Backend -> PathData -> PathI TrashEntryInfo
+pathDataToTrashInfoPath trashHome backend =
+  Env.getTrashInfoPath backend trashHome
+    . view #fileName
 
 -- | Converts the given 'PathData' to the corresponding 'Backend'. If they
 -- are already in sync then this is a no-op.
-convert ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadLogger m,
-    MonadPathReader m,
-    MonadPathSize m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThrow m
-  ) =>
-  PathData ->
-  Backend ->
-  m PathData
-convert pd@(PathDataDefault _) BackendDefault = pure pd
-convert pd@(PathDataFdo _) BackendFdo = pure pd
-convert pd@(PathDataDefault _) BackendFdo =
-  pure $
-    PathDataFdo $
-      Fdo.UnsafePathData
-        { fileName = pd ^. #fileName,
-          originalPath = pd ^. #originalPath,
-          created = pd ^. #created
-        }
-convert pd@(PathDataFdo _) BackendDefault = PathDataDefault <$> normalizeDefault pd
+convert :: PathData -> Backend -> PathData
+convert pd@(PathDataCbor _) BackendCbor = pd
+convert pd@(PathDataFdo _) BackendFdo = pd
+convert pd@(PathDataCbor _) BackendFdo =
+  PathDataFdo $
+    Fdo.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }
+convert pd@(PathDataFdo _) BackendCbor =
+  PathDataCbor $
+    Cbor.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }

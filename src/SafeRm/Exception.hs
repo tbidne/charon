@@ -33,7 +33,6 @@ module SafeRm.Exception
 where
 
 import SafeRm.Data.Paths (PathI, PathIndex (..))
-import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 
 -- | Path is not found.
@@ -110,9 +109,8 @@ instance Exception TrashEntryFileNotFoundE where
         "files' despite being listed in '",
         thome ^. #unPathI,
         slash,
-        "info'. This can be fixed by manually deleting the ",
-        Env.trashInfoExtension,
-        " file or deleting everything (i.e. safe-rm empty -f)."
+        "info'. This can be fixed by manually deleting the info file or ",
+        "deleting everything (i.e. safe-rm empty -f)."
       ]
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
@@ -127,8 +125,7 @@ instance Exception TrashEntryInfoNotFoundE where
     mconcat
       [ "The file '",
         name ^. #unPathI,
-        Env.trashInfoExtension,
-        "' was not found in '",
+        ".<ext>' was not found in '",
         thome ^. #unPathI,
         slash,
         "info' despite being listed in '",
@@ -144,17 +141,18 @@ data TrashEntryInfoBadExtE
   = MkTrashEntryInfoBadExtE
       !(PathI TrashEntryFileName)
       !FilePath
+      !FilePath
   deriving stock (Show)
 
 instance Exception TrashEntryInfoBadExtE where
-  displayException (MkTrashEntryInfoBadExtE name ext) =
+  displayException (MkTrashEntryInfoBadExtE name actualExt expectedExt) =
     mconcat
       [ "The trash info file '",
         name ^. #unPathI,
         "' has an unexpected file extension: ' ",
-        ext,
+        actualExt,
         "'. Expected '",
-        Env.trashInfoExtension,
+        expectedExt,
         "'"
       ]
 

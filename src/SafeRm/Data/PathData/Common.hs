@@ -4,6 +4,7 @@ module SafeRm.Data.PathData.Common
   ( getPathInfo,
     parseTrashInfoMap,
     lookup,
+    pathDataToType,
   )
 where
 
@@ -176,3 +177,35 @@ lookup :: ByteString -> HashMap ByteString b -> Either String b
 lookup k mp = case Map.lookup k mp of
   Nothing -> Left $ "Could not find key: " <> bsToStr k
   Just v -> Right v
+
+-- | Derives the 'PathType' from the 'PathData'.
+--
+-- __IMPORTANT:__ This function is only guaranteed to work if the 'PathData'
+-- corresponds to an extant trash entry. In particular, if the 'PathData' has
+-- not been created yet, this can fail.
+pathDataToType ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k a (PathI TrashEntryFileName),
+    HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  a ->
+  m PathType
+pathDataToType trashHome pd = do
+  fileExists <- doesFileExist path
+  if fileExists
+    then pure PathTypeFile
+    else do
+      dirExists <- doesDirectoryExist path
+      if dirExists
+        then pure PathTypeDirectory
+        else do
+          -- for a better error message
+          pathExists <- doesPathExist path
+          if pathExists
+            then throwCS $ MkPathNotFileDirE path
+            else throwCS $ MkFileNotFoundE path
+  where
+    MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)

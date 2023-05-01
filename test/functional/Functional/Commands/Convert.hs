@@ -4,104 +4,131 @@ module Functional.Commands.Convert
   )
 where
 
-import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI (..))
+import SafeRm.Env qualified as Env
 
-tests :: IO FilePath -> TestTree
-tests args =
+tests :: IO TestEnv -> TestTree
+tests testEnv =
   testGroup
     "Convert Command"
-    (backendTests args <$> cartProd @Backend)
-
-cartProd :: (Bounded a, Enum a) => [(a, a)]
-cartProd = [(x, y) | x <- g, y <- g]
+    ( (`convertsBackend` testEnv') <$> [minBound .. maxBound]
+    )
   where
-    g = [minBound .. maxBound]
+    testEnv' = appendTestDir "convert" <$> testEnv
 
-backendTests :: IO FilePath -> (Backend, Backend) -> TestTree
-backendTests args backend@(src, dest) =
-  testGroup
-    (Backend.backendArg src ++ " -> " ++ Backend.backendArg dest)
-    [ convertsBackend backend args
-    ]
-
-convertsBackend :: (Backend, Backend) -> IO FilePath -> TestTree
-convertsBackend (src, dest) args = testCase "Converts backend" $ do
-  testDir <- getTestPath args testDirPath
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir src ("delete" : filesToDelete <> dirsToDelete)
-
-  -- setup
-  clearDirectory testDir
-  -- test w/ a nested dir
-  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
-  -- test w/ a file in dir
-  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
-  assertFilesExist filesToDelete
-  assertDirectoriesExist dirsToDelete
-
-  runSafeRm delArgList
-
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertFilesExist $ mkTrashInfoPaths trashDir ["dir2"]
-  assertDirectoriesExist $ mkTrashPaths trashDir ["dir2"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
-
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' src testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
-
-  -- CONVERT
-
-  let emptyArgList = withSrArgs trashDir src ["convert", "-d", Backend.backendArg dest]
-  runSafeRm emptyArgList
-
-  -- same file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertFilesExist $ mkTrashInfoPaths trashDir ["dir2"]
-  assertDirectoriesExist $ mkTrashPaths trashDir ["dir2"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
-
-  -- trash structure assertions
-  (convertIdxSet, convertMetadata) <- runIndexMetadata' dest testDir
-  assertSetEq convertExpectedIdxSet convertIdxSet
-  delExpectedMetadata @=? convertMetadata
-  where
-    testDirPath =
-      mconcat
-        [ "convertsBackend-",
-          Backend.backendArg src,
-          "-",
-          Backend.backendArg dest
-        ]
-    mkTrashPath p =
-      MkPathI $
+convertsBackend :: Backend -> IO TestEnv -> TestTree
+convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) $ do
+  testEnv <- getTestEnv
+  let testDirPath =
         mconcat
-          [ "/safe-rm/functional/convert/",
-            testDirPath,
-            p
+          [ "convertsBackend-(dest=",
+            destDesc,
+            ")"
           ]
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' src PathTypeFile "f1" (mkTrashPath "/f1"),
-          mkPathData' src PathTypeFile "f2" (mkTrashPath "/f2"),
-          mkPathData' src PathTypeFile "f3" (mkTrashPath "/f3"),
-          mkPathData' src PathTypeDirectory "dir1" (mkTrashPath "/dir1"),
-          mkPathData' src PathTypeDirectory "dir2" (mkTrashPath "/dir2")
+
+  usingReaderT testEnv $ appendTestDirM testDirPath $ do
+    testDir <- getTestDir
+
+    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+
+    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+
+    -- setup
+    clearDirectory testDir
+    -- test w/ a nested dir
+    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    -- test w/ a file in dir
+    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    assertPathsExist (filesToDelete ++ dirsToDelete)
+
+    runSafeRm delArgList
+
+    -- file assertions
+    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
+    assertPathsExist delTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "dir1",
+          "dir2"
         ]
+
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- CONVERT
+
+    convertArgList <- withSrArgsM ["convert", "-d", Backend.backendArg dest]
+    runSafeRm convertArgList
+
+    -- we changed the backend, so have to update our env here
+    local (set' #backend dest) $ do
+      -- same file assertions
+
+      -- NOTE: [Test dir and backend changes]
+      --
+      -- We change the backend here as we want to test reading the trash
+      -- files we just converted. This presents a problem: our usual helper
+      -- functions e.g. mkAllTrashPathsM, mkPathDataSetM, runIndexMetadataTestDirM
+      -- use the current backend when determining the current test directory
+      -- i.e. they use getTestDir, which appends:
+      --
+      --      <> "-"
+      --      <> Backend.backendArg (env ^. #backend)
+      --
+      -- onto the end of the path. This is normally what we want, but here
+      -- it isn't, as it will calculate a new (wrong) trash directory.
+      -- For instance testDir above may be
+      --
+      --    /tmp/safe-rm/functional/convert/convertsBackend-(dest=cbor)-cbor
+      --
+      -- but after this backend change, it will be
+      --
+      -- /tmp/safe-rm/functional/convert/convertsBackend-(dest=cbor)-fdo
+      --
+      -- This is not what we want, as the test dir has not changed! Thus we
+      -- resort to variants of the aforementioned that explicitly take in
+      -- the test dir: our previously calculated testDir.
+
+      -- Have to recreate the trashFiles as they may have a different file
+      -- extension after the convert. See Note [Test dir and backend changes].
+      newBackend <- asks (view #backend)
+      let convertTrashPaths =
+            ["f1", "f2", "f3", "dir1", "dir2"] >>= \fp ->
+              let pathFile = testDir </> ".trash" </> "files" </> fp
+                  infoFile = testDir </> ".trash" </> "info" </> fp <> Env.trashInfoExtension newBackend
+               in [pathFile, infoFile]
+      assertPathsExist convertTrashPaths
+      assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+      -- trash structure assertions
+      convertExpectedIdxSet <-
+        -- See Note [Test dir and backend changes].
+        mkPathDataSetTestDirM
+          testDir
+          [ "f1",
+            "f2",
+            "f3",
+            "dir1",
+            "dir2"
+          ]
+
+      -- See Note [Test dir and backend changes].
+      (convertIdxSet, convertMetadata) <- runIndexMetadataTestDirM testDir
+      assertSetEq convertExpectedIdxSet convertIdxSet
+      delExpectedMetadata @=? convertMetadata
+  where
+    destDesc = Backend.backendArg dest
 
     delExpectedMetadata =
       MkMetadata
@@ -110,15 +137,3 @@ convertsBackend (src, dest) args = testCase "Converts backend" $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-    convertExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' dest PathTypeFile "f1" (mkTrashPath "/f1"),
-          mkPathData' dest PathTypeFile "f2" (mkTrashPath "/f2"),
-          mkPathData' dest PathTypeFile "f3" (mkTrashPath "/f3"),
-          mkPathData' dest PathTypeDirectory "dir1" (mkTrashPath "/dir1"),
-          mkPathData' dest PathTypeDirectory "dir2" (mkTrashPath "/dir2")
-        ]
-
-getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "convert"

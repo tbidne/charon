@@ -125,10 +125,8 @@ mvOriginalToTrash ::
     MonadFileWriter m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+    MonadReader env m
   ) =>
   PathI TrashHome ->
   Timestamp ->
@@ -140,7 +138,7 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   $(logDebug) ("Deleting: " <> showt pd)
 
   let MkPathI trashPath = PathData.pathDataToTrashPath trashHome pd
-      MkPathI trashInfoPath = PathData.pathDataToTrashInfoPath trashHome pd
+      MkPathI trashInfoPath = PathData.pathDataToTrashInfoPath trashHome backend pd
 
   -- 2. Write info file
   --
@@ -182,6 +180,7 @@ permDeleteFromTrash ::
   m Bool
 permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   pathDatas <- findPathData trashHome pathName
+  backend <- asks getBackend
 
   anyFailedRef <- newIORef False
   let deleteFn pathData = do
@@ -192,7 +191,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
           -- so that force does not change the semantics i.e. can only delete
           -- "well-behaved" files, and we don't have to do a redundant file/directory
           -- check.
-            deleteFn' pathData
+            deleteFn' backend pathData
           else do
             -- NOTE:
             -- - No buffering on input so we can read a single char w/o requiring a
@@ -204,13 +203,13 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             noBuffering
 
             -- NOTE: We normalize the path data as we want to display all fields here.
-            pathData' <- PathData.normalizeDefault pathData
+            pathData' <- PathData.normalizeCore pathData
             let pdStr = (renderStrict . layoutCompact . (line <>) . pretty) pathData'
             putTextLn pdStr
             putStr "Permanently delete (y/n)? "
             c <- Ch.toLower <$> getChar
             if
-                | c == 'y' -> deleteFn' pathData *> putStrLn ""
+                | c == 'y' -> deleteFn' backend pathData *> putStrLn ""
                 | c == 'n' -> putStrLn ""
                 | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
@@ -229,8 +228,8 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
           ]
   readIORef anyFailedRef
   where
-    deleteFn' pd = do
-      let MkPathI trashInfoPath' = Env.getTrashInfoPath trashHome (pd ^. #fileName)
+    deleteFn' b pd = do
+      let MkPathI trashInfoPath' = Env.getTrashInfoPath b trashHome (pd ^. #fileName)
 
       PathData.deleteFileName trashHome pd
       $(logDebug) ("Deleted: " <> showt pd)
@@ -258,6 +257,7 @@ restoreTrashToOriginal ::
 restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
   pathDatas <- findPathData trashHome pathName
+  backend <- asks getBackend
 
   anyFailedRef <- newIORef False
   let restoreFn pd = do
@@ -273,7 +273,7 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
             MkRestoreCollisionE fileName originalPath
 
         pathType <- PathData.pathDataToType trashHome pd
-        restoreFn' pathType pd
+        restoreFn' backend pathType pd
 
   -- Need our own error handling here since if we are restoring multiple
   -- wildcard matches we want success/failure to be independent.
@@ -290,9 +290,9 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
           ]
   readIORef anyFailedRef
   where
-    restoreFn' pt pd = do
+    restoreFn' b pt pd = do
       let MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
-          MkPathI trashInfoPath' = Env.getTrashInfoPath trashHome (pd ^. #fileName)
+          MkPathI trashInfoPath' = Env.getTrashInfoPath b trashHome (pd ^. #fileName)
 
       -- 3. Attempt restore
       PathType.renameFn pt trashPath' (pd ^. #originalPath % #unPathI)
@@ -316,13 +316,16 @@ findOnePathData ::
   PathI TrashEntryFileName ->
   m PathData
 findOnePathData trashHome pathName = do
+  backend <- asks getBackend
+  let trashInfoPath@(MkPathI trashInfoPath') =
+        Env.getTrashInfoPath backend trashHome pathName
+
   pathInfoExists <- doesFileExist trashInfoPath'
   unless pathInfoExists $
     throwCS $
       MkTrashEntryNotFoundE pathName trashInfoPath
 
   contents <- readBinaryFile trashInfoPath'
-  backend <- asks getBackend
   pathData <- case decode (backend, pathName) contents of
     Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
     Right pd -> pure pd
@@ -333,8 +336,6 @@ findOnePathData trashHome pathName = do
       MkTrashEntryFileNotFoundE trashHome pathName
 
   pure pathData
-  where
-    trashInfoPath@(MkPathI trashInfoPath') = Env.getTrashInfoPath trashHome pathName
 
 findManyPathData ::
   ( HasBackend env,
@@ -422,7 +423,6 @@ convertBackend ::
     MonadFileWriter m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m
@@ -440,9 +440,9 @@ convertBackend dest = addNamespace "convertBackend" $ do
   -- NOTE: This is not in-place.
 
   let createTmp = for_ index $ \pd -> do
-        pd' <- PathData.convert pd dest
-        let encoded = encode pd'
-            filePath = newInfo </> (pd' ^. (#fileName % #unPathI)) <> Env.trashInfoExtension
+        let pd' = PathData.convert pd dest
+            encoded = encode pd'
+            filePath = newInfo </> (pd' ^. (#fileName % #unPathI)) <> Env.trashInfoExtension dest
 
         writeBinaryFile filePath encoded
 

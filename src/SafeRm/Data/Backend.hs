@@ -13,8 +13,8 @@ import TOML (DecodeTOML (..))
 
 -- | Type of backend.
 data Backend
-  = -- | For use with the default backend.
-    BackendDefault
+  = -- | For use with the cbor backend.
+    BackendCbor
   | -- | For use with the FreeDesktopOrg backend.
     BackendFdo
   deriving stock (Bounded, Enum, Eq, Show)
@@ -24,20 +24,20 @@ instance DecodeTOML Backend where
 
 -- | Parses a 'PathDataBackend'.
 parseBackend :: (MonadFail m) => Text -> m Backend
-parseBackend "default" = pure BackendDefault
+parseBackend "cbor" = pure BackendCbor
 parseBackend "fdo" = pure BackendFdo
 parseBackend other =
   fail $
     mconcat
       [ "Could not parse backend: '",
         T.unpack other,
-        "'. Expected 'default' or 'fdo'."
+        "'. Expected 'cbor' or 'fdo'."
       ]
 
 backendTestDesc :: Backend -> String
-backendTestDesc BackendDefault = "(backend := default)"
+backendTestDesc BackendCbor = "(backend := cbor)"
 backendTestDesc BackendFdo = "(backend := fdo)"
 
 backendArg :: Backend -> String
-backendArg BackendDefault = "default"
+backendArg BackendCbor = "cbor"
 backendArg BackendFdo = "fdo"

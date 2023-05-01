@@ -16,7 +16,6 @@ import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import Numeric.Literal.Integer (FromInteger (afromInteger))
 import PathSize.Data.PathData qualified as PathSize
 import PathSize.Data.PathSizeResult (PathSizeResult (..))
 import PathSize.Data.PathTree (PathTree ((:^|)))
@@ -26,10 +25,9 @@ import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (..))
@@ -216,9 +214,9 @@ testFormatTabularAutoApprox b = testGoldenFormat b desc fileName mkIdx formatTab
       pure $
         MkIndex $
           case b of
-            BackendDefault ->
-              [ PathData.PathDataDefault $ Default.UnsafePathData PathTypeFile "foo" (MkPathI $ L.replicate 80 'f') (afromInteger 70) ts,
-                PathData.PathDataDefault $ Default.UnsafePathData PathTypeFile (MkPathI $ L.replicate 50 'b') "bar" (afromInteger 10) ts
+            BackendCbor ->
+              [ PathData.PathDataCbor $ Cbor.UnsafePathData "foo" (MkPathI $ L.replicate 80 'f') ts,
+                PathData.PathDataCbor $ Cbor.UnsafePathData (MkPathI $ L.replicate 50 'b') "bar" ts
               ]
             BackendFdo ->
               [ PathData.PathDataFdo $ Fdo.UnsafePathData "foo" (MkPathI $ L.replicate 80 'f') ts,
@@ -347,14 +345,14 @@ mkIndex b = do
   pure $
     MkIndex $
       case b of
-        BackendDefault ->
-          PathData.PathDataDefault
-            <$> [ Default.UnsafePathData PathTypeFile "foo" "/path/foo" (afromInteger 70) ts,
-                  Default.UnsafePathData PathTypeFile "bazzz" "/path/bar/bazzz" (afromInteger 5_000) ts,
-                  Default.UnsafePathData PathTypeDirectory "dir" "/some/really/really/long/dir" (afromInteger 20_230) ts,
-                  Default.UnsafePathData PathTypeFile "f" "/foo/path/f" (afromInteger 13_070_000) ts,
-                  Default.UnsafePathData PathTypeDirectory "d" "/d" largeFile ts,
-                  Default.UnsafePathData PathTypeFile "z" "/z" (afromInteger 200_120) ts
+        BackendCbor ->
+          PathData.PathDataCbor
+            <$> [ Cbor.UnsafePathData "foo" "/path/foo" ts,
+                  Cbor.UnsafePathData "bazzz" "/path/bar/bazzz" ts,
+                  Cbor.UnsafePathData "dir" "/some/really/really/long/dir" ts,
+                  Cbor.UnsafePathData "f" "/foo/path/f" ts,
+                  Cbor.UnsafePathData "d" "/d" ts,
+                  Cbor.UnsafePathData "z" "/z" ts
                 ]
         BackendFdo ->
           PathData.PathDataFdo
@@ -367,7 +365,6 @@ mkIndex b = do
                 ]
   where
     -- 5,000 Y
-    largeFile = afromInteger 5_000_000_000_000_000_000_000_000_000
     ts' :: (MonadFail f) => f Timestamp
     ts' = fromText "2020-05-31T12:00:00"
 

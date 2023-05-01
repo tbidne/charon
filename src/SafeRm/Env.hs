@@ -12,7 +12,7 @@ module SafeRm.Env
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
-import SafeRm.Data.Backend (Backend)
+import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (..),
@@ -40,11 +40,11 @@ getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
 getTrashPath trashHome name = trashHome <//> "files" <//> name
 
-getTrashInfoPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
-getTrashInfoPath trashHome name =
+getTrashInfoPath :: Backend -> PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
+getTrashInfoPath backend trashHome name =
   trashHome
     <//> "info"
-    <//> liftPathI' (<> trashInfoExtension) name
+    <//> liftPathI' (<> trashInfoExtension backend) name
 
 -- | Retrieves the trash path dir.
 getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
@@ -55,8 +55,9 @@ getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
 getTrashInfoDir trashHome = trashHome <//> "info"
 
 -- | Returns the extension for the trash info files.
-trashInfoExtension :: (IsString a) => a
-trashInfoExtension = ".trashinfo"
+trashInfoExtension :: (IsString a) => Backend -> a
+trashInfoExtension BackendCbor = ".cbor"
+trashInfoExtension BackendFdo = ".trashinfo"
 
 -- | Class for retrieving the backend.
 class HasBackend a where

@@ -32,51 +32,53 @@ import SafeRm.Prelude
 import Test.Tasty.HUnit (assertFailure)
 
 -- | Creates empty files at the specified paths.
-createFiles :: (Foldable f, Functor f, HasCallStack) => f FilePath -> IO ()
+createFiles :: (Foldable f, Functor f, HasCallStack, MonadIO m) => f FilePath -> m ()
 createFiles = createFilesMap fmap
 
 -- | Creates empty files at the specified paths.
 createFilesMap ::
-  (Foldable f, HasCallStack) =>
+  (Foldable f, HasCallStack, MonadIO m) =>
   ( (FilePath -> (FilePath, ByteString)) ->
     f FilePath ->
     f (FilePath, ByteString)
   ) ->
   f FilePath ->
-  IO ()
+  m ()
 createFilesMap mapper = createFileContents . mapper (,"")
 
 -- | Creates files at the specified paths.
 createFileContents ::
-  (Foldable f, HasCallStack) =>
+  (Foldable f, HasCallStack, MonadIO m) =>
   f (FilePath, ByteString) ->
-  IO ()
-createFileContents paths = for_ paths $
-  \(p, c) ->
-    writeBinaryFile (massagePath p) c
-      `catchAnyCS` \ex -> do
-        putStrLn $
-          mconcat
-            [ "[Test.Utils.createFileContents] Exception for file '",
-              p,
-              "' and contents '",
-              bsToStr c,
-              "': ",
-              displayException ex
-            ]
-        throwCS ex
+  m ()
+createFileContents paths = liftIO $
+  for_ paths $
+    \(p, c) ->
+      writeBinaryFile (massagePath p) c
+        `catchAnyCS` \ex -> do
+          putStrLn $
+            mconcat
+              [ "[Test.Utils.createFileContents] Exception for file '",
+                p,
+                "' and contents '",
+                bsToStr c,
+                "': ",
+                displayException ex
+              ]
+          throwCS ex
 
 -- | Creates empty files at the specified paths.
-createDirectories :: (Foldable f, HasCallStack) => f FilePath -> IO ()
-createDirectories paths =
-  for_ paths $ \p -> createDirectoryIfMissing False (massagePath p)
+createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f FilePath -> m ()
+createDirectories paths = liftIO $
+  for_ paths $
+    \p -> createDirectoryIfMissing True (massagePath p)
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
-clearDirectory :: (HasCallStack) => FilePath -> IO ()
-clearDirectory path = do
+clearDirectory :: (HasCallStack, MonadIO m) => FilePath -> m ()
+clearDirectory path = liftIO $ do
   exists <- doesDirectoryExist path'
   when exists $ removePathForcibly path'
-  createDirectoryIfMissing False path'
+  createDirectoryIfMissing True path'
   where
     path' = massagePath path
 
@@ -106,34 +108,36 @@ mapTextMatch f (Outfixes s ins e) = Outfixes (f s) (f <$> ins) (f e)
 -- This function automatically replaces backslashes with forward slashes
 -- for posix/windows path compatibility. Take care that any tests do not
 -- rely on having actual backslash chars (as opposed to "path separators").
-assertMatches :: [TextMatch] -> [Text] -> IO ()
+assertMatches :: (MonadIO m) => [TextMatch] -> [Text] -> m ()
 assertMatches expectations results = case matches expectations results of
   Nothing -> pure ()
   Just err ->
-    assertFailure $
-      mconcat
-        [ err,
-          "\n\n*** Full expectations ***\n\n",
-          unlineMatches expectations,
-          "\n*** Full results ***\n\n",
-          T.unpack (T.unlines results)
-        ]
+    liftIO $
+      assertFailure $
+        mconcat
+          [ err,
+            "\n\n*** Full expectations ***\n\n",
+            unlineMatches expectations,
+            "\n*** Full results ***\n\n",
+            T.unpack (T.unlines results)
+          ]
 
 -- | Tests text for matches. Otherwise triggers an HUnit failure.
 --
 -- This function automatically replaces backslashes with forward slashes
 -- for posix/windows path compatibility. Take care that any tests do not
 -- rely on having actual backslash chars (as opposed to "path separators").
-assertMatch :: TextMatch -> Text -> IO ()
+assertMatch :: (MonadIO m) => TextMatch -> Text -> m ()
 assertMatch expectation result =
-  unless (isMatchHelper expectation result) $
-    assertFailure $
-      mconcat
-        [ "\n\n*** Expectation ***\n\n",
-          showTextMatch expectation,
-          "\n*** Result ***\n\n",
-          T.unpack result
-        ]
+  liftIO $
+    unless (isMatchHelper expectation result) $
+      assertFailure $
+        mconcat
+          [ "\n\n*** Expectation ***\n\n",
+            showTextMatch expectation,
+            "\n*** Result ***\n\n",
+            T.unpack result
+          ]
 
 -- | If the texts do not match, returns an error string. Otherwise
 -- returns 'Nothing'.

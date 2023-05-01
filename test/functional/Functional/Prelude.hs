@@ -5,48 +5,51 @@
 module Functional.Prelude
   ( module X,
 
+    -- * Lifted HUnit
+    (@=?),
+
     -- * Running SafeRm
+
+    -- ** Test Environment
+    TestM,
+    TestEnv (..),
 
     -- ** Runners
     FuncEnv.runSafeRm,
     FuncEnv.runSafeRmException,
-    FuncEnv.runIndexMetadata,
-    FuncEnv.runIndexMetadata',
-    FuncEnv.runIndexMetadataBackendTrash,
+    FuncEnv.runIndexMetadataM,
+    FuncEnv.runIndexMetadataTestDirM,
 
-    -- *** Data capture
+    -- ** Data capture
     FuncEnv.captureSafeRm,
     FuncEnv.captureSafeRmLogs,
     FuncEnv.captureSafeRmExceptionLogs,
 
     -- * Assertions
-    assertFilesExist,
-    assertFilesDoNotExist,
-    assertDirectoriesExist,
-    assertDirectoriesDoNotExist,
+    assertPathsExist,
+    assertPathsDoNotExist,
     assertSetEq,
 
     -- * Misc
-    withSrArgs,
-    withBackendDir,
-    withBackendBaseDir,
-    createTestDir,
-    FuncEnv.mkPathData,
-    FuncEnv.mkPathData',
-    mkAllTrashPaths,
-    mkTrashPaths,
-    mkTrashInfoPaths,
+    withSrArgsM,
+    FuncEnv.mkPathDataSetM,
+    FuncEnv.mkPathDataSetM2,
+    FuncEnv.mkPathDataSetTestDirM,
+    appendTestDir,
+    appendTestDirM,
+    FuncEnv.getTestDir,
+    mkAllTrashPathsM,
   )
 where
 
+import Control.Monad.Reader as X (ReaderT (..))
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
+import Functional.Prelude.FuncEnv (TestEnv (..), TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
-import GHC.Exts (IsList (Item, fromList, toList))
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
-import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.Paths (PathI (..))
+import SafeRm.Env qualified as Env
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
@@ -54,82 +57,78 @@ import Test.Tasty.HUnit as X
     assertEqual,
     assertFailure,
     testCase,
-    (@=?),
   )
+import Test.Tasty.HUnit qualified as HUnit
 import Test.Utils as X
 import Text.Pretty.Simple qualified as Pretty
 
--- | Asserts that files exist.
-assertFilesExist :: [FilePath] -> IO ()
-assertFilesExist paths =
-  for_ paths $ \p -> do
-    exists <- doesFileExist p
-    assertBool ("Expected file to exist: " <> p) exists
+-- | Lifted (@=?).
+(@=?) :: (Eq a, HasCallStack, MonadIO m, Show a) => a -> a -> m ()
+x @=? y = liftIO $ x HUnit.@=? y
 
--- | Asserts that files do not exist.
-assertFilesDoNotExist :: [FilePath] -> IO ()
-assertFilesDoNotExist paths =
-  for_ paths $ \p -> do
-    exists <- doesFileExist p
-    assertBool ("Expected file not to exist: " <> p) (not exists)
+infix 1 @=?
 
--- | Asserts that directories exist.
-assertDirectoriesExist :: [FilePath] -> IO ()
-assertDirectoriesExist paths =
+-- | Assert paths exist.
+assertPathsExist :: (MonadIO m) => [FilePath] -> m ()
+assertPathsExist paths = liftIO $
   for_ paths $ \p -> do
-    exists <- doesDirectoryExist p
-    assertBool ("Expected directory to exist: " <> p) exists
+    exists <- doesPathExist p
+    assertBool ("Expected path to exist: " <> p) exists
 
--- | Asserts that directories do not exist.
-assertDirectoriesDoNotExist :: [FilePath] -> IO ()
-assertDirectoriesDoNotExist paths =
+-- | Asserts that paths do not exist.
+assertPathsDoNotExist :: (MonadIO m) => [FilePath] -> m ()
+assertPathsDoNotExist paths = liftIO $
   for_ paths $ \p -> do
-    exists <- doesDirectoryExist p
-    assertBool ("Expected directory not to exist: " <> p) (not exists)
+    exists <- doesPathExist p
+    assertBool ("Expected path not to exist: " <> p) (not exists)
 
-mkAllTrashPaths ::
-  ( Functor f,
-    IsList (f FilePath),
-    Item (f FilePath) ~ FilePath
-  ) =>
-  FilePath ->
-  f FilePath ->
-  f FilePath
-mkAllTrashPaths trashHome paths =
-  fromList (toList trashPaths ++ toList trashInfoPaths)
+-- | Transform each filepath @p@ to its files/ and info/ path, taking in
+-- the env's trash root, test dir, trash dir, and backend.
+mkAllTrashPathsM :: [FilePath] -> TestM [FilePath]
+mkAllTrashPathsM paths = liftA2 (++) trashPaths trashInfoPaths
   where
-    trashPaths = mkTrashPaths trashHome paths
-    trashInfoPaths = mkTrashInfoPaths trashHome paths
+    trashPaths = mkTrashPathsM paths
+    trashInfoPaths = mkTrashInfoPathsM paths
 
-mkTrashInfoPaths ::
-  ( Functor f
-  ) =>
-  FilePath ->
-  f FilePath ->
-  f FilePath
-mkTrashInfoPaths trashHome = fmap mkTrashInfoPath
-  where
-    mkTrashInfoPath p = trashHome </> "info" </> p <> ".trashinfo"
+-- | Transform each path @p@ to
+-- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/info\/p.<ext>@.
+mkTrashInfoPathsM :: [FilePath] -> TestM [FilePath]
+mkTrashInfoPathsM files = do
+  env <- ask
+  testDir <- FuncEnv.getTestDir
+  let ext = Env.trashInfoExtension (env ^. #backend)
+      mkTrashInfoPath p =
+        testDir
+          </> env ^. #trashDir
+          </> "info"
+          </> p
+            <> ext
+  pure $ fmap mkTrashInfoPath files
 
-mkTrashPaths ::
-  ( Functor f
-  ) =>
-  FilePath ->
-  f FilePath ->
-  f FilePath
-mkTrashPaths trashHome = fmap mkTrashPath
-  where
-    mkTrashPath p = trashHome </> "files" </> p
+-- | Transform each path @p@ to
+-- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/files\/p@.
+mkTrashPathsM :: [FilePath] -> TestM [FilePath]
+mkTrashPathsM files = do
+  env <- ask
+  testDir <- FuncEnv.getTestDir
+  let mkTrashPath p =
+        testDir
+          </> env ^. #trashDir
+          </> "files"
+          </> p
+  pure $ fmap mkTrashPath files
 
-assertSetEq :: (Hashable a, Show a) => HashSet a -> HashSet a -> IO ()
+assertSetEq :: (Hashable a, MonadIO m, Show a) => HashSet a -> HashSet a -> m ()
 assertSetEq x y = do
   unless (HSet.null xdiff) $
-    assertFailure $
-      TL.unpack (prettySet "Expected" "Results" xdiff y)
+    liftIO $
+      assertFailure $
+        TL.unpack (prettySet "Expected" "Results" xdiff y)
 
   unless (HSet.null ydiff) $
-    assertFailure $
-      TL.unpack (prettySet "Results" "Expected" ydiff x)
+    liftIO $
+      assertFailure $
+        TL.unpack (prettySet "Results" "Expected" ydiff x)
   where
     xdiff = HSet.difference x y
     ydiff = HSet.difference y x
@@ -149,40 +148,27 @@ assertSetEq x y = do
 
     p' = HSet.foldl' (\acc z -> Pretty.pShow z <> "\n" <> acc) ""
 
--- | @createTestDir tmpDirIO moduleDir testDir@, returns
--- @tmpDir/moduleDir/testDir@, creating the moduleDir if it does not exist.
+-- | Prepends the given arguments with the trash directory and backend,
+-- according to the environment i.e.
 --
--- E.g.
---
--- @createTestDir args "delete" "someDeleteTest" @
-createTestDir :: IO FilePath -> FilePath -> FilePath -> IO FilePath
-createTestDir args modDir testDir = do
-  -- See Note [OSX temp symlink]
-  root <- canonicalizePath =<< args
-  let rootMod = root </> modDir
-  createDirectoryIfMissing False rootMod
-  pure $ rootMod </> testDir
+-- @trashDir == <testRoot>\/<testDir>-<backend>\/<trashDir>@
+withSrArgsM :: [String] -> TestM [String]
+withSrArgsM as = do
+  env <- ask
 
-withSrArgs :: String -> Backend -> [String] -> [String]
-withSrArgs trashDir backend as =
-  ["-t", trashDir, "-b", Backend.backendArg backend] ++ as
+  testDir <- FuncEnv.getTestDir
+  let backend = env ^. #backend
+      trashDir = testDir </> env ^. #trashDir
+  pure $ ["-t", trashDir, "-b", Backend.backendArg backend] ++ as
 
--- e.g. withBackendDir BackendFdo "deletesOne" -> "deletesOne-fdo"
-withBackendDir :: Backend -> String -> String
-withBackendDir backend s = s ++ "-" ++ Backend.backendArg backend
+-- | Appends the given string to the testDir and creates the current full
+-- testDir according to 'FuncEnv.getTestDir'.
+appendTestDirM :: String -> TestM a -> TestM a
+appendTestDirM d m = local (appendTestDir d) $ do
+  testDir <- FuncEnv.getTestDir
+  liftIO . clearDirectory $ testDir
+  m
 
--- e.g. withBackendBaseDir BackendFdo "delete/deletesOne" "f1"
---   -> "/safe-rm/functional/delete/deletesOne-fdo/f1"
-withBackendBaseDir :: Backend -> String -> String -> PathI i
-withBackendBaseDir backend dir = MkPathI . withBackendBaseDir' backend dir
-
-withBackendBaseDir' :: Backend -> String -> String -> String
-withBackendBaseDir' backend dir f =
-  mconcat
-    [ "/safe-rm/functional/",
-      dir,
-      "-",
-      Backend.backendArg backend,
-      "/",
-      f
-    ]
+-- | Appends to the testDir.
+appendTestDir :: String -> TestEnv -> TestEnv
+appendTestDir d = over' #testDir (</> d)

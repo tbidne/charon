@@ -8,8 +8,8 @@ module Integration.Prelude
   ( module X,
 
     -- * Assertions
-    assertFilesExist,
-    assertFilesDoNotExist,
+    assertPathsExist,
+    assertPathsDoNotExist,
 
     -- * Running SafeRm
     captureSafeRmIntExceptionPure,
@@ -52,16 +52,16 @@ import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils as X
 
 -- | Asserts that files exist.
-assertFilesExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
-assertFilesExist paths =
+assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
+assertPathsExist paths =
   for_ paths $ \p -> do
     exists <- liftIO $ doesFileExist p
     annotate $ "Expected file to exist: " <> p
     assert exists
 
 -- | Asserts that files do not exist.
-assertFilesDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
-assertFilesDoNotExist paths =
+assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
+assertPathsDoNotExist paths =
   for_ paths $ \p -> do
     exists <- liftIO $ doesFileExist p
     annotate $ "Expected file not to exist: " <> p
@@ -203,7 +203,7 @@ mkIntPureEnv toml terminalRef deletedPathsRef = do
   trashHome <- getTrashHome'
   pure $
     MkIntPureEnv
-      { backend = fromMaybe BackendDefault (toml ^. #backend),
+      { backend = fromMaybe BackendCbor (toml ^. #backend),
         trashHome = trashHome,
         terminalRef,
         deletedPathsRef

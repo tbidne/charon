@@ -2,8 +2,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Provides 'PathData' for use with the default backend.
-module SafeRm.Data.PathData.Default
+-- | Core 'PathData' for actions that require more fields like size (e.g.
+-- formatting).
+module SafeRm.Data.PathData.Core
   ( -- * PathData
     PathData (..),
     toPathData,

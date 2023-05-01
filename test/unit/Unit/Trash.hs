@@ -33,7 +33,7 @@ tests :: TestTree
 tests =
   testGroup
     "Trash"
-    [ backendTests BackendDefault,
+    [ backendTests BackendCbor,
       backendTests BackendFdo
     ]
 

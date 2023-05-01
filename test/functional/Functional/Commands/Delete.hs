@@ -6,63 +6,54 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend (..))
-import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathType (PathType (..))
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
 -- paths. Evidently the tests did not catch this, presumably because
 -- relative paths are sufficient here.
 
-tests :: IO FilePath -> TestTree
-tests args =
+tests :: IO TestEnv -> TestTree
+tests testEnv =
   testGroup
     "Delete Command"
-    (backendTests args <$> [minBound .. maxBound])
-
-backendTests :: IO FilePath -> Backend -> TestTree
-backendTests args backend =
-  testGroup
-    (Backend.backendTestDesc backend)
-    [ deletesOne backend args,
-      deletesMany backend args,
-      deleteUnknownError backend args,
-      deleteDuplicateFile backend args,
-      deletesSome backend args
+    [ deletesOne testEnv',
+      deletesMany testEnv',
+      deleteUnknownError testEnv',
+      deleteDuplicateFile testEnv',
+      deletesSome testEnv'
     ]
-
-deletesOne :: Backend -> IO FilePath -> TestTree
-deletesOne backend args = testCase "Deletes a single file" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesOne")
-  let trashDir = testDir </> ".trash"
-      f1 = testDir </> "f1"
-      argList = withSrArgs trashDir backend ["delete", f1]
-
-  -- setup
-  clearDirectory testDir
-  createFiles [f1]
-  assertFilesExist [f1]
-
-  runSafeRm argList
-
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1"]
-  assertFilesDoNotExist [f1]
-  assertDirectoriesExist [trashDir]
-
-  -- trash structure assertions
-  (idxSet, metadata) <- runIndexMetadata' backend testDir
-
-  assertSetEq expectedIdxSet idxSet
-  expectedMetadata @=? metadata
   where
-    expectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesOne" "f1")
-        ]
+    testEnv' = appendTestDir "delete" <$> testEnv
 
+deletesOne :: IO TestEnv -> TestTree
+deletesOne getTestEnv = testCase "Deletes one" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> testEnv ^. #trashDir
+        f1 = testDir </> "f1"
+
+    expectedIdxSet <- mkPathDataSetM ["f1"]
+
+    -- setup
+    createFiles [f1]
+    assertPathsExist [f1]
+    argList <- withSrArgsM ["delete", f1]
+
+    liftIO $ runSafeRm argList
+
+    -- file assertions
+    trashPaths <- mkAllTrashPathsM ["f1"]
+    assertPathsExist (trashDir : trashPaths)
+    assertPathsDoNotExist [f1]
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
     expectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -71,46 +62,45 @@ deletesOne backend args = testCase "Deletes a single file" $ do
           size = afromInteger 0
         }
 
-deletesMany :: Backend -> IO FilePath -> TestTree
-deletesMany backend args = testCase "Deletes many paths" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesMany")
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      argList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
+deletesMany :: IO TestEnv -> TestTree
+deletesMany getTestEnv = testCase "Deletes many paths" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
+    testDir <- getTestDir
+    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
 
-  -- setup
-  clearDirectory testDir
-  -- test w/ a nested dir
-  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
-  -- test w/ a file in dir
-  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
-  assertFilesExist filesToDelete
-  assertDirectoriesExist dirsToDelete
+    argList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
 
-  runSafeRm argList
+    -- setup
+    -- test w/ a nested dir
+    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    -- test w/ a file in dir
+    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    assertPathsExist (filesToDelete ++ dirsToDelete)
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["dir1", "dir2", "dir2/dir3"]
+    liftIO $ runSafeRm argList
 
-  -- trash structure assertions
-  (idxSet, metadata) <- runIndexMetadata' backend testDir
+    -- file assertions
+    fileTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
+    assertPathsExist fileTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-  assertSetEq expectedIdxSet idxSet
-  expectedMetadata @=? metadata
-  where
-    expectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesMany" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "delete/deletesMany" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "delete/deletesMany" "f3"),
-          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "delete/deletesMany" "dir1"),
-          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "delete/deletesMany" "dir2")
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    expectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "dir1",
+          "dir2"
         ]
 
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
     expectedMetadata =
       MkMetadata
         { numEntries = 5,
@@ -119,65 +109,70 @@ deletesMany backend args = testCase "Deletes many paths" $ do
           size = afromInteger 0
         }
 
-deleteUnknownError :: Backend -> IO FilePath -> TestTree
-deleteUnknownError backend args = testCase "Deletes unknown prints error" $ do
-  testDir <- getTestPath args (withBackendDir backend "deleteUnknownError")
-  let trashDir = testDir </> ".trash"
-      file = testDir </> "bad file"
-      argList = withSrArgs trashDir backend ["delete", file]
+deleteUnknownError :: IO TestEnv -> TestTree
+deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
+    testDir <- getTestDir
+    let file = testDir </> "bad file"
 
-  -- setup
-  clearDirectory testDir
+    argList <- withSrArgsM ["delete", file]
 
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode argList
+    -- setup
+    clearDirectory testDir
 
-  "ExitFailure 1" @=? ex
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode argList
 
-  -- trash structure assertions
-  (idxSet, metadata) <- runIndexMetadata' backend testDir
+    liftIO $ "ExitFailure 1" @=? ex
 
-  assertSetEq expectedIdxSet idxSet
-  expectedMetadata @=? metadata
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
   where
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = mempty
 
-deleteDuplicateFile :: Backend -> IO FilePath -> TestTree
-deleteDuplicateFile backend args = testCase "Deletes duplicate file" $ do
-  testDir <- getTestPath args (withBackendDir backend "deleteDuplicateFile")
-  let trashDir = testDir </> ".trash"
-      file = testDir </> "f1"
-      argList = withSrArgs trashDir backend ["delete", file]
+deleteDuplicateFile :: IO TestEnv -> TestTree
+deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteDuplicateFile" $ do
+    testDir <- getTestDir
+    let trashDir = testDir </> testEnv ^. #trashDir
+        file = testDir </> "f1"
 
-  -- setup
-  clearDirectory testDir
+    argList <- withSrArgsM ["delete", file]
 
-  -- create and delete twice
-  createFiles [file]
-  assertFilesExist [file]
-  runSafeRm argList
+    -- setup
+    clearDirectory testDir
 
-  createFiles [file]
-  assertFilesExist [file]
-  runSafeRm argList
+    -- create and delete twice
+    createFiles [file]
+    assertPathsExist [file]
+    runSafeRm argList
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1 (1)", "f1"]
-  assertFilesDoNotExist [file]
-  assertDirectoriesExist [trashDir]
+    createFiles [file]
+    assertPathsExist [file]
+    runSafeRm argList
 
-  -- trash structure assertions
-  (idxSet, metadata) <- runIndexMetadata' backend testDir
+    -- file assertions
+    fileTrashPaths <- mkAllTrashPathsM ["f1 (1)", "f1"]
+    assertPathsExist (trashDir : fileTrashPaths)
+    assertPathsDoNotExist [file]
 
-  assertSetEq expectedIdxSet idxSet
-  expectedMetadata @=? metadata
-  where
-    expectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deleteDuplicateFile" "f1"),
-          mkPathData' backend PathTypeFile "f1 (1)" (withBackendBaseDir backend "delete/deleteDuplicateFile" "f1")
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    expectedIdxSet <-
+      mkPathDataSetM2
+        [ ("f1", "f1"),
+          ("f1 (1)", "f1")
         ]
 
+    assertSetEq expectedIdxSet idxSet
+    expectedMetadata @=? metadata
+  where
     expectedMetadata =
       MkMetadata
         { numEntries = 2,
@@ -186,40 +181,43 @@ deleteDuplicateFile backend args = testCase "Deletes duplicate file" $ do
           size = afromInteger 0
         }
 
-deletesSome :: Backend -> IO FilePath -> TestTree
-deletesSome backend args = testCase "Deletes some files with errors" $ do
-  testDir <- getTestPath args (withBackendDir backend "deletesSome")
-  let trashDir = testDir </> ".trash"
-      realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
-      filesTryDelete = (testDir </>) <$> ["f1", "f2", "f3", "f4", "f5"]
-      argList = withSrArgs trashDir backend ("delete" : filesTryDelete)
+deletesSome :: IO TestEnv -> TestTree
+deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
+    testDir <- getTestDir
+    let realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
+        filesTryDelete = (testDir </>) <$> ["f1", "f2", "f3", "f4", "f5"]
 
-  -- setup
-  clearDirectory testDir
-  createFiles realFiles
-  assertFilesExist realFiles
+    argList <- withSrArgsM ("delete" : filesTryDelete)
 
-  (ex, _) <- captureSafeRmExceptionLogs @ExitCode argList
+    -- setup
+    createFiles realFiles
+    assertPathsExist realFiles
 
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f5"]
-  assertFilesDoNotExist $ mkTrashPaths trashDir ["f3", "f4"]
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode argList
 
-  "ExitFailure 1" @=? ex
+    -- file assertions
+    trashPaths1 <- mkAllTrashPathsM ["f1", "f2", "f5"]
+    assertPathsExist trashPaths1
+    trashPaths2 <- mkAllTrashPathsM ["f3", "f4"]
+    assertPathsDoNotExist trashPaths2
 
-  -- trash structure assertions
-  (idxSet, metadata) <- runIndexMetadata' backend testDir
+    liftIO $ "ExitFailure 1" @=? ex
 
-  assertSetEq expectedIdxSet idxSet
-  expectedMetadata @=? metadata
-  where
-    expectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "delete/deletesSome" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "delete/deletesSome" "f2"),
-          mkPathData' backend PathTypeFile "f5" (withBackendBaseDir backend "delete/deletesSome" "f5")
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    expectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f5"
         ]
 
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
     expectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -227,6 +225,3 @@ deletesSome backend args = testCase "Deletes some files with errors" $ do
           logSize = afromInteger 0,
           size = afromInteger 0
         }
-
-getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "delete"

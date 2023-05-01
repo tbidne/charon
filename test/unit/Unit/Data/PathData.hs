@@ -12,9 +12,8 @@ import Hedgehog.Range qualified as Range
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData (..))
-import SafeRm.Data.PathData.Default qualified as Default
+import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI (..))
 import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Data.Timestamp (Timestamp (..))
@@ -59,13 +58,11 @@ serializeRoundtripSpecs backend params = testCase desc $ do
       Right decoded -> pd @=? decoded
   where
     desc = "decode . encode ~ id (specs) " ++ Backend.backendTestDesc backend
-    backendToMk BackendDefault name opath ts =
-      PathDataDefault $
-        Default.UnsafePathData
-          { pathType = PathTypeFile,
-            fileName = MkPathI name,
+    backendToMk BackendCbor name opath ts =
+      PathDataCbor $
+        Cbor.UnsafePathData
+          { fileName = MkPathI name,
             originalPath = MkPathI opath,
-            size = MkBytes 0,
             created = ts
           }
     backendToMk BackendFdo name opath ts =
@@ -106,23 +103,19 @@ serializeRoundtripProp =
 genPathData :: Gen (PathData, Backend)
 genPathData =
   Gen.choice
-    [ (\x -> (PathDataDefault x, BackendDefault)) <$> genDefaultPathData,
+    [ (\x -> (PathDataCbor x, BackendCbor)) <$> genCborPathData,
       (\x -> (PathDataFdo x, BackendFdo)) <$> genFdoPathData
     ]
 
-genDefaultPathData :: Gen Default.PathData
-genDefaultPathData =
-  Default.UnsafePathData
-    <$> genPathType
-    <*> genFileName
+genCborPathData :: Gen Cbor.PathData
+genCborPathData =
+  Cbor.UnsafePathData
+    <$> genFileName
     <*> genOriginalPath
-    <*> genSize
     <*> genTimestamp
   where
     genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) genPathChar
     genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) genPathChar
-    genPathType = Gen.element [PathTypeDirectory, PathTypeFile]
-    genSize = MkBytes <$> Gen.integral (Range.exponential 0 1_000_000_000_000)
 
 genFdoPathData :: Gen Fdo.PathData
 genFdoPathData =

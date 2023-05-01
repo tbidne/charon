@@ -199,7 +199,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
   Just "not-tmp" @=? cfg ^. #trashHome
-  Just BackendDefault @=? cfg ^. #backend
+  Just BackendCbor @=? cfg ^. #backend
   Just (Just LevelError) @=? cfg ^. #logLevel
   Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^. #logSizeMode
   where
@@ -209,7 +209,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
         "-t",
         "not-tmp",
         "-b",
-        "default",
+        "cbor",
         "--log-level",
         "error",
         "--log-size-mode",

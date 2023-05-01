@@ -21,4 +21,4 @@ import Test.Utils as X (clearDirectory)
 
 -- | Csv header.
 header :: ByteString
-header = encodeUtf8 . T.pack . L.intercalate "," $ headerNames BackendDefault
+header = encodeUtf8 . T.pack . L.intercalate "," $ headerNames BackendCbor

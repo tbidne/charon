@@ -64,7 +64,6 @@ delete ::
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
@@ -293,7 +292,6 @@ convert ::
     MonadFileWriter m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m

@@ -63,6 +63,6 @@ mkEnv trashHome = do
   pure $
     MkEnv
       { trashHome = trashHome,
-        backend = BackendDefault,
+        backend = BackendCbor,
         logEnv = MkLogEnv Nothing ""
       }

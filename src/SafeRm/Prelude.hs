@@ -15,6 +15,9 @@ module SafeRm.Prelude
     packed,
     unpacked,
     packedbs,
+
+    -- * Misc
+    usingReaderT,
   )
 where
 
@@ -282,3 +285,6 @@ unpacked = iso T.unpack T.pack
 packedbs :: Getter Text ByteString
 packedbs = to encodeUtf8
 {-# INLINE packedbs #-}
+
+usingReaderT :: b -> ReaderT b m a -> m a
+usingReaderT = flip runReaderT

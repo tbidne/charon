@@ -146,7 +146,7 @@ withEnv mergedConfig onEnv = do
      in onEnv $
           MkEnv
             { trashHome,
-              backend = fromMaybe BackendDefault (mergedConfig ^. #backend),
+              backend = fromMaybe BackendCbor (mergedConfig ^. #backend),
               logEnv =
                 MkLogEnv
                   { logFile,

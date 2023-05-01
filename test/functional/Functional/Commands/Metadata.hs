@@ -4,85 +4,74 @@ module Functional.Commands.Metadata
   )
 where
 
-import Data.HashSet qualified as HashSet
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend (..))
-import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata (..))
-import SafeRm.Data.PathType (PathType (..))
 
-tests :: IO FilePath -> TestTree
-tests args =
+tests :: IO TestEnv -> TestTree
+tests testEnv =
   testGroup
     "Metadata Command"
-    (backendTests args <$> [minBound .. maxBound])
-
-backendTests :: IO FilePath -> Backend -> TestTree
-backendTests args backend =
-  testGroup
-    (Backend.backendTestDesc backend)
-    [ metadata backend args,
-      empty backend args
+    [ metadata testEnv',
+      empty testEnv'
     ]
-
-metadata :: Backend -> IO FilePath -> TestTree
-metadata backend args = testCase "Prints metadata" $ do
-  testDir <- getTestPath args (withBackendDir backend "metadata")
-  let trashDir = testDir </> ".trash"
-      filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-      dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-      delArgList = withSrArgs trashDir backend ("delete" : filesToDelete <> dirsToDelete)
-
-  -- setup
-  clearDirectory testDir
-  -- test w/ a nested dir
-  createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
-  -- test w/ a file in dir
-  createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
-  assertFilesExist filesToDelete
-  assertDirectoriesExist dirsToDelete
-
-  runSafeRm delArgList
-
-  -- file assertions
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
-
-  -- trash structure assertions
-  (delIdxSet, delMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet delIdxSet
-  delExpectedMetadata @=? delMetadata
-
-  -- METADATA
-
-  let metaArgList = withSrArgs trashDir backend ["metadata"]
-  (metadataResult, _) <- captureSafeRmLogs metaArgList
-
-  -- assert nothing changed
-  assertFilesExist $ mkAllTrashPaths trashDir ["f1", "f2", "f3"]
-  assertDirectoriesExist $ mkTrashPaths trashDir ["dir2/dir3"]
-  assertFilesDoNotExist filesToDelete
-  assertDirectoriesDoNotExist dirsToDelete
-  assertDirectoriesExist $ mkTrashPaths trashDir ["", "dir1", "dir2", "dir2/dir3"]
-
-  assertMatches expectedMetadata metadataResult
-
-  -- trash structure assertions
-  (metadataIdxSet, metadatMetadata) <- runIndexMetadata' backend testDir
-  assertSetEq delExpectedIdxSet metadataIdxSet
-  delExpectedMetadata @=? metadatMetadata
   where
-    delExpectedIdxSet =
-      HashSet.fromList
-        [ mkPathData' backend PathTypeFile "f1" (withBackendBaseDir backend "metadata/metadata" "f1"),
-          mkPathData' backend PathTypeFile "f2" (withBackendBaseDir backend "metadata/metadata" "f2"),
-          mkPathData' backend PathTypeFile "f3" (withBackendBaseDir backend "metadata/metadata" "f3"),
-          mkPathData' backend PathTypeDirectory "dir1" (withBackendBaseDir backend "metadata/metadata" "dir1"),
-          mkPathData' backend PathTypeDirectory "dir2" (withBackendBaseDir backend "metadata/metadata" "dir2")
+    testEnv' = appendTestDir "metadata" <$> testEnv
+
+metadata :: IO TestEnv -> TestTree
+metadata getTestEnv = testCase "Prints metadata" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "metadata" $ do
+    testDir <- getTestDir
+
+    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+
+    -- setup
+    clearDirectory testDir
+    -- test w/ a nested dir
+    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    -- test w/ a file in dir
+    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    assertPathsExist (filesToDelete ++ dirsToDelete)
+
+    runSafeRm delArgList
+
+    -- file assertions
+    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
+    assertPathsExist delTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ "f1",
+          "f2",
+          "f3",
+          "dir1",
+          "dir2"
         ]
 
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- METADATA
+
+    metaArgList <- withSrArgsM ["metadata"]
+    (metadataResult, _) <- captureSafeRmLogs metaArgList
+
+    -- assert nothing changed
+    assertPathsExist delTrashPaths
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    assertMatches expectedMetadata metadataResult
+
+    -- trash structure assertions
+    (metadataIdxSet, metadatMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet metadataIdxSet
+    delExpectedMetadata @=? metadatMetadata
+  where
     delExpectedMetadata =
       MkMetadata
         { numEntries = 5,
@@ -100,18 +89,21 @@ metadata backend args = testCase "Prints metadata" $ do
               ""
             ]
 
-empty :: Backend -> IO FilePath -> TestTree
-empty backend args = testCase "Prints empty metadata" $ do
-  testDir <- getTestPath args (withBackendDir backend "empty")
-  let trashDir = testDir </> ".trash"
+empty :: IO TestEnv -> TestTree
+empty getTestEnv = testCase "Prints empty metadata" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
+    testDir <- getTestDir
 
-  createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
-  createFiles [trashDir </> "log"]
+    let trashDir = testDir </> ".trash"
 
-  let metaArgList = withSrArgs trashDir backend ["metadata"]
-  (result, _) <- captureSafeRmLogs metaArgList
+    createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
+    createFiles [trashDir </> "log"]
 
-  assertMatches expectedTerminal result
+    metaArgList <- withSrArgsM ["metadata"]
+    (result, _) <- captureSafeRmLogs metaArgList
+
+    assertMatches expectedTerminal result
   where
     expectedTerminal =
       Exact
@@ -121,6 +113,3 @@ empty backend args = testCase "Prints empty metadata" $ do
               "Size:         0.00B",
               ""
             ]
-
-getTestPath :: IO FilePath -> FilePath -> IO String
-getTestPath mroot = createTestDir mroot "metadata"
