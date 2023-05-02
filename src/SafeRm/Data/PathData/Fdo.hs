@@ -84,8 +84,6 @@ instance Serialize PathData where
 
   encode :: PathData -> ByteString
   encode pd =
-    -- FIXME: This needs to perform percent encoding:
-    -- http://www.faqs.org/rfcs/rfc2396.html
     C8.unlines
       [ "[Trash Info]",
         "Path=" <> U.percentEncode (encode (pd ^. #originalPath)),
