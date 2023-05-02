@@ -25,7 +25,6 @@ where
 import Data.Char qualified as Ch
 import Data.Text qualified as T
 import SafeRm.Data.PathData.Core (PathData)
-import SafeRm.Data.PathData.Core qualified as Default
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import SafeRm.Prelude
@@ -98,20 +97,7 @@ mapOrd :: (Ord b) => (a -> b) -> a -> a -> Ordering
 mapOrd f x y = f x `compare` f y
 
 formatMultiLine :: PathData -> Text
-formatMultiLine pd = T.intercalate "\n" strs
-  where
-    strs = zipWith (flip ($)) Default.headerNames labelFn
-    labelFn =
-      [ \x -> x <> ":     " <> typeToText (pd ^. #pathType),
-        \x -> x <> ":     " <> T.pack (pd ^. #fileName % #unPathI),
-        \x -> x <> ": " <> T.pack (pd ^. #originalPath % #unPathI),
-        \x -> x <> ":     " <> U.normalizedFormat (pd ^. #size),
-        \x -> x <> ":  " <> Timestamp.toTextSpace (pd ^. #created)
-      ]
-
-typeToText :: PathType -> Text
-typeToText PathTypeFile = "File"
-typeToText PathTypeDirectory = "Directory"
+formatMultiLine = U.renderPretty
 
 formatTabularHeader :: Natural -> Natural -> Text
 formatTabularHeader nameLen origLen =
@@ -120,9 +106,9 @@ formatTabularHeader nameLen origLen =
       sep,
       fixLen formatTypeLen "Type",
       sep,
-      fixLen formatSizeLen "Size",
-      sep,
       fixLen origLen "Original",
+      sep,
+      fixLen formatSizeLen "Size",
       sep,
       -- No need to fix the length here as Created is the last column
       "Created",
@@ -163,9 +149,9 @@ formatTabularRow nameLen origLen pd =
       sep,
       paddedType (pd ^. #pathType),
       sep,
-      fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
-      sep,
       fixLen' origLen (pd ^. #originalPath % #unPathI),
+      sep,
+      fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
       sep,
       Timestamp.toTextSpace (pd ^. #created)
     ]

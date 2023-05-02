@@ -7,7 +7,6 @@
 module SafeRm.Data.PathData.Core
   ( -- * PathData
     PathData (..),
-    --toPathData,
     headerNames,
   )
 where
@@ -40,12 +39,12 @@ data PathData = UnsafePathData
 makeFieldLabelsNoPrefix ''PathData
 
 instance Pretty PathData where
-  pretty pd = vsep strs <+> line
+  pretty pd = vsep strs
     where
       strs = zipWith (flip ($)) headerNames labelFn
       labelFn =
-        [ \x -> x <> ":     " <+> pretty (pd ^. #pathType),
-          \x -> x <> ":     " <+> pretty (pd ^. #fileName % #unPathI),
+        [ \x -> x <> ":     " <+> pretty (pd ^. #fileName % #unPathI),
+          \x -> x <> ":     " <+> pretty (pd ^. #pathType),
           \x -> x <> ": " <+> pretty (pd ^. #originalPath % #unPathI),
           \x -> x <> ":     " <+> pretty (U.normalizedFormat $ pd ^. #size),
           \x -> x <> ":  " <+> pretty (pd ^. #created)
@@ -53,4 +52,4 @@ instance Pretty PathData where
 
 -- | Header names.
 headerNames :: (IsList a, IsString (Exts.Item a)) => a
-headerNames = ["Type", "Name", "Original", "Size", "Created"]
+headerNames = ["Name", "Type", "Original", "Size", "Created"]

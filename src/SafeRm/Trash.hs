@@ -204,13 +204,13 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
 
             -- NOTE: We normalize the path data as we want to display all fields here.
             pathData' <- PathData.normalizeCore pathData
-            let pdStr = (renderStrict . layoutCompact . (line <>) . pretty) pathData'
+            let pdStr = Utils.renderPretty pathData'
             putTextLn pdStr
-            putStr "Permanently delete (y/n)? "
+            putStr "\nPermanently delete (y/n)? "
             c <- Ch.toLower <$> getChar
             if
-                | c == 'y' -> deleteFn' backend pathData *> putStrLn ""
-                | c == 'n' -> putStrLn ""
+                | c == 'y' -> deleteFn' backend pathData *> putStrLn "\n"
+                | c == 'n' -> putStrLn "\n"
                 | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
   -- Need our own error handling here since if we are deleting multiple

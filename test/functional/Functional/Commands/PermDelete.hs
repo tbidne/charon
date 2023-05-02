@@ -715,9 +715,8 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
     assertMatches expectedTerminal terminalResult
   where
     expectedTerminal =
-      [ Exact "",
+      [ Exact "Name:      f1",
         Exact "Type:      File",
-        Exact "Name:      f1",
         Outfixes
           "Original:"
           ["/safe-rm/functional/perm-delete/displaysAllData"]
@@ -727,7 +726,8 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         Exact "",
         -- Leaving off the "(y/n)?" suffix as the windows tests replaces all
         -- backslashes with forward slashes.
-        Prefix "Permanently delete"
+        Prefix "Permanently delete",
+        Exact ""
       ]
 
     delExpectedMetadata =
