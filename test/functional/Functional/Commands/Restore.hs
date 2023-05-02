@@ -10,6 +10,7 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -185,17 +186,24 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "bad file"]
-    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     assertPathsExist delTrashFiles
 
-    "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet restoreIdxSet
     delExpectedMetadata @=? restoreMetadata
   where
+    expectedEx =
+      Outfixes
+        "No entry for 'bad file'; did not find '"
+        [ "/safe-rm/functional/restore/restoreUnknownError-",
+          "/.trash/info/bad file."
+        ]
+        ""
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -234,17 +242,22 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1"]
-    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
 
     assertPathsExist delTrashFiles
 
-    "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet restoreIdxSet
     delExpectedMetadata @=? restoreMetadata
   where
+    expectedEx =
+      Outfixes
+        "Cannot restore the trash file 'f1' as one exists at the original location: "
+        ["/safe-rm/functional/restore/restoreCollisionError-"]
+        "/f1"
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -285,19 +298,26 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
-    (ex, _) <- captureSafeRmExceptionLogs @ExitCode restoreArgList
+    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
     assertPathsDoNotExist ((testDir </>) <$> ["f3", "f4"] ++ delTrashFiles)
     assertPathsExist ((testDir </>) <$> ["f1", "f2", "f5"])
 
-    "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
+    expectedEx =
+      Outfixes
+        "No entry for 'f4'; did not find '"
+        [ "/safe-rm/functional/restore/restoresSome-",
+          "/.trash/info/f4."
+        ]
+        ""
     delExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -436,7 +456,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     createFiles [testDir </> "fooBadbar"]
 
     restoreArgList <- withSrArgsM ["restore", "foo**bar", "*g*"]
-    runSafeRmException @ExitCode restoreArgList
+    runSafeRmException @RestoreCollisionE restoreArgList
 
     -- file assertions
     noRestoreTrashFiles <- mkAllTrashPathsM ["fooBadbar"]

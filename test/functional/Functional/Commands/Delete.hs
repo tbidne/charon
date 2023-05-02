@@ -7,6 +7,7 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Exception (FileNotFoundE)
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
@@ -121,9 +122,9 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode argList
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
 
-    liftIO $ "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -131,6 +132,12 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
   where
+    expectedEx =
+      Outfixes
+        "File not found: '"
+        ["/safe-rm/functional/delete/deleteUnknownError-"]
+        "/bad file'"
+
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = mempty
 
@@ -195,7 +202,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode argList
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
 
     -- file assertions
     trashPaths1 <- mkAllTrashPathsM ["f1", "f2", "f5"]
@@ -203,7 +210,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     trashPaths2 <- mkAllTrashPathsM ["f3", "f4"]
     assertPathsDoNotExist trashPaths2
 
-    liftIO $ "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -218,6 +225,11 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
   where
+    expectedEx =
+      Outfixes
+        "File not found: '"
+        ["/safe-rm/functional/delete/deletesSome-"]
+        "/f4'"
     expectedMetadata =
       MkMetadata
         { numEntries = 3,

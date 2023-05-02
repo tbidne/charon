@@ -10,6 +10,7 @@ import Data.Text qualified as T
 import Integration.Prelude
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Exception (RootE)
 
 tests :: TestTree
 tests =
@@ -36,9 +37,9 @@ testRoot b =
 
 deletesRootError :: Backend -> String -> TestTree
 deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
-  (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @ExitCode argList
+  (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @RootE argList
 
-  "ExitFailure 1" @=? ex
+  "Attempted to delete root! This is not allowed." @=? ex
   errMsg @=? terminal
   "" @=? deletedPaths
   where

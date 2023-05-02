@@ -226,6 +226,7 @@ test-suite functional
   build-depends:
     , algebra-simple
     , base
+    , effects-exceptions
     , effects-fs
     , effects-logger-ns
     , effects-terminal

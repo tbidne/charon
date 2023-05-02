@@ -3,6 +3,7 @@ module SafeRm.Utils
   ( -- * FAM combinators
     whenLeft,
     allM1,
+    throwIfEx,
 
     -- * Monoid
     fromMaybeMonoid,
@@ -33,6 +34,7 @@ module SafeRm.Utils
     -- * Misc
     renderPretty,
     setRefIfTrue,
+    setRefIfJust,
   )
 where
 
@@ -189,6 +191,23 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
 setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
 setRefIfTrue _ False = pure ()
 setRefIfTrue ref True = writeIORef ref True
+
+-- | Sets the ioref if the maybe is non-empty.
+setRefIfJust :: (MonadIORef m) => IORef (Maybe a) -> Maybe a -> m ()
+setRefIfJust _ Nothing = pure ()
+setRefIfJust ref x@(Just _) = writeIORef ref x
+
+-- | Throws the exception if it exists in the ref.
+throwIfEx ::
+  ( MonadIORef m,
+    MonadThrow m
+  ) =>
+  IORef (Maybe SomeException) ->
+  m ()
+throwIfEx ref =
+  readIORef ref >>= \case
+    Nothing -> pure ()
+    Just ex -> throwCS ex
 
 -- | Breaks a bytestring on the first '='. The '=' is removed from the second
 -- element.

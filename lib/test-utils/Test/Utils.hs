@@ -135,7 +135,7 @@ assertMatch expectation result =
         mconcat
           [ "\n\n*** Expectation ***\n\n",
             showTextMatch expectation,
-            "\n*** Result ***\n\n",
+            "\n\n*** Result ***\n\n",
             T.unpack result
           ]
 

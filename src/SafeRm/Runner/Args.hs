@@ -268,7 +268,7 @@ commandParser =
     mergeTxt = mkCmdDesc "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     delParser = Delete <$> pathsParser
-    permDelParser = DeletePerm <$> forceParser <*> pathsParser
+    permDelParser = PermDelete <$> forceParser <*> pathsParser
     emptyParser = Empty <$> forceParser
     restoreParser = Restore <$> pathsParser
     listParser =

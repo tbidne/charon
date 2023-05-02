@@ -8,8 +8,10 @@ module Functional.Commands.PermDelete
 where
 
 import Data.HashSet qualified as HashSet
+import Effects.Exception (StringException)
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Exception (TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -195,18 +197,26 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- PERMANENT DELETE
     permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @ExitCode permDelArgList
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
 
     -- assert exception
     assertPathsExist delTrashFiles
 
-    liftIO $ "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet permDelIdxSet
     liftIO $ delExpectedMetadata @=? permDelMetadata
   where
+    expectedEx =
+      Outfixes
+        "No entry for 'bad file'; did not find '"
+        [ "/safe-rm/functional/perm-delete/deleteUnknownError-",
+          "/.trash/info/bad file."
+        ]
+        ""
+
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -255,19 +265,24 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelArgList <-
       withSrArgsM
         ("perm-delete" : filesTryPermDelete ++ ["-f"])
-    (ex, _) <- captureSafeRmExceptionLogs @ExitCode permDelArgList
+    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
 
     -- file assertions
     permDelTrashFiles <- mkAllTrashPathsM filesTryPermDelete
     assertPathsDoNotExist permDelTrashFiles
 
-    liftIO $ "ExitFailure 1" @=? ex
+    assertMatch expectedEx ex
 
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
+    expectedEx =
+      Outfixes
+        "No entry for 'f4'; did not find '"
+        ["/safe-rm/functional/perm-delete/deletesSome-", "/.trash/info/f4."]
+        "'"
     delExpectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -471,7 +486,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
     -- delete will fail. This is how this test works.
     permDelArgList <- withSrArgsM ["perm-delete", "foo**bar", "*g*", "-f"]
-    runSafeRmException @ExitCode permDelArgList
+    runSafeRmException @StringException permDelArgList
 
     -- file assertions
     -- 1. Everything still gone from original location

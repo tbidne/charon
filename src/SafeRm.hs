@@ -5,7 +5,7 @@
 module SafeRm
   ( -- * Delete
     delete,
-    deletePermanently,
+    permDelete,
     emptyTrash,
 
     -- * Restore
@@ -48,8 +48,8 @@ import SafeRm.Trash qualified as Trash
 import SafeRm.Utils qualified as U
 import System.IO qualified as IO
 
--- TODO: Might be a good idea to throw the first exception encountered,
--- rather than ExitCode.
+-- NOTE: For functions that can encounter multiple exceptions, the first
+-- one is rethrown.
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
@@ -77,7 +77,7 @@ delete paths = addNamespace "delete" $ do
 
   Trash.createTrash
 
-  anyFailedRef <- newIORef False
+  someExRef <- newIORef Nothing
   currTime <- MkTimestamp <$> getSystemTime
 
   -- move paths to trash
@@ -92,13 +92,12 @@ delete paths = addNamespace "delete" $ do
               "': ",
               displayNoCS ex
             ]
-        writeIORef anyFailedRef True
+        writeIORef someExRef (Just ex)
 
-  anyFailed <- readIORef anyFailedRef
-  when anyFailed exitFailure
+  U.throwIfEx someExRef
 
 -- | Permanently deletes the paths from the trash.
-deletePermanently ::
+permDelete ::
   forall env m.
   ( HasBackend env,
     HasCallStack,
@@ -117,16 +116,16 @@ deletePermanently ::
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
-deletePermanently force paths = addNamespace "deletePermanently" $ do
+permDelete force paths = addNamespace "permDelete" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
 
-  anyFailedRef <- newIORef False
+  someExRef <- newIORef Nothing
 
   -- permanently delete paths
   addNamespace "deleting" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.permDeleteFromTrash force trashHome p >>= U.setRefIfTrue anyFailedRef)
+    (Trash.permDeleteFromTrash force trashHome p >>= U.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
@@ -136,10 +135,10 @@ deletePermanently force paths = addNamespace "deletePermanently" $ do
               "': ",
               displayNoCS ex
             ]
-        writeIORef anyFailedRef True
+        -- in case Trash.permDeleteFromTrash throws an exception
+        writeIORef someExRef (Just ex)
 
-  anyFailed <- readIORef anyFailedRef
-  when anyFailed exitFailure
+  U.throwIfEx someExRef
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -213,12 +212,12 @@ restore paths = addNamespace "restore" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
 
-  anyFailedRef <- newIORef False
+  someExRef <- newIORef Nothing
 
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.restoreTrashToOriginal trashHome p >>= U.setRefIfTrue anyFailedRef)
+    (Trash.restoreTrashToOriginal trashHome p >>= U.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn $
@@ -228,10 +227,9 @@ restore paths = addNamespace "restore" $ do
               "': ",
               displayNoCS ex
             ]
-        writeIORef anyFailedRef True
+        writeIORef someExRef (Just ex)
 
-  anyFailed <- readIORef anyFailedRef
-  when anyFailed exitFailure
+  U.throwIfEx someExRef
 
 -- | Empties the trash.
 emptyTrash ::

@@ -108,7 +108,7 @@ runCmd cmd =
   where
     runCmd' = \case
       Delete paths -> SafeRm.delete paths
-      DeletePerm force paths -> SafeRm.deletePermanently force paths
+      PermDelete force paths -> SafeRm.permDelete force paths
       Empty force -> SafeRm.emptyTrash force
       Restore paths -> SafeRm.restore paths
       List listCmd ->

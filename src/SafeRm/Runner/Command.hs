@@ -10,7 +10,7 @@ module SafeRm.Runner.Command
 
     -- * Optics
     _Delete,
-    _DeletePerm,
+    _PermDelete,
     _Empty,
     _Restore,
     _List,
@@ -29,7 +29,7 @@ instance AdvancePhase (Command Phase1) where
   type NextPhase (Command Phase1) = Command Phase2
 
   advancePhase (Delete paths) = Delete paths
-  advancePhase (DeletePerm force paths) = DeletePerm force paths
+  advancePhase (PermDelete force paths) = PermDelete force paths
   advancePhase (Empty b) = Empty b
   advancePhase (Restore paths) = Restore paths
   advancePhase Metadata = Metadata
@@ -43,7 +43,7 @@ data Command s
   = -- | Deletes a path.
     Delete !(UniqueSeq (PathI TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
-    DeletePerm
+    PermDelete
       !Bool
       !(UniqueSeq (PathI TrashEntryFileName))
   | -- | Empties the trash.

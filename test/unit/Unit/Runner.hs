@@ -12,10 +12,10 @@ import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
   ( _Delete,
-    _DeletePerm,
     _Empty,
     _List,
     _Metadata,
+    _PermDelete,
     _Restore,
   )
 import SafeRm.Runner.Command.List (ListCmd (..))
@@ -61,7 +61,7 @@ permDelete = testCase "Parses perm delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (False, ["foo", "bar"]) @=? cmd ^? _DeletePerm
+  Just (False, ["foo", "bar"]) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
 
@@ -70,7 +70,7 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (True, ["foo", "bar"]) @=? cmd ^? _DeletePerm
+  Just (True, ["foo", "bar"]) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
 

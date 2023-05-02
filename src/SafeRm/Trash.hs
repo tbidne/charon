@@ -21,7 +21,6 @@ import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.Exception (onException)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (..),
@@ -151,9 +150,11 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   let moveFn = PathType.renameFn pathType (pd ^. #originalPath % #unPathI) trashPath
 
   -- 5. If move failed, roll back info file
-  -- TODO: Should probably log the exception here as we lose it if removeFile
-  -- throws an exception
-  moveFn `onException` removeFile trashInfoPath
+  moveFn `catchAny` \ex -> do
+    $(logError) ("Error moving file to trash: " <> displayExceptiont ex)
+    removeFile trashInfoPath
+    throwM ex
+
   $(logDebug) ("Moved to trash: " <> showt pd)
 
 -- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
@@ -177,12 +178,12 @@ permDeleteFromTrash ::
   Bool ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m Bool
+  m (Maybe SomeException)
 permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   pathDatas <- findPathData trashHome pathName
   backend <- asks getBackend
 
-  anyFailedRef <- newIORef False
+  anyExRef <- newIORef Nothing
   let deleteFn pathData = do
         $(logDebug) ("Deleting: " <> T.pack (pathData ^. (#fileName % #unPathI)))
         if force
@@ -217,7 +218,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
   -- wildcard matches we want success/failure to be independent.
   for_ pathDatas $ \pathData ->
     deleteFn pathData `catchAnyCS` \ex -> do
-      writeIORef anyFailedRef True
+      writeIORef anyExRef (Just ex)
       $(logWarn) (T.pack $ displayNoCS ex)
       putStrLn $
         mconcat
@@ -226,7 +227,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             "': ",
             displayNoCS ex
           ]
-  readIORef anyFailedRef
+  readIORef anyExRef
   where
     deleteFn' b pd = do
       let MkPathI trashInfoPath' = Env.getTrashInfoPath b trashHome (pd ^. #fileName)
@@ -253,13 +254,13 @@ restoreTrashToOriginal ::
   ) =>
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m Bool
+  m (Maybe SomeException)
 restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
   pathDatas <- findPathData trashHome pathName
   backend <- asks getBackend
 
-  anyFailedRef <- newIORef False
+  someExRef <- newIORef Nothing
   let restoreFn pd = do
         let originalPath = pd ^. #originalPath
             fileName = pd ^. #fileName
@@ -279,7 +280,7 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
   -- wildcard matches we want success/failure to be independent.
   for_ pathDatas $ \pd ->
     restoreFn pd `catchAnyCS` \ex -> do
-      writeIORef anyFailedRef True
+      writeIORef someExRef (Just ex)
       $(logWarn) (T.pack $ displayNoCS ex)
       putStrLn $
         mconcat
@@ -288,7 +289,7 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
             "': ",
             displayNoCS ex
           ]
-  readIORef anyFailedRef
+  readIORef someExRef
   where
     restoreFn' b pt pd = do
       let MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)

@@ -34,6 +34,7 @@ import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
 import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
+import SafeRm.Exception (FileNotFoundE, TrashEntryNotFoundE)
 import SafeRm.Runner.Env
   ( Env (..),
     LogEnv (MkLogEnv),
@@ -154,8 +155,8 @@ testsBackend testDir b =
     (Backend.backendTestDesc b)
     [ delete b testDir,
       deleteSome b testDir,
-      deletePermanently b testDir,
-      deleteSomePermanently b testDir,
+      permDelete b testDir,
+      permDeleteSome b testDir,
       restore b testDir,
       restoreSome b testDir,
       emptyTrash b testDir,
@@ -225,7 +226,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTest `USeq.union` toTestDir β
 
       caughtEx <-
-        tryCS @_ @ExitCode $
+        tryCS @_ @FileNotFoundE $
           usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
 
       ex <-
@@ -255,9 +256,9 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       -- index should exactly match α
       αTest ^. #set === indexOrigPaths
 
-deletePermanently :: Backend -> IO FilePath -> TestTree
-deletePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
-  testPropertyNamed desc "deletePermanently" $ do
+permDelete :: Backend -> IO FilePath -> TestTree
+permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
+  testPropertyNamed desc "permDelete" $ do
     property $ do
       testDir <- (</> "x1") <$> getTestPath mtestDir
       α <- forAll (genFileNameSet b)
@@ -285,7 +286,7 @@ deletePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- permanently delete files
       let toPermDelete = USeq.map MkPathI α
-      usingIntIO env $ SafeRm.deletePermanently True toPermDelete
+      usingIntIO env $ SafeRm.permDelete True toPermDelete
 
       -- get index
       index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
@@ -296,9 +297,9 @@ deletePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "All trash entries are permanently deleted"
 
-deleteSomePermanently :: Backend -> IO FilePath -> TestTree
-deleteSomePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
-  testPropertyNamed desc "deleteSomePermanently" $ do
+permDeleteSome :: Backend -> IO FilePath -> TestTree
+permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
+  testPropertyNamed desc "permDeleteSome" $ do
     property $ do
       testDir <- (</> "x2") <$> getTestPath mtestDir
       (α, β, γ) <- forAll (gen3FileNameSets b)
@@ -336,8 +337,8 @@ deleteSomePermanently backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        tryCS @_ @ExitCode $
-          usingIntIONoCatch env (SafeRm.deletePermanently True toPermDelete)
+        tryCS @_ @TrashEntryNotFoundE $
+          usingIntIONoCatch env (SafeRm.permDelete True toPermDelete)
 
       ex <-
         either
@@ -442,7 +443,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        tryCS @_ @ExitCode $
+        tryCS @_ @TrashEntryNotFoundE $
           usingIntIONoCatch env (SafeRm.restore toRestore)
 
       ex <-
