@@ -104,13 +104,13 @@ formatTabularHeader nameLen origLen =
   mconcat
     [ fixLen nameLen "Name",
       sep,
-      fixLen formatTypeLen "Type",
-      sep,
       fixLen origLen "Original",
+      sep,
+      fixLen formatTypeLen "Type",
       sep,
       fixLen formatSizeLen "Size",
       sep,
-      -- No need to fix the length here as Created is the last column
+      -- No need to pad the length here as this is the last column
       "Created",
       "\n",
       titleLen
@@ -147,9 +147,9 @@ formatTabularRow nameLen origLen pd =
   mconcat
     [ fixLen' nameLen (pd ^. #fileName % #unPathI),
       sep,
-      paddedType (pd ^. #pathType),
-      sep,
       fixLen' origLen (pd ^. #originalPath % #unPathI),
+      sep,
+      paddedType (pd ^. #pathType),
       sep,
       fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
       sep,

@@ -7,14 +7,11 @@ module SafeRm.Data.PathData.Fdo
   ( -- * PathData
     PathData (..),
     toPathData,
-    headerNames,
   )
 where
 
 import Data.ByteString.Char8 qualified as C8
 import Data.HashSet qualified as Set
-import GHC.Exts (IsList)
-import GHC.Exts qualified as Exts
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType (..))
 import SafeRm.Data.Paths (PathI, PathIndex (..))
@@ -37,20 +34,6 @@ data PathData = UnsafePathData
   deriving anyclass (Hashable, NFData)
 
 makeFieldLabelsNoPrefix ''PathData
-
-instance Pretty PathData where
-  pretty pd = vsep strs <+> line
-    where
-      strs = zipWith (flip ($)) headerNames labelFn
-      labelFn =
-        [ \x -> x <> ":     " <+> pretty (pd ^. #fileName % #unPathI),
-          \x -> x <> ": " <+> pretty (pd ^. #originalPath % #unPathI),
-          \x -> x <> ":  " <+> pretty (pd ^. #created)
-        ]
-
--- | Header names.
-headerNames :: (IsList a, IsString (Exts.Item a)) => a
-headerNames = ["Name", "Original", "Created"]
 
 -- | For a given filepath, attempts to capture the following data:
 --

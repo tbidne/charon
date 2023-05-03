@@ -731,11 +731,11 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
   where
     expectedTerminal =
       [ Exact "Name:      f1",
-        Exact "Type:      File",
         Outfixes
           "Original:"
           ["/safe-rm/functional/perm-delete/displaysAllData"]
           "/f1",
+        Exact "Type:      File",
         Exact "Size:      5.00B",
         Exact "Created:   2020-05-31 12:00:00",
         Exact "",

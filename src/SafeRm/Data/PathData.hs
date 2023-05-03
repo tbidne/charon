@@ -23,7 +23,6 @@ module SafeRm.Data.PathData
     convert,
 
     -- * Miscellaneous
-    headerNames,
     normalizeCore,
     pathDataToTrashPath,
     pathDataToTrashInfoPath,
@@ -33,7 +32,6 @@ where
 import Data.Bifunctor (first)
 import Data.Text qualified as T
 import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
-import GHC.Exts qualified as Exts
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Common qualified as Common
@@ -54,10 +52,6 @@ data PathData
   | PathDataFdo Fdo.PathData
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)
-
-instance Pretty PathData where
-  pretty (PathDataCbor pd) = pretty pd
-  pretty (PathDataFdo pd) = pretty pd
 
 instance Serialize PathData where
   type DecodeExtra PathData = (Backend, PathI TrashEntryFileName)
@@ -171,11 +165,6 @@ deleteFileName trashHome pd = do
   PathType.deleteFn pathType trashPath'
   where
     MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
-
--- | Header names.
-headerNames :: (Exts.IsList a, IsString (Exts.Item a)) => Backend -> a
-headerNames BackendCbor = Cbor.headerNames
-headerNames BackendFdo = Fdo.headerNames
 
 -- | Normalizes the wrapper 'PathData' into the specific default backend's
 -- 'Default.PathData'. This is so we can functionality that relies on this
