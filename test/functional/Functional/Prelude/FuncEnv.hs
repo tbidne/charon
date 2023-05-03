@@ -71,10 +71,9 @@ type TestM a = ReaderT TestEnv IO a
 
 data TestEnv = MkTestEnv
   { backend :: Backend,
-    -- The relative test dir for a particular test e.g. delete/deletesMany
+    -- The test dir relative to testRoot e.g. delete/deletesMany
     testDir :: FilePath,
-    -- The relative trash dir for a particular test e.g.
-    -- delete/deletesMany/.trash
+    -- The trash dir relative to testDir e.g. .trash
     trashDir :: FilePath,
     -- Root.
     testRoot :: FilePath
