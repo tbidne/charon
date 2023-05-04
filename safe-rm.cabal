@@ -262,7 +262,6 @@ benchmark benchmarks
     , safe-rm
     , tasty-bench  ^>=0.3
     , test-utils
-    , text
 
   ghc-options:      -Wno-unused-packages
   hs-source-dirs:   benchmarks
