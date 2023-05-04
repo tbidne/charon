@@ -7,6 +7,7 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata qualified as Metadata
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -87,7 +88,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
         }
 
     emptyExpectedIdxSet = HashSet.empty
-    emptyExpectedMetadata = mempty
+    emptyExpectedMetadata = Metadata.empty
 
 emptyTrashTwice :: IO TestEnv -> TestTree
 emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
@@ -224,7 +225,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
         }
 
     emptyExpectedIdxSet = HashSet.empty
-    emptyExpectedMetadata = mempty
+    emptyExpectedMetadata = Metadata.empty
 
 missingPathsForcesDelete :: IO TestEnv -> TestTree
 missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad directory (no paths/)" $ do
@@ -291,4 +292,4 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
         }
 
     emptyExpectedIdxSet = HashSet.empty
-    emptyExpectedMetadata = mempty
+    emptyExpectedMetadata = Metadata.empty

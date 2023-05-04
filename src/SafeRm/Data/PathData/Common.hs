@@ -110,7 +110,7 @@ mkUniqPath fp = do
       | counter == maxBound =
           throwCS $ MkRenameDuplicateE fp
       | otherwise = do
-          let fp' = fp <> MkPathI (mkSuffix counter)
+          let fp' = Paths.liftPathI' (<> (mkSuffix counter)) fp
           b <- Paths.applyPathI doesPathExist fp'
           if b
             then go (counter + 1)

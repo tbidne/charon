@@ -150,7 +150,7 @@ withEnv mergedConfig onEnv = do
               logEnv =
                 MkLogEnv
                   { logFile,
-                    logNamespace = "runner"
+                    logNamespace = "main"
                   }
             }
 

@@ -10,6 +10,7 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
@@ -81,7 +82,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
         }
 
     restoreExpectedIdxSet = HashSet.empty
-    restoreExpectedMetadata = mempty
+    restoreExpectedMetadata = Metadata.empty
 
 restoreMany :: IO TestEnv -> TestTree
 restoreMany getTestEnv = testCase "Restores several paths" $ do
@@ -327,7 +328,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
         }
 
     restoreExpectedIdxSet = HashSet.empty
-    restoreExpectedMetadata = mempty
+    restoreExpectedMetadata = Metadata.empty
 
 restoresWildcards :: IO TestEnv -> TestTree
 restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $ do

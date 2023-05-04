@@ -1,12 +1,7 @@
 -- | Provides internal utility functions
 module SafeRm.Utils
   ( -- * FAM combinators
-    whenLeft,
-    allM1,
     throwIfEx,
-
-    -- * Monoid
-    fromMaybeMonoid,
 
     -- * Text
     matchesWildcards,
@@ -33,7 +28,6 @@ module SafeRm.Utils
 
     -- * Misc
     renderPretty,
-    setRefIfTrue,
     setRefIfJust,
   )
 where
@@ -54,27 +48,6 @@ import Data.Text.Internal.Search qualified as TIS
 import SafeRm.Prelude
 import Text.Printf (PrintfArg)
 import URI.ByteString qualified as URI
-
--- | Applies the function when we have a Left.
-whenLeft :: (Applicative f) => Either e a -> (e -> f ()) -> f ()
-whenLeft (Right _) _ = pure ()
-whenLeft (Left x) f = f x
-
--- | 'allM' that must have at least one 'True'.
-allM1 :: (Monad m) => NonEmpty (m Bool) -> m Bool
-allM1 (m :| ms) =
-  m >>= \case
-    True -> allM ms
-    False -> pure False
-
--- | 'Prelude.all' lifted to monads.
-allM :: (Foldable t, Monad m) => t (m Bool) -> m Bool
-allM = foldr f (pure True)
-  where
-    f m acc =
-      m >>= \case
-        True -> acc
-        False -> pure False
 
 -- | Normalizes and formats the bytes.
 normalizedFormat :: Bytes B Natural -> Text
@@ -99,10 +72,6 @@ formatBytes =
   Bytes.formatSized
     (MkFloatingFormatter (Just 2))
     Bytes.sizedFormatterUnix
-
--- | 'fromMaybe' for 'Monoid'.
-fromMaybeMonoid :: (Monoid a) => Maybe a -> a
-fromMaybeMonoid = fromMaybe mempty
 
 -- | Reads the 'LogLevel'.
 readLogLevel :: (MonadFail m) => Text -> m (Maybe LogLevel)
@@ -186,11 +155,6 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
   case TIS.indices p t of
     [] -> Nothing
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
-
--- | Sets the ioref if the bool is true.
-setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
-setRefIfTrue _ False = pure ()
-setRefIfTrue ref True = writeIORef ref True
 
 -- | Sets the ioref if the maybe is non-empty.
 setRefIfJust :: (MonadIORef m) => IORef (Maybe a) -> Maybe a -> m ()

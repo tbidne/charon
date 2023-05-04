@@ -11,10 +11,8 @@ module SafeRm.Prelude
     displayExceptiont,
 
     -- * Optics
-    shown,
     packed,
     unpacked,
-    packedbs,
 
     -- * Misc
     usingReaderT,
@@ -262,10 +260,6 @@ showt = T.pack . show
 displayExceptiont :: (Exception e) => e -> Text
 displayExceptiont = T.pack . displayException
 
-shown :: (Show a) => Getter a String
-shown = to show
-{-# INLINE shown #-}
-
 bsToStr :: ByteString -> String
 bsToStr = either displayException T.unpack . decodeUtf8
 
@@ -281,10 +275,6 @@ packed = iso T.pack T.unpack
 unpacked :: Iso' Text String
 unpacked = iso T.unpack T.pack
 {-# INLINE unpacked #-}
-
-packedbs :: Getter Text ByteString
-packedbs = to encodeUtf8
-{-# INLINE packedbs #-}
 
 usingReaderT :: b -> ReaderT b m a -> m a
 usingReaderT = flip runReaderT

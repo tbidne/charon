@@ -11,6 +11,7 @@ import Data.HashSet qualified as HashSet
 import Effects.Exception (StringException)
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
@@ -84,7 +85,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
         }
 
     permDelExpectedIdxSet = HashSet.empty
-    permDelExpectedMetadata = mempty
+    permDelExpectedMetadata = Metadata.empty
 
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
@@ -292,7 +293,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
         }
 
     permDelExpectedIdxSet = HashSet.empty
-    permDelExpectedMetadata = mempty
+    permDelExpectedMetadata = Metadata.empty
 
 deletesNoForce :: IO TestEnv -> TestTree
 deletesNoForce getTestEnv = testCase "Permanently deletes several paths without --force" $ do

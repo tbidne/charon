@@ -6,16 +6,12 @@ module SafeRm.Runner.Args
   ( getArgs,
     Args (..),
     TomlConfigPath (..),
-    _TomlNone,
-    _TomlDefault,
-    _TomlPath,
   )
 where
 
 import Control.Applicative qualified as A
 import Data.List qualified as L
-import Data.Version.Package qualified as PV
-import Development.GitRev qualified as GitRev
+import Data.Version (Version (versionBranch))
 import Options.Applicative
   ( CommandFields,
     InfoMod,
@@ -39,6 +35,7 @@ import Options.Applicative.Help.Chunk (Chunk (Chunk))
 import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
+import Paths_safe_rm qualified as Paths
 import SafeRm.Data.Backend (Backend (..), parseBackend)
 import SafeRm.Data.Index (Sort, readSort)
 import SafeRm.Data.PathData.Formatting (ColFormat (..))
@@ -69,8 +66,6 @@ data TomlConfigPath
     ( Eq,
       Show
     )
-
-makePrisms ''TomlConfigPath
 
 -- | CLI args.
 data Args = MkArgs
@@ -132,19 +127,10 @@ argsParser =
     <*> commandParser
 
 version :: Parser (a -> a)
-version = OA.infoOption txt (OA.long "version")
-  where
-    txt =
-      L.intercalate
-        "\n"
-        [ "SafeRm",
-          versNum,
-          "Revision: " <> $(GitRev.gitHash),
-          "Date: " <> $(GitRev.gitCommitDate)
-        ]
+version = OA.infoOption versNum (OA.long "version")
 
 versNum :: String
-versNum = "Version: " <> $$(PV.packageVersionStringTH "safe-rm.cabal")
+versNum = "Version: " <> L.intercalate "." (show <$> versionBranch Paths.version)
 
 backendParser :: Parser (Maybe Backend)
 backendParser =

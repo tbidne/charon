@@ -68,7 +68,7 @@ newtype PathI (i :: PathIndex) = MkPathI
   }
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (Hashable, NFData)
-  deriving (IsString, Monoid, Semigroup) via FilePath
+  deriving (IsString) via FilePath
 
 makeFieldLabelsNoPrefix ''PathI
 

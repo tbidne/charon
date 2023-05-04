@@ -5,6 +5,7 @@
 module SafeRm.Data.Metadata
   ( Metadata (..),
     toMetadata,
+    empty,
   )
 where
 
@@ -45,12 +46,9 @@ data Metadata = MkMetadata
 
 makeFieldLabelsNoPrefix ''Metadata
 
-instance Semigroup Metadata where
-  MkMetadata a b c d <> MkMetadata a' b' c' d' =
-    MkMetadata (a + a') (b + b') (c .+. c') (d .+. d')
-
-instance Monoid Metadata where
-  mempty = MkMetadata 0 0 zero zero
+-- | Empty metadata.
+empty :: Metadata
+empty = MkMetadata 0 0 zero zero
 
 instance Pretty Metadata where
   pretty stats = vsep strs <+> line

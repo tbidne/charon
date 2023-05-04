@@ -7,6 +7,7 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (FileNotFoundE)
 
 -- TODO: It would be nice if we could verify that the original location
@@ -139,7 +140,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
         "/bad file'"
 
     expectedIdxSet = HashSet.fromList []
-    expectedMetadata = mempty
+    expectedMetadata = Metadata.empty
 
 deleteDuplicateFile :: IO TestEnv -> TestTree
 deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do

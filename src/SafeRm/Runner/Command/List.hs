@@ -14,11 +14,10 @@ module SafeRm.Runner.Command.List
 where
 
 import Data.Text qualified as T
-import SafeRm.Data.Index (Sort)
+import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
 import SafeRm.Prelude
 import SafeRm.Runner.Phase (AdvancePhase (..), MaybePhaseF, Phase (..))
-import SafeRm.Utils qualified as U
 
 --------------------------------------------------------------------------------
 ----------------------------------- PHASE 1 ------------------------------------
@@ -106,6 +105,6 @@ instance AdvancePhase (ListCmd Phase1) where
         revSort
       }
     where
-      sort = U.fromMaybeMonoid (listCfg ^. #sort)
+      sort = fromMaybe Name (listCfg ^. #sort)
       revSort = fromMaybe False (listCfg ^. #revSort)
       format = advancePhase (listCfg ^. #format)

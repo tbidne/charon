@@ -5,6 +5,7 @@
 -- | Provides types.
 module SafeRm.Data.Index
   ( Index (..),
+    empty,
 
     -- * Reading
     readIndex,
@@ -13,8 +14,6 @@ module SafeRm.Data.Index
     formatIndex,
     Sort (..),
     readSort,
-    _Name,
-    _Size,
 
     -- * Low level utils
     fromList,
@@ -32,7 +31,7 @@ import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (..))
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Core qualified as PathDataCbor
+import SafeRm.Data.PathData.Core qualified as PathDataCore
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (..),
     PathDataFormat (..),
@@ -52,7 +51,7 @@ import SafeRm.Exception
 import SafeRm.Prelude
 import System.FilePath qualified as FP
 
-type PathDataCbor = PathDataCbor.PathData
+type PathDataCore = PathDataCore.PathData
 
 -- | Index that stores the trash data.
 newtype Index = MkIndex
@@ -60,11 +59,12 @@ newtype Index = MkIndex
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (NFData)
-  deriving
-    (Semigroup, Monoid)
-    via (Seq PathData)
 
 makeFieldLabelsNoPrefix ''Index
+
+-- | Empty index.
+empty :: Index
+empty = MkIndex mempty
 
 -- | Reads the trash directory into the 'Index'. If this succeeds then
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
@@ -154,26 +154,14 @@ data Sort
     Name
   | -- | Sort by size.
     Size
-  deriving stock
-    ( Eq,
-      Show
-    )
-
-makePrisms ''Sort
-
-instance Semigroup Sort where
-  l <> Name = l
-  _ <> Size = Size
-
-instance Monoid Sort where
-  mempty = Name
+  deriving stock (Eq, Show)
 
 readSort :: (MonadFail m) => Text -> m Sort
 readSort "name" = pure Name
 readSort "size" = pure Size
 readSort other = fail $ "Unrecognized sort: " <> T.unpack other
 
-sortFn :: Bool -> Sort -> PathDataCbor -> PathDataCbor -> Ordering
+sortFn :: Bool -> Sort -> PathDataCore -> PathDataCore -> Ordering
 sortFn b = \case
   Name -> rev Formatting.sortNameCreated
   Size -> rev Formatting.sortSizeName
@@ -384,7 +372,7 @@ getMaxLen = do
           <> displayExceptiont err
       pure 80
 
-multiline :: (PathDataCbor -> PathDataCbor -> Ordering) -> Seq PathDataCbor -> Text
+multiline :: (PathDataCore -> PathDataCore -> Ordering) -> Seq PathDataCore -> Text
 multiline sort =
   T.intercalate "\n\n"
     . fmap Formatting.formatMultiLine
@@ -392,10 +380,10 @@ multiline sort =
     . getElems sort
 
 tabular ::
-  (PathDataCbor -> PathDataCbor -> Ordering) ->
+  (PathDataCore -> PathDataCore -> Ordering) ->
   Natural ->
   Natural ->
-  Seq PathDataCbor ->
+  Seq PathDataCore ->
   Text
 tabular sort nameLen origLen =
   ((Formatting.formatTabularHeader nameLen origLen <> "\n") <>)
@@ -405,9 +393,9 @@ tabular sort nameLen origLen =
     . getElems sort
 
 getElems ::
-  (PathDataCbor -> PathDataCbor -> Ordering) ->
-  Seq PathDataCbor ->
-  Seq PathDataCbor
+  (PathDataCore -> PathDataCore -> Ordering) ->
+  Seq PathDataCore ->
+  Seq PathDataCore
 getElems = Seq.sortBy
 
 fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
@@ -430,5 +418,5 @@ indexToSeq ::
     MonadThrow m
   ) =>
   Index ->
-  m (Seq PathDataCbor)
+  m (Seq PathDataCore)
 indexToSeq = traverse PathData.normalizeCore . view #unIndex

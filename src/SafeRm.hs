@@ -163,7 +163,7 @@ getIndex = addNamespace "getIndex" $ do
     True -> Index.readIndex trashHome
     False -> do
       $(logDebug) "Trash does not exist."
-      pure mempty
+      pure Index.empty
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
@@ -188,7 +188,7 @@ getMetadata = addNamespace "getMetadata" $ do
     True -> Metadata.toMetadata (trashHome, trashLog)
     False -> do
       $(logInfo) "Trash does not exist."
-      pure mempty
+      pure Metadata.empty
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
