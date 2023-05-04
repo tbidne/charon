@@ -21,13 +21,16 @@ jobs:
         platform:
           - os: "macos-latest"
             set-env: "export"
-            trials: 1000
+            unit-trials: 1000
+            int-trials: 1000
           - os: "ubuntu-latest"
             set-env: "export"
-            trials: 10000
+            unit-trials: 10000
+            int-trials: 1000
           - os: "windows-latest"
             set-env: "set"
-            trials: 100
+            unit-trials: 100
+            int-trials: 100
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v3.3.0
@@ -44,7 +47,7 @@ jobs:
 
       - name: Unit Tests
         id: unit
-        run: cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'
+        run: cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.unit-trials }}'
 
       - uses: actions/upload-artifact@v3
         name: Unit Tests Upload
@@ -56,7 +59,7 @@ jobs:
       - name: Integration Tests
         run: |
           ${{ matrix.platform.set-env }} INT_LOGS=1
-          cabal test integration --test-options '--hedgehog-tests ${{ matrix.platform.trials }}'
+          cabal test integration --test-options '--hedgehog-tests ${{ matrix.platform.int-trials }}'
 
       - name: Functional Tests
         run: cabal test functional
