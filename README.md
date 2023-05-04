@@ -312,11 +312,11 @@ $ safe-rm delete foo bar baz
 # list contents
 $ safe-rm list
 
-Name | Type | Size    | Original            | Created
-----------------------------------------------------------------------
-bar  | F    | 410.35G | /bar                | 2022-10-28 15:33:18
-baz  | F    | 45.61M  | /a/long/path/to/baz | 2022-10-28 15:33:18
-foo  | D    | 24.38B  | /path/to/foo        | 2022-10-28 15:33:18
+Name | Original            | Type | Size    | Created
+-----------------------------------------------------------------
+bar  | /bar                | F    | 410.35G | 2022-10-28 15:33:18
+baz  | /a/long/path/to/baz | F    | 45.61M  | 2022-10-28 15:33:18
+foo  | /path/to/foo        | D    | 24.38B  | 2022-10-28 15:33:18
 ```
 
 ### Metadata
