@@ -21,6 +21,7 @@ tests testEnv =
         restoreMany testEnv',
         restoreUnknownError testEnv',
         restoreCollisionError testEnv',
+        restoreSimultaneousCollisionError testEnv',
         restoresSome testEnv',
         restoresWildcards testEnv',
         restoresSomeWildcards testEnv'
@@ -263,6 +264,83 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+
+restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
+restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
+    testDir <- getTestDir
+
+    let trashDir = testDir </> ".trash"
+        f1 = testDir </> "f1"
+        f2 = testDir </> "f2"
+        f3 = testDir </> "f3"
+    delArgList <- withSrArgsM ["delete", f1]
+
+    -- SETUP
+
+    createFiles [f1, f2, f3]
+
+    -- delete twice
+    runSafeRm (delArgList <> [f2, f3])
+    createFiles [f1]
+    runSafeRm delArgList
+
+    -- file assertions
+    delTrashFiles <- mkAllTrashPathsM ["f1 (1)", "f1", "f2", "f3"]
+    assertPathsExist (trashDir : delTrashFiles)
+
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM2
+        [ ("f1", "f1"),
+          ("f1 (1)", "f1"),
+          ("f2", "f2"),
+          ("f3", "f3")
+        ]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+
+    -- RESTORE
+    restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
+    (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
+
+    restoreTrashFiles <- mkAllTrashPathsM ["f1 (1)", "f3"]
+    assertPathsExist restoreTrashFiles
+
+    assertMatch expectedEx ex
+
+    -- trash structure assertions
+    restoreExpectedIdxSet <-
+      mkPathDataSetM2
+        [ ("f1 (1)", "f1"),
+          ("f3", "f3")
+        ]
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq restoreExpectedIdxSet restoreIdxSet
+    restoreExpectedMetadata @=? restoreMetadata
+  where
+    desc = "Restore simultaneous collision prints error"
+    expectedEx =
+      Outfixes
+        "Cannot restore the trash file 'f1 (1)' as one exists at the original location: "
+        ["/safe-rm/functional/restore/restoreSimultaneousCollisionError-"]
+        "/f1"
+    delExpectedMetadata =
+      MkMetadata
+        { numEntries = 4,
+          numFiles = 4,
+          logSize = afromInteger 0,
+          size = afromInteger 0
+        }
+    restoreExpectedMetadata =
+      MkMetadata
+        { numEntries = 2,
+          numFiles = 2,
           logSize = afromInteger 0,
           size = afromInteger 0
         }
