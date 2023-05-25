@@ -167,7 +167,7 @@ delete :: Backend -> IO FilePath -> TestTree
 delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "All paths are deleted" "delete" $ do
     property $ do
-      testDir <- (</> "d1") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "delete" backend
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -203,7 +203,7 @@ deleteSome :: Backend -> IO FilePath -> TestTree
 deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
-      testDir <- (</> "d2") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "deleteSome" backend
       (α, β) <- forAll (gen2FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -260,7 +260,7 @@ permDelete :: Backend -> IO FilePath -> TestTree
 permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDelete" $ do
     property $ do
-      testDir <- (</> "x1") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "permDelete" backend
       α <- forAll (genFileNameSet b)
       let trashDir = testDir </> ".trash"
           αTest = USeq.map (testDir </>) α
@@ -301,7 +301,7 @@ permDeleteSome :: Backend -> IO FilePath -> TestTree
 permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDeleteSome" $ do
     property $ do
-      testDir <- (</> "x2") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "permDeleteSome" backend
       (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -367,7 +367,7 @@ restore :: Backend -> IO FilePath -> TestTree
 restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
-      testDir <- (</> "r1") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "restore" backend
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -409,7 +409,7 @@ restoreSome :: Backend -> IO FilePath -> TestTree
 restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
-      testDir <- (</> "r2") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "restoreSome" backend
       (α, β, γ) <- forAll (gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
@@ -473,7 +473,7 @@ emptyTrash :: Backend -> IO FilePath -> TestTree
 emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
-      testDir <- (</> "e1") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "emptyTrash" backend
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -513,7 +513,7 @@ metadata :: Backend -> IO FilePath -> TestTree
 metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
-      testDir <- (</> "m1") <$> getTestPath mtestDir
+      testDir <- getTestPath mtestDir "metadata" backend
       α <- forAll (genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> ".trash"
@@ -690,5 +690,8 @@ mkTrashPaths backend trashHome =
 -- "deleted paths match expected paths" checks to succeed.
 --
 -- This is not needed on linux but also appears unharmful.
-getTestPath :: (MonadIO m) => IO Path -> m Path
-getTestPath mtestPath = liftIO (canonicalizePath =<< mtestPath)
+getTestPath :: (MonadIO m) => IO Path -> Path -> Backend -> m Path
+getTestPath mtestPath p backend = do
+  -- liftIO (canonicalizePath =<< mtestPath)
+  testPath <- liftIO $ canonicalizePath =<< mtestPath
+  pure $ testPath </> p </> Backend.backendArg backend
