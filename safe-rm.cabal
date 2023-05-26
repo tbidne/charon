@@ -98,7 +98,7 @@ library
     , nonempty-containers   >=0.3.4.2   && <0.4
     , optics-core           ^>=0.4
     , optics-th             ^>=0.4
-    , optparse-applicative  >=0.15      && <0.18
+    , optparse-applicative  >=0.15      && <0.19
     , path-size             ^>=0.1
     , prettyprinter         ^>=1.7.1
     , serialise             ^>=0.2.6.0

@@ -34,6 +34,7 @@
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
+      inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.smart-math.follows = "smart-math";
     };
     path-size = {
@@ -44,6 +45,7 @@
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
+      inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.si-bytes.follows = "si-bytes";
       inputs.monad-effects.follows = "monad-effects";
       inputs.smart-math.follows = "smart-math";
