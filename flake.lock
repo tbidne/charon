@@ -111,11 +111,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1685058766,
-        "narHash": "sha256-nluiznFDa7fnR4QKBjz4xd8EuQsmoKQ1VjNKjWaVRLY=",
+        "lastModified": 1685573355,
+        "narHash": "sha256-pNEqLsinR9qhWFWffAHeVovKLOhw4AoVUlBwSZuTW5s=",
         "owner": "tbidne",
         "repo": "monad-effects",
-        "rev": "9bc579b32f7f00ab8fd1db6d78a6a646b0c87f84",
+        "rev": "a3963463e34783befd4a639bd31e77328e8d6f07",
         "type": "github"
       },
       "original": {
@@ -209,11 +209,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1685060232,
-        "narHash": "sha256-IVqNdLT5wPGhS/hvcodlb4UsSACrP6qXPj8PZeBucog=",
+        "lastModified": 1685579582,
+        "narHash": "sha256-GIPvz2u06PcftV4bOUMDe+4IlhlVlZY51Enlzr/o4gI=",
         "owner": "tbidne",
         "repo": "path-size",
-        "rev": "a806a458c089849bd0c3f7ab791bbf668fbe8a8d",
+        "rev": "7a7800e772d5e1c1c8d59db9e5b8d335d54478ea",
         "type": "github"
       },
       "original": {

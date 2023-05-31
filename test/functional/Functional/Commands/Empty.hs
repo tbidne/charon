@@ -84,7 +84,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     emptyExpectedIdxSet = HashSet.empty
@@ -154,7 +154,7 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
         { numEntries = 5,
           numFiles = 5,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 25
         }
 
 missingInfoForcesDelete :: IO TestEnv -> TestTree
@@ -221,7 +221,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     emptyExpectedIdxSet = HashSet.empty
@@ -288,7 +288,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     emptyExpectedIdxSet = HashSet.empty

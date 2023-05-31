@@ -11,8 +11,6 @@ where
 
 import Data.Bytes (SomeSize)
 import Data.Bytes qualified as Bytes
-import Data.Text qualified as T
-import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
 import GHC.Real (Integral)
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import Numeric.Literal.Rational (FromRational (afromRational))
@@ -66,10 +64,8 @@ toMetadata ::
     HasCallStack,
     MonadFileReader m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadTerminal m,
     MonadThrow m
   ) =>
   (PathI TrashHome, PathI TrashLog) ->
@@ -90,15 +86,7 @@ toMetadata (trashHome, trashLog) =
     logExists <- doesFileExist logPath
     logSize <-
       if logExists
-        then do
-          fmap (Bytes.normalize . toDouble . MkBytes @B) $
-            pathSizeRecursive logPath >>= \case
-              PathSizeSuccess n -> pure n
-              PathSizePartial errs n -> do
-                -- We received a value but had some errors.
-                putStrLn "Encountered errors retrieving size. See logs."
-                for_ errs $ \e -> $(logError) (T.pack $ displayException e)
-                pure n
+        then Bytes.normalize . toDouble . MkBytes @B <$> getFileSize logPath
         else do
           $(logDebug) "Log does not exist"
           pure (afromRational 0)

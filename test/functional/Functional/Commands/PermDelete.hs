@@ -81,7 +81,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
     permDelExpectedIdxSet = HashSet.empty
@@ -150,7 +150,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     permDelExpectedMetadata =
@@ -158,7 +158,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 deleteUnknownError :: IO TestEnv -> TestTree
@@ -223,7 +223,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 deletesSome :: IO TestEnv -> TestTree
@@ -289,7 +289,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }
 
     permDelExpectedIdxSet = HashSet.empty
@@ -349,14 +349,14 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
         { numEntries = 5,
           numFiles = 5,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 25
         }
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }
 
 deletesWildcards :: IO TestEnv -> TestTree
@@ -432,7 +432,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
         { numEntries = 12,
           numFiles = 12,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 60
         }
 
     permDelExpectedMetadata =
@@ -440,7 +440,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
 
 deletesSomeWildcards :: IO TestEnv -> TestTree
@@ -507,14 +507,14 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
         { numEntries = 9,
           numFiles = 9,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 45
         }
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 -- Wildcard literals are not valid in windows paths
@@ -597,14 +597,14 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
         { numEntries = 7,
           numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 35
         }
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
 
 deletesCombinedWildcardLiteral :: IO TestEnv -> TestTree
@@ -675,14 +675,14 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
     permDelExpectedMetadata =
       MkMetadata
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
@@ -751,5 +751,5 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }

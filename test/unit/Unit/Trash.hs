@@ -8,9 +8,7 @@ module Unit.Trash
 where
 
 import Data.List qualified as L
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.FileSystem.PathSize (PathSizeResult (..))
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import Effects.LoggerNS
   ( LocStrategy (LocStable),
@@ -18,8 +16,6 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import PathSize (SubPathData (MkSubPathData))
-import PathSize.Data.PathData qualified as PathSize.PathData
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Paths (PathI, PathIndex (..), liftPathI')
@@ -143,18 +139,6 @@ instance MonadPathReader PathDataT where
                 "/",
                 "/home/ "
               ]
-
-instance MonadPathSize PathDataT where
-  findLargestPaths _ p = pure (PathSizeSuccess spd)
-    where
-      spd = MkSubPathData $ NESeq.fromList (pd :| [])
-      pd =
-        PathSize.PathData.MkPathData
-          { PathSize.PathData.path = p,
-            PathSize.PathData.size = 0,
-            PathSize.PathData.numFiles = 0,
-            PathSize.PathData.numDirectories = 0
-          }
 
 -- No real IO!!!
 instance MonadFileWriter PathDataT where

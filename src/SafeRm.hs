@@ -102,16 +102,18 @@ permDelete ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
+    MonadPosix m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
@@ -174,9 +176,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadReader env m,
-    MonadTerminal m,
     MonadThrow m
   ) =>
   m Metadata
@@ -240,7 +240,6 @@ emptyTrash ::
     MonadFileReader m,
     MonadHandleWriter m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
     MonadLoggerNS m,
     MonadReader env m,

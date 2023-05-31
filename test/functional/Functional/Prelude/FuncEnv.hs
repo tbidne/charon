@@ -34,7 +34,6 @@ module Functional.Prelude.FuncEnv
 where
 
 import Data.HashSet qualified as HSet
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
@@ -50,7 +49,6 @@ import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
-import PathSize qualified
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
@@ -131,6 +129,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadAsync,
       MonadCatch,
       MonadFileReader,
       MonadFileWriter,
@@ -138,6 +137,8 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIO,
       MonadIORef,
       MonadMask,
+      MonadPosix,
+      MonadThread,
       MonadThrow,
       MonadReader env
     )
@@ -155,7 +156,9 @@ instance
   doesPathExist = liftIO . doesPathExist
   listDirectory = liftIO . listDirectory
   canonicalizePath = liftIO . canonicalizePath
-  getFileSize = liftIO . getFileSize
+  pathIsSymbolicLink = liftIO . pathIsSymbolicLink
+
+  getFileSize _ = pure 5
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
   -- the real state (~/.local/state/safe-rm) and instead use our testing
@@ -178,19 +181,6 @@ instance MonadPathWriter (FuncIO env) where
     -- This is for X.deletesSomeWildcards test
     | (T.isSuffixOf "fooBadbar" $ T.pack x) = throwString "Mock: cannot delete fooBadbar"
     | otherwise = liftIO $ removeFile x
-
-instance MonadPathSize (FuncIO env) where
-  findLargestPaths _ _ =
-    pure $
-      PathSize.PathSizeSuccess $
-        PathSize.MkSubPathData $
-          NESeq.singleton $
-            PathSize.MkPathData
-              { PathSize.path = "",
-                PathSize.size = 5,
-                PathSize.numFiles = 10,
-                PathSize.numDirectories = 20
-              }
 
 instance
   ( Is k A_Getter,

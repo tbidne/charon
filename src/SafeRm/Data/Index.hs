@@ -175,12 +175,15 @@ formatIndex ::
   forall m env.
   ( HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
+    MonadPosix m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   -- | Format to use
   PathDataFormat ->
@@ -410,12 +413,15 @@ insert pd = HMap.insert (pd ^. #fileName) pd
 indexToSeq ::
   ( HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
+    MonadIORef m,
     MonadLogger m,
     MonadPathReader m,
-    MonadPathSize m,
+    MonadPosix m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThrow m
+    MonadThread m
   ) =>
   Index ->
   m (Seq PathDataCore)

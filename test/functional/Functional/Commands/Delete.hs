@@ -61,7 +61,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 deletesMany :: IO TestEnv -> TestTree
@@ -108,7 +108,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
 deleteUnknownError :: IO TestEnv -> TestTree
@@ -186,7 +186,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
         { numEntries = 2,
           numFiles = 2,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 10
         }
 
 deletesSome :: IO TestEnv -> TestTree
@@ -236,5 +236,5 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }

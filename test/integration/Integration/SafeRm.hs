@@ -14,7 +14,6 @@ import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
@@ -24,7 +23,6 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Integration.AsciiOnly (AsciiOnly (..))
 import Integration.Prelude
-import PathSize qualified
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
@@ -68,6 +66,7 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadAsync,
       MonadIO,
       MonadCatch,
       MonadFileReader,
@@ -76,24 +75,13 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       MonadIORef,
       MonadPathReader,
       MonadPathWriter,
+      MonadPosix,
       MonadReader IntEnv,
+      MonadThread,
       MonadThrow,
       MonadTime
     )
     via (SafeRmT IntEnv IO)
-
-instance MonadPathSize IntIO where
-  findLargestPaths _ _ =
-    pure $
-      PathSize.PathSizeSuccess $
-        PathSize.MkSubPathData $
-          NESeq.singleton $
-            PathSize.MkPathData
-              { PathSize.path = "",
-                PathSize.size = 5,
-                PathSize.numFiles = 10,
-                PathSize.numDirectories = 20
-              }
 
 instance MonadLogger IntIO where
   monadLoggerLog loc _ lvl msg = do

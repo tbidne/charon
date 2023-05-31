@@ -31,7 +31,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/monad-effects.git
-    tag: 9bc579b32f7f00ab8fd1db6d78a6a646b0c87f84
+    tag: a3963463e34783befd4a639bd31e77328e8d6f07
     subdir:
         effects-async
         effects-exceptions
@@ -43,11 +43,12 @@ source-repository-package
         effects-terminal
         effects-thread
         effects-time
+        effects-unix-compat
 
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: a806a458c089849bd0c3f7ab791bbf668fbe8a8d
+    tag: 7a7800e772d5e1c1c8d59db9e5b8d335d54478ea
 
 source-repository-package
     type: git

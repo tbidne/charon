@@ -60,6 +60,7 @@ import TOML qualified
 -- SafeRm.
 runSafeRm ::
   ( HasCallStack,
+    MonadAsync m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -67,9 +68,10 @@ runSafeRm ::
     MonadMask m,
     MonadOptparse m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
+    MonadPosix m,
     MonadTerminal m,
+    MonadThread m,
     MonadTime m
   ) =>
   m ()
@@ -85,6 +87,7 @@ runCmd ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadLoggerNS m,
     MonadFileReader m,
     MonadFileWriter m,
@@ -92,10 +95,11 @@ runCmd ::
     MonadIORef m,
     MonadMask m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
+    MonadPosix m,
     MonadReader env m,
     MonadTerminal m,
+    MonadThread m,
     MonadTime m
   ) =>
   CommandP2 ->
@@ -202,13 +206,16 @@ printIndex ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
+    MonadPosix m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   PathDataFormat ->
   Sort ->
@@ -226,7 +233,6 @@ printMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadReader env m,
     MonadTerminal m,
     MonadThrow m

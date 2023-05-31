@@ -17,12 +17,10 @@ module Integration.Prelude
 where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
-import Effects.FileSystem.PathSize qualified as PathSize
 import Effects.System.Terminal (MonadTerminal (..), Window (..))
 import Effects.Time (MonadTime (..))
 import Hedgehog as X
@@ -94,27 +92,17 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadAsync,
       MonadCatch,
       MonadIORef,
       MonadMask,
       MonadPathReader,
+      MonadPosix,
+      MonadThread,
       MonadThrow,
       MonadReader env
     )
     via (ReaderT env IO)
-
-instance MonadPathSize (IntPure env) where
-  findLargestPaths _ _ =
-    pure $
-      PathSize.PathSizeSuccess $
-        PathSize.MkSubPathData $
-          NESeq.singleton $
-            PathSize.MkPathData
-              { PathSize.path = "",
-                PathSize.size = 5,
-                PathSize.numFiles = 10,
-                PathSize.numDirectories = 20
-              }
 
 instance MonadTerminal (IntPure IntPureEnv) where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)

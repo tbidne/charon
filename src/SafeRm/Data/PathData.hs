@@ -31,7 +31,7 @@ where
 
 import Data.Bifunctor (first)
 import Data.Text qualified as T
-import Effects.FileSystem.PathSize (PathSizeResult (..), pathSizeRecursive)
+import PathSize (PathSizeResult (..), pathSizeRecursive)
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Common qualified as Common
@@ -172,12 +172,15 @@ deleteFileName trashHome pd = do
 normalizeCore ::
   ( HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
+    MonadIORef m,
     MonadLogger m,
     MonadPathReader m,
-    MonadPathSize m,
+    MonadPosix m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThrow m
+    MonadThread m
   ) =>
   PathData ->
   m Core.PathData
@@ -197,10 +200,19 @@ normalizeCore pd = do
         PathSizeSuccess n -> pure n
         PathSizePartial errs n -> do
           -- We received a value but had some errors.
-          putStrLn "Encountered errors retrieving size. See logs."
-          for_ errs $ \e -> $(logError) (T.pack $ displayException e)
+          putStrLn "Encountered errors retrieving size."
+          for_ errs $ \e -> do
+            let errMsg = T.pack $ displayException e
+            putTextLn errMsg
+            $(logError) errMsg
           pure n
-
+        PathSizeFailure errs -> do
+          putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
+          for_ errs $ \e -> do
+            let errMsg = T.pack $ displayException e
+            putTextLn errMsg
+            $(logError) errMsg
+          pure 0
   pure $
     Core.UnsafePathData
       { fileName,

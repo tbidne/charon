@@ -137,7 +137,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     mergeExpectedMetadata =
@@ -145,7 +145,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
         { numEntries = 10,
           numFiles = 8,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 40
         }
 
 mergeCollisionFails :: IO TestEnv -> TestTree
@@ -246,5 +246,5 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }

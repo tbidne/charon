@@ -77,7 +77,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
 
     expectedMetadata =
@@ -85,7 +85,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
         <$> [ "Entries:      5",
               "Total Files:  4",
               "Log size:     0.00B",
-              "Size:         0.00B",
+              "Size:         20.00B",
               ""
             ]
 

@@ -111,6 +111,7 @@
               "effects-terminal"
               "effects-thread"
               "effects-time"
+              "effects-unix-compat"
             ];
           };
           hlib = pkgs.haskell.lib;

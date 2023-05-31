@@ -164,16 +164,18 @@ permDeleteFromTrash ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPathSize m,
     MonadPathWriter m,
+    MonadPosix m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   Bool ->
   PathI TrashHome ->
@@ -516,6 +518,6 @@ mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
   where
     config =
       MkCopyDirConfig
-        { overwrite = OverwriteTarget,
+        { overwrite = OverwriteDirectories,
           targetName = TargetNameDest
         }

@@ -8,18 +8,13 @@ module Unit.Data.Index
   )
 where
 
-import Data.Bifunctor (first)
-import Data.HashMap.Strict qualified as Map
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
+import Effects.FileSystem.PathReader (MonadPathReader (..))
 import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import PathSize.Data.PathData qualified as PathSize
-import PathSize.Data.PathSizeResult (PathSizeResult (..))
-import PathSize.Data.PathTree (PathTree ((:^|)))
-import PathSize.Data.SubPathData qualified as SPD
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
@@ -109,16 +104,33 @@ newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadAsync,
       MonadCatch,
       MonadIO,
+      MonadIORef,
+      MonadPosix,
       MonadReader TestEnv,
+      MonadThread,
       MonadThrow
     )
     via ReaderT TestEnv IO
 
 instance MonadPathReader ConfigIO where
+  listDirectory _ = pure []
+  pathIsSymbolicLink _ = pure False
+
   doesFileExist = pure . not . (`L.elem` dirs)
   doesDirectoryExist = pure . (`L.elem` dirs)
+
+  getFileSize p
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "foo" = pure 70
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "bazzz" = pure 5_000
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "dir" = pure 20_230
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "f" = pure 13_070_000
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "z" = pure 200_120
+    | p == "test" </> "unit" </> "index" </> "trash" </> "files" </> "d" = pure 5_000_000_000_000_000_000_000_000_000
+    | p == ("test" </> "unit" </> "index" </> "trash" </> "files" </> L.replicate 50 'b') = pure 10
+  getFileSize p = error $ "getFileSize: " <> p
 
 dirs :: [FilePath]
 dirs =
@@ -126,36 +138,6 @@ dirs =
     <$> [ "dir",
           "d"
         ]
-
-instance MonadPathSize ConfigIO where
-  findLargestPaths _ p =
-    pure $
-      PathSizeSuccess $
-        SPD.mkSubPathData $
-          psd :^| []
-    where
-      sizes =
-        Map.fromList $
-          first ((trashPath </> "files") </>)
-            <$> [ (L.replicate 80 'f', 10),
-                  (L.replicate 50 'b', 10),
-                  ("bar", 10),
-                  ("d", 5_000_000_000_000_000_000_000_000_000),
-                  ("foo", 70),
-                  ("bazzz", 5_000),
-                  ("dir", 20_230),
-                  ("f", 13_070_000),
-                  ("z", 200_120)
-                ]
-      psd =
-        PathSize.MkPathData
-          { path = "",
-            size = case Map.lookup p sizes of
-              Just s -> s
-              Nothing -> error $ "Could not find key: '" ++ p ++ "'",
-            numFiles = 0,
-            numDirectories = 0
-          }
 
 runConfigIO :: ConfigIO a -> Natural -> IO a
 runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` MkPathI trashPath)

@@ -95,6 +95,8 @@ import Data.Type.Equality as X (type (~))
 #endif
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
+import Effects.Concurrent.Async as X (MonadAsync)
+import Effects.Concurrent.Thread as X (MonadThread)
 import Effects.Exception as X
   ( Exception (..),
     ExceptionCS (..),
@@ -151,7 +153,6 @@ import Effects.FileSystem.PathReader as X
       ),
     getXdgConfig,
   )
-import Effects.FileSystem.PathSize as X (MonadPathSize (findLargestPaths))
 import Effects.FileSystem.PathWriter as X
   ( MonadPathWriter
       ( createDirectoryIfMissing,
@@ -174,6 +175,7 @@ import Effects.LoggerNS as X
     addNamespace,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
+import Effects.System.PosixCompat as X (MonadPosix)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
     putTextLn,
@@ -235,6 +237,7 @@ import Optics.TH as X
     makePrisms,
     noPrefixFieldLabels,
   )
+import PathSize as X (findLargestPaths)
 import Prettyprinter as X
   ( Doc,
     Pretty (pretty),

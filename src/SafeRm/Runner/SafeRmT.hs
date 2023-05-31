@@ -18,6 +18,7 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
     ( Functor,
       Applicative,
       Monad,
+      MonadAsync,
       MonadCatch,
       MonadFileReader,
       MonadFileWriter,
@@ -26,10 +27,11 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       MonadIORef,
       MonadMask,
       MonadPathReader,
-      MonadPathSize,
       MonadPathWriter,
+      MonadPosix,
       MonadReader env,
       MonadTerminal,
+      MonadThread,
       MonadThrow,
       MonadTime
     )

@@ -79,7 +79,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
     restoreExpectedIdxSet = HashSet.empty
@@ -143,14 +143,14 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 restoreUnknownError :: IO TestEnv -> TestTree
@@ -211,7 +211,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 restoreCollisionError :: IO TestEnv -> TestTree
@@ -265,7 +265,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
@@ -335,14 +335,14 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
         { numEntries = 4,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 20
         }
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 2,
           numFiles = 2,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 10
         }
 
 restoresSome :: IO TestEnv -> TestTree
@@ -402,7 +402,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }
 
     restoreExpectedIdxSet = HashSet.empty
@@ -479,14 +479,14 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
         { numEntries = 12,
           numFiles = 12,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 60
         }
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
 
 restoresSomeWildcards :: IO TestEnv -> TestTree
@@ -556,14 +556,14 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
         { numEntries = 9,
           numFiles = 9,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 45
         }
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 1,
           numFiles = 1,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 5
         }
 
 -- Wildcard literals are not valid in windows paths
@@ -626,14 +626,14 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
         { numEntries = 7,
           numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 35
         }
     restoreExpectedMetadata =
       MkMetadata
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
 
 restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
@@ -700,7 +700,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
         { numEntries = 6,
           numFiles = 6,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 30
         }
 
     restoreArgListExpectedMetadata =
@@ -708,7 +708,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
         { numEntries = 3,
           numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 0
+          size = afromInteger 15
         }
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
