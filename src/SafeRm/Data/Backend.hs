@@ -1,9 +1,12 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Provides the 'Backend' data type.
 module SafeRm.Data.Backend
   ( Backend (..),
     parseBackend,
     backendTestDesc,
     backendArg,
+    backendArgOsPath,
   )
 where
 
@@ -27,8 +30,8 @@ parseBackend :: (MonadFail m) => Text -> m Backend
 parseBackend "cbor" = pure BackendCbor
 parseBackend "fdo" = pure BackendFdo
 parseBackend other =
-  fail $
-    mconcat
+  fail
+    $ mconcat
       [ "Could not parse backend: '",
         T.unpack other,
         "'. Expected 'cbor' or 'fdo'."
@@ -41,3 +44,7 @@ backendTestDesc BackendFdo = "(backend := fdo)"
 backendArg :: Backend -> String
 backendArg BackendCbor = "cbor"
 backendArg BackendFdo = "fdo"
+
+backendArgOsPath :: Backend -> OsPath
+backendArgOsPath BackendCbor = [osp|cbor|]
+backendArgOsPath BackendFdo = [osp|fdo|]

@@ -26,8 +26,8 @@ instance Pretty PathType where
 
 instance Serialize PathType where
   type DecodeExtra PathType = ()
-  encode PathTypeFile = "f"
-  encode PathTypeDirectory = "d"
+  encode PathTypeFile = pure "f"
+  encode PathTypeDirectory = pure "d"
 
   decode _ "f" = Right PathTypeFile
   decode _ "d" = Right PathTypeDirectory
@@ -38,7 +38,7 @@ existsFn ::
     MonadPathReader m
   ) =>
   PathType ->
-  Path ->
+  OsPath ->
   m Bool
 existsFn PathTypeFile = doesFileExist
 existsFn PathTypeDirectory = doesDirectoryExist
@@ -48,8 +48,8 @@ renameFn ::
     MonadPathWriter m
   ) =>
   PathType ->
-  Path ->
-  Path ->
+  OsPath ->
+  OsPath ->
   m ()
 renameFn PathTypeFile = renameFile
 renameFn PathTypeDirectory = renameDirectory
@@ -59,7 +59,7 @@ deleteFn ::
     MonadPathWriter m
   ) =>
   PathType ->
-  Path ->
+  OsPath ->
   m ()
 deleteFn PathTypeFile = removeFile
 deleteFn PathTypeDirectory = removeDirectoryRecursive

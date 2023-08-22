@@ -65,13 +65,18 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
-  encode :: PathData -> ByteString
+  encode :: PathData -> Either String ByteString
   encode pd =
-    C8.unlines
-      [ "[Trash Info]",
-        "Path=" <> U.percentEncode (encode (pd ^. #originalPath)),
-        "DeletionDate=" <> encode (pd ^. #created)
-      ]
+    case (encode (pd ^. #originalPath), encode (pd ^. #created)) of
+      (Right opath, Right created) ->
+        Right
+          $ C8.unlines
+            [ "[Trash Info]",
+              "Path=" <> U.percentEncode opath,
+              "DeletionDate=" <> created
+            ]
+      (Left ex, _) -> Left ex
+      (_, Left ex) -> Left ex
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
@@ -80,8 +85,8 @@ instance Serialize PathData where
     originalPath <- decodeUnit . U.percentDecode =<< Common.lookup "Path" mp
     created <- decodeUnit =<< Common.lookup "DeletionDate" mp
 
-    Right $
-      UnsafePathData
+    Right
+      $ UnsafePathData
         { fileName = name,
           originalPath,
           created

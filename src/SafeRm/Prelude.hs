@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Custom prelude.
 module SafeRm.Prelude
@@ -13,6 +14,12 @@ module SafeRm.Prelude
     -- * Optics
     packed,
     unpacked,
+
+    -- ** Path literals
+    pathDotTrash,
+    pathFiles,
+    pathInfo,
+    pathSafeRm,
 
     -- * Misc
     usingReaderT,
@@ -140,7 +147,6 @@ import Effects.FileSystem.HandleWriter as X
         openBinaryFile
       ),
   )
-import Effects.FileSystem.Path as X (Path)
 import Effects.FileSystem.PathReader as X
   ( MonadPathReader
       ( canonicalizePath,
@@ -162,6 +168,17 @@ import Effects.FileSystem.PathWriter as X
         renameFile
       ),
   )
+import Effects.FileSystem.Utils as X
+  ( OsPath,
+    decodeOsToFp,
+    decodeOsToFpShow,
+    decodeOsToFpShowText,
+    decodeOsToFpThrowM,
+    encodeFpToOs,
+    encodeFpToOsThrowM,
+    osp,
+    (</>),
+  )
 import Effects.IORef as X
   ( IORef,
     MonadIORef,
@@ -175,9 +192,10 @@ import Effects.LoggerNS as X
     addNamespace,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
-import Effects.System.PosixCompat as X (MonadPosix)
+import Effects.System.PosixCompat as X (MonadPosixCompat)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
+    print,
     putTextLn,
   )
 import Effects.Time as X (MonadTime)
@@ -247,7 +265,6 @@ import Prettyprinter as X
     (<+>),
   )
 import Prettyprinter.Render.Text as X (renderStrict)
-import System.FilePath as X ((</>))
 import System.IO as X
   ( BufferMode (NoBuffering),
     FilePath,
@@ -281,3 +298,15 @@ unpacked = iso T.unpack T.pack
 
 usingReaderT :: b -> ReaderT b m a -> m a
 usingReaderT = flip runReaderT
+
+pathFiles :: OsPath
+pathFiles = [osp|files|]
+
+pathInfo :: OsPath
+pathInfo = [osp|info|]
+
+pathSafeRm :: OsPath
+pathSafeRm = [osp|safe-rm|]
+
+pathDotTrash :: OsPath
+pathDotTrash = [osp|.trash|]

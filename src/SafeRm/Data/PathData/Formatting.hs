@@ -87,7 +87,14 @@ sortCreated = mapOrd (view #created)
 
 -- | Sorts by the name.
 sortName :: PathData -> PathData -> Ordering
-sortName = mapOrd (fmap Ch.toLower . view (#fileName % #unPathI))
+sortName pd1 pd2 = case liftA2 (,) (decodeOsToFp p1) (decodeOsToFp p2) of
+  -- NOTE: Decoding to string is the default ordering. If for some reason this
+  -- fails, fall back to OsPaths' ordering.
+  Right (s1, s2) -> mapOrd (fmap Ch.toLower) s1 s2
+  Left _ -> p1 `compare` p2
+  where
+    p1 = pd1 ^. (#fileName % #unPathI)
+    p2 = pd2 ^. (#fileName % #unPathI)
 
 -- | Sorts by the name.
 sortSize :: PathData -> PathData -> Ordering
@@ -145,9 +152,9 @@ minTableWidth =
 formatTabularRow :: Natural -> Natural -> PathData -> Text
 formatTabularRow nameLen origLen pd =
   mconcat
-    [ fixLen' nameLen (pd ^. #fileName % #unPathI),
+    [ fixLen' nameLen (decodeOsToFpShow $ pd ^. #fileName % #unPathI),
       sep,
-      fixLen' origLen (pd ^. #originalPath % #unPathI),
+      fixLen' origLen (decodeOsToFpShow $ pd ^. #originalPath % #unPathI),
       sep,
       paddedType (pd ^. #pathType),
       sep,

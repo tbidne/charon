@@ -2,6 +2,7 @@
 module SafeRm.Utils
   ( -- * FAM combinators
     throwIfEx,
+    whenM,
 
     -- * Text
     matchesWildcards,
@@ -27,6 +28,7 @@ module SafeRm.Utils
     logLevelStrings,
 
     -- * Misc
+    filterSeqM,
     renderPretty,
     setRefIfJust,
   )
@@ -41,6 +43,7 @@ import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes.Formatting.Base (BaseFormatter)
 import Data.Bytes.Size (Sized)
 import Data.Char qualified as Ch
+import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Data.Text.Internal (Text (Text))
 import Data.Text.Internal qualified as TI
@@ -81,8 +84,8 @@ readLogLevel "warn" = pure $ Just LevelWarn
 readLogLevel "info" = pure $ Just LevelInfo
 readLogLevel "debug" = pure $ Just LevelDebug
 readLogLevel other =
-  fail $
-    mconcat
+  fail
+    $ mconcat
       [ "Expected log-level ",
         logLevelStrings,
         ", received: ",
@@ -216,3 +219,18 @@ percentEncode =
 -- | Percent decodes a bytestring.
 percentDecode :: ByteString -> ByteString
 percentDecode = URI.urlDecode False
+
+-- | Filter a sequence monadically.
+filterSeqM :: forall m a. (Monad m) => (a -> m Bool) -> Seq a -> m (Seq a)
+filterSeqM p = foldl' foldP (pure Seq.empty)
+  where
+    foldP :: m (Seq a) -> a -> m (Seq a)
+    foldP acc x = do
+      b <- p x
+      if b
+        then (:|> x) <$> acc
+        else acc
+
+-- | When for monadic bool.
+whenM :: (Monad m) => m Bool -> m () -> m ()
+whenM mb ma = mb >>= (`when` ma)

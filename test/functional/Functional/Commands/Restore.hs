@@ -8,6 +8,8 @@ module Functional.Commands.Restore
 where
 
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as T
+import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
 import SafeRm.Data.Metadata qualified as Metadata
@@ -26,7 +28,7 @@ tests testEnv =
         restoresWildcards testEnv',
         restoresSomeWildcards testEnv'
       ]
-      <> wildcardLiteralTests testEnv'
+    <> wildcardLiteralTests testEnv'
   where
     testEnv' = appendTestDir "restore" <$> testEnv
 
@@ -36,10 +38,10 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
   usingReaderT testEnv $ appendTestDirM "restoreOne" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
 
-    delArgList <- withSrArgsM ["delete", f1]
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -91,20 +93,20 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
   usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    let trashDir = testDir </>! ".trash"
+        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- SETUP
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
 
-    assertPathsExist ((testDir </>) <$> ["dir1", "dir2/dir3"])
-    assertPathsExist ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
+    assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
 
     runSafeRm delArgList
 
@@ -159,9 +161,9 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
   usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
-    delArgList <- withSrArgsM ["delete", f1]
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -202,8 +204,8 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     expectedEx =
       Outfixes
         "No entry for 'bad file'; did not find '"
-        [ "/safe-rm/functional/restore/restoreUnknownError-",
-          "/.trash/info/bad file."
+        [ combineFps ["restoreUnknownError-"],
+          T.pack $ foldFilePaths [".trash", "info", "bad file"]
         ]
         ""
     delExpectedMetadata =
@@ -220,9 +222,9 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
   usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
-    delArgList <- withSrArgsM ["delete", f1]
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -257,9 +259,9 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
   where
     expectedEx =
       Outfixes
-        "Cannot restore the trash file 'f1' as one exists at the original location: "
-        ["/safe-rm/functional/restore/restoreCollisionError-"]
-        "/f1"
+        "Cannot restore the trash file 'f1' as one exists at the original location: '"
+        [combineFps ["restoreCollisionError-"]]
+        "/f1'"
     delExpectedMetadata =
       MkMetadata
         { numEntries = 1,
@@ -274,18 +276,18 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
   usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
-        f2 = testDir </> "f2"
-        f3 = testDir </> "f3"
-    delArgList <- withSrArgsM ["delete", f1]
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
+        f2 = testDir </>! "f2"
+        f3 = testDir </>! "f3"
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
     createFiles [f1, f2, f3]
 
     -- delete twice
-    runSafeRm (delArgList <> [f2, f3])
+    runSafeRm (delArgList <> (unsafeDecodeOsToFp <$> [f2, f3]))
     createFiles [f1]
     runSafeRm delArgList
 
@@ -327,9 +329,9 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     desc = "Restore simultaneous collision prints error"
     expectedEx =
       Outfixes
-        "Cannot restore the trash file 'f1 (1)' as one exists at the original location: "
-        ["/safe-rm/functional/restore/restoreSimultaneousCollisionError-"]
-        "/f1"
+        "Cannot restore the trash file 'f1 (1)' as one exists at the original location: '"
+        [combineFps ["restoreSimultaneousCollisionError-"]]
+        "/f1'"
     delExpectedMetadata =
       MkMetadata
         { numEntries = 4,
@@ -351,10 +353,10 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
   usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
+    let trashDir = testDir </>! ".trash"
+        realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
         filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
-    delArgList <- withSrArgsM ("delete" : realFiles)
+    delArgList <- withSrArgsPathsM ["delete"] realFiles
 
     -- setup
     clearDirectory testDir
@@ -380,8 +382,8 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
-    assertPathsDoNotExist ((testDir </>) <$> ["f3", "f4"] ++ delTrashFiles)
-    assertPathsExist ((testDir </>) <$> ["f1", "f2", "f5"])
+    assertPathsDoNotExist (((testDir </>!) <$> ["f3", "f4"]) ++ delTrashFiles)
+    assertPathsExist ((testDir </>!) <$> ["f1", "f2", "f5"])
 
     assertMatch expectedEx ex
 
@@ -414,9 +416,9 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
   usingReaderT testEnv $ appendTestDirM "restoresWildcards" $ do
     testDir <- getTestDir
 
-    let filesToRestore = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
-        otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-    delArgList <- withSrArgsM ("delete" : filesToRestore <> otherFiles)
+    let filesToRestore = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
+        otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
+    delArgList <- withSrArgsPathsM ["delete"] (filesToRestore <> otherFiles)
 
     -- SETUP
     createFiles (filesToRestore <> otherFiles)
@@ -496,9 +498,9 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     testDir <- getTestDir
 
     let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
-        testFiles = (testDir </>) <$> files
+        testFiles = (testDir </>!) <$> files
 
-    delArgList <- withSrArgsM ("delete" : testFiles)
+    delArgList <- withSrArgsPathsM ["delete"] testFiles
 
     -- SETUP
     createFiles testFiles
@@ -532,7 +534,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
 
     -- We want a collision to force an error; everything should be restored
     -- from trash but fooBadBar
-    createFiles [testDir </> "fooBadbar"]
+    createFiles [testDir </>! "fooBadbar"]
 
     restoreArgList <- withSrArgsM ["restore", "foo**bar", "*g*"]
     runSafeRmException @RestoreCollisionE restoreArgList
@@ -582,9 +584,9 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     testDir <- getTestDir
 
     let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
-        testFiles = (testDir </>) <$> files
-        testWcLiteral = testDir </> "*"
-    delArgList <- withSrArgsM ("delete" : testWcLiteral : testFiles)
+        testFiles = (testDir </>!) <$> files
+        testWcLiteral = testDir </>! "*"
+    delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
 
     -- SETUP
     createFiles (testWcLiteral : testFiles)
@@ -644,9 +646,9 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
 
     let files = ["yxxfoo", "yxxbar", "yxxbaz"]
         wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
-        testFiles = (testDir </>) <$> files
-        testWcLiterals = (testDir </>) <$> wcLiterals
-    delArgList <- withSrArgsM ("delete" : testWcLiterals <> testFiles)
+        testFiles = (testDir </>!) <$> files
+        testWcLiterals = (testDir </>!) <$> wcLiterals
+    delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
 
     -- SETUP
     createFiles (testWcLiterals <> testFiles)
@@ -714,3 +716,8 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
 wildcardLiteralTests = const []
 #endif
+
+combineFps :: [FilePath] -> Text
+combineFps =
+  T.pack
+    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "restore")

@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Entrypoint for integration tests.
 module Main (main) where
 
@@ -16,8 +18,9 @@ main :: IO ()
 main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
-  T.defaultMainWithIngredients ingredients $
-    T.withResource setup teardown $ \args ->
+  T.defaultMainWithIngredients ingredients
+    $ T.withResource setup teardown
+    $ \args ->
       testGroup
         "Integration Tests"
         [ SafeRm.tests args,
@@ -30,16 +33,18 @@ main = do
     ingredients =
       T.includingOptions [Option @AsciiOnly Proxy] : T.defaultIngredients
 
-setup :: IO FilePath
+setup :: IO OsPath
 setup = do
-  tmpDir <- (</> "safe-rm/integration") <$> Dir.getTemporaryDirectory
+  tmpDir <-
+    (\p -> p </> [osp|safe-rm|] </> [osp|integration|])
+      <$> Dir.getTemporaryDirectory
 
   createDirectoryIfMissing True tmpDir
   pure tmpDir
 
-teardown :: FilePath -> IO ()
+teardown :: OsPath -> IO ()
 teardown tmpDir = guardOrElse' "NO_CLEANUP" ExpectEnvSet doNothing cleanup
   where
     cleanup = removePathForcibly tmpDir
     doNothing =
-      putStrLn $ "*** Not cleaning up tmp dir: " <> tmpDir
+      putStrLn $ "*** Not cleaning up tmp dir: " <> show tmpDir

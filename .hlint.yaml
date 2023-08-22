@@ -15,3 +15,8 @@
       - "Test.Utils.clearDirectory"
       - "Test.Utils.exToBuilder"
       - "Test.Utils.unsafeReplaceDir"
+- ignore:
+    name: "Use bimap"
+    within:
+      # The warning is spurious as Bifunctor is not polykinded
+      - "Integration.SafeRm"

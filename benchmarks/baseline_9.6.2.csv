@@ -1,0 +1,4 @@
+Name,Mean (ps),2*Stdev (ps),Allocated,Copied,Peak Memory
+"All.Read Index.1,000",1086875,48012,3236,0,88080384
+"All.Read Index.10,000",1097877,94484,3198,0,88080384
+"All.Read Index.100,000",1107901,105520,3198,0,88080384

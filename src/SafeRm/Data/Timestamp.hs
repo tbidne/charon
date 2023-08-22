@@ -59,7 +59,7 @@ instance Serialise Timestamp where
 
 instance Serialize Timestamp where
   type DecodeExtra Timestamp = ()
-  encode = encodeUtf8 . toText
+  encode = pure . encodeUtf8 . toText
   decode _ bs = case decodeUtf8 bs of
     Left err -> Left $ displayException err
     Right timeStr -> case parseLocalTime (T.unpack timeStr) of

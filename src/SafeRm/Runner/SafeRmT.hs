@@ -28,7 +28,7 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       MonadMask,
       MonadPathReader,
       MonadPathWriter,
-      MonadPosix,
+      MonadPosixCompat,
       MonadReader env,
       MonadTerminal,
       MonadThread,

@@ -50,7 +50,14 @@ instance DecodeTOML TomlConfig where
       <*> decodeLogLevel
       <*> decodeSizeMode
     where
-      decodeTrashHome = fmap MkPathI <$> getFieldOpt "trash-home"
+      decodeTrashHome = do
+        mh <- getFieldOpt "trash-home"
+        case mh of
+          Nothing -> pure Nothing
+          Just h ->
+            case encodeFpToOs h of
+              Right p -> pure $ Just $ MkPathI p
+              Left ex -> fail $ "Could not encode trash-home: " <> displayException ex
       decodeBackend = getFieldOptWith tomlDecoder "backend"
       decodeLogLevel =
         getFieldOptWith (tomlDecoder >>= U.readLogLevel) "log-level"

@@ -1,3 +1,6 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 module Unit.Data.PathData
   ( tests,
   )
@@ -6,6 +9,7 @@ where
 import Data.Fixed (Fixed (MkFixed))
 import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), TimeOfDay (..))
+import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -15,9 +19,10 @@ import SafeRm.Data.PathData (PathData (..))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.Paths (PathI (..))
-import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Data.Serialize (Serialize (..), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (..))
 import SafeRm.Data.Timestamp qualified as Timestamp
+import Test.Utils qualified as TestUtils
 import Text.Pretty.Simple qualified as Pretty
 import Unit.Prelude
 
@@ -31,23 +36,23 @@ tests =
   where
     backends = [minBound .. maxBound]
     specs =
-      [ ("1", "\t"),
-        ("2", "path\\nnew\\n\\nlines"),
-        ("3", "path\\n\\n")
+      [ ([osp|1|], [osp|\t|]),
+        ([osp|2|], [osp|path\\nnew\\n\\nlines|]),
+        ([osp|3|], [osp|path\\n\\n|])
       ]
 
-serializeRoundtripSpecs :: Backend -> [(String, String)] -> TestTree
+serializeRoundtripSpecs :: Backend -> [(OsPath, OsPath)] -> TestTree
 serializeRoundtripSpecs backend params = testCase desc $ do
   ts <- Timestamp.fromText "1858-11-17T00:00:00"
 
   for_ params $ \(fileName, originalPath) -> do
     let pd = backendToMk backend fileName originalPath ts
-        encoded = encode pd
+    encoded <- encodeThrowM pd
 
     case decode (backend, MkPathI fileName) encoded of
       Left err ->
-        assertFailure $
-          mconcat
+        assertFailure
+          $ mconcat
             [ "PathData:\n\n",
               TL.unpack (Pretty.pShow pd),
               "\n\nEncoded:\n\n",
@@ -59,15 +64,15 @@ serializeRoundtripSpecs backend params = testCase desc $ do
   where
     desc = "decode . encode ~ id (specs) " ++ Backend.backendTestDesc backend
     backendToMk BackendCbor name opath ts =
-      PathDataCbor $
-        Cbor.UnsafePathData
+      PathDataCbor
+        $ Cbor.UnsafePathData
           { fileName = MkPathI name,
             originalPath = MkPathI opath,
             created = ts
           }
     backendToMk BackendFdo name opath ts =
-      PathDataFdo $
-        Fdo.UnsafePathData
+      PathDataFdo
+        $ Fdo.UnsafePathData
           { fileName = MkPathI name,
             originalPath = MkPathI opath,
             created = ts
@@ -92,8 +97,8 @@ serializeRoundtripProp =
       -- precision whereas the timestamp field technically has picosecond
       -- resolution. This is acceptable, as we do not care about
       -- precision > second.
-      let encoded = encode pathData
-          decoded = decode (backend, fileName) encoded
+      encoded <- encodeThrowM pathData
+      let decoded = decode (backend, fileName) encoded
 
       annotateShow encoded
       annotateShow decoded
@@ -114,8 +119,8 @@ genCborPathData =
     <*> genOriginalPath
     <*> genTimestamp
   where
-    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) genPathChar
-    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) genPathChar
+    genFileName = toPathI <$> Gen.string (Range.exponential 1 100) genPathChar
+    genOriginalPath = toPathI <$> Gen.string (Range.linear 1 100) genPathChar
 
 genFdoPathData :: Gen Fdo.PathData
 genFdoPathData =
@@ -124,11 +129,14 @@ genFdoPathData =
     <*> genOriginalPath
     <*> genTimestamp
   where
-    genFileName = MkPathI <$> Gen.string (Range.exponential 1 100) genPathChar
-    genOriginalPath = MkPathI <$> Gen.string (Range.linear 1 100) genPathChar
+    genFileName = toPathI <$> Gen.string (Range.exponential 1 100) genPathChar
+    genOriginalPath = toPathI <$> Gen.string (Range.linear 1 100) genPathChar
+
+toPathI :: FilePath -> PathI i
+toPathI = MkPathI . unsafeEncodeFpToOs
 
 genPathChar :: Gen Char
-genPathChar = Gen.filter (/= '\NUL') Gen.unicode
+genPathChar = TestUtils.genPathChar False
 
 genTimestamp :: Gen Timestamp
 genTimestamp = MkTimestamp <$> genLocalTime

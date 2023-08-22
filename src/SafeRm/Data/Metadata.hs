@@ -103,8 +103,8 @@ toMetadata (trashHome, trashLog) =
     -- NOTE: If the index is successfully read then we have verified that
     -- all invariants are preserved i.e. bijection between /files and /info.
 
-    pure $
-      MkMetadata
+    pure
+      $ MkMetadata
         { numEntries = toNat numEntries,
           numFiles = toNat numFiles,
           logSize,
@@ -127,8 +127,8 @@ getAllFiles ::
     MonadPathReader m,
     MonadThrow m
   ) =>
-  FilePath ->
-  m [FilePath]
+  OsPath ->
+  m [OsPath]
 getAllFiles fp =
   doesFileExist fp >>= \case
     True -> pure [fp]
@@ -137,5 +137,5 @@ getAllFiles fp =
         True ->
           listDirectory fp
             >>= fmap join
-              . traverse (getAllFiles . (fp </>))
+            . traverse (getAllFiles . (fp </>))
         False -> throwCS $ MkFileNotFoundE fp

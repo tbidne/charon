@@ -5,6 +5,8 @@ module Functional.Commands.Delete
 where
 
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as T
+import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
 import SafeRm.Data.Metadata qualified as Metadata
@@ -33,15 +35,15 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> testEnv ^. #trashDir
-        f1 = testDir </> "f1"
+    let trashDir = testDir </> (testEnv ^. #trashDir)
+        f1 = testDir </>! "f1"
 
     expectedIdxSet <- mkPathDataSetM ["f1"]
 
     -- setup
     createFiles [f1]
     assertPathsExist [f1]
-    argList <- withSrArgsM ["delete", f1]
+    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp f1]
 
     liftIO $ runSafeRm argList
 
@@ -69,16 +71,16 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
-    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
-    argList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    argList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     liftIO $ runSafeRm argList
@@ -116,9 +118,9 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
     testDir <- getTestDir
-    let file = testDir </> "bad file"
+    let file = testDir </>! "bad file"
 
-    argList <- withSrArgsM ["delete", file]
+    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp file]
 
     -- setup
     clearDirectory testDir
@@ -135,9 +137,9 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
   where
     expectedEx =
       Outfixes
-        "File not found: '"
-        ["/safe-rm/functional/delete/deleteUnknownError-"]
-        "/bad file'"
+        "File not found: "
+        [combineFps ["deleteUnknownError-"]]
+        "bad file"
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -147,10 +149,10 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deleteDuplicateFile" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> testEnv ^. #trashDir
-        file = testDir </> "f1"
+    let trashDir = testDir </> (testEnv ^. #trashDir)
+        file = testDir </>! "f1"
 
-    argList <- withSrArgsM ["delete", file]
+    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp file]
 
     -- setup
     clearDirectory testDir
@@ -194,10 +196,10 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
     testDir <- getTestDir
-    let realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
-        filesTryDelete = (testDir </>) <$> ["f1", "f2", "f3", "f4", "f5"]
+    let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
+        filesTryDelete = (testDir </>!) <$> ["f1", "f2", "f3", "f4", "f5"]
 
-    argList <- withSrArgsM ("delete" : filesTryDelete)
+    argList <- withSrArgsPathsM ["delete"] filesTryDelete
 
     -- setup
     createFiles realFiles
@@ -228,9 +230,9 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
   where
     expectedEx =
       Outfixes
-        "File not found: '"
-        ["/safe-rm/functional/delete/deletesSome-"]
-        "/f4'"
+        "File not found: "
+        [combineFps ["deletesSome-"]]
+        "/f4"
     expectedMetadata =
       MkMetadata
         { numEntries = 3,
@@ -238,3 +240,8 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
           logSize = afromInteger 0,
           size = afromInteger 15
         }
+
+combineFps :: [FilePath] -> Text
+combineFps =
+  T.pack
+    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "delete")

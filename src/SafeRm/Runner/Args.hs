@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -12,6 +13,7 @@ where
 import Control.Applicative qualified as A
 import Data.List qualified as L
 import Data.Version (Version (versionBranch))
+import Effects.Optparse (osPath)
 import Options.Applicative
   ( CommandFields,
     InfoMod,
@@ -40,7 +42,7 @@ import SafeRm.Data.Backend (Backend (..), parseBackend)
 import SafeRm.Data.Index (Sort, readSort)
 import SafeRm.Data.PathData.Formatting (ColFormat (..))
 import SafeRm.Data.PathData.Formatting qualified as PathData
-import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
 import SafeRm.Runner.Command (Command (..), CommandP1)
@@ -61,7 +63,7 @@ data TomlConfigPath
   | -- | Attempts to read the Toml file at the default path.
     TomlDefault
   | -- | Path to Toml file.
-    TomlPath !FilePath
+    TomlPath !OsPath
   deriving stock
     ( Eq,
       Show
@@ -106,8 +108,8 @@ parserInfoArgs =
     headerTxt = Just "Safe-rm: A tool for deleting files to a trash directory."
     footerTxt = Just $ fromString versNum
     desc =
-      Chunk.paragraph $
-        mconcat
+      Chunk.paragraph
+        $ mconcat
           [ "Safe-rm moves files to a trash directory, so they can later be ",
             "restored or permanently deleted. It is intended as a safer ",
             "alternative to rm. See github.com/tbidne/safe-rm#readme for ",
@@ -134,14 +136,14 @@ versNum = "Version: " <> L.intercalate "." (show <$> versionBranch Paths.version
 
 backendParser :: Parser (Maybe Backend)
 backendParser =
-  OA.optional $
-    OA.option (OA.str >>= parseBackend) $
-      mconcat
-        [ OA.long "backend",
-          OA.short 'b',
-          OA.metavar "(cbor|fdo)",
-          mkHelp helpTxt
-        ]
+  OA.optional
+    $ OA.option (OA.str >>= parseBackend)
+    $ mconcat
+      [ OA.long "backend",
+        OA.short 'b',
+        OA.metavar "(cbor|fdo)",
+        mkHelp helpTxt
+      ]
   where
     helpTxt =
       mconcat
@@ -152,8 +154,8 @@ backendParser =
 
 backendDestParser :: Parser Backend
 backendDestParser =
-  OA.option (OA.str >>= parseBackend) $
-    mconcat
+  OA.option (OA.str >>= parseBackend)
+    $ mconcat
       [ OA.long "dest",
         OA.short 'd',
         OA.metavar "(cbor|fdo)",
@@ -185,10 +187,11 @@ configParser =
           "not specified then we look in the XDG config directory ",
           "e.g. ~/.config/safe-rm/config.toml"
         ]
-    readTomlPath =
-      OA.str >>= \case
-        "none" -> pure TomlNone
-        path -> pure $ TomlPath path
+    readTomlPath = do
+      p <- osPath
+      if p == [osp|none|]
+        then pure TomlNone
+        else pure $ TomlPath p
 
 commandParser :: Parser CommandP1
 commandParser =
@@ -232,8 +235,8 @@ commandParser =
   where
     delTxt = mkCmdDesc "Moves the path(s) to the trash."
     permDelTxt =
-      mkCmdDesc $
-        mconcat
+      mkCmdDesc
+        $ mconcat
           [ "Permanently deletes path(s) from the trash. Can use wildcards ",
             "to match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, ",
             "etc. To match a filename with a literal * not representing a ",
@@ -241,8 +244,8 @@ commandParser =
           ]
     emptyTxt = mkCmdDesc "Empties the trash."
     restoreTxt =
-      mkCmdDesc $
-        mconcat
+      mkCmdDesc
+        $ mconcat
           [ "Restores the trash path(s) to their original location. Can use ",
             "wildcards to match trash paths e.g. '*foo*bar' matches foobar, ",
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
@@ -258,28 +261,28 @@ commandParser =
     emptyParser = Empty <$> forceParser
     restoreParser = Restore <$> pathsParser
     listParser =
-      fmap List $
-        MkListCmd
-          <$> ( MkListFormatPhase1
-                  <$> listFormatStyleParser
-                  <*> nameTruncParser
-                  <*> origTruncParser
-              )
-          <*> sortParser
-          <*> reverseSortParser
+      fmap List
+        $ MkListCmd
+        <$> ( MkListFormatPhase1
+                <$> listFormatStyleParser
+                <*> nameTruncParser
+                <*> origTruncParser
+            )
+        <*> sortParser
+        <*> reverseSortParser
     metadataParser = pure Metadata
     convertParser = Convert <$> backendDestParser
     mergeParser = Merge <$> trashDestParser
 
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =
-  A.optional $
-    OA.option (OA.str >>= parseListFormat) $
-      mconcat
-        [ OA.long "format",
-          OA.metavar "(t[abular] | m[ulti])",
-          mkHelp helpTxt
-        ]
+  A.optional
+    $ OA.option (OA.str >>= parseListFormat)
+    $ mconcat
+      [ OA.long "format",
+        OA.metavar "(t[abular] | m[ulti])",
+        mkHelp helpTxt
+      ]
   where
     helpTxt =
       mconcat
@@ -300,8 +303,8 @@ nameTruncParser = colParser PathData.formatFileNameLenMin fields
         [ OA.long "name-len",
           OA.short 'n',
           OA.metavar "(max|NAT)",
-          mkHelp $
-            mconcat
+          mkHelp
+            $ mconcat
               [ "Sets the file name column length to either NAT characters or ",
                 "longest file-name. Only affects the 'tabular' format."
               ]
@@ -315,8 +318,8 @@ origTruncParser = colParser PathData.formatOriginalPathLenMin fields
         [ OA.long "orig-len",
           OA.short 'o',
           OA.metavar "(max|NAT)",
-          mkHelp $
-            mconcat
+          mkHelp
+            $ mconcat
               [ "Sets the original-path column length to either NAT characters or ",
                 "longest path. Only affects the 'tabular' format."
               ]
@@ -331,8 +334,8 @@ colParser minLen = A.optional . OA.option readCol
         other -> case TR.readMaybe other of
           Just n -> pure $ ColFormatFixed n
           Nothing ->
-            fail $
-              mconcat
+            fail
+              $ mconcat
                 [ "Unrecognized col-format. Should either be 'max' or a positive ",
                   "integer < ",
                   show minLen,
@@ -354,20 +357,20 @@ sortParser =
 
 reverseSortParser :: Parser (Maybe Bool)
 reverseSortParser =
-  A.optional $
-    OA.flag' True $
-      mconcat
-        [ OA.long "reverse-sort",
-          OA.short 'r',
-          mkHelp helpTxt
-        ]
+  A.optional
+    $ OA.flag' True
+    $ mconcat
+      [ OA.long "reverse-sort",
+        OA.short 'r',
+        mkHelp helpTxt
+      ]
   where
     helpTxt = "Sorts in the reverse order."
 
 forceParser :: Parser Bool
 forceParser =
-  OA.switch $
-    mconcat
+  OA.switch
+    $ mconcat
       [ OA.long "force",
         OA.short 'f',
         mkHelp helpTxt
@@ -379,7 +382,7 @@ trashParser :: Parser (Maybe (PathI TrashHome))
 trashParser =
   A.optional
     $ OA.option
-      OA.str
+      (fmap MkPathI osPath)
     $ mconcat
       [ OA.long "trash-home",
         OA.short 't',
@@ -397,7 +400,7 @@ trashParser =
 trashDestParser :: Parser (PathI TrashHome)
 trashDestParser =
   OA.option
-    OA.str
+    (fmap MkPathI osPath)
     $ mconcat
       [ OA.long "dest",
         OA.short 'd',
@@ -409,30 +412,36 @@ trashDestParser =
 
 logLevelParser :: Parser (Maybe (Maybe LogLevel))
 logLevelParser =
-  A.optional $
-    OA.option (OA.str >>= Utils.readLogLevel) $
-      mconcat
-        [ OA.long "log-level",
-          OA.metavar Utils.logLevelStrings,
-          mkHelp $
-            mconcat
-              [ "The file level in which to log. Defaults to none. Logs are ",
-                "written to the XDG state directory e.g. ~/.local/state/safe-rm."
-              ]
-        ]
+  A.optional
+    $ OA.option (OA.str >>= Utils.readLogLevel)
+    $ mconcat
+      [ OA.long "log-level",
+        OA.metavar Utils.logLevelStrings,
+        mkHelp
+          $ mconcat
+            [ "The file level in which to log. Defaults to none. Logs are ",
+              "written to the XDG state directory e.g. ~/.local/state/safe-rm."
+            ]
+      ]
 
-pathsParser :: (Hashable a, IsString a) => Parser (UniqueSeq a)
+pathsParser :: Parser (UniqueSeq (PathI i))
 pathsParser =
   -- NOTE: _should_ be safe because OA.some only succeeds for non-zero input.
   -- We do this rather than using NonEmpty's some1 because otherwise the CLI
   -- help metavar is duplicated i.e. "PATHS... [PATHS...]".
-  fromFoldable . unsafeNE
-    <$> OA.some (OA.argument OA.str (OA.metavar "PATHS..."))
+  --
+  -- Also we explicitly favor 'osPath' over 'validOsPath' i.e. we do NOT
+  -- want path validation here. The reason is that we want to allow users to
+  -- pass paths containing wildcards (*) for easier matching, but these are
+  -- not valid windows paths, hence will fail any validation checks.
+  fromFoldable
+    . unsafeNE
+    <$> OA.some (OA.argument (fmap MkPathI osPath) (OA.metavar "PATHS..."))
 
 logSizeModeParser :: Parser (Maybe FileSizeMode)
 logSizeModeParser =
-  OA.optional $
-    OA.option
+  OA.optional
+    $ OA.option
       readFileSize
       ( mconcat
           [ OA.long "log-size-mode",

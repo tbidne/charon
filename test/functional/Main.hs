@@ -16,6 +16,7 @@ import GHC.Conc (setUncaughtExceptionHandler)
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
+import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
 
 -- | Runs functional tests.
@@ -23,8 +24,9 @@ main :: IO ()
 main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
-  Tasty.defaultMain $
-    Tasty.withResource setup teardown $ \env ->
+  Tasty.defaultMain
+    $ Tasty.withResource setup teardown
+    $ \env ->
       let setBackend b = set' #backend b <$> env
 
           tests =
@@ -55,13 +57,14 @@ main = do
 
 setup :: IO TestEnv
 setup = do
-  tmpDir <- (\tmp -> tmp </> "safe-rm" </> "functional") <$> Dir.getTemporaryDirectory
+  tmpDir <- (\tmp -> tmp </> pathSafeRm </>! "functional") <$> Dir.getTemporaryDirectory
   createDirectoryIfMissing True tmpDir
-  pure $
-    MkTestEnv
+  testDir <- encodeUtf ""
+  pure
+    $ MkTestEnv
       { backend = BackendCbor,
-        testDir = "",
-        trashDir = ".trash",
+        testDir,
+        trashDir = pathDotTrash,
         testRoot = tmpDir
       }
 
@@ -71,4 +74,4 @@ teardown env = guardOrElse' "NO_CLEANUP" ExpectEnvSet doNothing cleanup
     fp = env ^. #testRoot
     cleanup = removePathForcibly fp
     doNothing =
-      putStrLn $ "*** Not cleaning up tmp dir: " <> fp
+      putStrLn $ "*** Not cleaning up tmp dir: " <> show fp

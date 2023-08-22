@@ -177,7 +177,7 @@ normalizeCore ::
     MonadIORef m,
     MonadLogger m,
     MonadPathReader m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m
@@ -195,8 +195,9 @@ normalizeCore pd = do
   let MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
 
   size <-
-    fmap (MkBytes @B) $
-      pathSizeRecursive path >>= \case
+    fmap (MkBytes @B)
+      $ pathSizeRecursive path
+      >>= \case
         PathSizeSuccess n -> pure n
         PathSizePartial errs n -> do
           -- We received a value but had some errors.
@@ -213,8 +214,8 @@ normalizeCore pd = do
             putTextLn errMsg
             $(logError) errMsg
           pure 0
-  pure $
-    Core.UnsafePathData
+  pure
+    $ Core.UnsafePathData
       { fileName,
         originalPath,
         created,
@@ -270,15 +271,15 @@ convert :: PathData -> Backend -> PathData
 convert pd@(PathDataCbor _) BackendCbor = pd
 convert pd@(PathDataFdo _) BackendFdo = pd
 convert pd@(PathDataCbor _) BackendFdo =
-  PathDataFdo $
-    Fdo.UnsafePathData
+  PathDataFdo
+    $ Fdo.UnsafePathData
       { fileName = pd ^. #fileName,
         originalPath = pd ^. #originalPath,
         created = pd ^. #created
       }
 convert pd@(PathDataFdo _) BackendCbor =
-  PathDataCbor $
-    Cbor.UnsafePathData
+  PathDataCbor
+    $ Cbor.UnsafePathData
       { fileName = pd ^. #fileName,
         originalPath = pd ^. #originalPath,
         created = pd ^. #created

@@ -73,7 +73,7 @@ delete ::
   m ()
 delete paths = addNamespace "delete" $ do
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   Trash.createTrash
 
@@ -85,10 +85,10 @@ delete paths = addNamespace "delete" $ do
     Trash.mvOriginalToTrash trashHome currTime fp
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
-        putStrLn $
-          mconcat
+        putStrLn
+          $ mconcat
             [ "Error deleting path '",
-              fp ^. #unPathI,
+              decodeOsToFpShow $ fp ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -109,7 +109,7 @@ permDelete ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
@@ -120,7 +120,7 @@ permDelete ::
   m ()
 permDelete force paths = addNamespace "permDelete" $ do
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
 
@@ -130,10 +130,10 @@ permDelete force paths = addNamespace "permDelete" $ do
     (Trash.permDeleteFromTrash force trashHome p >>= U.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
-        putStrLn $
-          mconcat
+        putStrLn
+          $ mconcat
             [ "Error permanently deleting path '",
-              p ^. #unPathI,
+              decodeOsToFpShow $ p ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -159,7 +159,7 @@ getIndex ::
 getIndex = addNamespace "getIndex" $ do
   trashHome <- asks getTrashHome
 
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   Trash.doesTrashExist >>= \case
     True -> Index.readIndex trashHome
@@ -183,7 +183,7 @@ getMetadata ::
 getMetadata = addNamespace "getMetadata" $ do
   trashHome <- asks getTrashHome
   trashLog <- Env.getTrashLog
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
   Trash.doesTrashExist >>= \case
     True -> Metadata.toMetadata (trashHome, trashLog)
     False -> do
@@ -210,7 +210,7 @@ restore ::
   m ()
 restore paths = addNamespace "restore" $ do
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
 
@@ -220,10 +220,10 @@ restore paths = addNamespace "restore" $ do
     (Trash.restoreTrashToOriginal trashHome p >>= U.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
-        putStrLn $
-          mconcat
+        putStrLn
+          $ mconcat
             [ "Error restoring path '",
-              p ^. #unPathI,
+              decodeOsToFpShow $ p ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -250,13 +250,13 @@ emptyTrash ::
   m ()
 emptyTrash force = addNamespace "emptyTrash" $ do
   trashHome@(MkPathI th) <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   exists <- doesDirectoryExist th
   if not exists
     then do
       $(logDebug) "Trash home does not exist."
-      putTextLn $ T.pack th <> " is empty."
+      putTextLn $ Paths.toText trashHome <> " is empty."
     else
       if force
         then do
@@ -270,15 +270,15 @@ emptyTrash force = addNamespace "emptyTrash" $ do
           putStr "Permanently delete all contents (y/n)? "
           c <- Ch.toLower <$> getChar
           if
-              | c == 'y' -> do
-                  $(logDebug) "Deleting contents."
-                  removeDirectoryRecursive th
-                  Trash.createTrash
-                  putStrLn ""
-              | c == 'n' -> do
-                  $(logDebug) "Not deleting contents."
-                  putStrLn ""
-              | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+            | c == 'y' -> do
+                $(logDebug) "Deleting contents."
+                removeDirectoryRecursive th
+                Trash.createTrash
+                putStrLn ""
+            | c == 'n' -> do
+                $(logDebug) "Not deleting contents."
+                putStrLn ""
+            | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
 convert ::
   ( HasBackend env,
@@ -297,7 +297,7 @@ convert ::
   m ()
 convert dest = addNamespace "convert" $ do
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (trashHome ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   src <- asks getBackend
   if src == dest
@@ -329,7 +329,7 @@ merge ::
   m ()
 merge dest = addNamespace "merge" $ do
   src <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> T.pack (src ^. #unPathI))
+  $(logDebug) ("Trash home: " <> Paths.toText src)
 
   src' <- Paths.liftPathIF' canonicalizePath src
   dest' <- Paths.liftPathIF' canonicalizePath dest
@@ -338,16 +338,16 @@ merge dest = addNamespace "merge" $ do
     then do
       let msg =
             mconcat
-              [ "Source path '",
-                src' ^. #unPathI,
-                "' is the same as dest path '",
-                dest' ^. #unPathI,
-                "'. Nothing to do."
+              [ "Source path ",
+                decodeOsToFpShow $ src' ^. #unPathI,
+                " is the same as dest path ",
+                decodeOsToFpShow $ dest' ^. #unPathI,
+                ". Nothing to do."
               ]
       $(logDebug) $ T.pack msg
       putStrLn msg
     else do
-      $(logDebug) $ "Dest path: " <> T.pack (dest' ^. #unPathI)
+      $(logDebug) $ "Dest path: " <> Paths.toText dest
       Trash.mergeTrashDirs src dest
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()

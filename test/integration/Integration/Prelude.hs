@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
@@ -50,19 +51,19 @@ import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils as X
 
 -- | Asserts that files exist.
-assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
+assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsExist paths =
   for_ paths $ \p -> do
     exists <- liftIO $ doesFileExist p
-    annotate $ "Expected file to exist: " <> p
+    annotate $ "Expected file to exist: " <> show p
     assert exists
 
 -- | Asserts that files do not exist.
-assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f FilePath -> m ()
+assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsDoNotExist paths =
   for_ paths $ \p -> do
     exists <- liftIO $ doesFileExist p
-    annotate $ "Expected file not to exist: " <> p
+    annotate $ "Expected file not to exist: " <> show p
     assert (not exists)
 
 -- | Environment for running pure integration tests.
@@ -70,7 +71,7 @@ data IntPureEnv = MkIntPureEnv
   { backend :: !Backend,
     trashHome :: !(PathI TrashHome),
     terminalRef :: !(IORef Text),
-    deletedPathsRef :: !(IORef String)
+    deletedPathsRef :: !(IORef [OsPath])
   }
 
 makeFieldLabelsNoPrefix ''IntPureEnv
@@ -97,7 +98,7 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
       MonadIORef,
       MonadMask,
       MonadPathReader,
-      MonadPosix,
+      MonadPosixCompat,
       MonadThread,
       MonadThrow,
       MonadReader env
@@ -108,8 +109,8 @@ instance MonadTerminal (IntPure IntPureEnv) where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
   getChar = pure 'y'
   getTerminalSize =
-    pure $
-      Window
+    pure
+      $ Window
         { height = 50,
           width = 100
         }
@@ -141,11 +142,11 @@ instance MonadHandleWriter (IntPure IntPureEnv) where
 instance MonadPathWriter (IntPure IntPureEnv) where
   renameFile p1 _ =
     asks (view #deletedPathsRef) >>= \ref ->
-      modifyIORef' ref (\rest -> p1 <> "\n" <> rest)
+      modifyIORef' ref (p1 :)
 
   renameDirectory p1 _ =
     asks (view #deletedPathsRef) >>= \ref ->
-      modifyIORef' ref (\rest -> p1 <> "\n" <> rest)
+      modifyIORef' ref (p1 :)
 
   createDirectoryIfMissing _ _ = pure ()
 
@@ -162,7 +163,7 @@ captureSafeRmIntExceptionPure ::
   IO (Text, Text, Text)
 captureSafeRmIntExceptionPure argList = do
   terminalRef <- newIORef ""
-  deletedPathsRef <- newIORef ""
+  deletedPathsRef <- newIORef []
 
   (toml, cmd) <- getConfig
   env <- mkIntPureEnv toml terminalRef deletedPathsRef
@@ -180,17 +181,17 @@ captureSafeRmIntExceptionPure argList = do
       pure
         ( T.pack (displayException ex),
           terminal,
-          T.pack deletedPaths
+          showt deletedPaths
         )
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-mkIntPureEnv :: TomlConfig -> IORef Text -> IORef String -> IO IntPureEnv
+mkIntPureEnv :: TomlConfig -> IORef Text -> IORef [OsPath] -> IO IntPureEnv
 mkIntPureEnv toml terminalRef deletedPathsRef = do
   trashHome <- getTrashHome'
-  pure $
-    MkIntPureEnv
+  pure
+    $ MkIntPureEnv
       { backend = fromMaybe BackendCbor (toml ^. #backend),
         trashHome = trashHome,
         terminalRef,

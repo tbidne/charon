@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Runner unit tests.
 module Unit.Runner
@@ -9,6 +10,7 @@ where
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
+import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
   ( _Delete,
@@ -52,7 +54,7 @@ delete = testCase "Parses delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just ["foo", "bar"] @=? cmd ^? _Delete
+  Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Delete
   where
     argList = ["delete", "foo", "bar", "-c", "none"]
 
@@ -61,7 +63,7 @@ permDelete = testCase "Parses perm delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (False, ["foo", "bar"]) @=? cmd ^? _PermDelete
+  Just (False, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
 
@@ -70,7 +72,7 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (True, ["foo", "bar"]) @=? cmd ^? _PermDelete
+  Just (True, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
 
@@ -97,7 +99,7 @@ restore = testCase "Parses restore" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just ["foo", "bar"] @=? cmd ^? _Restore
+  Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Restore
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
 
@@ -187,7 +189,7 @@ parsesExample :: TestTree
 parsesExample = testCase "Parses example" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
-  Just "./tmp" @=? cfg ^. #trashHome
+  Just (MkPathI [osp|./tmp|]) @=? cfg ^. #trashHome
   Just BackendFdo @=? cfg ^. #backend
   Just (Just LevelInfo) @=? cfg ^. #logLevel
   Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^. #logSizeMode
@@ -198,7 +200,7 @@ argsOverridesToml :: TestTree
 argsOverridesToml = testCase "Args overrides Toml" $ do
   (cfg, _) <- SysEnv.withArgs argList getConfiguration
 
-  Just "not-tmp" @=? cfg ^. #trashHome
+  Just (MkPathI [osp|not-tmp|]) @=? cfg ^. #trashHome
   Just BackendCbor @=? cfg ^. #backend
   Just (Just LevelError) @=? cfg ^. #logLevel
   Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^. #logSizeMode

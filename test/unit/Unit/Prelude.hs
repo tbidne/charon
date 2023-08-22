@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Prelude for unit test suite.
 module Unit.Prelude
   ( module X,
@@ -5,7 +7,6 @@ module Unit.Prelude
     assertFalse,
     assertMatches,
     getDefaultTrash,
-    diff,
   )
 where
 
@@ -26,7 +27,7 @@ import Hedgehog as X
   )
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, askOption, testGroup)
-import Test.Tasty.Golden as X (goldenVsFile, goldenVsFileDiff)
+import Test.Tasty.Golden as X (goldenVsFile)
 import Test.Tasty.HUnit as X
   ( assertBool,
     assertEqual,
@@ -37,11 +38,8 @@ import Test.Tasty.HUnit as X
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils (TextMatch (..), assertMatches)
 
-getDefaultTrash :: IO FilePath
-getDefaultTrash = (</> ".trash") <$> getHomeDirectory
-
-diff :: FilePath -> FilePath -> [FilePath]
-diff ref new = ["diff", "-u", ref, new]
+getDefaultTrash :: IO OsPath
+getDefaultTrash = (</> [osp|.trash|]) <$> getHomeDirectory
 
 assertFalse :: String -> Bool -> IO ()
 assertFalse d = assertBool d . not

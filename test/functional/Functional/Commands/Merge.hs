@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Tests for merge command.
 module Functional.Commands.Merge
   ( tests,
@@ -26,13 +28,13 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 
     -- SETUP SRC
 
-    local (set' #trashDir "src") $ do
-      let filesToDelete = (testDir </>) <$> ["sf1", "sf2", "sf3"]
-          dirsToDelete = (testDir </>) <$> ["sdir1", "sdir2"]
-      delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    local (set' #trashDir pathSrc) $ do
+      let filesToDelete = (testDir </>!) <$> ["sf1", "sf2", "sf3"]
+          dirsToDelete = (testDir </>!) <$> ["sdir1", "sdir2"]
+      delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
-      createDirectories ((testDir </>) <$> ["sdir1", "sdir2", "sdir2/sdir3"])
-      createFiles ((testDir </> "sdir2/sdir3/foo") : filesToDelete)
+      createDirectories ((testDir </>!) <$> ["sdir1", "sdir2", "sdir2/sdir3"])
+      createFiles ((testDir </>! "sdir2/sdir3/foo") : filesToDelete)
       assertPathsExist (filesToDelete ++ dirsToDelete)
 
       runSafeRm delArgList
@@ -58,13 +60,13 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 
     -- SETUP DEST
 
-    local (set' #trashDir "dest") $ do
-      let filesToDelete = (testDir </>) <$> ["df1", "df2", "df3"]
-          dirsToDelete = (testDir </>) <$> ["ddir1", "ddir2"]
-      delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    local (set' #trashDir pathDest) $ do
+      let filesToDelete = (testDir </>!) <$> ["df1", "df2", "df3"]
+          dirsToDelete = (testDir </>!) <$> ["ddir1", "ddir2"]
+      delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
-      createDirectories ((testDir </>) <$> ["ddir1", "ddir2", "ddir2/ddir3"])
-      createFiles ((testDir </> "ddir2/ddir3/foo") : filesToDelete)
+      createDirectories ((testDir </>!) <$> ["ddir1", "ddir2", "ddir2/ddir3"])
+      createFiles ((testDir </>! "ddir2/ddir3/foo") : filesToDelete)
       assertPathsExist (filesToDelete ++ dirsToDelete)
 
       runSafeRm delArgList
@@ -89,13 +91,13 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       delExpectedMetadata @=? delMetadata
 
     -- MERGE FROM SRC TO DEST
-    local (set' #trashDir "src") $ do
-      let dest = testDir </> "dest"
-      mergeArgs <- withSrArgsM ["merge", "-d", dest]
+    local (set' #trashDir pathSrc) $ do
+      let dest = testDir </> pathDest
+      mergeArgs <- withSrArgsPathsM ["merge", "-d"] [dest]
       runSafeRm mergeArgs
 
     -- VERIFY DEST
-    local (set' #trashDir "dest") $ do
+    local (set' #trashDir pathDest) $ do
       -- file assertions
       mergedTrashPaths <-
         mkAllTrashPathsM
@@ -154,18 +156,18 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
   usingReaderT testEnv $ appendTestDirM "mergeCollisionFails" $ do
     testDir <- getTestDir
 
-    let trashDirDest = testDir </> "dest"
+    let trashDirDest = testDir </>! "dest"
 
     -- SETUP SRC
 
-    (delTrashPathsSrc, pathsToDeleteSrc) <- local (set' #trashDir "src") $ do
-      let filesToDelete = (testDir </>) <$> ["sf1", "sf2", "sf3"]
-          dirsToDelete = (testDir </>) <$> ["sdir1", "dir2"]
+    (delTrashPathsSrc, pathsToDeleteSrc) <- local (set' #trashDir pathSrc) $ do
+      let filesToDelete = (testDir </>!) <$> ["sf1", "sf2", "sf3"]
+          dirsToDelete = (testDir </>!) <$> ["sdir1", "dir2"]
 
-      delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+      delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
       -- NOTE: both trash dirs have dir2, giving us the collision we need
-      createDirectories ((testDir </>) <$> ["sdir1", "dir2", "dir2/sdir3"])
-      createFiles ((testDir </> "dir2/sdir3/foo") : filesToDelete)
+      createDirectories ((testDir </>!) <$> ["sdir1", "dir2", "dir2/sdir3"])
+      createFiles ((testDir </>! "dir2/sdir3/foo") : filesToDelete)
 
       runSafeRm delArgList
 
@@ -193,14 +195,14 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
     -- SETUP DEST
 
     (delTrashPathsDest, pathsToDeleteDest, delExpectedIdxSetDest) <-
-      local (set' #trashDir "dest") $ do
-        let filesToDelete = (testDir </>) <$> ["df1", "df2", "df3"]
-            dirsToDelete = (testDir </>) <$> ["ddir1", "dir2"]
+      local (set' #trashDir pathDest) $ do
+        let filesToDelete = (testDir </>!) <$> ["df1", "df2", "df3"]
+            dirsToDelete = (testDir </>!) <$> ["ddir1", "dir2"]
 
-        delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
         -- NOTE: both trash dirs have dir2, giving us the collision we need
-        createDirectories ((testDir </>) <$> ["ddir1", "dir2", "dir2/sdir3"])
-        createFiles ((testDir </> "dir2/sdir3/foo") : filesToDelete)
+        createDirectories ((testDir </>!) <$> ["ddir1", "dir2", "dir2/sdir3"])
+        createFiles ((testDir </>! "dir2/sdir3/foo") : filesToDelete)
 
         runSafeRm delArgList
 
@@ -227,15 +229,15 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
 
     -- MERGE
 
-    local (set' #trashDir "src") $ do
-      mergeArgs <- withSrArgsM ["merge", "-d", trashDirDest]
+    local (set' #trashDir pathSrc) $ do
+      mergeArgs <- withSrArgsPathsM ["merge", "-d"] [trashDirDest]
       runSafeRmException @PathExistsException mergeArgs
 
       -- verify src unchanged
       assertPathsExist (delTrashPathsSrc ++ delTrashPathsDest)
       assertPathsDoNotExist (pathsToDeleteSrc ++ pathsToDeleteDest)
 
-    local (set' #trashDir "dest") $ do
+    local (set' #trashDir pathDest) $ do
       -- verify dest unchanged
       (mergeIdxSetDest, mergeMetadataDest) <- runIndexMetadataM
       assertSetEq delExpectedIdxSetDest mergeIdxSetDest
@@ -248,3 +250,9 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
           logSize = afromInteger 0,
           size = afromInteger 20
         }
+
+pathSrc :: OsPath
+pathSrc = [osp|src|]
+
+pathDest :: OsPath
+pathDest = [osp|dest|]

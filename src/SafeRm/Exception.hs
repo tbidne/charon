@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Provides exceptions used by SafeRm.
 module SafeRm.Exception
@@ -32,19 +33,20 @@ module SafeRm.Exception
   )
 where
 
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import Effects.FileSystem.Utils qualified as FsUtils
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Prelude
+import System.OsPath (encodeUtf)
 
 -- | Path is not found.
-newtype FileNotFoundE = MkFileNotFoundE FilePath
+newtype FileNotFoundE = MkFileNotFoundE OsPath
   deriving stock (Show)
 
 instance Exception FileNotFoundE where
   displayException (MkFileNotFoundE f) =
     mconcat
-      [ "File not found: '",
-        f,
-        "'"
+      [ "File not found: ",
+        FsUtils.osToFp f
       ]
 
 -- | Could not rename file due to duplicate names.
@@ -55,7 +57,7 @@ instance Exception RenameDuplicateE where
   displayException (MkRenameDuplicateE n) =
     mconcat
       [ "Failed renaming duplicate file: ",
-        n ^. #unPathI
+        FsUtils.osToFp $ n ^. #unPathI
       ]
 
 -- | Trash path not found error. Distinct from 'TrashEntryFileNotFoundE' in that
@@ -72,9 +74,9 @@ instance Exception TrashEntryNotFoundE where
   displayException (MkTrashEntryNotFoundE name path) =
     mconcat
       [ "No entry for '",
-        name ^. #unPathI,
+        FsUtils.osToFp $ name ^. #unPathI,
         "'; did not find '",
-        path ^. #unPathI,
+        FsUtils.osToFp $ path ^. #unPathI,
         "'"
       ]
 
@@ -87,7 +89,7 @@ instance Exception TrashEntryWildcardNotFoundE where
   displayException (MkTrashEntryWildcardNotFoundE name) =
     mconcat
       [ "No entries found for wildcard search '",
-        name ^. #unPathI,
+        FsUtils.osToFp $ name ^. #unPathI,
         "'"
       ]
 
@@ -99,19 +101,20 @@ data TrashEntryFileNotFoundE
   deriving stock (Show)
 
 instance Exception TrashEntryFileNotFoundE where
-  displayException (MkTrashEntryFileNotFoundE thome name) =
+  displayException (MkTrashEntryFileNotFoundE (MkPathI thome) name) =
     mconcat
       [ "The file '",
-        name ^. #unPathI,
+        FsUtils.osToFp $ name ^. #unPathI,
         "' was not found in '",
-        thome ^. #unPathI,
-        slash,
-        "files' despite being listed in '",
-        thome ^. #unPathI,
-        slash,
-        "info'. This can be fixed by manually deleting the info file or ",
+        FsUtils.osToFp filesPath,
+        "' despite being listed in '",
+        FsUtils.osToFp infoPath,
+        "'. This can be fixed by manually deleting the info file or ",
         "deleting everything (i.e. safe-rm empty -f)."
       ]
+    where
+      filesPath = thome </> pathFiles
+      infoPath = thome </> pathInfo
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
 data TrashEntryInfoNotFoundE
@@ -121,35 +124,40 @@ data TrashEntryInfoNotFoundE
   deriving stock (Show)
 
 instance Exception TrashEntryInfoNotFoundE where
-  displayException (MkTrashEntryInfoNotFoundE thome name) =
+  displayException (MkTrashEntryInfoNotFoundE (MkPathI thome) (MkPathI name)) =
     mconcat
       [ "The file '",
-        name ^. #unPathI,
-        ".<ext>' was not found in '",
-        thome ^. #unPathI,
-        slash,
-        "info' despite being listed in '",
-        thome ^. #unPathI,
-        slash,
-        "files'. This can be fixed by manually deleting the ",
-        slash,
-        "files entry or deleting everything (i.e. safe-rm empty -f)."
+        FsUtils.osToFp nameExt,
+        "' was not found in '",
+        FsUtils.osToFp infoPath,
+        "' despite being listed in '",
+        FsUtils.osToFp filesPath,
+        "'. This can be fixed by manually deleting the 'files' ",
+        "entry or deleting everything (i.e. safe-rm empty -f)."
       ]
+    where
+      -- Have to do this because ".<ext>" is not valid on windows i.e. fails
+      -- QuasiQuote
+      nameExt = case encodeUtf ".<ext>" of
+        Nothing -> name
+        Just s -> name <> s
+      filesPath = thome </> pathFiles
+      infoPath = thome </> pathInfo
 
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
 data TrashEntryInfoBadExtE
   = MkTrashEntryInfoBadExtE
       !(PathI TrashEntryFileName)
-      !FilePath
-      !FilePath
+      !String
+      !String
   deriving stock (Show)
 
 instance Exception TrashEntryInfoBadExtE where
   displayException (MkTrashEntryInfoBadExtE name actualExt expectedExt) =
     mconcat
       [ "The trash info file '",
-        name ^. #unPathI,
-        "' has an unexpected file extension: ' ",
+        FsUtils.osToFp $ name ^. #unPathI,
+        "' has an unexpected file extension: '",
         actualExt,
         "'. Expected '",
         expectedExt,
@@ -161,28 +169,30 @@ newtype TrashDirFilesNotFoundE = MkTrashDirFilesNotFoundE (PathI TrashHome)
   deriving stock (Show)
 
 instance Exception TrashDirFilesNotFoundE where
-  displayException (MkTrashDirFilesNotFoundE th) =
+  displayException (MkTrashDirFilesNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash files directory was not found at '",
-        th ^. #unPathI,
-        slash,
-        "files' despite the trash home existing. This can be fixed by ",
+        FsUtils.osToFp files,
+        "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
+    where
+      files = th </> pathFiles
 
 -- | Trash info dir not found error.
 newtype TrashDirInfoNotFoundE = MkTrashDirInfoNotFoundE (PathI TrashHome)
   deriving stock (Show)
 
 instance Exception TrashDirInfoNotFoundE where
-  displayException (MkTrashDirInfoNotFoundE th) =
+  displayException (MkTrashDirInfoNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash info directory was not found at '",
-        th ^. #unPathI,
-        slash,
-        "info' despite the trash home existing. This can be fixed by ",
+        FsUtils.osToFp info,
+        "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
+    where
+      info = th </> [osp|info|]
 
 -- | Collision with existing file when attempting a restore.
 data RestoreCollisionE
@@ -195,9 +205,10 @@ instance Exception RestoreCollisionE where
   displayException (MkRestoreCollisionE n o) =
     mconcat
       [ "Cannot restore the trash file '",
-        n ^. #unPathI,
-        "' as one exists at the original location: ",
-        o ^. #unPathI
+        FsUtils.osToFp $ n ^. #unPathI,
+        "' as one exists at the original location: '",
+        FsUtils.osToFp $ o ^. #unPathI,
+        "'"
       ]
 
 -- | Exception for deleting the root.
@@ -222,7 +233,7 @@ instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
       [ "Could not decode file '",
-        path ^. #unPathI,
+        FsUtils.osToFp $ path ^. #unPathI,
         "' with contents:\n",
         bsToStrLenient bs,
         "\nError: ",
@@ -230,20 +241,13 @@ instance Exception InfoDecodeE where
       ]
 
 -- | Could not rename file due to duplicate names.
-newtype PathNotFileDirE = MkPathNotFileDirE FilePath
+newtype PathNotFileDirE = MkPathNotFileDirE OsPath
   deriving stock (Show)
 
 instance Exception PathNotFileDirE where
   displayException (MkPathNotFileDirE p) =
     mconcat
       [ "Path exists but is not a file or directory: '",
-        p,
+        FsUtils.osToFp p,
         "'"
       ]
-
-slash :: FilePath
-#if WINDOWS
-slash = "\\"
-#else
-slash = "/"
-#endif

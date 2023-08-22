@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
@@ -39,6 +40,7 @@ import Data.Time (LocalTime (LocalTime), ZonedTime (..))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
 import Effects.FileSystem.PathWriter (MonadPathWriter (..))
+import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.LoggerNS
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -70,11 +72,11 @@ type TestM a = ReaderT TestEnv IO a
 data TestEnv = MkTestEnv
   { backend :: Backend,
     -- The test dir relative to testRoot e.g. delete/deletesMany
-    testDir :: FilePath,
+    testDir :: OsPath,
     -- The trash dir relative to testDir e.g. .trash
-    trashDir :: FilePath,
+    trashDir :: OsPath,
     -- Root.
-    testRoot :: FilePath
+    testRoot :: OsPath
   }
 
 makeFieldLabelsNoPrefix ''TestEnv
@@ -137,7 +139,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIO,
       MonadIORef,
       MonadMask,
-      MonadPosix,
+      MonadPosixCompat,
       MonadThread,
       MonadThrow,
       MonadReader env
@@ -179,7 +181,8 @@ instance MonadPathWriter (FuncIO env) where
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
-    | (T.isSuffixOf "fooBadbar" $ T.pack x) = throwString "Mock: cannot delete fooBadbar"
+    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecodeOsToFp x) =
+        throwString "Mock: cannot delete fooBadbar"
     | otherwise = liftIO $ removeFile x
 
 instance
@@ -197,8 +200,8 @@ instance
     writeIORef charStream cs
     pure c
   getTerminalSize =
-    pure $
-      Window
+    pure
+      $ Window
         { height = 50,
           width = 100
         }
@@ -238,8 +241,8 @@ mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfig -> IORef Text -> IORef Text
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- liftIO getTrashHome
   charStream <- liftIO $ newIORef altAnswers
-  pure $
-    MkFuncEnv
+  pure
+    $ MkFuncEnv
       { trashHome = trashHome,
         backend = fromMaybe BackendCbor (toml ^. #backend),
         terminalRef,
@@ -340,7 +343,7 @@ runIndexMetadataM = do
   runIndexMetadataTestDirM testDir
 
 -- | Runs SafeRm's Index and Metadata commands with the given test directory.
-runIndexMetadataTestDirM :: FilePath -> TestM (HashSet PathData, Metadata)
+runIndexMetadataTestDirM :: OsPath -> TestM (HashSet PathData, Metadata)
 runIndexMetadataTestDirM testDir = do
   env <- ask
   terminalRef <- newIORef ""
@@ -367,13 +370,15 @@ runIndexMetadataTestDirM testDir = do
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
-    addSet :: String -> HashSet PathData -> PathData -> HashSet PathData
+    addSet :: OsPath -> HashSet PathData -> PathData -> HashSet PathData
     addSet tmp acc pd =
       let fixPath =
             MkPathI
+              . unsafeEncodeFpToOs
               . T.unpack
-              . T.replace (T.pack tmp) ""
+              . T.replace (T.pack $ unsafeDecodeOsToFp tmp) ""
               . T.pack
+              . unsafeDecodeOsToFp
               . view #unPathI
        in case pd of
             PathDataCbor d -> HSet.insert (PathDataCbor $ over' #originalPath fixPath d) acc
@@ -390,39 +395,44 @@ runIndexMetadataTestDirM testDir = do
 --
 -- The type of PathData that is returned depends on the test env's current
 -- backend.
-mkPathDataSetM :: [FilePath] -> TestM (HashSet PathData)
+mkPathDataSetM :: [String] -> TestM (HashSet PathData)
 mkPathDataSetM paths = do
   testDir <- getTestDir
   mkPathDataSetTestDirM testDir paths
 
 -- | Like 'mkPathDataSetM', except uses the given path as the test directory,
 -- rather than having it determined by the TestEnv.
-mkPathDataSetTestDirM :: FilePath -> [FilePath] -> TestM (HashSet PathData)
+mkPathDataSetTestDirM :: OsPath -> [String] -> TestM (HashSet PathData)
 mkPathDataSetTestDirM testDir paths = do
   env <- ask
   let backend = env ^. #backend
 
   tmpDir <- canonicalizePath =<< getTemporaryDirectory
-  let testDir' = T.unpack $ T.replace (T.pack tmpDir) "" (T.pack testDir)
+  let testDir' =
+        unsafeEncodeFpToOs
+          $ T.unpack
+          $ T.replace (T.pack $ unsafeDecodeOsToFp tmpDir) "" (T.pack $ unsafeDecodeOsToFp testDir)
 
-  pure $
-    HSet.fromList $
-      paths
-        <&> \p -> case backend of
-          BackendCbor ->
-            PathDataCbor $
-              Cbor.UnsafePathData
-                { fileName = MkPathI p,
-                  originalPath = MkPathI (testDir' </> p),
-                  created = fixedTimestamp
-                }
-          BackendFdo ->
-            PathDataFdo $
-              Fdo.UnsafePathData
-                { fileName = MkPathI p,
-                  originalPath = MkPathI (testDir' </> p),
-                  created = fixedTimestamp
-                }
+  pure
+    $ HSet.fromList
+    $ paths
+    <&> \p ->
+      let p' = unsafeEncodeFpToOs p
+       in case backend of
+            BackendCbor ->
+              PathDataCbor
+                $ Cbor.UnsafePathData
+                  { fileName = MkPathI p',
+                    originalPath = MkPathI (testDir' </> p'),
+                    created = fixedTimestamp
+                  }
+            BackendFdo ->
+              PathDataFdo
+                $ Fdo.UnsafePathData
+                  { fileName = MkPathI p',
+                    originalPath = MkPathI (testDir' </> p'),
+                    created = fixedTimestamp
+                  }
 
 -- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
 -- originalPath differ i.e. for each @(p, q)@
@@ -433,33 +443,42 @@ mkPathDataSetTestDirM testDir paths = do
 --   created = fixedTimestamp
 -- }
 -- @
-mkPathDataSetM2 :: [(FilePath, FilePath)] -> TestM (HashSet PathData)
+mkPathDataSetM2 :: [(String, String)] -> TestM (HashSet PathData)
 mkPathDataSetM2 paths = do
   env <- ask
   let backend = env ^. #backend
 
   testDir <- getTestDir
   tmpDir <- canonicalizePath =<< getTemporaryDirectory
-  let testDir' = T.unpack $ T.replace (T.pack tmpDir) "" (T.pack testDir)
+  let testDir' =
+        unsafeEncodeFpToOs
+          $ T.unpack
+          $ T.replace
+            (T.pack $ unsafeDecodeOsToFp tmpDir)
+            ""
+            (T.pack $ unsafeDecodeOsToFp testDir)
 
-  pure $
-    HSet.fromList $
-      paths
-        <&> \(fn, opath) -> case backend of
-          BackendCbor ->
-            PathDataCbor $
-              Cbor.UnsafePathData
-                { fileName = MkPathI fn,
-                  originalPath = MkPathI (testDir' </> opath),
-                  created = fixedTimestamp
-                }
-          BackendFdo ->
-            PathDataFdo $
-              Fdo.UnsafePathData
-                { fileName = MkPathI fn,
-                  originalPath = MkPathI (testDir' </> opath),
-                  created = fixedTimestamp
-                }
+  pure
+    $ HSet.fromList
+    $ paths
+    <&> \(fn, opath) ->
+      let fn' = unsafeEncodeFpToOs fn
+          opath' = unsafeEncodeFpToOs opath
+       in case backend of
+            BackendCbor ->
+              PathDataCbor
+                $ Cbor.UnsafePathData
+                  { fileName = MkPathI fn',
+                    originalPath = MkPathI (testDir' </> opath'),
+                    created = fixedTimestamp
+                  }
+            BackendFdo ->
+              PathDataFdo
+                $ Fdo.UnsafePathData
+                  { fileName = MkPathI fn',
+                    originalPath = MkPathI (testDir' </> opath'),
+                    created = fixedTimestamp
+                  }
 
 -- | Returns the full test dir for the given environment i.e.
 --
@@ -468,7 +487,7 @@ mkPathDataSetM2 paths = do
 -- e.g.
 --
 -- /tmp/safe-rm/functional/delete/deleteOne-fdo
-getTestDir :: TestM String
+getTestDir :: TestM OsPath
 getTestDir = do
   env <- ask
 
@@ -477,9 +496,9 @@ getTestDir = do
 
   let testDir =
         testRoot
-          </> env ^. #testDir
-            <> "-"
-            <> Backend.backendArg (env ^. #backend)
+          </> (env ^. #testDir)
+          <> [osp|-|]
+          <> Backend.backendArgOsPath (env ^. #backend)
   createDirectoryIfMissing True testDir
 
   pure testDir

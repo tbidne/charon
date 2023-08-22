@@ -1,6 +1,7 @@
 -- | Provides the 'Serialize' class.
 module SafeRm.Data.Serialize
   ( Serialize (..),
+    encodeThrowM,
     decodeUnit,
   )
 where
@@ -13,10 +14,16 @@ class Serialize a where
   type DecodeExtra a
 
   -- | Encode to bytestring.
-  encode :: a -> ByteString
+  encode :: a -> Either String ByteString
 
   -- | Decode from a bytestring.
   decode :: DecodeExtra a -> ByteString -> Either String a
+
+-- | Encodes the value, throwing an exception for any failures.
+encodeThrowM :: (Serialize a, MonadThrow m) => a -> m ByteString
+encodeThrowM x = case encode x of
+  Left s -> throwString s
+  Right y -> pure y
 
 -- | Convenience function for when decoding takes no extra data.
 decodeUnit :: (DecodeExtra a ~ (), Serialize a) => ByteString -> Either String a

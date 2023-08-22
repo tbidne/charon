@@ -8,6 +8,7 @@ module Functional.Commands.PermDelete
 where
 
 import Data.HashSet qualified as HashSet
+import Data.Text qualified as T
 import Effects.Exception (StringException)
 import Functional.Prelude
 import SafeRm.Data.Metadata (Metadata (..))
@@ -27,7 +28,7 @@ tests testEnv =
         deletesSomeWildcards testEnv',
         displaysAllData testEnv'
       ]
-      <> wildcardLiteralTests testEnv'
+    <> wildcardLiteralTests testEnv'
   where
     testEnv' = appendTestDir "perm-delete" <$> testEnv
 
@@ -36,10 +37,10 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> testEnv ^. #trashDir
-        f1 = testDir </> "f1"
+    let trashDir = testDir </> (testEnv ^. #trashDir)
+        f1 = testDir </>! "f1"
 
-    delArgList <- withSrArgsM ["delete", f1]
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -92,17 +93,17 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> testEnv ^. #trashDir
-        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    let trashDir = testDir </> (testEnv ^. #trashDir)
+        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- SETUP
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     liftIO $ runSafeRm delArgList
@@ -167,10 +168,10 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
   usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
 
-    delArgList <- withSrArgsM ["delete", f1]
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -213,8 +214,8 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     expectedEx =
       Outfixes
         "No entry for 'bad file'; did not find '"
-        [ "/safe-rm/functional/perm-delete/deleteUnknownError-",
-          "/.trash/info/bad file."
+        [ combineFps ["deleteUnknownError-"],
+          T.pack $ foldFilePaths [".trash", "info", "bad file"]
         ]
         ""
 
@@ -232,11 +233,11 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
   usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        realFiles = (testDir </>) <$> ["f1", "f2", "f5"]
+    let trashDir = testDir </>! ".trash"
+        realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
         filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
 
-    delArgList <- withSrArgsM ("delete" : realFiles)
+    delArgList <- withSrArgsPathsM ["delete"] realFiles
 
     -- setup
     createFiles realFiles
@@ -282,7 +283,9 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     expectedEx =
       Outfixes
         "No entry for 'f4'; did not find '"
-        ["/safe-rm/functional/perm-delete/deletesSome-", "/.trash/info/f4."]
+        [ combineFps ["deletesSome"],
+          T.pack $ foldFilePaths [".trash", "info", "f4."]
+        ]
         "'"
     delExpectedMetadata =
       MkMetadata
@@ -300,11 +303,11 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesNoForce" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> ".trash"
+    let trashDir = testDir </>! ".trash"
         fileDeleteNames = show @Int <$> [1 .. 5]
-        fileDeletePaths = (testDir </>) <$> fileDeleteNames
+        fileDeletePaths = (testDir </>!) <$> fileDeleteNames
 
-    delArgList <- withSrArgsM ("delete" : fileDeletePaths)
+    delArgList <- withSrArgsPathsM ["delete"] fileDeletePaths
 
     -- SETUP
     createFiles fileDeletePaths
@@ -364,11 +367,11 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesWildcards" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> ".trash"
-        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
-        otherFiles = (testDir </>) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
+    let trashDir = testDir </>! ".trash"
+        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
+        otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
 
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> otherFiles)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> otherFiles)
 
     -- SETUP
     createFiles (filesToDelete <> otherFiles)
@@ -449,9 +452,9 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
   usingReaderT testEnv $ appendTestDirM "deletesSomeWildcards" $ do
     testDir <- getTestDir
     let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
-        testFiles = (testDir </>) <$> files
+        testFiles = (testDir </>!) <$> files
 
-    delArgList <- withSrArgsM ("delete" : testFiles)
+    delArgList <- withSrArgsPathsM ["delete"] testFiles
 
     -- SETUP
     createFiles testFiles
@@ -532,10 +535,10 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
   usingReaderT testEnv $ appendTestDirM "deletesLiteralWildcardOnly" $ do
     testDir <- getTestDir
     let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
-        testFiles = (testDir </>) <$> files
-        testWcLiteral = testDir </> "*"
+        testFiles = (testDir </>!) <$> files
+        testWcLiteral = testDir </>! "*"
     
-    delArgList <- withSrArgsM ("delete" : testWcLiteral : testFiles)
+    delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
 
     -- SETUP
     clearDirectory testDir
@@ -614,10 +617,10 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     testDir <- getTestDir
     let files = ["xxfoo", "xxbar", "xxbaz"]
         wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
-        testFiles = (testDir </>) <$> files
-        testWcLiterals = (testDir </>) <$> wcLiterals
+        testFiles = (testDir </>!) <$> files
+        testWcLiterals = (testDir </>!) <$> wcLiterals
     
-    delArgList <- withSrArgsM ("delete" : testWcLiterals <> testFiles)
+    delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
 
     -- SETUP
     createFiles (testWcLiterals <> testFiles)
@@ -694,10 +697,10 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "displaysAllData" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> ".trash"
-        f1 = testDir </> "f1"
+    let trashDir = testDir </>! ".trash"
+        f1 = testDir </>! "f1"
 
-    delArgList <- withSrArgsM ["delete", f1]
+    delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
 
@@ -734,7 +737,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
       [ Exact "Name:      f1",
         Outfixes
           "Original:"
-          ["/safe-rm/functional/perm-delete/displaysAllData"]
+          [combineFps ["displaysAllData"]]
           "/f1",
         Exact "Type:      File",
         Exact "Size:      5.00B",
@@ -753,3 +756,8 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
           logSize = afromInteger 0,
           size = afromInteger 5
         }
+
+combineFps :: [FilePath] -> Text
+combineFps =
+  T.pack
+    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "perm-delete")

@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | This modules provides an executable for running safe-rm.
@@ -69,7 +70,7 @@ runSafeRm ::
     MonadOptparse m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadTerminal m,
     MonadThread m,
     MonadTime m
@@ -96,7 +97,7 @@ runCmd ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m,
@@ -147,8 +148,8 @@ withEnv mergedConfig onEnv = do
               { handle,
                 logLevel
               }
-     in onEnv $
-          MkEnv
+     in onEnv
+          $ MkEnv
             { trashHome,
               backend = fromMaybe BackendCbor (mergedConfig ^. #backend),
               logEnv =
@@ -182,8 +183,8 @@ getConfiguration = do
     TomlPath tomlPath -> readConfig tomlPath
     -- no toml config path given...
     TomlDefault -> do
-      xdgConfig <- getXdgConfig "safe-rm"
-      let defPath = xdgConfig </> "config.toml"
+      xdgConfig <- getXdgConfig safeRmPath
+      let defPath = xdgConfig </> [osp|config.toml|]
       exists <- doesFileExist defPath
       if exists
         then -- 2. config exists at default path: read
@@ -212,7 +213,7 @@ printIndex ::
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m
@@ -259,7 +260,7 @@ getTrashHome ::
     MonadPathReader m
   ) =>
   m (PathI TrashHome)
-getTrashHome = MkPathI <$> (getXdgData "safe-rm")
+getTrashHome = MkPathI <$> (getXdgData safeRmPath)
 
 withLogHandle ::
   ( HasCallStack,
@@ -273,7 +274,7 @@ withLogHandle ::
   (Handle -> m a) ->
   m a
 withLogHandle sizeMode onHandle = do
-  xdgState <- getXdgState "safe-rm"
+  xdgState <- getXdgState safeRmPath
   createDirectoryIfMissing True xdgState
 
   MkPathI logPath <- Env.getTrashLog
@@ -288,7 +289,7 @@ handleLogSize ::
     MonadPathWriter m,
     MonadTerminal m
   ) =>
-  Path ->
+  OsPath ->
   Maybe FileSizeMode ->
   m ()
 handleLogSize logFile msizeMode = do
@@ -299,9 +300,9 @@ handleLogSize logFile msizeMode = do
 
     case sizeMode of
       FileSizeModeWarn warnSize ->
-        when (logSize' > warnSize) $
-          putTextLn $
-            sizeWarning warnSize logFile logSize'
+        when (logSize' > warnSize)
+          $ putTextLn
+          $ sizeWarning warnSize logFile logSize'
       FileSizeModeDelete delSize ->
         when (logSize' > delSize) $ do
           putTextLn $ sizeWarning delSize logFile logSize' <> " Deleting log."
@@ -310,9 +311,9 @@ handleLogSize logFile msizeMode = do
     sizeMode = fromMaybe FileSizeMode.defaultSizeMode msizeMode
     sizeWarning warnSize fp fileSize =
       mconcat
-        [ "Warning: log dir '",
-          T.pack fp,
-          "' has size: ",
+        [ "Warning: log dir ",
+          decodeOsToFpShowText fp,
+          " has size: ",
           formatBytes fileSize,
           ", but specified threshold is: ",
           formatBytes warnSize,
@@ -326,3 +327,6 @@ handleLogSize logFile msizeMode = do
         -- here, but it is better than normalizing a natural, which will
         -- truncate (i.e. greater precision loss).
         . fmap (fromIntegral @Natural @Double)
+
+safeRmPath :: OsPath
+safeRmPath = [osp|safe-rm|]

@@ -32,6 +32,7 @@ module Functional.Prelude
 
     -- * Misc
     withSrArgsM,
+    withSrArgsPathsM,
     FuncEnv.mkPathDataSetM,
     FuncEnv.mkPathDataSetM2,
     FuncEnv.mkPathDataSetTestDirM,
@@ -39,12 +40,22 @@ module Functional.Prelude
     appendTestDirM,
     FuncEnv.getTestDir,
     mkAllTrashPathsM,
+    (</>!),
+    foldFilePaths,
+    foldFilePathsAcc,
+    cfp,
   )
 where
 
 import Control.Monad.Reader as X (ReaderT (..))
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
+import Effects.FileSystem.Utils
+  ( unsafeDecodeOsToFp,
+    unsafeEncodeFpToOs,
+    (</>!),
+  )
+import Effects.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv (..), TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
@@ -69,66 +80,68 @@ x @=? y = liftIO $ x HUnit.@=? y
 infix 1 @=?
 
 -- | Assert paths exist.
-assertPathsExist :: (MonadIO m) => [FilePath] -> m ()
-assertPathsExist paths = liftIO $
-  for_ paths $ \p -> do
+assertPathsExist :: (MonadIO m) => [OsPath] -> m ()
+assertPathsExist paths = liftIO
+  $ for_ paths
+  $ \p -> do
     exists <- doesPathExist p
-    assertBool ("Expected path to exist: " <> p) exists
+    assertBool ("Expected path to exist: " <> show p) exists
 
 -- | Asserts that paths do not exist.
-assertPathsDoNotExist :: (MonadIO m) => [FilePath] -> m ()
-assertPathsDoNotExist paths = liftIO $
-  for_ paths $ \p -> do
+assertPathsDoNotExist :: (MonadIO m) => [OsPath] -> m ()
+assertPathsDoNotExist paths = liftIO
+  $ for_ paths
+  $ \p -> do
     exists <- doesPathExist p
-    assertBool ("Expected path not to exist: " <> p) (not exists)
+    assertBool ("Expected path not to exist: " <> show p) (not exists)
 
 -- | Transform each filepath @p@ to its files/ and info/ path, taking in
 -- the env's trash root, test dir, trash dir, and backend.
-mkAllTrashPathsM :: [FilePath] -> TestM [FilePath]
+mkAllTrashPathsM :: [FilePath] -> TestM [OsPath]
 mkAllTrashPathsM paths = liftA2 (++) trashPaths trashInfoPaths
   where
-    trashPaths = mkTrashPathsM paths
-    trashInfoPaths = mkTrashInfoPathsM paths
+    trashPaths = mkTrashPathsM (fmap unsafeEncodeFpToOs paths)
+    trashInfoPaths = mkTrashInfoPathsM (fmap unsafeEncodeFpToOs paths)
 
 -- | Transform each path @p@ to
 -- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/info\/p.<ext>@.
-mkTrashInfoPathsM :: [FilePath] -> TestM [FilePath]
+mkTrashInfoPathsM :: [OsPath] -> TestM [OsPath]
 mkTrashInfoPathsM files = do
   env <- ask
   testDir <- FuncEnv.getTestDir
-  let ext = Env.trashInfoExtension (env ^. #backend)
+  let ext = Env.trashInfoExtensionOsPath (env ^. #backend)
       mkTrashInfoPath p =
         testDir
-          </> env ^. #trashDir
-          </> "info"
+          </> (env ^. #trashDir)
+          </> pathInfo
           </> p
-            <> ext
+          <> ext
   pure $ fmap mkTrashInfoPath files
 
 -- | Transform each path @p@ to
 -- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/files\/p@.
-mkTrashPathsM :: [FilePath] -> TestM [FilePath]
+mkTrashPathsM :: [OsPath] -> TestM [OsPath]
 mkTrashPathsM files = do
   env <- ask
   testDir <- FuncEnv.getTestDir
   let mkTrashPath p =
         testDir
-          </> env ^. #trashDir
-          </> "files"
+          </> (env ^. #trashDir)
+          </> pathFiles
           </> p
   pure $ fmap mkTrashPath files
 
 assertSetEq :: (Hashable a, MonadIO m, Show a) => HashSet a -> HashSet a -> m ()
 assertSetEq x y = do
-  unless (HSet.null xdiff) $
-    liftIO $
-      assertFailure $
-        TL.unpack (prettySet "Expected" "Results" xdiff y)
+  unless (HSet.null xdiff)
+    $ liftIO
+    $ assertFailure
+    $ TL.unpack (prettySet "Expected" "Results" xdiff y)
 
-  unless (HSet.null ydiff) $
-    liftIO $
-      assertFailure $
-        TL.unpack (prettySet "Results" "Expected" ydiff x)
+  unless (HSet.null ydiff)
+    $ liftIO
+    $ assertFailure
+    $ TL.unpack (prettySet "Results" "Expected" ydiff x)
   where
     xdiff = HSet.difference x y
     ydiff = HSet.difference y x
@@ -158,8 +171,15 @@ withSrArgsM as = do
 
   testDir <- FuncEnv.getTestDir
   let backend = env ^. #backend
-      trashDir = testDir </> env ^. #trashDir
-  pure $ ["-t", trashDir, "-b", Backend.backendArg backend] ++ as
+      trashDir = testDir </> (env ^. #trashDir)
+  pure $ ["-t", unsafeDecodeOsToFp trashDir, "-b", Backend.backendArg backend] ++ as
+
+-- | Prepends the given arguments with the trash directory and backend,
+-- according to the environment i.e.
+--
+-- @trashDir == <testRoot>\/<testDir>-<backend>\/<trashDir>@
+withSrArgsPathsM :: [String] -> [OsPath] -> TestM [String]
+withSrArgsPathsM as paths = withSrArgsM (as ++ (unsafeDecodeOsToFp <$> paths))
 
 -- | Appends the given string to the testDir and creates the current full
 -- testDir according to 'FuncEnv.getTestDir'.
@@ -171,4 +191,13 @@ appendTestDirM d m = local (appendTestDir d) $ do
 
 -- | Appends to the testDir.
 appendTestDir :: String -> TestEnv -> TestEnv
-appendTestDir d = over' #testDir (</> d)
+appendTestDir d = over' #testDir (</> unsafeEncodeFpToOs d)
+
+foldFilePaths :: [FilePath] -> FilePath
+foldFilePaths = foldFilePathsAcc ""
+
+foldFilePathsAcc :: FilePath -> [FilePath] -> FilePath
+foldFilePathsAcc = foldl' cfp
+
+cfp :: FilePath -> FilePath -> FilePath
+cfp = FsUtils.combineFilePaths

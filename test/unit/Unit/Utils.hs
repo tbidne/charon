@@ -71,8 +71,9 @@ testStripInfix = testCase "stripInfix" $ do
       --     TI.text arr (x + off + plen)
       Just ("se", "dthird") @=? Utils.stripInfix "con" suffix
     other ->
-      assertFailure $
-        "first `stripInfix` firstsecondthird returned unexpected: " <> show other
+      assertFailure
+        $ "first `stripInfix` firstsecondthird returned unexpected: "
+        <> show other
 
   -- failures
   Nothing @=? Utils.stripInfix "aa" "foobar"

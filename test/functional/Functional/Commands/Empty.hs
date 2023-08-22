@@ -12,7 +12,7 @@ import SafeRm.Data.Metadata qualified as Metadata
 tests :: IO TestEnv -> TestTree
 tests testEnv =
   testGroup
-    "Permanent Delete Command"
+    "Empty Command"
     [ emptyTrash testEnv',
       emptyTrashTwice testEnv',
       emptyNoForce testEnv',
@@ -28,15 +28,15 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
   usingReaderT testEnv $ appendTestDirM "emptyTrash" $ do
     testDir <- getTestDir
 
-    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories (dirsToDelete <> [testDir </>! "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     runSafeRm delArgList
@@ -103,11 +103,10 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "emptyNoForce" $ do
     testDir <- getTestDir
-
     let fileDeleteNames = show @Int <$> [1 .. 5]
-        fileDeletePaths = (testDir </>) <$> fileDeleteNames
+        fileDeletePaths = (testDir </>!) <$> fileDeleteNames
 
-    delArgList <- withSrArgsM $ "delete" : fileDeletePaths
+    delArgList <- withSrArgsPathsM ["delete"] fileDeletePaths
 
     -- setup
     -- test w/ a file in dir
@@ -163,16 +162,16 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
   usingReaderT testEnv $ appendTestDirM "missingInfoForcesDelete" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    let trashDir = testDir </> pathDotTrash
+        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories (dirsToDelete <> [testDir </>! "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     -- delete files
@@ -198,7 +197,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     delExpectedMetadata @=? delMetadata
 
     -- delete info dir, leaving trash dir in bad state
-    clearDirectory (trashDir </> "info")
+    clearDirectory (trashDir </> pathInfo)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgList
@@ -209,7 +208,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     assertPathsDoNotExist (emptyTrashFiles ++ emptyTrashDirs)
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-    assertPathsExist $ fmap (trashDir </>) ["info", "files"]
+    assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
@@ -233,17 +232,17 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
   usingReaderT testEnv $ appendTestDirM "missingPathsForcesDelete" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
-        filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    let trashDir = testDir </> pathDotTrash
+        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories (dirsToDelete <> [testDir </>! "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     -- delete files
@@ -269,14 +268,14 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     delExpectedMetadata @=? delMetadata
 
     -- delete info dir, leaving trash dir in bad state
-    clearDirectory (trashDir </> "files")
+    clearDirectory (trashDir </> pathFiles)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgList
 
     -- file assertions
     assertPathsDoNotExist (delTrashPaths ++ filesToDelete ++ dirsToDelete)
-    assertPathsExist $ fmap (trashDir </>) ["info", "files"]
+    assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM

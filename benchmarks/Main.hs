@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Benchmark suite.
 module Main (main) where
 
@@ -18,16 +20,16 @@ main = do
         [ ReadIndex.benchmarks testDir
         ]
 
-setup :: IO FilePath
+setup :: IO OsPath
 setup = do
-  testDir <- (</> "bench") <$> Dir.getTemporaryDirectory
+  testDir <- (</> [osp|bench|]) <$> Dir.getTemporaryDirectory
   Dir.createDirectoryIfMissing False testDir
   ReadIndex.setup testDir
   pure testDir
 
-teardown :: FilePath -> IO ()
+teardown :: OsPath -> IO ()
 teardown testDir = guardOrElse' "NO_CLEANUP" ExpectEnvSet doNothing cleanup
   where
     cleanup = Dir.removePathForcibly testDir
     doNothing =
-      putStrLn $ "*** Not cleaning up tmp dir: " <> testDir
+      putStrLn $ "*** Not cleaning up tmp dir: " <> show testDir

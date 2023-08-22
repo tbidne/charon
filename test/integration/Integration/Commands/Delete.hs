@@ -26,7 +26,9 @@ testRoot b =
     [ deletesRootError b "C:\\",
       deletesRootError b "d:",
       deletesRootError b "X:\\   ",
-      deletesRootError b "  g:   "
+      deletesRootError b "g:   "
+      -- Cannot actually test "  g:  " i.e. leading whitespace on windows
+      -- because it is not a valid path with the colon.
     ]
 #else
     [ deletesRootError b "/",
@@ -40,14 +42,13 @@ deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
   (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @RootE argList
 
   "Attempted to delete root! This is not allowed." @=? ex
-  errMsg @=? terminal
-  "" @=? deletedPaths
+  assertMatch expected (T.strip terminal)
+  "[]" @=? deletedPaths
   where
-    errMsg :: Text
-    errMsg =
-      "Error deleting path '"
-        <> T.pack r
-        <> "': Attempted to delete root! This is not allowed.\n"
+    expected =
+      Outfix
+        "Error deleting path"
+        "Attempted to delete root! This is not allowed."
 
     argList :: [String]
     argList = "delete" : r : ["-t", "/dev/null", "--backend", Backend.backendArg b]

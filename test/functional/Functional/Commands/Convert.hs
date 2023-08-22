@@ -4,6 +4,7 @@ module Functional.Commands.Convert
   )
 where
 
+import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
@@ -32,17 +33,17 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
   usingReaderT testEnv $ appendTestDirM testDirPath $ do
     testDir <- getTestDir
 
-    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     clearDirectory testDir
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ([testDir </>! "dir2/dir3/foo"] <> filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     runSafeRm delArgList
@@ -105,8 +106,9 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       newBackend <- asks (view #backend)
       let convertTrashPaths =
             ["f1", "f2", "f3", "dir1", "dir2"] >>= \fp ->
-              let pathFile = testDir </> ".trash" </> "files" </> fp
-                  infoFile = testDir </> ".trash" </> "info" </> fp <> Env.trashInfoExtension newBackend
+              let fp' = unsafeEncodeFpToOs fp
+                  pathFile = testDir </> pathDotTrash </> pathFiles </> fp'
+                  infoFile = testDir </> pathDotTrash </> pathInfo </> fp' <> Env.trashInfoExtensionOsPath newBackend
                in [pathFile, infoFile]
       assertPathsExist convertTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)

@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Interface for the trash directory
@@ -39,7 +40,7 @@ import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths (PathI (..), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Data.Serialize (Serialize (..), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (..))
 import SafeRm.Env qualified as Env
@@ -109,12 +110,12 @@ doesTrashExist = do
         (False, False) -> pure False
         -- Path exists; info does not -> Badly formed, throw exception
         (True, False) ->
-          throwCS $
-            MkTrashDirInfoNotFoundE trashHome
+          throwCS
+            $ MkTrashDirInfoNotFoundE trashHome
         -- Info exists; path does not -> Badly formed, throw exception
         (False, True) ->
-          throwCS $
-            MkTrashDirFilesNotFoundE trashHome
+          throwCS
+            $ MkTrashDirFilesNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 mvOriginalToTrash ::
@@ -143,7 +144,7 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   --
   -- Perform this before the actual move to be safe i.e. path is only moved
   -- if info is already created.
-  let encoded = encode pd
+  encoded <- encodeThrowM pd
   writeBinaryFile trashInfoPath encoded
 
   -- 4. Move file to trash
@@ -172,7 +173,7 @@ permDeleteFromTrash ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m
@@ -187,7 +188,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
 
   anyExRef <- newIORef Nothing
   let deleteFn pathData = do
-        $(logDebug) ("Deleting: " <> T.pack (pathData ^. (#fileName % #unPathI)))
+        $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
         if force
           then -- NOTE: Technically don't need the pathdata if force is on, since we have
           -- the path and can just delete it. Nevertheless, we retrieve the pathData
@@ -212,9 +213,9 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             putStr "\nPermanently delete (y/n)? "
             c <- Ch.toLower <$> getChar
             if
-                | c == 'y' -> deleteFn' backend pathData *> putStrLn "\n"
-                | c == 'n' -> putStrLn "\n"
-                | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+              | c == 'y' -> deleteFn' backend pathData *> putStrLn "\n"
+              | c == 'n' -> putStrLn "\n"
+              | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
   -- Need our own error handling here since if we are deleting multiple
   -- wildcard matches we want success/failure to be independent.
@@ -222,11 +223,11 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
     deleteFn pathData `catchAnyCS` \ex -> do
       writeIORef anyExRef (Just ex)
       $(logWarn) (T.pack $ displayNoCS ex)
-      putStrLn $
-        mconcat
-          [ "Error deleting path '",
-            pathData ^. (#fileName % #unPathI),
-            "': ",
+      putStrLn
+        $ mconcat
+          [ "Error deleting path ",
+            show $ pathData ^. (#fileName % #unPathI),
+            ": ",
             displayNoCS ex
           ]
   readIORef anyExRef
@@ -267,13 +268,13 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
         let originalPath = pd ^. #originalPath
             fileName = pd ^. #fileName
 
-        $(logDebug) ("Restoring: " <> T.pack (fileName ^. #unPathI))
+        $(logDebug) ("Restoring: " <> Paths.toText fileName)
 
         -- 2. Verify original path is empty
         exists <- PathData.originalPathExists trashHome pd
-        when exists $
-          throwCS $
-            MkRestoreCollisionE fileName originalPath
+        when exists
+          $ throwCS
+          $ MkRestoreCollisionE fileName originalPath
 
         pathType <- PathData.pathDataToType trashHome pd
         restoreFn' backend pathType pd
@@ -284,11 +285,11 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
     restoreFn pd `catchAnyCS` \ex -> do
       writeIORef someExRef (Just ex)
       $(logWarn) (T.pack $ displayNoCS ex)
-      putStrLn $
-        mconcat
-          [ "Error restoring path '",
-            pd ^. (#fileName % #unPathI),
-            "': ",
+      putStrLn
+        $ mconcat
+          [ "Error restoring path ",
+            show $ pd ^. (#fileName % #unPathI),
+            ": ",
             displayNoCS ex
           ]
   readIORef someExRef
@@ -324,9 +325,9 @@ findOnePathData trashHome pathName = do
         Env.getTrashInfoPath backend trashHome pathName
 
   pathInfoExists <- doesFileExist trashInfoPath'
-  unless pathInfoExists $
-    throwCS $
-      MkTrashEntryNotFoundE pathName trashInfoPath
+  unless pathInfoExists
+    $ throwCS
+    $ MkTrashEntryNotFoundE pathName trashInfoPath
 
   contents <- readBinaryFile trashInfoPath'
   pathData <- case decode (backend, pathName) contents of
@@ -334,9 +335,9 @@ findOnePathData trashHome pathName = do
     Right pd -> pure pd
 
   pathExists <- PathData.trashPathExists trashHome pathData
-  unless pathExists $
-    throwCS $
-      MkTrashEntryFileNotFoundE trashHome pathName
+  unless pathExists
+    $ throwCS
+    $ MkTrashEntryFileNotFoundE trashHome pathName
 
   pure pathData
 
@@ -355,16 +356,16 @@ findManyPathData ::
 findManyPathData trashHome pathName = do
   MkIndex index <- Index.readIndex trashHome
 
-  case Seq.filter pdMatchesWildcard index of
+  pathNameText <- T.pack <$> decodeOsToFpThrowM (pathName ^. #unPathI)
+
+  matches <- Utils.filterSeqM (pdMatchesWildcard pathNameText) index
+  case matches of
     Seq.Empty -> throwCS $ MkTrashEntryWildcardNotFoundE pathName
     pd :<| pds -> pure $ pd :<|| pds
   where
-    pdMatchesWildcard =
-      Utils.matchesWildcards pathNameText
-        . T.pack
-        . view (#fileName % #unPathI)
-
-    pathNameText = T.pack $ pathName ^. #unPathI
+    pdMatchesWildcard pathNameText' pd = do
+      fp <- decodeOsToFpThrowM (pd ^. (#fileName % #unPathI))
+      pure $ Utils.matchesWildcards pathNameText' (T.pack fp)
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout
@@ -385,32 +386,34 @@ findPathData ::
   PathI TrashEntryFileName ->
   m (NESeq PathData)
 findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
+  pathNameStr <- decodeOsToFpThrowM pathName'
+  let pathNameTxt = T.pack pathNameStr
+
   if
-      -- 1. Found a (n unescaped) wildcard; findMany (findMany handles the case
-      -- where pathName also includes the sequence \\*).
-      | hasWildcard pathName' -> do
-          $(logDebug) $ "Performing wildcard search: '" <> pathNameTxt <> "'"
-          findManyPathData trashHome pathName
-      -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
-      -- wildcards by this point, we can simply findOne as normal, after removing
-      -- the escape.
-      | "\\*" `T.isInfixOf` pathNameTxt -> do
-          $(logDebug) $
-            mconcat
-              [ "Found escape sequence \\* in path '",
-                pathNameTxt,
-                "'. Treating as the literal *."
-              ]
-          let literal = T.replace "\\*" "*" pathNameTxt
-          NESeq.singleton <$> findOnePathData trashHome (MkPathI $ T.unpack literal)
+    -- 1. Found a (n unescaped) wildcard; findMany (findMany handles the case
+    -- where pathName also includes the sequence \\*).
+    | hasWildcard pathNameStr -> do
+        $(logDebug) $ "Performing wildcard search: '" <> pathNameTxt <> "'"
+        findManyPathData trashHome pathName
+    -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
+    -- wildcards by this point, we can simply findOne as normal, after removing
+    -- the escape.
+    | "\\*" `T.isInfixOf` pathNameTxt -> do
+        $(logDebug)
+          $ mconcat
+            [ "Found escape sequence \\* in path '",
+              pathNameTxt,
+              "'. Treating as the literal *."
+            ]
+        let literal = T.replace "\\*" "*" pathNameTxt
+        literalPath <- encodeFpToOsThrowM $ T.unpack literal
+        NESeq.singleton <$> findOnePathData trashHome (MkPathI literalPath)
 
-      -- 3. No * at all; normal
-      | otherwise -> do
-          $(logDebug) $ "Normal search: '" <> pathNameTxt <> "'"
-          NESeq.singleton <$> findOnePathData trashHome pathName
+    -- 3. No * at all; normal
+    | otherwise -> do
+        $(logDebug) $ "Normal search: '" <> pathNameTxt <> "'"
+        NESeq.singleton <$> findOnePathData trashHome pathName
   where
-    pathNameTxt = T.pack pathName'
-
     hasWildcard [] = False
     -- escaped; ignore
     hasWildcard ('\\' : '*' : xs) = hasWildcard xs
@@ -437,15 +440,18 @@ convertBackend dest = addNamespace "convertBackend" $ do
   trashHome@(MkPathI th) <- asks getTrashHome
   MkIndex index <- Index.readIndex trashHome
 
-  let newInfo = th </> "tmp_info_new"
+  let newInfo = th </> [osp|tmp_info_new|]
   createDirectory newInfo
 
   -- NOTE: This is not in-place.
 
   let createTmp = for_ index $ \pd -> do
         let pd' = PathData.convert pd dest
-            encoded = encode pd'
-            filePath = newInfo </> (pd' ^. (#fileName % #unPathI)) <> Env.trashInfoExtension dest
+        encoded <- encodeThrowM pd'
+        let filePath =
+              newInfo
+                </> (pd' ^. (#fileName % #unPathI))
+                <> Env.trashInfoExtensionOsPath dest
 
         writeBinaryFile filePath encoded
 
@@ -457,13 +463,13 @@ convertBackend dest = addNamespace "convertBackend" $ do
               displayException ex
             ]
     $(logError) $ T.pack msg
-    $(logError) $ "Deleting tmp dir: " <> T.pack newInfo
+    $(logError) $ "Deleting tmp dir: " <> decodeOsToFpShowText newInfo
     putStrLn msg
     removeDirectoryRecursive newInfo
     throwM ex
 
   let MkPathI trashInfoDir = Env.getTrashInfoDir trashHome
-      oldInfo = th </> "tmp_info_old"
+      oldInfo = th </> [osp|tmp_info_old|]
 
   -- 2. Move current trash/info to trash/tmp_info_old
   renameDirectory trashInfoDir oldInfo

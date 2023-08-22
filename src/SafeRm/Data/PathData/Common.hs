@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module SafeRm.Data.PathData.Common
@@ -11,6 +12,7 @@ where
 import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
+import Effects.FileSystem.Utils qualified as FsUtils
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Paths qualified as Paths
@@ -24,7 +26,7 @@ import SafeRm.Exception
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
-import System.FilePath qualified as FP
+import System.OsPath qualified as FP
 
 -- | For a given path, retrieves its unique trash entry file name,
 -- original path, and type.
@@ -110,12 +112,13 @@ mkUniqPath fp = do
       | counter == maxBound =
           throwCS $ MkRenameDuplicateE fp
       | otherwise = do
-          let fp' = Paths.liftPathI' (<> (mkSuffix counter)) fp
+          counterStr <- mkSuffix counter
+          let fp' = Paths.liftPathI' (<> counterStr) fp
           b <- Paths.applyPathI doesPathExist fp'
           if b
             then go (counter + 1)
             else pure fp'
-    mkSuffix i = " (" <> show i <> ")"
+    mkSuffix i = FsUtils.encodeFpToOsThrowM $ " (" <> show i <> ")"
 
 throwIfIllegal ::
   ( HasCallStack,
@@ -124,12 +127,10 @@ throwIfIllegal ::
   ) =>
   PathI i ->
   m ()
-throwIfIllegal p =
-  addNamespace "throwIfIllegal" $
-    if
-        | Paths.isRoot p -> $(logError) "Path is root!" *> throwCS MkRootE
-        | Paths.isEmpty p -> $(logError) "Path is empty!" *> throwCS MkEmptyPathE
-        | otherwise -> pure ()
+throwIfIllegal p = addNamespace "throwIfIllegal" $ do
+  U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwCS MkRootE
+
+  U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwCS MkEmptyPathE
 
 -- | Parses a ByteString like:
 --
@@ -160,13 +161,17 @@ parseTrashInfoMap expectedKeys bs =
           unexpectedKeys = Set.difference keys expectedKeys
           unexpectedKeysStr = C8.intercalate ", " $ Set.toList unexpectedKeys
 
-      unless (Set.null unexpectedKeys) $
-        Left $
-          "Unexpected keys: '" <> bsToStrLenient unexpectedKeysStr <> "'"
+      unless (Set.null unexpectedKeys)
+        $ Left
+        $ "Unexpected keys: '"
+        <> bsToStrLenient unexpectedKeysStr
+        <> "'"
 
-      unless (Set.null missingKeys) $
-        Left $
-          "Missing keys: '" <> bsToStrLenient missingKeysStr <> "'"
+      unless (Set.null missingKeys)
+        $ Left
+        $ "Missing keys: '"
+        <> bsToStrLenient missingKeysStr
+        <> "'"
 
       Right mp
     _ -> Left $ "Did not receive header [Trash Info]: " <> bsToStr bs

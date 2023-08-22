@@ -23,16 +23,16 @@ metadata getTestEnv = testCase "Prints metadata" $ do
   usingReaderT testEnv $ appendTestDirM "metadata" $ do
     testDir <- getTestDir
 
-    let filesToDelete = (testDir </>) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>) <$> ["dir1", "dir2"]
-    delArgList <- withSrArgsM ("delete" : filesToDelete <> dirsToDelete)
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
 
     -- setup
     clearDirectory testDir
     -- test w/ a nested dir
-    createDirectories ((testDir </>) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
     -- test w/ a file in dir
-    createFiles ((testDir </> "dir2/dir3/foo") : filesToDelete)
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     runSafeRm delArgList
@@ -95,10 +95,10 @@ empty getTestEnv = testCase "Prints empty metadata" $ do
   usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </> ".trash"
+    let trashDir = testDir </>! ".trash"
 
-    createDirectories [testDir, trashDir, trashDir </> "info", trashDir </> "files"]
-    createFiles [trashDir </> "log"]
+    createDirectories [testDir, trashDir, trashDir </>! "info", trashDir </>! "files"]
+    createFiles [trashDir </>! "log"]
 
     metaArgList <- withSrArgsM ["metadata"]
     (result, _) <- captureSafeRmLogs metaArgList

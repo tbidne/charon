@@ -70,20 +70,25 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
-  encode :: PathData -> ByteString
+  encode :: PathData -> Either String ByteString
   encode (UnsafePathData _ (MkPathI opath) ts) =
-    BSL.toStrict $ Serialise.serialise (opath, ts)
+    case decodeOsToFp opath of
+      Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (opath', ts)
+      Left ex -> Left $ displayException ex
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    (originalPath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
+    (opath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
 
-    Right $
-      UnsafePathData
-        { fileName = name,
-          originalPath = MkPathI originalPath,
-          created
-        }
+    case encodeFpToOs opath of
+      Right opath' ->
+        Right
+          $ UnsafePathData
+            { fileName = name,
+              originalPath = MkPathI opath',
+              created
+            }
+      Left ex -> Left $ displayException ex
 
 -- | Derives the 'PathType' from the 'PathData'.
 --

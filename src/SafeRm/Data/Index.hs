@@ -38,7 +38,6 @@ import SafeRm.Data.PathData.Formatting
   )
 import SafeRm.Data.PathData.Formatting qualified as Formatting
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Serialize (Serialize (..))
 import SafeRm.Env (HasBackend (..), HasTrashHome)
 import SafeRm.Env qualified as Env
@@ -49,7 +48,7 @@ import SafeRm.Exception
     TrashEntryInfoNotFoundE (..),
   )
 import SafeRm.Prelude
-import System.FilePath qualified as FP
+import System.OsPath qualified as FP
 
 type PathDataCore = PathDataCore.PathData
 
@@ -83,26 +82,26 @@ readIndex ::
   m Index
 readIndex trashHome = addNamespace "readIndex" $ do
   paths <- listDirectory trashInfoDir'
-  $(logDebug) ("Trash info: " <> T.pack trashInfoDir')
-  $(logDebug) ("Info: " <> T.pack (show paths))
+  $(logDebug) ("Trash info: " <> decodeOsToFpShowText trashInfoDir')
+  $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpShowText <$> paths))
   backend <- asks getBackend
 
   -- TODO: Maybe this shouldn't report errors eagerly
 
   let seqify ::
-        Path ->
+        OsPath ->
         m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->
         m (Seq PathData, HashSet (PathI TrashEntryFileName))
       seqify p macc = do
-        let actualExt = FP.takeExtension p
-            expectedExt = Env.trashInfoExtension backend
+        actualExt <- decodeOsToFpThrowM (FP.takeExtension p)
+        let expectedExt = Env.trashInfoExtension backend
 
-        when (actualExt /= expectedExt) $
-          throwCS $
-            MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
+        when (actualExt /= expectedExt)
+          $ throwCS
+          $ MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
 
         let path = trashInfoDir' </> p
-        $(logDebug) ("Path: " <> T.pack path)
+        $(logDebug) ("Path: " <> decodeOsToFpShowText path)
 
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
@@ -119,12 +118,12 @@ readIndex trashHome = addNamespace "readIndex" $ do
 
   -- NOTE: Check that all files in /files exist in the index.
   allTrashPaths <- listDirectory trashPathsDir'
-  $(logDebug) ("Paths: " <> T.pack (show allTrashPaths))
+  $(logDebug) ("Paths: " <> T.intercalate ", " (decodeOsToFpShowText <$> allTrashPaths))
   for_ allTrashPaths $ \p -> do
     let pName = MkPathI $ FP.takeFileName p
-    unless (pName `HSet.member` pathSet) $
-      throwCS $
-        MkTrashEntryInfoNotFoundE trashHome pName
+    unless (pName `HSet.member` pathSet)
+      $ throwCS
+      $ MkTrashEntryInfoNotFoundE trashHome pName
 
   pure $ MkIndex indexSeq
   where
@@ -142,9 +141,9 @@ throwIfTrashNonExtant ::
   m ()
 throwIfTrashNonExtant trashHome pd = do
   exists <- PathData.trashPathExists trashHome pd
-  unless exists $
-    throwCS $
-      MkTrashEntryFileNotFoundE trashHome filePath
+  unless exists
+    $ throwCS
+    $ MkTrashEntryFileNotFoundE trashHome filePath
   where
     filePath = pd ^. #fileName
 
@@ -180,7 +179,7 @@ formatIndex ::
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m
@@ -237,6 +236,10 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     --          remaining width according to the following ratio: 40% for
     --          fileNames, 60% for the originalPath.
 
+    -- maxNameLen := longest name
+    -- maxOrigLen := orig path
+    (maxNameLen, maxOrigLen) <- foldl' foldMap (pure maxStart) (idx ^. #unIndex)
+
     -- maxLen := maximum terminal width
     maxLen <- getMaxLen
 
@@ -245,8 +248,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     maxLenForDynCols <-
       if maxLen < Formatting.minTableWidth
         then
-          throwString $
-            mconcat
+          throwString
+            $ mconcat
               [ "Terminal width (",
                 show maxLen,
                 ") is less than minimum width (",
@@ -258,10 +261,12 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
 
     -- Basically: if an option is explicitly specified; use it. Otherwise,
     -- try to calculate a "good" value.
-    (nameLen, origLen) <- case (nameFmtToStrategy nameFormat, origFmtToStrategy origFormat) of
+    (nameLen, origLen) <- case ( nameFmtToStrategy maxNameLen nameFormat,
+                                 origFmtToStrategy maxOrigLen origFormat
+                               ) of
       (Right nLen, Right oLen) -> pure (nLen, oLen)
-      (Right nLen, Left mkOLen) -> mkOLen maxLenForDynCols nLen
-      (Left mkNLen, Right oLen) -> mkNLen maxLenForDynCols oLen
+      (Right nLen, Left mkOLen) -> mkOLen maxLenForDynCols maxOrigLen nLen
+      (Left mkNLen, Right oLen) -> mkNLen maxLenForDynCols maxNameLen oLen
       (Left _, Left _) ->
         if maxNameLen + maxOrigLen <= maxLenForDynCols
           then pure (maxNameLen, maxOrigLen)
@@ -274,27 +279,33 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
     tabular (sortFn revSort sort) nameLen origLen <$> indexToSeq idx
     where
       -- Search the index; find the longest name and orig path
-      (maxNameLen, maxOrigLen) = foldl' foldMap maxStart (idx ^. #unIndex)
-      foldMap :: (Natural, Natural) -> PathData -> (Natural, Natural)
-      foldMap (!maxNameSoFar, !maxOrigSoFar) pd =
-        ( max maxNameSoFar (pathLen $ pd ^. #fileName),
-          max maxOrigSoFar (pathLen $ pd ^. #originalPath)
-        )
+      foldMap :: m (Natural, Natural) -> PathData -> m (Natural, Natural)
+      foldMap acc pd = do
+        (!maxNameSoFar, !maxOrigSoFar) <- acc
+        nameLen <- pathLen $ pd ^. #fileName
+        origLen <- pathLen $ pd ^. #originalPath
+        pure (max maxNameSoFar nameLen, max maxOrigSoFar origLen)
+
+      maxStart :: (Natural, Natural)
       maxStart = (Formatting.formatFileNameLenMin, Formatting.formatOriginalPathLenMin)
-      pathLen = fromIntegral . Paths.applyPathI length
+
+      pathLen :: PathI i -> m Natural
+      pathLen (MkPathI p) = do
+        p' <- decodeOsToFpThrowM p
+        pure $ fromIntegral $ length p'
 
       -- Map the name format to its strategy
-      nameFmtToStrategy (Just (ColFormatFixed nameLen)) = Right nameLen
-      nameFmtToStrategy (Just ColFormatMax) = Right maxNameLen
-      nameFmtToStrategy Nothing = Left mkNameLen
+      nameFmtToStrategy _ (Just (ColFormatFixed nameLen)) = Right nameLen
+      nameFmtToStrategy maxNameLen (Just ColFormatMax) = Right maxNameLen
+      nameFmtToStrategy _ Nothing = Left mkNameLen
 
       -- Map the orig format to its strategy
-      origFmtToStrategy (Just (ColFormatFixed origLen)) = Right origLen
-      origFmtToStrategy (Just ColFormatMax) = Right maxOrigLen
-      origFmtToStrategy Nothing = Left mkOrigLen
+      origFmtToStrategy _ (Just (ColFormatFixed origLen)) = Right origLen
+      origFmtToStrategy maxOrigLen (Just ColFormatMax) = Right maxOrigLen
+      origFmtToStrategy _ Nothing = Left mkOrigLen
 
       -- Given a fixed nameLen, derive a "good" origLen
-      mkOrigLen maxLenForDynCols nLen =
+      mkOrigLen maxLenForDynCols maxOrigLen nLen =
         if nLen + maxOrigLen <= maxLenForDynCols
           then -- 1. Requested nLen and maxOrigLen fits; use both
             pure (nLen, maxOrigLen)
@@ -304,8 +315,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
             -- Formatting.formatOriginalPathLenMin, this could lead to wrapping.
             if nLen < maxLenForDynCols
               then do
-                $(logDebug) $
-                  mconcat
+                $(logDebug)
+                  $ mconcat
                     [ "Maximum original path (",
                       showt maxOrigLen,
                       ") does not fit with requested name length (",
@@ -318,8 +329,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
               else -- 3. Requested nameLen > available space. We are going to wrap
               -- regardless, so use it and the minimum orig.
               do
-                $(logWarn) $
-                  mconcat
+                $(logWarn)
+                  $ mconcat
                     [ "Requested name length (",
                       showt nLen,
                       ") > calculated terminal space (",
@@ -330,7 +341,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                 pure (nLen, Formatting.formatOriginalPathLenMin)
 
       -- Given a fixed origLen, derive a "good" nameLen
-      mkNameLen maxLenForDynCols oLen =
+      mkNameLen maxLenForDynCols maxNameLen oLen =
         if oLen + maxNameLen <= maxLenForDynCols
           then -- 1. Requested oLen and maxNameLen fits; use both
             pure (maxNameLen, oLen)
@@ -340,8 +351,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
             -- Formatting.formatFileNameLenMin, this could lead to wrapping.
             if oLen < maxLenForDynCols
               then do
-                $(logDebug) $
-                  mconcat
+                $(logDebug)
+                  $ mconcat
                     [ "Maximum name (",
                       showt maxNameLen,
                       ") does not fit with requested original path length (",
@@ -354,8 +365,8 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
               else -- 3. Requested origLen > available space. We are going to wrap
               -- regardless, so use it and the minimum name.
               do
-                $(logWarn) $
-                  mconcat
+                $(logWarn)
+                  $ mconcat
                     [ "Requested original path length (",
                       showt oLen,
                       ") > calculated terminal space (",
@@ -370,9 +381,9 @@ getMaxLen = do
   tryAny getTerminalWidth >>= \case
     Right w -> pure w
     Left err -> do
-      $(logWarn) $
-        "Could not detect terminal length. Falling back to default 80. Error:\n"
-          <> displayExceptiont err
+      $(logWarn)
+        $ "Could not detect terminal length. Falling back to default 80. Error:\n"
+        <> displayExceptiont err
       pure 80
 
 multiline :: (PathDataCore -> PathDataCore -> Ordering) -> Seq PathDataCore -> Text
@@ -418,7 +429,7 @@ indexToSeq ::
     MonadIORef m,
     MonadLogger m,
     MonadPathReader m,
-    MonadPosix m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadThread m

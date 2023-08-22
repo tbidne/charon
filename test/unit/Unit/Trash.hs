@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Unit tests for Trash
@@ -18,11 +19,12 @@ import Effects.LoggerNS
 import Effects.LoggerNS qualified as Logger
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.Paths (PathI, PathIndex (..), liftPathI')
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend (..))
 import SafeRm.Exception (EmptyPathE, RootE)
 import SafeRm.Trash qualified as Trash
+import System.OsPath (encodeUtf)
 import Unit.Prelude
 
 tests :: TestTree
@@ -104,41 +106,52 @@ instance MonadLoggerNS PathDataT where
 instance MonadPathWriter PathDataT where
   renameFile p1 p2 =
     ask >>= \(MkTestEnv ref _ _ _) ->
-      writeIORef ref ("renamed " <> T.pack p1 <> " to " <> T.pack p2)
+      writeIORef ref ("renamed " <> showt p1 <> " to " <> showt p2)
 
   -- overridden for a better error message
   removeFile p =
-    error $
-      mconcat
+    error
+      $ mconcat
         [ "removeFile intentionally unimplemented; unit tests should not be ",
           "using it. Attempted delete: '",
-          p,
+          show p,
           "'"
         ]
 
 instance MonadPathReader PathDataT where
-  canonicalizePath = pure . (windowsify "/home/" </>)
+  canonicalizePath = pure . ([osp|home|] </>)
 
   doesPathExist p
     | p `L.elem` nexists = pure False
-    | otherwise = error $ "Path: '" <> p <> "'"
+    | otherwise =
+        error
+          $ mconcat
+            [ "Path not found: ",
+              show p,
+              ". Paths we know about: ",
+              show nexists
+            ]
     where
       nexists =
-        windowsify
-          <$> [ "test/unit/.trash/files/foo",
-                "test/unit/.trash/files/ "
-              ]
+        [ pathTest </> pathUnit </> pathDotTrash </> pathFiles </> [osp|foo|],
+          pathTest </> pathUnit </> pathDotTrash </> pathFiles </> [osp| |]
+        ]
 
   doesFileExist p
     | p `L.elem` exists = pure True
-    | otherwise = error p
+    | otherwise =
+        error
+          $ mconcat
+            [ "File not found: ",
+              show p,
+              ". Files we know about: ",
+              show exists
+            ]
     where
       exists =
-        windowsify
-          <$> [ "/home/path/to/foo",
-                "/",
-                "/home/ "
-              ]
+        [ [osp|home|] </> [osp|path|] </> [osp|to|] </> [osp|foo|],
+          [osp|home|] </> [osp| |]
+        ]
 
 -- No real IO!!!
 instance MonadFileWriter PathDataT where
@@ -160,19 +173,21 @@ backendTests b =
 
 mvTrash :: Backend -> TestTree
 mvTrash b = testCase "mvOriginalToTrash success" $ do
-  (result, _) <- runPathDataTLogs b (Trash.mvOriginalToTrash trashHome ts (liftPathI' windowsify "path/to/foo"))
-  windowsify "renamed /home/path/to/foo to test/unit/.trash/files/foo" @=? T.unpack result
+  (result, _) <- runPathDataTLogs b (Trash.mvOriginalToTrash trashHome ts fooPath)
+  windowsify "renamed \"home/path/to/foo\" to \"test/unit/.trash/files/foo\"" @=? T.unpack result
+  where
+    fooPath = MkPathI $ [osp|path|] </> [osp|to|] </> [osp|foo|]
 
 mvTrashWhitespace :: Backend -> TestTree
 mvTrashWhitespace b = testCase "mvOriginalToTrash whitespace success" $ do
-  (result, _) <- runPathDataTLogs b (Trash.mvOriginalToTrash trashHome ts " ")
-  windowsify "renamed /home/  to test/unit/.trash/files/ " @=? T.unpack result
+  (result, _) <- runPathDataTLogs b (Trash.mvOriginalToTrash trashHome ts (MkPathI [osp| |]))
+  windowsify "renamed \"home/ \" to \"test/unit/.trash/files/ \"" @=? T.unpack result
 
 mvTrashRootError :: Backend -> TestTree
 mvTrashRootError b = testCase desc $ do
   eformatted <-
-    tryCS @_ @RootE $
-      runPathDataT b (Trash.mvOriginalToTrash trashHome ts rootDir)
+    tryCS @_ @RootE
+      $ runPathDataT b (Trash.mvOriginalToTrash trashHome ts rootDir)
   case eformatted of
     Right result ->
       assertFailure $ "Expected exception, received result: " <> show result
@@ -180,16 +195,20 @@ mvTrashRootError b = testCase desc $ do
   where
     desc = "mvOriginalToTrash throws exception for root original path"
 #if WINDOWS
-    rootDir = "C:\\"
+    rootDir = MkPathI [osp|C:\|]
 #else
-    rootDir = "/"
+    rootDir = MkPathI [osp|/|]
 #endif
 
 mvTrashEmptyError :: Backend -> TestTree
 mvTrashEmptyError b = testCase desc $ do
+  -- NOTE: Need filepath's encodeUtf here as the quasiquote and our functions
+  -- will (correctly) fail on empty paths. This check is out of paranoia, in
+  -- case an empty string somehow gets through.
+  empty <- encodeUtf ""
   eformatted <-
-    tryCS @_ @EmptyPathE $
-      runPathDataT b (Trash.mvOriginalToTrash trashHome ts "")
+    tryCS @_ @EmptyPathE
+      $ runPathDataT b (Trash.mvOriginalToTrash trashHome ts (MkPathI empty))
   case eformatted of
     Right result ->
       assertFailure $ "Expected exception, received result: " <> show result
@@ -198,7 +217,7 @@ mvTrashEmptyError b = testCase desc $ do
     desc = "mvOriginalToTrash throws exception for empty original path"
 
 trashHome :: PathI TrashHome
-trashHome = liftPathI' windowsify "test/unit/.trash"
+trashHome = MkPathI $ [osp|test|] </> [osp|unit|] </> pathDotTrash
 
 ts :: Timestamp
 ts = case fromText "2020-05-31T12:00:00" of
@@ -209,8 +228,15 @@ windowsify :: String -> String
 #if WINDOWS
 windowsify [] = []
 windowsify (c:cs)
-  | c == '/' = '\\' : windowsify cs
+  -- double slash due to using Show
+  | c == '/' = '\\' : '\\' : windowsify cs
   | otherwise = c : windowsify cs
 #else
 windowsify = id
 #endif
+
+pathTest :: OsPath
+pathTest = [osp|test|]
+
+pathUnit :: OsPath
+pathUnit = [osp|unit|]

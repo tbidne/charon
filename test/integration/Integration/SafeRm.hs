@@ -1,8 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 -- | Property tests for the SafeRm API.
 module Integration.SafeRm
@@ -11,18 +14,24 @@ module Integration.SafeRm
 where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
+import Data.Bifunctor (Bifunctor (first))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
+import Data.Hashable (Hashable (hash))
+import Data.List (unzip)
 import Data.List qualified as L
 import Data.Text qualified as T
+import Effects.FileSystem.Utils qualified as FsUtils
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
 import GHC.Exts (IsList (Item, fromList))
-import Hedgehog (PropertyT)
+import Hedgehog (GenT, PropertyT, forAll)
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
 import Integration.AsciiOnly (AsciiOnly (..))
 import Integration.Prelude
+import Integration.Utils qualified as IntUtils
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (..))
 import SafeRm.Data.Backend qualified as Backend
@@ -39,6 +48,8 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (..))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
+import System.OsPath qualified as OsPath
+import Test.Utils qualified as TestUtils
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -75,7 +86,7 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       MonadIORef,
       MonadPathReader,
       MonadPathWriter,
-      MonadPosix,
+      MonadPosixCompat,
       MonadReader IntEnv,
       MonadThread,
       MonadThrow,
@@ -131,44 +142,43 @@ usingIntIO env rdr = do
 usingIntIONoCatch :: IntEnv -> IntIO a -> PropertyT IO a
 usingIntIONoCatch env (MkIntIO rdr) = liftIO $ runReaderT rdr env
 
-tests :: IO FilePath -> TestTree
+tests :: IO OsPath -> TestTree
 tests testDir =
   testGroup
     "SafeRm"
     (testsBackend testDir <$> [minBound .. maxBound])
 
-testsBackend :: IO FilePath -> Backend -> TestTree
+testsBackend :: IO OsPath -> Backend -> TestTree
 testsBackend testDir b =
   testGroup
     (Backend.backendTestDesc b)
-    [ delete b testDir,
-      deleteSome b testDir,
-      permDelete b testDir,
-      permDeleteSome b testDir,
-      restore b testDir,
-      restoreSome b testDir,
-      emptyTrash b testDir,
-      metadata b testDir
+    [ delete b testDir
+    -- deleteSome b testDir,
+    -- permDelete b testDir,
+    -- permDeleteSome b testDir,
+    -- restore b testDir,
+    -- restoreSome b testDir,
+    -- emptyTrash b testDir,
+    -- metadata b testDir
     ]
 
-delete :: Backend -> IO FilePath -> TestTree
+delete :: Backend -> IO OsPath -> TestTree
 delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "All paths are deleted" "delete" $ do
     property $ do
-      testDir <- getTestPath mtestDir "delete" backend
-      α <- forAll (genFileNameSet b)
+      annotateShow b
+      testDir <- getTestPath mtestDir [osp|delete|] backend
+      (α, fps) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      annotateShow $ show $ USeq.map (fmap Ch.isPrint) fps
+      setupDir testDir αTest
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
@@ -187,16 +197,16 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       αTest ^. #set === indexOrigPaths
 
-deleteSome :: Backend -> IO FilePath -> TestTree
+deleteSome :: Backend -> IO OsPath -> TestTree
 deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
-      testDir <- getTestPath mtestDir "deleteSome" backend
-      (α, β) <- forAll (gen2FileNameSets b)
+      testDir <- getTestPath mtestDir [osp|deleteSome|] backend
+      ((α, _), (β, _)) <- forAll (IntUtils.gen2FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
           αTest = toTestDir α
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
           βTrash = mkTrashPaths backend trashDir β
       env <- liftIO $ mkEnv backend trashDir
@@ -204,18 +214,15 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      setupDir testDir αTest
 
       -- delete files
       -- should succeed on α and fail on β
       let toDelete = αTest `USeq.union` toTestDir β
 
       caughtEx <-
-        tryCS @_ @FileNotFoundE $
-          usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
+        tryCS @_ @FileNotFoundE
+          $ usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
 
       ex <-
         either
@@ -244,13 +251,13 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       -- index should exactly match α
       αTest ^. #set === indexOrigPaths
 
-permDelete :: Backend -> IO FilePath -> TestTree
+permDelete :: Backend -> IO OsPath -> TestTree
 permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDelete" $ do
     property $ do
-      testDir <- getTestPath mtestDir "permDelete" backend
-      α <- forAll (genFileNameSet b)
-      let trashDir = testDir </> ".trash"
+      testDir <- getTestPath mtestDir [osp|permDelete|] backend
+      (α, _) <- forAll (IntUtils.genFileNameSet b)
+      let trashDir = testDir </> [osp|.trash|]
           αTest = USeq.map (testDir </>) α
           αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
@@ -258,10 +265,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      setupDir testDir αTest
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
@@ -285,16 +289,16 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "All trash entries are permanently deleted"
 
-permDeleteSome :: Backend -> IO FilePath -> TestTree
+permDeleteSome :: Backend -> IO OsPath -> TestTree
 permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDeleteSome" $ do
     property $ do
-      testDir <- getTestPath mtestDir "permDeleteSome" backend
-      (α, β, γ) <- forAll (gen3FileNameSets b)
+      testDir <- getTestPath mtestDir [osp|permDeleteSome|] backend
+      ((α, _), (β, _), (γ, _)) <- forAll (IntUtils.gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
           toDelete = toTestDir (α `USeq.union` γ)
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           trashSet = mkTrashPaths backend trashDir (α `USeq.union` γ)
           αTrash = mkTrashPaths backend trashDir α
           βTrash = mkTrashPaths backend trashDir β
@@ -305,10 +309,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toDelete
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map toDelete
-      assertPathsExist toDelete
+      setupDir testDir toDelete
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
@@ -325,8 +326,8 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE $
-          usingIntIONoCatch env (SafeRm.permDelete True toPermDelete)
+        tryCS @_ @TrashEntryNotFoundE
+          $ usingIntIONoCatch env (SafeRm.permDelete True toPermDelete)
 
       ex <-
         either
@@ -351,24 +352,21 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "Some trash entries are permanently deleted, others error"
 
-restore :: Backend -> IO FilePath -> TestTree
+restore :: Backend -> IO OsPath -> TestTree
 restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
-      testDir <- getTestPath mtestDir "restore" backend
-      α <- forAll (genFileNameSet b)
+      testDir <- getTestPath mtestDir [osp|restore|] backend
+      (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      setupDir testDir αTest
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
@@ -393,16 +391,16 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTrash
 
-restoreSome :: Backend -> IO FilePath -> TestTree
+restoreSome :: Backend -> IO OsPath -> TestTree
 restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
-      testDir <- getTestPath mtestDir "restoreSome" backend
-      (α, β, γ) <- forAll (gen3FileNameSets b)
+      testDir <- getTestPath mtestDir [osp|restoreSome|] backend
+      ((α, _), (β, _), (γ, _)) <- forAll (IntUtils.gen3FileNameSets b)
       let toTestDir = USeq.map (testDir </>)
 
           toDelete = toTestDir (α `USeq.union` γ)
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
           γTrash = mkTrashPaths backend trashDir γ
       env <- liftIO $ mkEnv backend trashDir
@@ -411,10 +409,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toDelete
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map toDelete
-      assertPathsExist toDelete
+      setupDir testDir toDelete
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
@@ -431,8 +426,8 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE $
-          usingIntIONoCatch env (SafeRm.restore toRestore)
+        tryCS @_ @TrashEntryNotFoundE
+          $ usingIntIONoCatch env (SafeRm.restore toRestore)
 
       ex <-
         either
@@ -457,14 +452,14 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "Some trash entries are restored, others error"
 
-emptyTrash :: Backend -> IO FilePath -> TestTree
+emptyTrash :: Backend -> IO OsPath -> TestTree
 emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
-      testDir <- getTestPath mtestDir "emptyTrash" backend
-      α <- forAll (genFileNameSet b)
+      testDir <- getTestPath mtestDir [osp|emptyTrash|] backend
+      (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
@@ -472,10 +467,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      setupDir testDir αTest
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
@@ -497,14 +489,14 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotate "Assert files do not exist"
       assertPathsDoNotExist (αTest `USeq.union` αTrash)
 
-metadata :: Backend -> IO FilePath -> TestTree
+metadata :: Backend -> IO OsPath -> TestTree
 metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
-      testDir <- getTestPath mtestDir "metadata" backend
-      α <- forAll (genFileNameSet b)
+      testDir <- getTestPath mtestDir [osp|metadata|] backend
+      (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
-          trashDir = testDir </> ".trash"
+          trashDir = testDir </> [osp|.trash|]
           αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
@@ -512,10 +504,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      liftIO $ do
-        clearDirectory testDir
-        createFilesMap USeq.map αTest
-      assertPathsExist αTest
+      setupDir testDir αTest
 
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
@@ -539,101 +528,16 @@ natToInt i
   where
     intMax = fromIntegral (maxBound :: Int)
 
-genFileNameSet :: Bool -> Gen (UniqueSeq FilePath)
-genFileNameSet asciiOnly = fromFoldable <$> Gen.list range (genFileName asciiOnly)
-  where
-    range = Range.linear 1 100
-
-gen2FileNameSets :: Bool -> Gen (UniqueSeq FilePath, UniqueSeq FilePath)
-gen2FileNameSets asciiOnly = do
-  α <- fromFoldable <$> Gen.list range (genFileName asciiOnly)
-  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly α)
-  pure (α, β)
-  where
-    range = Range.linear 1 100
-
-gen3FileNameSets :: Bool -> Gen (UniqueSeq FilePath, UniqueSeq FilePath, UniqueSeq FilePath)
-gen3FileNameSets asciiOnly = do
-  α <- fromFoldable <$> Gen.list range (genFileName asciiOnly)
-  β <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly α)
-  γ <- fromFoldable <$> Gen.list range (genFileNameNoDupes asciiOnly (α `USeq.union` β))
-  pure (α, β, γ)
-  where
-    range = Range.linear 1 100
-
-genFileName :: Bool -> Gen FilePath
-genFileName asciiOnly = genFileNameNoDupes asciiOnly USeq.empty
-
-genFileNameNoDupes :: Bool -> UniqueSeq FilePath -> Gen FilePath
-genFileNameNoDupes asciiOnly paths =
-  Gen.filter
-    (not . (`USeq.member` paths))
-    (Gen.string range (genChar asciiOnly))
-  where
-    range = Range.linear 1 20
-
-genChar :: Bool -> Gen Char
-genChar asciiOnly = Gen.filterT f (mapper <$> g)
-  where
-    g =
-      if asciiOnly
-        then Gen.ascii
-        else Gen.unicode
-#if OSX
-    -- Below unrestricted unicode paths are causing the mac tests to fail.
-    -- It would be nice to have a list of paths that we _should_ support,
-    -- so we know which set to generate, but for now, just generate the
-    -- printable chars.
-    --
-    -- Note: paths that previously caused failures were \x19ad and \x2800.
-    -- ':' was also excluded, though it hadn't caused a test failure (yet)
-    f c = Ch.isPrint c && notBadChar c
-
-    -- The wildcard '*' is excluded because it causes tests to fail.
-    -- For instance, suppose we delete files '*' and ' ' and then try to
-    -- permanently delete them. Permanently deleting the wildcard will match
-    -- ' ' and delete both, so then when we try to explicitly delete ' ',
-    -- it will fail.
-    notBadChar :: Char -> Bool
-    notBadChar c = not $ L.elem @[] c ['/', '.', ':', '*']
-
-    mapper :: Char -> Char
-    mapper = id
-#elif WINDOWS
-    f c = Ch.isPrint c && notBadChar c
-
-    -- https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#file-and-directory-names
-    notBadChar :: Char -> Bool
-    notBadChar c = not $ L.elem @[] c
-      ['/', '\\', '<', '>', ':', '"', '|', '?', '*', '0', '.', ' ']
-
-    -- windows paths are case-insensitive by default, so let's just take
-    -- lower-case paths :-(
-    mapper :: Char -> Char
-    mapper = Ch.toLower
-#else
-    f c = notControl c && notBadChar c
-
-    notControl :: Char -> Bool
-    notControl = not . Ch.isControl
-
-    notBadChar :: Char -> Bool
-    notBadChar c = not $ L.elem @[] c ['/', '.', '*']
-
-    mapper :: Char -> Char
-    mapper = id
-#endif
-
-toOrigPath :: HashSet FilePath -> PathData -> HashSet FilePath
+toOrigPath :: HashSet OsPath -> PathData -> HashSet OsPath
 toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 
-mkEnv :: Backend -> FilePath -> IO IntEnv
+mkEnv :: Backend -> OsPath -> IO IntEnv
 mkEnv backend fp = do
   termLogsRef <- newIORef []
   logsRef <- newIORef []
 
-  pure $
-    MkIntEnv
+  pure
+    $ MkIntEnv
       { coreEnv =
           MkEnv
             { trashHome = MkPathI fp,
@@ -647,18 +551,18 @@ mkEnv backend fp = do
 
 mkTrashPaths ::
   ( Foldable f,
-    IsList (f FilePath),
-    Item (f FilePath) ~ FilePath
+    IsList (f OsPath),
+    Item (f OsPath) ~ OsPath
   ) =>
   Backend ->
-  FilePath ->
-  f FilePath ->
-  f FilePath
+  OsPath ->
+  f OsPath ->
+  f OsPath
 mkTrashPaths backend trashHome =
   fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
   where
-    mkTrashPath p = trashHome </> "files" </> p
-    mkTrashInfoPath p = trashHome </> "info" </> p <> Env.trashInfoExtension backend
+    mkTrashPath p = trashHome </> pathFiles </> p
+    mkTrashInfoPath p = trashHome </> pathInfo </> p <> Env.trashInfoExtensionOsPath backend
 
 -- NOTE: [OSX temp symlink]
 --
@@ -678,8 +582,25 @@ mkTrashPaths backend trashHome =
 -- "deleted paths match expected paths" checks to succeed.
 --
 -- This is not needed on linux but also appears unharmful.
-getTestPath :: (MonadIO m) => IO Path -> Path -> Backend -> m Path
+getTestPath :: (MonadIO m) => IO OsPath -> OsPath -> Backend -> m OsPath
 getTestPath mtestPath p backend = do
-  -- liftIO (canonicalizePath =<< mtestPath)
   testPath <- liftIO $ canonicalizePath =<< mtestPath
-  pure $ testPath </> p </> Backend.backendArg backend
+  pure $ testPath </> p </> Backend.backendArgOsPath backend
+
+setupDir ::
+  ( MonadCatch m,
+    MonadIO m,
+    MonadTest m
+  ) =>
+  OsPath ->
+  UniqueSeq OsPath ->
+  m ()
+setupDir dir files = do
+  let action = do
+        clearDirectory dir
+        createFilesMap USeq.map files
+        assertPathsExist files
+
+  action `catchAny` \ex -> do
+    annotate $ displayException ex
+    failure

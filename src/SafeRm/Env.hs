@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Provides classes for running SafeRm with an environment.
 module SafeRm.Env
   ( HasTrashHome (..),
@@ -7,6 +9,7 @@ module SafeRm.Env
     getTrashPath,
     getTrashInfoPath,
     trashInfoExtension,
+    trashInfoExtensionOsPath,
     HasBackend (..),
   )
 where
@@ -35,24 +38,28 @@ class HasTrashHome a where
 
 -- | Retrieves the trash log path.
 getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
-getTrashLog = MkPathI . (</> "log") <$> getXdgState "safe-rm"
+getTrashLog = MkPathI . (</> [osp|log|]) <$> getXdgState pathSafeRm
 
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
-getTrashPath trashHome name = trashHome <//> "files" <//> name
+getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 
 getTrashInfoPath :: Backend -> PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
 getTrashInfoPath backend trashHome name =
   trashHome
-    <//> "info"
-    <//> liftPathI' (<> trashInfoExtension backend) name
+    <//> MkPathI pathInfo
+    <//> liftPathI' (<> trashInfoExtensionOsPath backend) name
 
 -- | Retrieves the trash path dir.
 getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
-getTrashPathDir trashHome = trashHome <//> "files"
+getTrashPathDir trashHome = trashHome <//> MkPathI pathFiles
 
 -- | Retrieves the trash info dir.
 getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
-getTrashInfoDir trashHome = trashHome <//> "info"
+getTrashInfoDir trashHome = trashHome <//> MkPathI pathInfo
+
+trashInfoExtensionOsPath :: Backend -> OsPath
+trashInfoExtensionOsPath BackendCbor = [osp|.cbor|]
+trashInfoExtensionOsPath BackendFdo = [osp|.trashinfo|]
 
 -- | Returns the extension for the trash info files.
 trashInfoExtension :: (IsString a) => Backend -> a

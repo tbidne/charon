@@ -43,8 +43,8 @@ instance Pretty PathData where
     where
       strs = zipWith (flip ($)) headerNames labelFn
       labelFn =
-        [ \x -> x <> ":     " <+> pretty (pd ^. #fileName % #unPathI),
-          \x -> x <> ": " <+> pretty (pd ^. #originalPath % #unPathI),
+        [ \x -> x <> ":     " <+> pretty (decodeOsToFpShowText $ pd ^. #fileName % #unPathI),
+          \x -> x <> ": " <+> pretty (decodeOsToFpShowText $ pd ^. #originalPath % #unPathI),
           \x -> x <> ":     " <+> pretty (pd ^. #pathType),
           \x -> x <> ":     " <+> pretty (U.normalizedFormat $ pd ^. #size),
           \x -> x <> ":  " <+> pretty (pd ^. #created)
