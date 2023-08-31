@@ -27,23 +27,23 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Internal.Property (forAllT)
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
-import Integration.AsciiOnly (AsciiOnly (..))
+import Integration.AsciiOnly (AsciiOnly)
 import Integration.Prelude
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
-import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
+import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Exception (FileNotFoundE, TrashEntryNotFoundE)
 import SafeRm.Runner.Env
-  ( Env (..),
+  ( Env,
     LogEnv (MkLogEnv),
   )
-import SafeRm.Runner.SafeRmT (SafeRmT (..))
+import SafeRm.Runner.SafeRmT (SafeRmT)
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 import System.OsPath qualified as OsPath
 import Test.Utils qualified as TestUtils

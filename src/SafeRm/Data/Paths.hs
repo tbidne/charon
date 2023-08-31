@@ -36,7 +36,7 @@ where
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
-import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- | Types of filepaths used in SafeRm.

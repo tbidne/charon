@@ -14,15 +14,25 @@ module SafeRm.Data.PathData.Cbor
 where
 
 import Codec.Serialise qualified as Serialise
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Data.PathData.Common qualified as Common
-import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashHome
+      ),
+  )
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env qualified as Env
-import SafeRm.Exception (FileNotFoundE (..), PathNotFileDirE (..))
+import SafeRm.Exception
+  ( FileNotFoundE (MkFileNotFoundE),
+    PathNotFileDirE (MkPathNotFileDirE),
+  )
 import SafeRm.Prelude
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not

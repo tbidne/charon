@@ -6,9 +6,17 @@ where
 
 import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata
+  ( Metadata
+      ( MkMetadata,
+        logSize,
+        numEntries,
+        numFiles,
+        size
+      ),
+  )
 import SafeRm.Env qualified as Env
 
 tests :: IO TestEnv -> TestTree

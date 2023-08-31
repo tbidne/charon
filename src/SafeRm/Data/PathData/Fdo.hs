@@ -13,8 +13,15 @@ where
 import Data.ByteString.Char8 qualified as C8
 import Data.HashSet qualified as Set
 import SafeRm.Data.PathData.Common qualified as Common
-import SafeRm.Data.PathType (PathType (..))
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.Paths
+  ( PathI,
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashHome
+      ),
+  )
 import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude

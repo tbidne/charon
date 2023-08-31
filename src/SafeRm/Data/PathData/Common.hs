@@ -14,13 +14,21 @@ import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
 import Effects.FileSystem.Utils qualified as FsUtils
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashEntryPath,
+        TrashHome
+      ),
+  )
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( EmptyPathE (MkEmptyPathE),
     FileNotFoundE (MkFileNotFoundE),
-    PathNotFileDirE (..),
+    PathNotFileDirE (MkPathNotFileDirE),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
   )

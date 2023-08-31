@@ -34,7 +34,16 @@ module SafeRm.Exception
 where
 
 import Effects.FileSystem.Utils qualified as FsUtils
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryInfo,
+        TrashEntryOriginalPath,
+        TrashEntryPath,
+        TrashHome
+      ),
+  )
 import SafeRm.Prelude
 import System.OsPath (encodeUtf)
 

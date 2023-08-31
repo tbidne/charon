@@ -10,10 +10,13 @@ where
 import Benchmarks.Prelude
 import Effects.FileSystem.Utils ((</>!))
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq qualified as UniqueSeq
-import SafeRm.Runner.Env (Env (..), LogEnv (MkLogEnv))
+import SafeRm.Runner.Env
+  ( Env (MkEnv, backend, logEnv, trashHome),
+    LogEnv (MkLogEnv),
+  )
 import SafeRm.Runner.SafeRmT (runSafeRmT)
 
 -- | Index reading benchmarks.

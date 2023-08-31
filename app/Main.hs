@@ -3,13 +3,13 @@ module Main (main) where
 
 import GHC.Conc.Sync (setUncaughtExceptionHandler)
 import SafeRm.Prelude
-  ( ExceptionCS (..),
+  ( ExceptionCS (MkExceptionCS),
     catch,
     displayException,
     throwM,
   )
 import SafeRm.Runner (runSafeRm)
-import System.Exit (ExitCode (..))
+import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 
 main :: IO ()
 main = do

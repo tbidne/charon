@@ -19,7 +19,14 @@ module SafeRm.Runner.Command
 where
 
 import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import SafeRm.Data.Paths
+  ( PathI,
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashHome
+      ),
+  )
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import SafeRm.Runner.Command.List (ListCmd)

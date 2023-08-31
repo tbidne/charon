@@ -5,7 +5,7 @@ module Functional.Commands.List
 where
 
 import Data.Text qualified as T
-import Effects.FileSystem.PathWriter (MonadPathWriter (..))
+import Effects.FileSystem.PathWriter qualified as PW
 import Functional.Prelude
 import SafeRm.Exception
   ( TrashDirFilesNotFoundE,
@@ -123,7 +123,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     runSafeRm delArgList
 
     -- delete file from trash for expected error
-    removeFile (trashDir </> pathFiles </>! "missing")
+    PW.removeFile (trashDir </> pathFiles </>! "missing")
 
     -- Creating empty file so that we don't get the "size mismatch" error.
     -- We specifically want the "missing.trashinfo has no corresponding missing" error.

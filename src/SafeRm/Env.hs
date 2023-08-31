@@ -15,10 +15,10 @@ module SafeRm.Env
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (..),
+    PathIndex (TrashDirFiles, TrashDirInfo, TrashEntryFileName, TrashEntryInfo, TrashEntryPath, TrashHome, TrashLog),
     liftPathI',
     (<//>),
   )
@@ -43,7 +43,11 @@ getTrashLog = MkPathI . (</> [osp|log|]) <$> getXdgState pathSafeRm
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
 getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 
-getTrashInfoPath :: Backend -> PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryInfo
+getTrashInfoPath ::
+  Backend ->
+  PathI TrashHome ->
+  PathI TrashEntryFileName ->
+  PathI TrashEntryInfo
 getTrashInfoPath backend trashHome name =
   trashHome
     <//> MkPathI pathInfo

@@ -38,14 +38,26 @@ import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import Paths_safe_rm qualified as Paths
-import SafeRm.Data.Backend (Backend (..), parseBackend)
+import SafeRm.Data.Backend (Backend, parseBackend)
 import SafeRm.Data.Index (Sort, readSort)
-import SafeRm.Data.PathData.Formatting (ColFormat (..))
+import SafeRm.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax))
 import SafeRm.Data.PathData.Formatting qualified as PathData
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Prelude
-import SafeRm.Runner.Command (Command (..), CommandP1)
+import SafeRm.Runner.Command
+  ( Command
+      ( Convert,
+        Delete,
+        Empty,
+        List,
+        Merge,
+        Metadata,
+        PermDelete,
+        Restore
+      ),
+    CommandP1,
+  )
 import SafeRm.Runner.Command.List
   ( ListCmd (MkListCmd),
     ListFormatPhase1 (MkListFormatPhase1),

@@ -105,9 +105,9 @@ import Data.Word as X (Word16, Word8)
 import Effects.Concurrent.Async as X (MonadAsync)
 import Effects.Concurrent.Thread as X (MonadThread)
 import Effects.Exception as X
-  ( Exception (..),
-    ExceptionCS (..),
-    ExitCode (..),
+  ( Exception (displayException),
+    ExceptionCS (MkExceptionCS),
+    ExitCode (ExitFailure, ExitSuccess),
     MonadCatch,
     MonadMask,
     MonadThrow,

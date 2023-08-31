@@ -14,7 +14,10 @@ where
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType)
-import SafeRm.Data.Paths (PathI, PathIndex (..))
+import SafeRm.Data.Paths
+  ( PathI,
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath),
+  )
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U

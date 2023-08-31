@@ -3,9 +3,19 @@ module Integration.AsciiOnly
   )
 where
 
-import Data.Tagged (Tagged (..))
+import Data.Tagged (Tagged (Tagged))
 import SafeRm.Prelude
-import Test.Tasty.Options (IsOption (..), flagCLParser, safeReadBool)
+import Test.Tasty.Options
+  ( IsOption
+      ( defaultValue,
+        optionCLParser,
+        optionHelp,
+        optionName,
+        parseValue
+      ),
+    flagCLParser,
+    safeReadBool,
+  )
 
 -- | Option for limiting hedgehog-generated strings to ascii, for easier
 -- debugging.

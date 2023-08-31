@@ -18,10 +18,11 @@ import SafeRm.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import SafeRm.Runner.Phase (advancePhase)
 import SafeRm.Utils qualified as U
 import TOML
-  ( DecodeTOML (..),
+  ( DecodeTOML (),
     getFieldOpt,
     getFieldOptWith,
   )
+import TOML.Decode (tomlDecoder)
 
 -- | Holds TOML configuration.
 data TomlConfig = MkTomlConfig

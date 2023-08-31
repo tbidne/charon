@@ -31,18 +31,34 @@ where
 
 import Data.Bifunctor (first)
 import Data.Text qualified as T
-import PathSize (PathSizeResult (..), pathSizeRecursive)
-import SafeRm.Data.Backend (Backend (..))
+import PathSize
+  ( PathSizeResult
+      ( PathSizeFailure,
+        PathSizePartial,
+        PathSizeSuccess
+      ),
+    pathSizeRecursive,
+  )
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathData.Core qualified as Core
 import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Serialize (Serialize (..))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryInfo,
+        TrashEntryOriginalPath,
+        TrashEntryPath,
+        TrashHome
+      ),
+  )
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
-import SafeRm.Env (HasTrashHome (..))
+import SafeRm.Env (HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 

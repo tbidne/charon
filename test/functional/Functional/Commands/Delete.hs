@@ -8,7 +8,15 @@ import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
-import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata
+  ( Metadata
+      ( MkMetadata,
+        logSize,
+        numEntries,
+        numFiles,
+        size
+      ),
+  )
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (FileNotFoundE)
 

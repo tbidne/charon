@@ -36,10 +36,11 @@ where
 
 import Data.HashSet qualified as HSet
 import Data.Text qualified as T
-import Data.Time (LocalTime (LocalTime), ZonedTime (..))
+import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
-import Effects.FileSystem.PathReader (MonadPathReader (..), XdgDirectory (XdgState))
-import Effects.FileSystem.PathWriter (MonadPathWriter (..))
+import Effects.FileSystem.PathReader (XdgDirectory (XdgState))
+import Effects.FileSystem.PathReader qualified as PR
+import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.LoggerNS
   ( LocStrategy (LocStable),
@@ -47,19 +48,20 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import Effects.System.Terminal (MonadTerminal (..), Window (..))
+import Effects.System.Terminal (Window (Window))
+import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData (PathData (..))
+import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Timestamp (Timestamp (..))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 import SafeRm.Runner qualified as Runner
@@ -153,12 +155,12 @@ instance
   ) =>
   MonadPathReader (FuncIO env)
   where
-  doesFileExist = liftIO . doesFileExist
-  doesDirectoryExist = liftIO . doesDirectoryExist
-  doesPathExist = liftIO . doesPathExist
-  listDirectory = liftIO . listDirectory
-  canonicalizePath = liftIO . canonicalizePath
-  pathIsSymbolicLink = liftIO . pathIsSymbolicLink
+  doesFileExist = liftIO . PR.doesFileExist
+  doesDirectoryExist = liftIO . PR.doesDirectoryExist
+  doesPathExist = liftIO . PR.doesPathExist
+  listDirectory = liftIO . PR.listDirectory
+  canonicalizePath = liftIO . PR.canonicalizePath
+  pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
 
   getFileSize _ = pure 5
 
@@ -168,22 +170,22 @@ instance
   getXdgDirectory XdgState _ = do
     MkPathI th <- asks (view #trashHome)
     pure th
-  getXdgDirectory xdg p = liftIO $ getXdgDirectory xdg p
+  getXdgDirectory xdg p = liftIO $ PR.getXdgDirectory xdg p
 
 instance MonadPathWriter (FuncIO env) where
-  createDirectory = liftIO . createDirectory
-  createDirectoryIfMissing b = liftIO . createDirectoryIfMissing b
-  renameDirectory x = liftIO . renameDirectory x
-  renameFile x = liftIO . renameFile x
-  removeDirectory = liftIO . removeDirectory
-  removeDirectoryRecursive = liftIO . removeDirectoryRecursive
-  copyFileWithMetadata src = liftIO . copyFileWithMetadata src
+  createDirectory = liftIO . PW.createDirectory
+  createDirectoryIfMissing b = liftIO . PW.createDirectoryIfMissing b
+  renameDirectory x = liftIO . PW.renameDirectory x
+  renameFile x = liftIO . PW.renameFile x
+  removeDirectory = liftIO . PW.removeDirectory
+  removeDirectoryRecursive = liftIO . PW.removeDirectoryRecursive
+  copyFileWithMetadata src = liftIO . PW.copyFileWithMetadata src
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
     | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecodeOsToFp x) =
         throwString "Mock: cannot delete fooBadbar"
-    | otherwise = liftIO $ removeFile x
+    | otherwise = liftIO $ PW.removeFile x
 
 instance
   ( Is k A_Getter,
@@ -363,7 +365,7 @@ runIndexMetadataTestDirM testDir = do
           }
 
   -- Need to canonicalize due to windows aliases
-  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
 
   idx <- liftIO $ view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
   mdata <- liftIO $ runFuncIO SafeRm.getMetadata funcEnv
@@ -407,7 +409,7 @@ mkPathDataSetTestDirM testDir paths = do
   env <- ask
   let backend = env ^. #backend
 
-  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -449,7 +451,7 @@ mkPathDataSetM2 paths = do
   let backend = env ^. #backend
 
   testDir <- getTestDir
-  tmpDir <- canonicalizePath =<< getTemporaryDirectory
+  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -492,13 +494,13 @@ getTestDir = do
   env <- ask
 
   -- See Note [OSX temp symlink]
-  testRoot <- canonicalizePath (env ^. #testRoot)
+  testRoot <- PR.canonicalizePath (env ^. #testRoot)
 
   let testDir =
         testRoot
           </> (env ^. #testDir)
           <> [osp|-|]
           <> Backend.backendArgOsPath (env ^. #backend)
-  createDirectoryIfMissing True testDir
+  PW.createDirectoryIfMissing True testDir
 
   pure testDir

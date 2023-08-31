@@ -8,7 +8,7 @@ where
 
 import Data.Text qualified as T
 import Integration.Prelude
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Exception (RootE)
 

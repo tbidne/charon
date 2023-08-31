@@ -240,7 +240,6 @@ test-suite functional
     , effects-time
     , env-guard             ^>=0.2
     , filepath
-    , mtl
     , pretty-simple
     , safe-rm
     , tasty

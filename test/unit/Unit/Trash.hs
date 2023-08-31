@@ -17,11 +17,11 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
-import SafeRm.Env (HasBackend (..))
+import SafeRm.Env (HasBackend)
 import SafeRm.Exception (EmptyPathE, RootE)
 import SafeRm.Trash qualified as Trash
 import System.OsPath (encodeUtf)

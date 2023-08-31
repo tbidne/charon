@@ -11,23 +11,26 @@ where
 
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
-import Effects.FileSystem.PathReader (MonadPathReader (..))
+import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
+import SafeRm.Data.PathData.Formatting
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    PathDataFormat (FormatMultiline, FormatTabular),
+  )
+import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
-import SafeRm.Env (HasTrashHome (..))
+import SafeRm.Env (HasTrashHome (getTrashHome))
 import Unit.Prelude
 
 tests :: TestTree

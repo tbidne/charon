@@ -47,7 +47,6 @@ module Functional.Prelude
   )
 where
 
-import Control.Monad.Reader as X (ReaderT (..))
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
 import Effects.FileSystem.Utils
@@ -56,7 +55,7 @@ import Effects.FileSystem.Utils
     (</>!),
   )
 import Effects.FileSystem.Utils qualified as FsUtils
-import Functional.Prelude.FuncEnv (TestEnv (..), TestM)
+import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Data.Backend qualified as Backend

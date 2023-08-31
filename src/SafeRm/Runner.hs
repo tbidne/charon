@@ -19,7 +19,7 @@ import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Index (Sort)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData.Formatting (PathDataFormat)
@@ -38,9 +38,21 @@ import SafeRm.Runner.Args
       ),
     getArgs,
   )
-import SafeRm.Runner.Command (Command (..), CommandP2)
+import SafeRm.Runner.Command
+  ( Command
+      ( Convert,
+        Delete,
+        Empty,
+        List,
+        Merge,
+        Metadata,
+        PermDelete,
+        Restore
+      ),
+    CommandP2,
+  )
 import SafeRm.Runner.Env
-  ( Env (..),
+  ( Env (MkEnv, backend, trashHome),
     LogEnv (MkLogEnv),
     LogFile (MkLogFile),
     handle,

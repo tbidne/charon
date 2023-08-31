@@ -15,9 +15,16 @@ where
 
 import Data.Text qualified as T
 import SafeRm.Data.Index (Sort (Name))
-import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
+import SafeRm.Data.PathData.Formatting
+  ( ColFormat,
+    PathDataFormat (FormatMultiline, FormatTabular),
+  )
 import SafeRm.Prelude
-import SafeRm.Runner.Phase (AdvancePhase (..), MaybePhaseF, Phase (..))
+import SafeRm.Runner.Phase
+  ( AdvancePhase (NextPhase, advancePhase),
+    MaybePhaseF,
+    Phase (Phase1, Phase2),
+  )
 
 --------------------------------------------------------------------------------
 ----------------------------------- PHASE 1 ------------------------------------

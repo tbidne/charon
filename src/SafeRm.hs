@@ -23,10 +23,8 @@ where
 
 import Data.Char qualified as Ch
 import Data.Text qualified as T
-import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
-import Effects.System.Terminal
-  ( MonadTerminal (getChar),
-  )
+import Effects.FileSystem.HandleWriter qualified as HW
+import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
@@ -36,12 +34,12 @@ import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (..),
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
-import SafeRm.Env (HasBackend (..), HasTrashHome (getTrashHome))
+import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
@@ -268,7 +266,7 @@ emptyTrash force = addNamespace "emptyTrash" $ do
           putStrLn ""
           putTextLn $ U.renderPretty metadata
           putStr "Permanently delete all contents (y/n)? "
-          c <- Ch.toLower <$> getChar
+          c <- Ch.toLower <$> Term.getChar
           if
             | c == 'y' -> do
                 $(logDebug) "Deleting contents."
@@ -353,4 +351,4 @@ merge dest = addNamespace "merge" $ do
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout
   where
-    buffOff h = hSetBuffering h NoBuffering
+    buffOff h = HW.hSetBuffering h NoBuffering

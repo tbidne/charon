@@ -19,11 +19,12 @@ where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Text qualified as T
-import Data.Time (LocalTime (LocalTime), ZonedTime (..))
+import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
-import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
-import Effects.System.Terminal (MonadTerminal (..), Window (..))
-import Effects.Time (MonadTime (..))
+import Effects.FileSystem.HandleWriter (MonadHandleWriter (hSetBuffering))
+import Effects.System.Terminal (Window (Window))
+import Effects.System.Terminal qualified as Term
+import Effects.Time (MonadTime (getMonotonicTime, getSystemZonedTime))
 import Hedgehog as X
   ( Gen,
     MonadGen,
@@ -38,7 +39,7 @@ import Hedgehog as X
     withTests,
     (===),
   )
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude as X

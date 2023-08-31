@@ -8,7 +8,15 @@ where
 
 import Effects.FileSystem.PathWriter (PathExistsException)
 import Functional.Prelude
-import SafeRm.Data.Metadata (Metadata (..))
+import SafeRm.Data.Metadata
+  ( Metadata
+      ( MkMetadata,
+        logSize,
+        numEntries,
+        numFiles,
+        size
+      ),
+  )
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =

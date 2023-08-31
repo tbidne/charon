@@ -12,7 +12,7 @@ where
 
 import Data.Text qualified as T
 import SafeRm.Prelude
-import TOML (DecodeTOML (..))
+import TOML (DecodeTOML (tomlDecoder))
 
 -- | Type of backend.
 data Backend

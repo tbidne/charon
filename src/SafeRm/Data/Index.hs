@@ -28,24 +28,27 @@ import Data.Ord (Ord (max))
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
-import GHC.Real (RealFrac (..))
+import GHC.Real (RealFrac (floor))
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathData.Core qualified as PathDataCore
 import SafeRm.Data.PathData.Formatting
-  ( ColFormat (..),
-    PathDataFormat (..),
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    PathDataFormat (FormatMultiline, FormatTabular),
   )
 import SafeRm.Data.PathData.Formatting qualified as Formatting
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (..))
-import SafeRm.Data.Serialize (Serialize (..))
-import SafeRm.Env (HasBackend (..), HasTrashHome)
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex (TrashEntryFileName, TrashHome),
+  )
+import SafeRm.Data.Serialize (Serialize (decode))
+import SafeRm.Env (HasBackend (getBackend), HasTrashHome)
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
-    TrashEntryInfoBadExtE (..),
-    TrashEntryInfoNotFoundE (..),
+    TrashEntryInfoBadExtE (MkTrashEntryInfoBadExtE),
+    TrashEntryInfoNotFoundE (MkTrashEntryInfoNotFoundE),
   )
 import SafeRm.Prelude
 import System.OsPath qualified as FP
@@ -412,13 +415,13 @@ getElems ::
   Seq PathDataCore
 getElems = Seq.sortBy
 
-fromList :: [PathData] -> HashMap (PathI 'TrashEntryFileName) PathData
+fromList :: [PathData] -> HashMap (PathI TrashEntryFileName) PathData
 fromList = foldr insert HMap.empty
 
 insert ::
   PathData ->
-  HashMap (PathI 'TrashEntryFileName) PathData ->
-  HashMap (PathI 'TrashEntryFileName) PathData
+  HashMap (PathI TrashEntryFileName) PathData ->
+  HashMap (PathI TrashEntryFileName) PathData
 insert pd = HMap.insert (pd ^. #fileName) pd
 
 indexToSeq ::

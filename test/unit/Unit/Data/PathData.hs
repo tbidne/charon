@@ -8,19 +8,19 @@ where
 
 import Data.Fixed (Fixed (MkFixed))
 import Data.Text.Lazy qualified as TL
-import Data.Time (LocalTime (LocalTime), TimeOfDay (..))
+import Data.Time (LocalTime (LocalTime), TimeOfDay (TimeOfDay))
 import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.PathData (PathData (..))
+import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.Paths (PathI (..))
-import SafeRm.Data.Serialize (Serialize (..), encodeThrowM)
-import SafeRm.Data.Timestamp (Timestamp (..))
+import SafeRm.Data.Paths (PathI (MkPathI))
+import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
+import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import Test.Utils qualified as TestUtils
 import Text.Pretty.Simple qualified as Pretty

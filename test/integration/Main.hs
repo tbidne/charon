@@ -11,7 +11,7 @@ import Integration.Prelude
 import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as T
-import Test.Tasty.Options (OptionDescription (..))
+import Test.Tasty.Options (OptionDescription (Option))
 
 -- | Runs integration tests.
 main :: IO ()

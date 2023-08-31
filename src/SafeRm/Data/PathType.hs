@@ -7,8 +7,8 @@ module SafeRm.Data.PathType
   )
 where
 
-import Effects.FileSystem.PathWriter (MonadPathWriter (..))
-import SafeRm.Data.Serialize (Serialize (..))
+import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- | Path type.

@@ -7,9 +7,12 @@ module Unit.Runner
   )
 where
 
-import SafeRm.Data.Backend (Backend (..))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Index (Sort (Name))
-import SafeRm.Data.PathData.Formatting (ColFormat (..), PathDataFormat (..))
+import SafeRm.Data.PathData.Formatting
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    PathDataFormat (FormatTabular),
+  )
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
@@ -20,8 +23,13 @@ import SafeRm.Runner.Command
     _PermDelete,
     _Restore,
   )
-import SafeRm.Runner.Command.List (ListCmd (..))
-import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
+import SafeRm.Runner.Command.List (ListCmd (MkListCmd, format, revSort, sort))
+import SafeRm.Runner.FileSizeMode
+  ( FileSizeMode
+      ( FileSizeModeDelete,
+        FileSizeModeWarn
+      ),
+  )
 import System.Environment qualified as SysEnv
 import Unit.Prelude
 

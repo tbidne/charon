@@ -22,36 +22,43 @@ import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.FileSystem.HandleWriter (MonadHandleWriter (..))
+import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathWriter
-  ( CopyDirConfig (..),
-    MonadPathWriter (..),
-    Overwrite (..),
-    TargetName (..),
+  ( CopyDirConfig (MkCopyDirConfig),
+    Overwrite (OverwriteDirectories),
+    TargetName (TargetNameDest),
   )
+import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
-import Effects.System.Terminal (MonadTerminal (..))
+import Effects.System.Terminal qualified as Term
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.Index (Index (..))
+import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType qualified as PathType
-import SafeRm.Data.Paths (PathI (..), PathIndex (..))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashHome
+      ),
+  )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize (Serialize (..), encodeThrowM)
+import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp)
-import SafeRm.Env (HasBackend (getBackend), HasTrashHome (..))
+import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
 import SafeRm.Exception
-  ( InfoDecodeE (..),
+  ( InfoDecodeE (MkInfoDecodeE),
     RestoreCollisionE (MkRestoreCollisionE),
-    TrashDirFilesNotFoundE (..),
-    TrashDirInfoNotFoundE (..),
+    TrashDirFilesNotFoundE (MkTrashDirFilesNotFoundE),
+    TrashDirInfoNotFoundE (MkTrashDirInfoNotFoundE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
-    TrashEntryWildcardNotFoundE (..),
+    TrashEntryWildcardNotFoundE (MkTrashEntryWildcardNotFoundE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
@@ -153,7 +160,7 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   -- 5. If move failed, roll back info file
   moveFn `catchAny` \ex -> do
     $(logError) ("Error moving file to trash: " <> displayExceptiont ex)
-    removeFile trashInfoPath
+    PW.removeFile trashInfoPath
     throwM ex
 
   $(logDebug) ("Moved to trash: " <> showt pd)
@@ -211,7 +218,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             let pdStr = Utils.renderPretty pathData'
             putTextLn pdStr
             putStr "\nPermanently delete (y/n)? "
-            c <- Ch.toLower <$> getChar
+            c <- Ch.toLower <$> Term.getChar
             if
               | c == 'y' -> deleteFn' backend pathData *> putStrLn "\n"
               | c == 'n' -> putStrLn "\n"
@@ -237,7 +244,7 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
 
       PathData.deleteFileName trashHome pd
       $(logDebug) ("Deleted: " <> showt pd)
-      removeFile trashInfoPath'
+      PW.removeFile trashInfoPath'
 
 -- | Moves the 'PathData'\'s @fileName@ back to its @originalPath@.
 -- Returns 'True' if any failed. In this case, the error has already been
@@ -306,7 +313,7 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
       -- NOTE: We do not do any error handling here as at this point we have
       -- accomplished our goal: restore the file. That the trash is now out of sync
       -- is bad, but there isn't anything we can do other than alert the user.
-      removeFile trashInfoPath'
+      PW.removeFile trashInfoPath'
 
 findOnePathData ::
   ( HasBackend env,
@@ -370,7 +377,7 @@ findManyPathData trashHome pathName = do
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout
   where
-    buffOff h = hSetBuffering h NoBuffering
+    buffOff h = HW.hSetBuffering h NoBuffering
 
 -- | Searches for the given trash name in the trash.
 findPathData ::
@@ -441,7 +448,7 @@ convertBackend dest = addNamespace "convertBackend" $ do
   MkIndex index <- Index.readIndex trashHome
 
   let newInfo = th </> [osp|tmp_info_new|]
-  createDirectory newInfo
+  PW.createDirectory newInfo
 
   -- NOTE: This is not in-place.
 

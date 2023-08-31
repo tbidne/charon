@@ -11,13 +11,13 @@ module SafeRm.Data.Timestamp
   )
 where
 
-import Codec.Serialise (Serialise (..))
+import Codec.Serialise (Serialise)
 import Codec.Serialise qualified as Serialise
 import Data.Text qualified as T
-import Data.Time (Day (..), TimeOfDay (..))
+import Data.Time (Day (ModifiedJulianDay), TimeOfDay (TimeOfDay))
 import Data.Time.Format qualified as Format
-import Data.Time.LocalTime (LocalTime (..))
-import SafeRm.Data.Serialize (Serialize (..))
+import Data.Time.LocalTime (LocalTime (LocalTime))
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- NOTE: We currently do not include any timezone information. We started
