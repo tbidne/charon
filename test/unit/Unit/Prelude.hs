@@ -1,12 +1,9 @@
-{-# LANGUAGE QuasiQuotes #-}
-
 -- | Prelude for unit test suite.
 module Unit.Prelude
   ( module X,
     TextMatch,
     assertFalse,
     assertMatches,
-    getDefaultTrash,
   )
 where
 
@@ -37,9 +34,6 @@ import Test.Tasty.HUnit as X
   )
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
 import Test.Utils (TextMatch, assertMatches)
-
-getDefaultTrash :: IO OsPath
-getDefaultTrash = (</> [osp|.trash|]) <$> getHomeDirectory
 
 assertFalse :: String -> Bool -> IO ()
 assertFalse d = assertBool d . not

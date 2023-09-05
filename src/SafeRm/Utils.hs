@@ -160,21 +160,20 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
 
 -- | Sets the ioref if the maybe is non-empty.
-setRefIfJust :: (MonadIORef m) => IORef (Maybe a) -> Maybe a -> m ()
+setRefIfJust :: (IORefStatic :> es) => IORef (Maybe a) -> Maybe a -> Eff es ()
 setRefIfJust _ Nothing = pure ()
 setRefIfJust ref x@(Just _) = writeIORef ref x
 
 -- | Throws the exception if it exists in the ref.
 throwIfEx ::
-  ( MonadIORef m,
-    MonadThrow m
+  ( IORefStatic :> es
   ) =>
   IORef (Maybe SomeException) ->
-  m ()
+  Eff es ()
 throwIfEx ref =
   readIORef ref >>= \case
     Nothing -> pure ()
-    Just ex -> throwCS ex
+    Just ex -> throwM ex
 
 -- | Breaks a bytestring on the first '='. The '=' is removed from the second
 -- element.

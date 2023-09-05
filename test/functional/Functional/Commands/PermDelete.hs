@@ -9,7 +9,7 @@ where
 
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
-import Effects.Exception (StringException)
+import Effectful.Exception (StringException)
 import Functional.Prelude
 import SafeRm.Data.Metadata
   ( Metadata
@@ -43,7 +43,7 @@ tests testEnv =
 deletesOne :: IO TestEnv -> TestTree
 deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
+  usingTestM testEnv $ appendTestDirM "deletesOne" $ do
     testDir <- getTestDir
     let trashDir = testDir </> (testEnv ^. #trashDir)
         f1 = testDir </>! "f1"
@@ -56,7 +56,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     assertPathsExist [f1]
 
     -- delete to trash first
-    liftIO $ runSafeRm delArgList
+    runSafeRm delArgList
 
     -- file assertions
     delTrashFiles <- mkAllTrashPathsM ["f1"]
@@ -69,12 +69,12 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     delExpectedIdxSet <- mkPathDataSetM ["f1"]
 
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
 
     permDelArgList <- withSrArgsM ["perm-delete", "f1", "-f"]
-    liftIO $ runSafeRm permDelArgList
+    runSafeRm permDelArgList
 
     -- file assertions
     assertPathsDoNotExist $ f1 : delTrashFiles
@@ -83,7 +83,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
   where
     delExpectedMetadata =
       MkMetadata
@@ -99,7 +99,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
+  usingTestM testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
     let trashDir = testDir </> (testEnv ^. #trashDir)
         filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
@@ -114,7 +114,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
-    liftIO $ runSafeRm delArgList
+    runSafeRm delArgList
 
     -- file assertions
     delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
@@ -133,13 +133,13 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     -- trash structure assertions
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
 
     -- leave f2 alone
     permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "-f"]
-    liftIO $ runSafeRm permDelArgList
+    runSafeRm permDelArgList
 
     -- file assertions
     permDelTrashPaths <- mkAllTrashPathsM ["f1", "f3", "dir1", "dir2"]
@@ -152,7 +152,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
   where
     delExpectedMetadata =
       MkMetadata
@@ -173,7 +173,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
+  usingTestM testEnv $ appendTestDirM "deleteUnknownError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -203,11 +203,11 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
     permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
+    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
 
     -- assert exception
     assertPathsExist delTrashFiles
@@ -217,7 +217,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet permDelIdxSet
-    liftIO $ delExpectedMetadata @=? permDelMetadata
+    delExpectedMetadata @=? permDelMetadata
   where
     expectedEx =
       Outfixes
@@ -238,7 +238,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 deletesSome :: IO TestEnv -> TestTree
 deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
+  usingTestM testEnv $ appendTestDirM "deletesSome" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -269,7 +269,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
     permDelArgList <-
@@ -286,7 +286,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
   where
     expectedEx =
       Outfixes
@@ -309,7 +309,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
 deletesNoForce :: IO TestEnv -> TestTree
 deletesNoForce getTestEnv = testCase "Permanently deletes several paths without --force" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesNoForce" $ do
+  usingTestM testEnv $ appendTestDirM "deletesNoForce" $ do
     testDir <- getTestDir
     let trashDir = testDir </>! ".trash"
         fileDeleteNames = show @Int <$> [1 .. 5]
@@ -333,7 +333,7 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
 
@@ -353,7 +353,7 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
   where
     delExpectedMetadata =
       MkMetadata
@@ -373,7 +373,7 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 deletesWildcards :: IO TestEnv -> TestTree
 deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wildcards" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesWildcards" $ do
+  usingTestM testEnv $ appendTestDirM "deletesWildcards" $ do
     testDir <- getTestDir
     let trashDir = testDir </>! ".trash"
         filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
@@ -457,7 +457,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
 deletesSomeWildcards :: IO TestEnv -> TestTree
 deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesSomeWildcards" $ do
+  usingTestM testEnv $ appendTestDirM "deletesSomeWildcards" $ do
     testDir <- getTestDir
     let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
         testFiles = (testDir </>!) <$> files
@@ -540,7 +540,7 @@ wildcardLiteralTests testEnv =
 deletesLiteralWildcardOnly :: IO TestEnv -> TestTree
 deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w/ literal wildcard" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesLiteralWildcardOnly" $ do
+  usingTestM testEnv $ appendTestDirM "deletesLiteralWildcardOnly" $ do
     testDir <- getTestDir
     let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
         testFiles = (testDir </>!) <$> files
@@ -621,7 +621,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
 deletesCombinedWildcardLiteral :: IO TestEnv -> TestTree
 deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesCombinedWildcardLiteral" $ do
+  usingTestM testEnv $ appendTestDirM "deletesCombinedWildcardLiteral" $ do
     testDir <- getTestDir
     let files = ["xxfoo", "xxbar", "xxbaz"]
         wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
@@ -703,7 +703,7 @@ wildcardLiteralTests = const []
 displaysAllData :: IO TestEnv -> TestTree
 displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "displaysAllData" $ do
+  usingTestM testEnv $ appendTestDirM "displaysAllData" $ do
     testDir <- getTestDir
     let trashDir = testDir </>! ".trash"
         f1 = testDir </>! "f1"

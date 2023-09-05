@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -60,20 +61,20 @@ instance Pretty Metadata where
 
 -- | Returns metadata for the trash directory.
 toMetadata ::
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
-    MonadFileReader m,
-    MonadPathReader m,
-    MonadLoggerNS m,
-    MonadReader env m,
-    MonadThrow m
+    FileReaderDynamic :> es,
+    PathReaderDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    Reader env :> es
   ) =>
   (PathI TrashHome, PathI TrashLog) ->
-  m Metadata
+  Eff es Metadata
 toMetadata (trashHome, trashLog) =
   addNamespace "toMetadata" $ do
     -- Index size
-    index <- view #unIndex <$> Index.readIndex trashHome
+    index <- view #unIndex <$> (Index.readIndex @env) trashHome
     let numIndex = length index
     $(logDebug) ("Index size: " <> showt numIndex)
 
@@ -124,11 +125,10 @@ toMetadata (trashHome, trashLog) =
 
 getAllFiles ::
   ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    PathReaderDynamic :> es
   ) =>
   OsPath ->
-  m [OsPath]
+  Eff es [OsPath]
 getAllFiles fp =
   doesFileExist fp >>= \case
     True -> pure [fp]
@@ -138,4 +138,4 @@ getAllFiles fp =
           listDirectory fp
             >>= fmap join
             . traverse (getAllFiles . (fp </>))
-        False -> throwCS $ MkFileNotFoundE fp
+        False -> throwM $ MkFileNotFoundE fp

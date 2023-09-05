@@ -2,7 +2,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Prelude for integration test suite.
 module Integration.Prelude
@@ -17,14 +16,53 @@ module Integration.Prelude
   )
 where
 
-import Control.Monad.Reader (ReaderT (ReaderT))
+import Data.IORef qualified as IORef
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
-import Effects.FileSystem.HandleWriter (MonadHandleWriter (hSetBuffering))
-import Effects.System.Terminal (Window (Window))
-import Effects.System.Terminal qualified as Term
-import Effects.Time (MonadTime (getMonotonicTime, getSystemZonedTime))
+import Effectful.FileSystem.FileReader.Dynamic
+  ( FileReaderDynamic (ReadBinaryFile),
+  )
+import Effectful.FileSystem.FileReader.Dynamic qualified as FR
+import Effectful.FileSystem.FileWriter.Dynamic
+  ( FileWriterDynamic (WriteBinaryFile),
+  )
+import Effectful.FileSystem.HandleWriter.Dynamic
+  ( HandleWriterDynamic (HSetBuffering),
+  )
+import Effectful.FileSystem.PathReader.Dynamic qualified as PR
+import Effectful.FileSystem.PathWriter.Dynamic
+  ( PathWriterDynamic
+      ( CreateDirectoryIfMissing,
+        RenameDirectory,
+        RenameFile
+      ),
+  )
+import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
+import Effectful.LoggerNS.Dynamic
+  ( LoggerNSDynamic
+      ( GetNamespace,
+        LocalNamespace
+      ),
+  )
+import Effectful.Terminal.Dynamic
+  ( TerminalDynamic
+      ( GetChar,
+        GetContents',
+        GetLine,
+        GetTerminalSize,
+        PutBinary,
+        PutStr,
+        PutStrLn
+      ),
+    Window (Window, height, width),
+  )
+import Effectful.Time.Dynamic
+  ( TimeDynamic
+      ( GetMonotonicTime,
+        GetSystemZonedTime
+      ),
+  )
 import Hedgehog as X
   ( Gen,
     MonadGen,
@@ -55,7 +93,7 @@ import Test.Utils as X
 assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ doesFileExist p
+    exists <- liftIO $ runPathReader $ doesFileExist p
     annotate $ "Expected file to exist: " <> show p
     assert exists
 
@@ -63,9 +101,14 @@ assertPathsExist paths =
 assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsDoNotExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ doesFileExist p
+    exists <- liftIO $ runPathReader $ doesFileExist p
     annotate $ "Expected file not to exist: " <> show p
     assert (not exists)
+
+runPathReader :: Eff [PathReaderDynamic, IOE] a -> IO a
+runPathReader =
+  runEff
+    . runPathReaderDynamicIO
 
 -- | Environment for running pure integration tests.
 data IntPureEnv = MkIntPureEnv
@@ -81,78 +124,110 @@ deriving anyclass instance HasBackend IntPureEnv
 
 deriving anyclass instance HasTrashHome IntPureEnv
 
--- NOTE: It would be nice to replace the IO with Identity, so we could be
--- really sure that we are not doing any IO. Alas, while we could mock
--- e.g. MonadPathReader (and possibly replace MonadIORef w/ STRef), we rely
--- on throwing exceptions, which requires IO.
-
--- | Type for running integration tests via a pure file-system. As this is
--- used to test protecting against root, it is VERY important that it cannot
--- actually write to the file system!!!
-newtype IntPure env a = MkIntPure (ReaderT env IO a)
-  deriving
-    ( Applicative,
-      Functor,
-      Monad,
-      MonadAsync,
-      MonadCatch,
-      MonadIORef,
-      MonadMask,
-      MonadPathReader,
-      MonadPosixCompat,
-      MonadThread,
-      MonadThrow,
-      MonadReader env
-    )
-    via (ReaderT env IO)
-
-instance MonadTerminal (IntPure IntPureEnv) where
-  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
-  getChar = pure 'y'
-  getTerminalSize =
+runTerminal ::
+  ( IORefStatic :> es,
+    Reader IntPureEnv :> es
+  ) =>
+  Eff (TerminalDynamic : es) a ->
+  Eff es a
+runTerminal = interpret $ \_ -> \case
+  PutStr s ->
+    asks @IntPureEnv (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
+  GetChar -> pure 'y'
+  GetTerminalSize ->
     pure
       $ Window
         { height = 50,
           width = 100
         }
+  PutStrLn s ->
+    asks @IntPureEnv (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack (s <> "\n"))
+  PutBinary _ -> error "PutBinary: unimplemented"
+  GetLine -> error "GetLine: unimplemented"
+  GetContents' -> error "GetContents': unimplemented"
 
-instance MonadTime (IntPure env) where
-  getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
-  getMonotonicTime = pure 0
+runTime :: Eff (TimeDynamic : es) a -> Eff es a
+runTime = interpret $ \_ -> \case
+  GetSystemZonedTime -> pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
+  GetMonotonicTime -> pure 0
 
-instance MonadLogger (IntPure IntPureEnv) where
-  monadLoggerLog _ _ _ _ = pure ()
+runLogger :: Eff (LoggerDynamic : es) a -> Eff es a
+runLogger = interpret $ \_ -> \case
+  LoggerLog {} -> pure ()
 
-instance MonadLoggerNS (IntPure IntPureEnv) where
-  getNamespace = pure ""
-  localNamespace _ = id
+runLoggerNS :: Eff (LoggerNSDynamic : es) a -> Eff es a
+runLoggerNS = interpret $ \env -> \case
+  GetNamespace -> pure ""
+  LocalNamespace _ m -> localSeqUnlift env $ \runner -> runner m
 
-instance MonadFileReader (IntPure IntPureEnv) where
-  readBinaryFile _ = error "oh no"
+runFileReader :: Eff (FileReaderDynamic : es) a -> Eff es a
+runFileReader = interpret $ \_ -> \case
+  ReadBinaryFile _ -> error "oh no"
 
 -- NOTE: No real file-system operations!!!
-instance MonadFileWriter (IntPure IntPureEnv) where
-  writeBinaryFile _ _ = pure ()
+runFileWriter :: Eff (FileWriterDynamic : es) a -> Eff es a
+runFileWriter = interpret $ \_ -> \case
+  WriteBinaryFile {} -> pure ()
+  _ -> error "runFileWriter: unimplemented"
 
 -- NOTE: No real file-system operations!!!
-instance MonadHandleWriter (IntPure IntPureEnv) where
-  hSetBuffering _ _ = pure ()
+runHandleWriter :: Eff (HandleWriterDynamic : es) a -> Eff es a
+runHandleWriter = interpret $ \_ -> \case
+  HSetBuffering {} -> pure ()
+  _ -> error "runHandleWriter: unimplemented"
 
 -- NOTE: Intentionally unimplemented. We do not want this class to actually
 -- have the ability to write/delete files!!!
-instance MonadPathWriter (IntPure IntPureEnv) where
-  renameFile p1 _ =
-    asks (view #deletedPathsRef) >>= \ref ->
-      modifyIORef' ref (p1 :)
+runPathWriter ::
+  ( IORefStatic :> es,
+    Reader IntPureEnv :> es
+  ) =>
+  Eff (PathWriterDynamic : es) a ->
+  Eff es a
+runPathWriter = interpret $ \_ -> \case
+  RenameFile p1 _ ->
+    asks @IntPureEnv (view #deletedPathsRef) >>= \ref -> modifyIORef' ref (p1 :)
+  RenameDirectory p1 _ ->
+    asks @IntPureEnv (view #deletedPathsRef) >>= \ref -> modifyIORef' ref (p1 :)
+  CreateDirectoryIfMissing _ _ -> pure ()
+  _ -> error "runPathWriter: unimplemented"
 
-  renameDirectory p1 _ =
-    asks (view #deletedPathsRef) >>= \ref ->
-      modifyIORef' ref (p1 :)
-
-  createDirectoryIfMissing _ _ = pure ()
-
-runIntPure :: (IntPure env) a -> env -> IO a
-runIntPure (MkIntPure rdr) = runReaderT rdr
+runIntPure ::
+  Eff
+    [ TimeDynamic,
+      TerminalDynamic,
+      PosixCompatStatic,
+      PathWriterDynamic,
+      PathReaderDynamic,
+      LoggerNSDynamic,
+      LoggerDynamic,
+      IORefStatic,
+      HandleWriterDynamic,
+      FileWriterDynamic,
+      FileReaderDynamic,
+      Reader IntPureEnv,
+      Concurrent,
+      IOE
+    ]
+    a ->
+  IntPureEnv ->
+  IO a
+runIntPure x env =
+  runEff
+    . runConcurrent
+    . runReader env
+    . runFileReader
+    . runFileWriter
+    . runHandleWriter
+    . runIORefStaticIO
+    . runLogger
+    . runLoggerNS
+    . PR.runPathReaderDynamicIO
+    . runPathWriter
+    . runPosixCompatStaticIO
+    . runTerminal
+    . runTime
+    $ x
 
 -- | Runs safe-rm and captures a thrown exception, terminal, and
 -- deleted paths.
@@ -163,21 +238,21 @@ captureSafeRmIntExceptionPure ::
   [String] ->
   IO (Text, Text, Text)
 captureSafeRmIntExceptionPure argList = do
-  terminalRef <- newIORef ""
-  deletedPathsRef <- newIORef []
+  terminalRef <- IORef.newIORef ""
+  deletedPathsRef <- IORef.newIORef []
 
   (toml, cmd) <- getConfig
   env <- mkIntPureEnv toml terminalRef deletedPathsRef
 
-  result <- tryCS @_ @e $ runIntPure (Runner.runCmd cmd) env
+  result <- try @_ @e $ runIntPure (Runner.runCmd @IntPureEnv cmd) env
 
   case result of
     Right _ ->
       error
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
-      terminal <- readIORef terminalRef
-      deletedPaths <- readIORef deletedPathsRef
+      terminal <- IORef.readIORef terminalRef
+      deletedPaths <- IORef.readIORef deletedPathsRef
 
       pure
         ( T.pack (displayException ex),
@@ -186,7 +261,13 @@ captureSafeRmIntExceptionPure argList = do
         )
   where
     argList' = "-c" : "none" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+    getConfig = SysEnv.withArgs argList' (run Runner.getConfiguration)
+
+    run =
+      runEff
+        . FR.runFileReaderDynamicIO
+        . runOptparseStaticIO
+        . PR.runPathReaderDynamicIO
 
 mkIntPureEnv :: TomlConfig -> IORef Text -> IORef [OsPath] -> IO IntPureEnv
 mkIntPureEnv toml terminalRef deletedPathsRef = do

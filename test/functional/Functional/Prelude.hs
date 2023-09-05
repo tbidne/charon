@@ -13,14 +13,15 @@ module Functional.Prelude
     -- ** Test Environment
     TestM,
     TestEnv (..),
+    FuncEnv.usingTestM,
 
-    -- ** Runners
+    -- ** Safe-rm Runners
     FuncEnv.runSafeRm,
     FuncEnv.runSafeRmException,
     FuncEnv.runIndexMetadataM,
     FuncEnv.runIndexMetadataTestDirM,
 
-    -- ** Data capture
+    -- *** Data capture
     FuncEnv.captureSafeRm,
     FuncEnv.captureSafeRmLogs,
     FuncEnv.captureSafeRmExceptionLogs,
@@ -49,12 +50,13 @@ where
 
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
-import Effects.FileSystem.Utils
+import Effectful.FileSystem.PathReader.Static qualified as PRStatic
+import Effectful.FileSystem.Utils
   ( unsafeDecodeOsToFp,
     unsafeEncodeFpToOs,
     (</>!),
   )
-import Effects.FileSystem.Utils qualified as FsUtils
+import Effectful.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
@@ -73,26 +75,26 @@ import Test.Utils as X
 import Text.Pretty.Simple qualified as Pretty
 
 -- | Lifted (@=?).
-(@=?) :: (Eq a, HasCallStack, MonadIO m, Show a) => a -> a -> m ()
+(@=?) :: (Eq a, HasCallStack, Show a) => a -> a -> TestM ()
 x @=? y = liftIO $ x HUnit.@=? y
 
 infix 1 @=?
 
 -- | Assert paths exist.
-assertPathsExist :: (MonadIO m) => [OsPath] -> m ()
-assertPathsExist paths = liftIO
-  $ for_ paths
-  $ \p -> do
-    exists <- doesPathExist p
-    assertBool ("Expected path to exist: " <> show p) exists
+assertPathsExist :: [OsPath] -> TestM ()
+assertPathsExist paths =
+  for_ paths
+    $ \p -> do
+      exists <- PRStatic.doesPathExist p
+      liftIO $ assertBool ("Expected path to exist: " <> show p) exists
 
 -- | Asserts that paths do not exist.
-assertPathsDoNotExist :: (MonadIO m) => [OsPath] -> m ()
-assertPathsDoNotExist paths = liftIO
-  $ for_ paths
-  $ \p -> do
-    exists <- doesPathExist p
-    assertBool ("Expected path not to exist: " <> show p) (not exists)
+assertPathsDoNotExist :: [OsPath] -> TestM ()
+assertPathsDoNotExist paths =
+  for_ paths
+    $ \p -> do
+      exists <- PRStatic.doesPathExist p
+      liftIO $ assertBool ("Expected path not to exist: " <> show p) (not exists)
 
 -- | Transform each filepath @p@ to its files/ and info/ path, taking in
 -- the env's trash root, test dir, trash dir, and backend.
@@ -106,7 +108,7 @@ mkAllTrashPathsM paths = liftA2 (++) trashPaths trashInfoPaths
 -- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/info\/p.<ext>@.
 mkTrashInfoPathsM :: [OsPath] -> TestM [OsPath]
 mkTrashInfoPathsM files = do
-  env <- ask
+  env :: TestEnv <- ask
   testDir <- FuncEnv.getTestDir
   let ext = Env.trashInfoExtensionOsPath (env ^. #backend)
       mkTrashInfoPath p =
@@ -121,7 +123,7 @@ mkTrashInfoPathsM files = do
 -- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/files\/p@.
 mkTrashPathsM :: [OsPath] -> TestM [OsPath]
 mkTrashPathsM files = do
-  env <- ask
+  env :: TestEnv <- ask
   testDir <- FuncEnv.getTestDir
   let mkTrashPath p =
         testDir
@@ -166,7 +168,7 @@ assertSetEq x y = do
 -- @trashDir == <testRoot>\/<testDir>-<backend>\/<trashDir>@
 withSrArgsM :: [String] -> TestM [String]
 withSrArgsM as = do
-  env <- ask
+  env :: TestEnv <- ask
 
   testDir <- FuncEnv.getTestDir
   let backend = env ^. #backend

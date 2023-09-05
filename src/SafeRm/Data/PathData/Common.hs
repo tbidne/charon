@@ -12,7 +12,7 @@ where
 import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
-import Effects.FileSystem.Utils qualified as FsUtils
+import Effectful.FileSystem.Utils qualified as FsUtils
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -39,14 +39,13 @@ import System.OsPath qualified as FP
 -- | For a given path, retrieves its unique trash entry file name,
 -- original path, and type.
 getPathInfo ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+  ( LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathType)
+  Eff es (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathType)
 getPathInfo trashHome origPath = do
   $(logDebug) $ "Retreiving path data: '" <> Paths.toText origPath <> "'"
 
@@ -91,8 +90,8 @@ getPathInfo trashHome origPath = do
         else do
           pathExists <- Paths.applyPathI doesPathExist originalPath
           if pathExists
-            then throwCS $ MkPathNotFileDirE (originalPath ^. #unPathI)
-            else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
+            then throwM $ MkPathNotFileDirE (originalPath ^. #unPathI)
+            else throwM $ MkFileNotFoundE (originalPath ^. #unPathI)
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
@@ -102,23 +101,21 @@ getPathInfo trashHome origPath = do
 -- "file1", "file2", "file3", ...
 -- @
 mkUniqPath ::
-  forall m.
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+  forall es.
+  ( PathReaderDynamic :> es
   ) =>
   PathI TrashEntryPath ->
-  m (PathI TrashEntryPath)
+  Eff es (PathI TrashEntryPath)
 mkUniqPath fp = do
   b <- Paths.applyPathI doesPathExist fp
   if b
     then go 1
     else pure fp
   where
-    go :: (HasCallStack) => Word16 -> m (PathI TrashEntryPath)
+    go :: (HasCallStack) => Word16 -> Eff es (PathI TrashEntryPath)
     go !counter
       | counter == maxBound =
-          throwCS $ MkRenameDuplicateE fp
+          throwM $ MkRenameDuplicateE fp
       | otherwise = do
           counterStr <- mkSuffix counter
           let fp' = Paths.liftPathI' (<> counterStr) fp
@@ -129,16 +126,15 @@ mkUniqPath fp = do
     mkSuffix i = FsUtils.encodeFpToOsThrowM $ " (" <> show i <> ")"
 
 throwIfIllegal ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadThrow m
+  ( LoggerDynamic :> es,
+    LoggerNSDynamic :> es
   ) =>
   PathI i ->
-  m ()
+  Eff es ()
 throwIfIllegal p = addNamespace "throwIfIllegal" $ do
-  U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwCS MkRootE
+  U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwM MkRootE
 
-  U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwCS MkEmptyPathE
+  U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwM MkEmptyPathE
 
 -- | Parses a ByteString like:
 --
@@ -200,12 +196,11 @@ pathDataToType ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k a (PathI TrashEntryFileName),
     HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   a ->
-  m PathType
+  Eff es PathType
 pathDataToType trashHome pd = do
   fileExists <- doesFileExist path
   if fileExists
@@ -218,7 +213,7 @@ pathDataToType trashHome pd = do
           -- for a better error message
           pathExists <- doesPathExist path
           if pathExists
-            then throwCS $ MkPathNotFileDirE path
-            else throwCS $ MkFileNotFoundE path
+            then throwM $ MkPathNotFileDirE path
+            else throwM $ MkFileNotFoundE path
   where
     MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)

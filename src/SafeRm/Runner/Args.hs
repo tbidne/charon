@@ -13,7 +13,7 @@ where
 import Control.Applicative qualified as A
 import Data.List qualified as L
 import Data.Version (Version (versionBranch))
-import Effects.Optparse (osPath)
+import Effectful.Optparse.Static (execParser, osPath)
 import Options.Applicative
   ( CommandFields,
     InfoMod,
@@ -40,7 +40,12 @@ import Options.Applicative.Types (ArgPolicy (Intersperse))
 import Paths_safe_rm qualified as Paths
 import SafeRm.Data.Backend (Backend, parseBackend)
 import SafeRm.Data.Index (Sort, readSort)
-import SafeRm.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax))
+import SafeRm.Data.PathData.Formatting
+  ( ColFormat
+      ( ColFormatFixed,
+        ColFormatMax
+      ),
+  )
 import SafeRm.Data.PathData.Formatting qualified as PathData
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
@@ -102,7 +107,7 @@ data Args = MkArgs
 makeFieldLabelsNoPrefix ''Args
 
 -- | Retrieves CLI args.
-getArgs :: (MonadOptparse m) => m Args
+getArgs :: (OptparseStatic :> es) => Eff es Args
 getArgs = execParser parserInfoArgs
 
 parserInfoArgs :: ParserInfo Args

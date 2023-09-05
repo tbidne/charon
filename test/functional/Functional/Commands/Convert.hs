@@ -4,7 +4,7 @@ module Functional.Commands.Convert
   )
 where
 
-import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
+import Effectful.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
@@ -38,7 +38,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
             ")"
           ]
 
-  usingReaderT testEnv $ appendTestDirM testDirPath $ do
+  usingTestM testEnv $ appendTestDirM testDirPath $ do
     testDir <- getTestDir
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
@@ -81,7 +81,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     runSafeRm convertArgList
 
     -- we changed the backend, so have to update our env here
-    local (set' #backend dest) $ do
+    local @TestEnv (set' #backend dest) $ do
       -- same file assertions
 
       -- NOTE: [Test dir and backend changes]
@@ -111,7 +111,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
       -- Have to recreate the trashFiles as they may have a different file
       -- extension after the convert. See Note [Test dir and backend changes].
-      newBackend <- asks (view #backend)
+      newBackend <- asks @TestEnv (view #backend)
       let convertTrashPaths =
             ["f1", "f2", "f3", "dir1", "dir2"] >>= \fp ->
               let fp' = unsafeEncodeFpToOs fp

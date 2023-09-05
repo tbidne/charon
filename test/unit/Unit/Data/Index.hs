@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Unit tests for Data.Index
 module Unit.Data.Index
@@ -11,10 +10,28 @@ where
 
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
-import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
-import Effects.System.Terminal
-  ( MonadTerminal (getTerminalSize),
+import Effectful.Concurrent qualified as CC
+import Effectful.FileSystem.FileWriter.Dynamic qualified as FW
+import Effectful.FileSystem.PathReader.Dynamic
+  ( PathReaderDynamic
+      ( DoesDirectoryExist,
+        DoesFileExist,
+        GetFileSize,
+        ListDirectory,
+        PathIsSymbolicLink
+      ),
+  )
+import Effectful.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
+import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
+import Effectful.LoggerNS.Dynamic
+  ( LoggerNSDynamic
+      ( GetNamespace,
+        LocalNamespace
+      ),
+  )
+import Effectful.PosixCompat.Static qualified as Posix
+import Effectful.Terminal.Dynamic
+  ( TerminalDynamic (GetTerminalSize),
     Window (Window, height, width),
   )
 import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
@@ -104,38 +121,22 @@ data TestEnv = MkTestEnv Natural (PathI TrashHome)
 instance HasTrashHome TestEnv where
   getTrashHome (MkTestEnv _ th) = th
 
-newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
-  deriving
-    ( Applicative,
-      Functor,
-      Monad,
-      MonadAsync,
-      MonadCatch,
-      MonadIO,
-      MonadIORef,
-      MonadPosixCompat,
-      MonadReader TestEnv,
-      MonadThread,
-      MonadThrow
-    )
-    via ReaderT TestEnv IO
-
-instance MonadPathReader ConfigIO where
-  listDirectory _ = pure []
-  pathIsSymbolicLink _ = pure False
-
-  doesFileExist = pure . not . (`L.elem` dirs)
-  doesDirectoryExist = pure . (`L.elem` dirs)
-
-  getFileSize p
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|foo|] = pure 70
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|bazzz|] = pure 5_000
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|dir|] = pure 20_230
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|f|] = pure 13_070_000
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|z|] = pure 200_120
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|d|] = pure 5_000_000_000_000_000_000_000_000_000
-    | p == ([osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> unsafeEncodeFpToOs (L.replicate 50 'b')) = pure 10
-  getFileSize p = error $ "getFileSize: " <> show p
+runPathReader :: Eff (PathReaderDynamic : es) a -> Eff es a
+runPathReader = interpret $ \_ -> \case
+  ListDirectory {} -> pure []
+  PathIsSymbolicLink {} -> pure False
+  DoesFileExist p -> pure $ p `L.notElem` dirs
+  DoesDirectoryExist p -> pure (p `L.elem` dirs)
+  GetFileSize p
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|foo|] -> pure 70
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|bazzz|] -> pure 5_000
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|dir|] -> pure 20_230
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|f|] -> pure 13_070_000
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|z|] -> pure 200_120
+    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|d|] -> pure 5_000_000_000_000_000_000_000_000_000
+    | p == ([osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> unsafeEncodeFpToOs (L.replicate 50 'b')) -> pure 10
+    | otherwise -> error $ "getFileSize: " <> show p
+  _ -> error "Unit.Data.Index.runPathReader: unimplemented"
 
 dirs :: [OsPath]
 dirs =
@@ -144,28 +145,59 @@ dirs =
           [osp|d|]
         ]
 
-runConfigIO :: ConfigIO a -> Natural -> IO a
-runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` MkPathI trashPath)
+runConfigIO ::
+  Eff
+    [ TerminalDynamic,
+      PosixCompatStatic,
+      PathReaderDynamic,
+      LoggerNSDynamic,
+      LoggerDynamic,
+      Reader TestEnv,
+      Concurrent,
+      IOE
+    ]
+    a ->
+  Natural ->
+  IO a
+runConfigIO x n = run x
+  where
+    run =
+      runEff
+        . CC.runConcurrent
+        . runReader (MkTestEnv n (MkPathI trashPath))
+        . runLogger
+        . runLoggerNS
+        . runPathReader
+        . Posix.runPosixCompatStaticIO
+        . runTerminal
 
 trashPath :: OsPath
 trashPath = [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|]
 
-instance MonadTerminal ConfigIO where
-  getTerminalSize =
-    ask >>= \(MkTestEnv n _) ->
-      pure
-        $ Window
-          { height = 50,
-            width = n
-          }
-  putStr = liftIO . putStr
+runTerminal ::
+  ( Reader TestEnv :> es
+  ) =>
+  Eff (TerminalDynamic : es) a ->
+  Eff es a
+runTerminal = interpret $ \_ -> \case
+  GetTerminalSize -> do
+    MkTestEnv n _ <- ask
+    pure
+      $ Window
+        { height = 50,
+          width = fromIntegral n
+        }
+  _ -> error "Unit.Data.Index.runTerminal: unimplemented"
 
-instance MonadLogger ConfigIO where
-  monadLoggerLog _ _ _ _ = pure ()
+runLogger :: Eff (LoggerDynamic : es) a -> Eff es a
+runLogger = interpret $ \_ -> \case
+  LoggerLog {} -> pure ()
 
-instance MonadLoggerNS ConfigIO where
-  getNamespace = pure ""
-  localNamespace _ m = m
+runLoggerNS :: Eff (LoggerNSDynamic : es) a -> Eff es a
+runLoggerNS = interpret $ \env -> \case
+  GetNamespace -> pure ""
+  LocalNamespace _ m ->
+    localSeqUnlift env $ \runner -> runner m
 
 -- Tests tabular automatic formatting i.e. nothing specified
 tabularAutoTests :: Backend -> TestTree
@@ -221,9 +253,9 @@ formatTabularAutoFail :: TestTree
 formatTabularAutoFail = testCase desc $ do
   let idx = MkIndex []
   eformatted <-
-    tryAnyCS
+    tryAny
       $ runConfigIO
-        (Index.formatIndex formatTabularAuto Name False idx)
+        (Index.formatIndex @TestEnv formatTabularAuto Name False idx)
         53
   case eformatted of
     Right result ->
@@ -431,11 +463,15 @@ testGolden
   rev
   termWidth = goldenVsFile desc (unsafeDecodeOsToFp gpath) (unsafeDecodeOsToFp apath) $ do
     idx <- mkIdx
-    let fmt = Index.formatIndex style sortFn rev idx
+    let fmt = Index.formatIndex @TestEnv style sortFn rev idx
     formatted <- runConfigIO fmt termWidth
-    writeBinaryFile apath (toBS formatted)
+    run $ writeBinaryFile apath (toBS formatted)
     where
       (gpath, apath) = mkGoldenPaths backend fileName
+
+      run =
+        runEff
+          . FW.runFileWriterDynamicIO
 
 mkGoldenPaths :: Backend -> OsPath -> (OsPath, OsPath)
 -- NOTE: Using the same goldens for all backends since we want formatting to be

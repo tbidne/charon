@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -15,9 +16,8 @@ where
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
 import Data.Text qualified as T
-import Effects.FileSystem.HandleWriter (withBinaryFile)
-import Effects.FileSystem.PathReader (getXdgData, getXdgState)
-import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
+import Effectful.FileSystem.HandleWriter.Dynamic (withBinaryFile)
+import Effectful.FileSystem.PathReader.Dynamic (getXdgData)
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Index (Sort)
@@ -63,7 +63,7 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.FileSizeMode (FileSizeMode (..))
 import SafeRm.Runner.FileSizeMode qualified as FileSizeMode
-import SafeRm.Runner.SafeRmT (runSafeRmT)
+import SafeRm.Runner.Logging (runLoggerDynamic, runLoggerNSDynamic)
 import SafeRm.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
 import SafeRm.Utils qualified as U
 import TOML qualified
@@ -72,84 +72,81 @@ import TOML qualified
 -- optional Toml config, and creates the environment before running
 -- SafeRm.
 runSafeRm ::
-  ( HasCallStack,
-    MonadAsync m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadIORef m,
-    MonadMask m,
-    MonadOptparse m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m,
-    MonadTime m
+  ( Concurrent :> es,
+    FileReaderDynamic :> es,
+    FileWriterDynamic :> es,
+    HandleWriterDynamic :> es,
+    IORefStatic :> es,
+    OptparseStatic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    PosixCompatStatic :> es,
+    TerminalDynamic :> es,
+    TimeDynamic :> es
   ) =>
-  m ()
+  Eff es ()
 runSafeRm = do
   (config, cmd) <- getConfiguration
-  withEnv config (runSafeRmT $ runCmd cmd)
+  withEnv config $ \env ->
+    runReader env
+      $ runLoggerNSDynamic
+      $ runLoggerDynamic
+      $ runCmd @Env cmd
 
 -- | Runs SafeRm in the given environment. This is useful in conjunction with
 -- 'getConfiguration' as an alternative 'runSafeRm', when we want to use a
 -- custom env.
 runCmd ::
-  forall m env.
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
     HasTrashHome env,
-    MonadAsync m,
-    MonadLoggerNS m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadIORef m,
-    MonadMask m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m,
-    MonadTime m
+    Concurrent :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    FileReaderDynamic :> es,
+    FileWriterDynamic :> es,
+    HandleWriterDynamic :> es,
+    IORefStatic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    PosixCompatStatic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es,
+    TimeDynamic :> es
   ) =>
   CommandP2 ->
-  m ()
+  Eff es ()
 runCmd cmd =
   -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
   -- This is what we want, as it similar to what we will get once GHC
   -- natively supports exceptions with callstacks.
-  runCmd' cmd `catchCS` logEx
+  runCmd' cmd `catchAny` logEx
   where
     runCmd' = \case
-      Delete paths -> SafeRm.delete paths
-      PermDelete force paths -> SafeRm.permDelete force paths
-      Empty force -> SafeRm.emptyTrash force
-      Restore paths -> SafeRm.restore paths
+      Delete paths -> SafeRm.delete @env paths
+      PermDelete force paths -> SafeRm.permDelete @env force paths
+      Empty force -> SafeRm.emptyTrash @env force
+      Restore paths -> SafeRm.restore @env paths
       List listCmd ->
-        printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
-      Metadata -> printMetadata
-      Convert dest -> SafeRm.convert dest
-      Merge dest -> SafeRm.merge dest
+        printIndex @env (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
+      Metadata -> printMetadata @env
+      Convert dest -> SafeRm.convert @env dest
+      Merge dest -> SafeRm.merge @env dest
 
-    logEx :: (HasCallStack) => SomeException -> m a
+    logEx :: (HasCallStack) => SomeException -> Eff es a
     logEx ex = do
-      $(logError) (T.pack $ displayNoCS ex)
-      throwCS ex
+      $(logError) (T.pack $ displayException ex)
+      throwM ex
 
 withEnv ::
-  ( HasCallStack,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
+  ( HandleWriterDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    TerminalDynamic :> es
   ) =>
   TomlConfig ->
-  (Env m -> m a) ->
-  m a
+  (Env -> Eff es a) ->
+  Eff es a
 withEnv mergedConfig onEnv = do
   trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
 
@@ -178,13 +175,11 @@ withEnv mergedConfig onEnv = do
 -- For example, if both the CLI and Toml file specify the trash home, then
 -- the CLI's value will be used.
 getConfiguration ::
-  ( HasCallStack,
-    MonadFileReader m,
-    MonadOptparse m,
-    MonadPathReader m,
-    MonadThrow m
+  ( FileReaderDynamic :> es,
+    OptparseStatic :> es,
+    PathReaderDynamic :> es
   ) =>
-  m (TomlConfig, CommandP2)
+  Eff es (TomlConfig, CommandP2)
 getConfiguration = do
   -- get CLI args
   args <- getArgs
@@ -213,78 +208,69 @@ getConfiguration = do
       contents <- readFileUtf8ThrowM fp
       case TOML.decode contents of
         Right cfg -> pure cfg
-        Left tomlErr -> throwCS tomlErr
+        Left tomlErr -> throwM tomlErr
 
 printIndex ::
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
     HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadFileReader m,
-    MonadIORef m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    Concurrent :> es,
+    FileReaderDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    PosixCompatStatic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   PathDataFormat ->
   Sort ->
   Bool ->
-  m ()
+  Eff es ()
 printIndex style sort revSort = do
-  index <- SafeRm.getIndex
-  formatted <- Index.formatIndex style sort revSort index
+  index <- SafeRm.getIndex @env
+  formatted <- Index.formatIndex @env style sort revSort index
   putTextLn formatted
 
 printMetadata ::
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
     HasTrashHome env,
-    MonadFileReader m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThrow m
+    FileReaderDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
-  m ()
-printMetadata = SafeRm.getMetadata >>= prettyDel
+  Eff es ()
+printMetadata = SafeRm.getMetadata @env >>= prettyDel
 
-prettyDel :: (Pretty a, MonadTerminal m) => a -> m ()
+prettyDel :: (Pretty a, TerminalDynamic :> es) => a -> Eff es ()
 prettyDel = putTextLn . U.renderPretty
 
 -- | If the argument is given, returns it. Otherwise searches for the default
 -- trash location.
 trashOrDefault ::
-  ( HasCallStack,
-    MonadPathReader m
+  ( PathReaderDynamic :> es
   ) =>
   Maybe (PathI TrashHome) ->
-  m (PathI TrashHome)
+  Eff es (PathI TrashHome)
 trashOrDefault = maybe getTrashHome pure
 
 -- | Retrieves the default trash directory.
-getTrashHome ::
-  ( HasCallStack,
-    MonadPathReader m
-  ) =>
-  m (PathI TrashHome)
+getTrashHome :: (PathReaderDynamic :> es) => Eff es (PathI TrashHome)
 getTrashHome = MkPathI <$> (getXdgData safeRmPath)
 
 withLogHandle ::
-  ( HasCallStack,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
+  ( HandleWriterDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    TerminalDynamic :> es
   ) =>
   Maybe FileSizeMode ->
-  (Handle -> m a) ->
-  m a
+  (Handle -> Eff es a) ->
+  Eff es a
 withLogHandle sizeMode onHandle = do
   xdgState <- getXdgState safeRmPath
   createDirectoryIfMissing True xdgState
@@ -296,14 +282,13 @@ withLogHandle sizeMode onHandle = do
   withBinaryFile logPath AppendMode onHandle
 
 handleLogSize ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
+  ( PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    TerminalDynamic :> es
   ) =>
   OsPath ->
   Maybe FileSizeMode ->
-  m ()
+  Eff es ()
 handleLogSize logFile msizeMode = do
   logExists <- doesFileExist logFile
   when logExists $ do

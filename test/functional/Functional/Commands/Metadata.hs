@@ -28,7 +28,7 @@ tests testEnv =
 metadata :: IO TestEnv -> TestTree
 metadata getTestEnv = testCase "Prints metadata" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "metadata" $ do
+  usingTestM testEnv $ appendTestDirM "metadata" $ do
     testDir <- getTestDir
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
@@ -100,7 +100,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
 empty :: IO TestEnv -> TestTree
 empty getTestEnv = testCase "Prints empty metadata" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
+  usingTestM testEnv $ appendTestDirM "emptySucceeds" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"

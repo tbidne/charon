@@ -9,7 +9,7 @@ where
 import Data.Fixed (Fixed (MkFixed))
 import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), TimeOfDay (TimeOfDay))
-import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
+import Effectful.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range

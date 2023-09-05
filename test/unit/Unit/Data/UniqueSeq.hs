@@ -5,6 +5,7 @@ module Unit.Data.UniqueSeq
 where
 
 import Data.HashSet qualified as HSet
+import Data.IORef qualified as IORef
 import Data.Sequence (Seq (Empty))
 import GHC.Exts (IsList (fromList, toList))
 import Hedgehog (PropertyT)
@@ -172,7 +173,7 @@ insertMember =
 
 uniqseqInvariants :: (Hashable a, Show a) => UniqueSeq a -> PropertyT IO ()
 uniqseqInvariants useq = do
-  foundRef <- liftIO $ newIORef HSet.empty
+  foundRef <- liftIO $ IORef.newIORef HSet.empty
   seqAndSetSynced useq
   seqUnique foundRef useq
 
@@ -198,14 +199,14 @@ seqUnique foundRef (MkUniqueSeq seq _) = foldr go (pure ()) seq
   where
     go :: a -> PropertyT IO () -> PropertyT IO ()
     go x acc = do
-      found <- liftIO $ readIORef foundRef
+      found <- liftIO $ IORef.readIORef foundRef
       if HSet.member x found
         then do
           annotate "Found duplicate"
           annotateShow x
           failure
         else do
-          liftIO $ modifyIORef' foundRef (HSet.insert x)
+          liftIO $ IORef.modifyIORef' foundRef (HSet.insert x)
           acc
 
 genUniqueSeq :: Gen (UniqueSeq Int)

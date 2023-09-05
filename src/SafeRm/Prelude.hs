@@ -20,9 +20,6 @@ module SafeRm.Prelude
     pathFiles,
     pathInfo,
     pathSafeRm,
-
-    -- * Misc
-    usingReaderT,
   )
 where
 
@@ -44,21 +41,6 @@ import Control.Monad as X
   )
 import Control.Monad.Fail as X (MonadFail (fail))
 import Control.Monad.IO.Class as X (MonadIO (liftIO))
-import Control.Monad.Logger as X
-  ( LogLevel (LevelDebug, LevelError, LevelInfo, LevelWarn),
-    MonadLogger (monadLoggerLog),
-    logDebug,
-    logError,
-    logInfo,
-    logWarn,
-  )
-import Control.Monad.Reader as X
-  ( MonadReader (ask),
-    ReaderT,
-    asks,
-    local,
-    runReaderT,
-  )
 import Data.Bifunctor as X (Bifunctor (bimap))
 import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
@@ -102,103 +84,123 @@ import Data.Type.Equality as X (type (~))
 #endif
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
-import Effects.Concurrent.Async as X (MonadAsync)
-import Effects.Concurrent.Thread as X (MonadThread)
-import Effects.Exception as X
+import Effectful as X (Eff, IOE, runEff, type (:>))
+import Effectful.Concurrent as X (Concurrent, runConcurrent)
+import Effectful.Dispatch.Dynamic as X (interpret, localSeqUnlift, reinterpret)
+import Effectful.Exception as X
   ( Exception (displayException),
-    ExceptionCS (MkExceptionCS),
     ExitCode (ExitFailure, ExitSuccess),
-    MonadCatch,
-    MonadMask,
     MonadThrow,
     SomeException,
-    addCS,
     bracket,
     catch,
     catchAny,
-    catchAnyCS,
-    catchCS,
-    displayNoCS,
     exitFailure,
     finally,
-    throwCS,
     throwM,
     throwString,
     try,
     tryAny,
-    tryAnyCS,
-    tryCS,
   )
-import Effects.FileSystem.FileReader as X
-  ( MonadFileReader (readBinaryFile),
-    decodeUtf8,
-    decodeUtf8Lenient,
+import Effectful.FileSystem.FileReader.Dynamic as X
+  ( FileReaderDynamic,
+    readBinaryFile,
     readFileUtf8ThrowM,
   )
-import Effects.FileSystem.FileWriter as X
-  ( MonadFileWriter (appendBinaryFile, writeBinaryFile),
-    encodeUtf8,
+import Effectful.FileSystem.FileWriter.Dynamic as X
+  ( FileWriterDynamic,
+    appendBinaryFile,
+    writeBinaryFile,
   )
-import Effects.FileSystem.HandleWriter as X
-  ( MonadHandleWriter
-      ( hClose,
-        hFlush,
-        hPut,
-        openBinaryFile
-      ),
+import Effectful.FileSystem.HandleWriter.Dynamic as X
+  ( HandleWriterDynamic,
+    hClose,
+    hFlush,
+    hPut,
+    openBinaryFile,
   )
-import Effects.FileSystem.PathReader as X
-  ( MonadPathReader
-      ( canonicalizePath,
-        doesDirectoryExist,
-        doesFileExist,
-        doesPathExist,
-        getFileSize,
-        getHomeDirectory,
-        listDirectory
-      ),
+import Effectful.FileSystem.PathReader.Dynamic as X
+  ( PathReaderDynamic,
+    canonicalizePath,
+    doesDirectoryExist,
+    doesFileExist,
+    doesPathExist,
+    getFileSize,
+    getHomeDirectory,
     getXdgConfig,
+    getXdgState,
+    listDirectory,
+    runPathReaderDynamicIO,
   )
-import Effects.FileSystem.PathWriter as X
-  ( MonadPathWriter
-      ( createDirectoryIfMissing,
-        removeDirectoryRecursive,
-        removePathForcibly,
-        renameDirectory,
-        renameFile
-      ),
+import Effectful.FileSystem.PathWriter.Dynamic as X
+  ( PathWriterDynamic,
+    createDirectoryIfMissing,
+    removeDirectoryRecursive,
+    removeFile,
+    removePathForcibly,
+    renameDirectory,
+    renameFile,
+    runPathWriterDynamicIO,
   )
-import Effects.FileSystem.Utils as X
+import Effectful.FileSystem.Utils as X
   ( OsPath,
     decodeOsToFp,
     decodeOsToFpShow,
     decodeOsToFpShowText,
     decodeOsToFpThrowM,
+    decodeUtf8,
+    decodeUtf8Lenient,
     encodeFpToOs,
     encodeFpToOsThrowM,
+    encodeUtf8,
     osp,
     (</>),
   )
-import Effects.IORef as X
+import Effectful.IORef.Static as X
   ( IORef,
-    MonadIORef,
+    IORefStatic,
     modifyIORef',
     newIORef,
     readIORef,
+    runIORefStaticIO,
     writeIORef,
   )
-import Effects.LoggerNS as X
-  ( MonadLoggerNS (getNamespace, localNamespace),
-    addNamespace,
+import Effectful.Logger.Dynamic as X
+  ( LogLevel (LevelDebug, LevelError, LevelInfo, LevelWarn),
+    LoggerDynamic,
+    logDebug,
+    logError,
+    logInfo,
+    logWarn,
+    loggerLog,
   )
-import Effects.Optparse as X (MonadOptparse (execParser))
-import Effects.System.PosixCompat as X (MonadPosixCompat)
-import Effects.System.Terminal as X
-  ( MonadTerminal (putStr, putStrLn),
+import Effectful.LoggerNS.Dynamic as X
+  ( LoggerNSDynamic,
+    Namespace,
+    addNamespace,
+    getNamespace,
+    localNamespace,
+  )
+import Effectful.Optparse.Static as X (OptparseStatic, runOptparseStaticIO)
+import Effectful.PosixCompat.Static as X
+  ( PosixCompatStatic,
+    runPosixCompatStaticIO,
+  )
+import Effectful.Reader.Static as X
+  ( Reader,
+    ask,
+    asks,
+    local,
+    runReader,
+  )
+import Effectful.Terminal.Dynamic as X
+  ( TerminalDynamic,
     print,
+    putStr,
+    putStrLn,
     putTextLn,
   )
-import Effects.Time as X (MonadTime)
+import Effectful.Time.Dynamic as X (TimeDynamic)
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
 import GHC.Float as X (Double)
@@ -295,9 +297,6 @@ packed = iso T.pack T.unpack
 unpacked :: Iso' Text String
 unpacked = iso T.unpack T.pack
 {-# INLINE unpacked #-}
-
-usingReaderT :: b -> ReaderT b m a -> m a
-usingReaderT = flip runReaderT
 
 pathFiles :: OsPath
 pathFiles = [osp|files|]

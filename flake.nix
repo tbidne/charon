@@ -21,8 +21,8 @@
       inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    monad-effects = {
-      url = "github:tbidne/monad-effects";
+    effectful-effects = {
+      url = "github:tbidne/effectful-effects";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -30,10 +30,9 @@
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
       inputs.nix-hs-utils.follows = "nix-hs-utils";
-      inputs.smart-math.follows = "smart-math";
     };
     path-size = {
-      url = "github:tbidne/path-size";
+      url = "github:tbidne/path-size/effectful";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,7 +41,7 @@
       inputs.bounds.follows = "bounds";
       inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.si-bytes.follows = "si-bytes";
-      inputs.monad-effects.follows = "monad-effects";
+      inputs.effectful-effects.follows = "effectful-effects";
       inputs.smart-math.follows = "smart-math";
     };
     si-bytes = {
@@ -68,7 +67,6 @@
   };
   outputs =
     inputs@{ flake-parts
-    , monad-effects
     , nix-hs-utils
     , nixpkgs
     , self
@@ -92,43 +90,36 @@
               "path-size"
               "si-bytes"
               "smart-math"
-            ] // nix-hs-utils.mkRelLibs monad-effects final [
-              "effects-async"
-              "effects-exceptions"
-              "effects-ioref"
-              "effects-fs"
-              "effects-logger-ns"
-              "effects-optparse"
-              "effects-stm"
-              "effects-terminal"
-              "effects-thread"
-              "effects-time"
-              "effects-unix-compat"
+            ] // nix-hs-utils.mkRelLibs "${inputs.effectful-effects}/lib" final [
+              "exceptions-effectful"
+              "ioref-effectful"
+              "fs-effectful"
+              "logger-effectful"
+              "logger-ns-effectful"
+              "optparse-effectful"
+              "stm-effectful"
+              "terminal-effectful"
+              "time-effectful"
+              "unix-compat-effectful"
             ];
           };
           hlib = pkgs.haskell.lib;
+          compilerPkgs = { inherit compiler pkgs; };
           mkPkg = returnShellEnv:
             nix-hs-utils.mkHaskellPkg {
               inherit compiler pkgs returnShellEnv;
               name = "safe-rm";
               root = ./.;
             };
-          hsDirs = "app benchmarks lib src test";
         in
         {
           packages.default = mkPkg false;
           devShells.default = mkPkg true;
 
           apps = {
-            format = nix-hs-utils.format {
-              inherit compiler hsDirs pkgs;
-            };
-            lint = nix-hs-utils.lint {
-              inherit compiler hsDirs pkgs;
-            };
-            lint-refactor = nix-hs-utils.lint-refactor {
-              inherit compiler hsDirs pkgs;
-            };
+            format = nix-hs-utils.format compilerPkgs;
+            lint = nix-hs-utils.lint compilerPkgs;
+            lintRefactor = nix-hs-utils.lintRefactor compilerPkgs;
           };
         };
       systems = [

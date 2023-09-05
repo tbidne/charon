@@ -3,7 +3,7 @@ name:               safe-rm
 version:            0.1
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC ==9.4.6 || ==9.6.2
+tested-with:        GHC ==9.6.2
 copyright:          2022-2023 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
@@ -72,46 +72,44 @@ library
     SafeRm.Runner.Command.List
     SafeRm.Runner.Env
     SafeRm.Runner.FileSizeMode
+    SafeRm.Runner.Logging
     SafeRm.Runner.Phase
-    SafeRm.Runner.SafeRmT
     SafeRm.Runner.Toml
     SafeRm.Trash
     SafeRm.Utils
 
   build-depends:
-    , algebra-simple        ^>=0.1
-    , base                  >=4.17.0.0  && <4.19
-    , bytestring            >=0.11.1.0  && <0.13
-    , containers            ^>=0.6.3.1
-    , deepseq               >=1.4.6.0   && <1.6
-    , effects-async         ^>=0.1
-    , effects-exceptions    ^>=0.1
-    , effects-fs            ^>=0.1
-    , effects-ioref         ^>=0.1
-    , effects-logger-ns     ^>=0.1
-    , effects-optparse      ^>=0.1
-    , effects-terminal      ^>=0.1
-    , effects-thread        ^>=0.1
-    , effects-time          ^>=0.1
-    , effects-unix-compat   ^>=0.1
-    , filepath              ^>=1.4.2.1
-    , hashable              ^>=1.4.0.2
-    , monad-logger          ^>=0.3.30
-    , mtl                   >=2.2.1     && <2.4
-    , nonempty-containers   >=0.3.4.2   && <0.4
-    , optics-core           ^>=0.4
-    , optics-th             ^>=0.4
-    , optparse-applicative  >=0.15      && <0.19
-    , path-size             ^>=0.1
-    , prettyprinter         ^>=1.7.1
-    , serialise             ^>=0.2.6.0
-    , si-bytes              ^>=0.1
-    , text                  >=1.2.4.0   && <2.1
-    , time                  >=1.9.3     && <1.14
-    , toml-reader           >=0.2.0.0   && <0.3
-    , unordered-containers  ^>=0.2.14.0
-    , uri-bytestring        ^>=0.3.3.1
-    , vector                >=0.12.3.0  && <0.14
+    , algebra-simple         ^>=0.1
+    , base                   >=4.17.0.0  && <4.19
+    , bytestring             >=0.11.1.0  && <0.13
+    , containers             ^>=0.6.3.1
+    , deepseq                >=1.4.6.0   && <1.6
+    , effectful              >=2.2.1.0   && <2.4
+    , exceptions-effectful   ^>=0.1
+    , filepath               ^>=1.4.2.1
+    , fs-effectful           ^>=0.1
+    , hashable               ^>=1.4.0.2
+    , ioref-effectful        ^>=0.1
+    , logger-effectful       ^>=0.1
+    , logger-ns-effectful    ^>=0.1
+    , nonempty-containers    >=0.3.4.2   && <0.4
+    , optics-core            ^>=0.4
+    , optics-th              ^>=0.4
+    , optparse-applicative   >=0.15      && <0.19
+    , optparse-effectful     ^>=0.1
+    , path-size              ^>=0.1
+    , prettyprinter          ^>=1.7.1
+    , serialise              ^>=0.2.6.0
+    , si-bytes               ^>=0.1
+    , terminal-effectful     ^>=0.1
+    , text                   >=1.2.4.0   && <2.1
+    , time                   >=1.9.3     && <1.14
+    , time-effectful         ^>=0.1
+    , toml-reader            >=0.2.0.0   && <0.3
+    , unix-compat-effectful  ^>=0.1
+    , unordered-containers   ^>=0.2.14.0
+    , uri-bytestring         ^>=0.3.3.1
+    , vector                 >=0.12.3.0  && <0.14
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -121,10 +119,11 @@ library test-utils
   exposed-modules:  Test.Utils
   build-depends:
     , base
-    , effects-fs
+    , fs-effectful
     , hedgehog
     , safe-rm
     , tasty-hunit
+    , terminal-effectful
     , text
     , unordered-containers
 
@@ -137,7 +136,14 @@ executable safe-rm
   main-is:            Main.hs
   build-depends:
     , base
+    , effectful
+    , fs-effectful
+    , ioref-effectful
+    , optparse-effectful
     , safe-rm
+    , terminal-effectful
+    , time-effectful
+    , unix-compat-effectful
 
   hs-source-dirs:     app
   ghc-options:        -threaded -with-rtsopts=-N
@@ -159,20 +165,24 @@ test-suite unit
   build-depends:
     , base
     , containers
-    , effects-fs
-    , effects-logger-ns
-    , effects-terminal
-    , filepath
-    , hedgehog              >=1.0.2    && <1.5
-    , pretty-simple         >=4.0.0.0  && <4.2
+    , effectful
+    , fs-effectful
+    , hedgehog               >=1.0.2    && <1.5
+    , logger-effectful
+    , logger-ns-effectful
+    , optparse-effectful
+    , pretty-simple          >=4.0.0.0  && <4.2
     , safe-rm
-    , tasty                 >=1.1.0.3  && <1.5
-    , tasty-golden          ^>=2.3.1.1
-    , tasty-hedgehog        >=1.2.0.0  && <1.5
-    , tasty-hunit           >=0.9      && <0.11
+    , tasty                  >=1.1.0.3  && <1.5
+    , tasty-golden           ^>=2.3.1.1
+    , tasty-hedgehog         >=1.2.0.0  && <1.5
+    , tasty-hunit            >=0.9      && <0.11
+    , terminal-effectful
     , test-utils
     , text
     , time
+    , time-effectful
+    , unix-compat-effectful
     , unordered-containers
 
   hs-source-dirs:   test/unit
@@ -192,23 +202,25 @@ test-suite integration
 
   build-depends:
     , base
-    , effects-fs
-    , effects-logger-ns
-    , effects-terminal
-    , effects-time
     , env-guard             ^>=0.2
+    , exceptions-effectful
     , filepath
+    , fs-effectful
     , hashable
     , hedgehog
+    , logger-effectful
+    , logger-ns-effectful
     , mtl
     , safe-rm
     , tagged                ^>=0.8.6
     , tasty
     , tasty-hedgehog
     , tasty-hunit
+    , terminal-effectful
     , test-utils
     , text
     , time
+    , time-effectful
     , unordered-containers
 
   hs-source-dirs:   test/integration
@@ -233,20 +245,22 @@ test-suite functional
   build-depends:
     , algebra-simple
     , base
-    , effects-exceptions
-    , effects-fs
-    , effects-logger-ns
-    , effects-terminal
-    , effects-time
+    , effectful
     , env-guard             ^>=0.2
+    , exceptions-effectful
     , filepath
+    , fs-effectful
+    , logger-effectful
+    , logger-ns-effectful
     , pretty-simple
     , safe-rm
     , tasty
     , tasty-hunit
+    , terminal-effectful
     , test-utils
     , text
     , time
+    , time-effectful
     , unordered-containers
 
   hs-source-dirs:   test/functional
@@ -262,12 +276,13 @@ benchmark benchmarks
 
   build-depends:
     , base
-    , effects-fs
     , env-guard
+    , fs-effectful
     , safe-rm
-    , tasty-bench  ^>=0.3
+    , tasty-bench         ^>=0.3
+    , terminal-effectful
     , test-utils
+    , time-effectful
 
-  ghc-options:      -Wno-unused-packages
   hs-source-dirs:   benchmarks
   default-language: GHC2021

@@ -9,7 +9,7 @@ where
 
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
+import Effectful.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata
   ( Metadata
@@ -43,7 +43,7 @@ tests testEnv =
 restoreOne :: IO TestEnv -> TestTree
 restoreOne getTestEnv = testCase "Restores a single file" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreOne" $ do
+  usingTestM testEnv $ appendTestDirM "restoreOne" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -98,7 +98,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
 restoreMany :: IO TestEnv -> TestTree
 restoreMany getTestEnv = testCase "Restores several paths" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
+  usingTestM testEnv $ appendTestDirM "restoreMany" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -166,7 +166,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
 restoreUnknownError :: IO TestEnv -> TestTree
 restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
+  usingTestM testEnv $ appendTestDirM "restoreUnknownError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -227,7 +227,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
 restoreCollisionError :: IO TestEnv -> TestTree
 restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
+  usingTestM testEnv $ appendTestDirM "restoreCollisionError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -281,7 +281,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
 restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
 restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
+  usingTestM testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -358,7 +358,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
 restoresSome :: IO TestEnv -> TestTree
 restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
+  usingTestM testEnv $ appendTestDirM "restoresSome" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </>! ".trash"
@@ -421,7 +421,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
 restoresWildcards :: IO TestEnv -> TestTree
 restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresWildcards" $ do
+  usingTestM testEnv $ appendTestDirM "restoresWildcards" $ do
     testDir <- getTestDir
 
     let filesToRestore = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
@@ -502,7 +502,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
 restoresSomeWildcards :: IO TestEnv -> TestTree
 restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresSomeWildcards" $ do
+  usingTestM testEnv $ appendTestDirM "restoresSomeWildcards" $ do
     testDir <- getTestDir
 
     let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
@@ -588,7 +588,7 @@ wildcardLiteralTests testEnv =
 restoresLiteralWildcardOnly :: IO TestEnv -> TestTree
 restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal wildcard" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresLiteralWildcardOnly" $ do
+  usingTestM testEnv $ appendTestDirM "restoresLiteralWildcardOnly" $ do
     testDir <- getTestDir
 
     let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
@@ -649,7 +649,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
 restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
 restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresCombinedWildcardLiteral" $ do
+  usingTestM testEnv $ appendTestDirM "restoresCombinedWildcardLiteral" $ do
     testDir <- getTestDir
 
     let files = ["yxxfoo", "yxxbar", "yxxbaz"]

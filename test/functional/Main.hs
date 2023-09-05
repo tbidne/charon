@@ -1,8 +1,11 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Entrypoint for functional tests.
 module Main (main) where
 
 import Data.Char qualified as Ch
-import Effects.FileSystem.PathReader qualified as Dir
+import Effectful.FileSystem.PathReader.Static qualified as PRStatic
+import Effectful.FileSystem.PathWriter.Static qualified as PWStatic
 import Functional.Commands.Convert qualified as Convert
 import Functional.Commands.Delete qualified as Delete
 import Functional.Commands.Empty qualified as Empty
@@ -16,13 +19,14 @@ import GHC.Conc (setUncaughtExceptionHandler)
 import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Backend qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
+import System.IO qualified as IO
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
 
 -- | Runs functional tests.
 main :: IO ()
 main = do
-  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
+  setUncaughtExceptionHandler $ \ex -> IO.putStrLn ("\n" <> displayException ex)
 
   Tasty.defaultMain
     $ Tasty.withResource setup teardown
@@ -57,8 +61,12 @@ main = do
 
 setup :: IO TestEnv
 setup = do
-  tmpDir <- (\tmp -> tmp </> pathSafeRm </>! "functional") <$> Dir.getTemporaryDirectory
-  createDirectoryIfMissing True tmpDir
+  tmpDir <-
+    run $ do
+      d <- (\tmp -> tmp </> pathSafeRm </> [osp|functional|]) <$> PRStatic.getTemporaryDirectory
+      PWStatic.createDirectoryIfMissing True d
+      pure d
+
   testDir <- encodeUtf ""
   pure
     $ MkTestEnv
@@ -72,6 +80,12 @@ teardown :: TestEnv -> IO ()
 teardown env = guardOrElse' "NO_CLEANUP" ExpectEnvSet doNothing cleanup
   where
     fp = env ^. #testRoot
-    cleanup = removePathForcibly fp
+    cleanup = run $ PWStatic.removePathForcibly fp
     doNothing =
-      putStrLn $ "*** Not cleaning up tmp dir: " <> show fp
+      IO.putStrLn $ "*** Not cleaning up tmp dir: " <> show fp
+
+run :: Eff [PWStatic.PathWriterStatic, PRStatic.PathReaderStatic, IOE] a -> IO a
+run =
+  runEff
+    . PRStatic.runPathReaderStaticIO
+    . PWStatic.runPathWriterStaticIO

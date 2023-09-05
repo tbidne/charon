@@ -18,9 +18,9 @@ import Data.Hashable (Hashable (hash))
 import Data.List (unzip)
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.FileSystem.Utils qualified as FsUtils
-import Effects.LoggerNS (Namespace, defaultLogFormatter)
-import Effects.LoggerNS qualified as Logger
+import Effectful.FileSystem.Utils qualified as FsUtils
+import Effectful.LoggerNS.Dynamic (Namespace, defaultLogFormatter)
+import Effectful.LoggerNS.Dynamic qualified as Logger
 import GHC.Exts (IsList (Item, fromList))
 import Hedgehog (GenT, PropertyT)
 import Hedgehog.Gen qualified as Gen
@@ -43,7 +43,6 @@ import SafeRm.Runner.Env
   ( Env,
     LogEnv (MkLogEnv),
   )
-import SafeRm.Runner.SafeRmT (SafeRmT)
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 import System.OsPath qualified as OsPath
 import Test.Utils qualified as TestUtils

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -23,9 +24,9 @@ where
 
 import Data.Char qualified as Ch
 import Data.Text qualified as T
-import Effects.FileSystem.HandleWriter qualified as HW
-import Effects.System.Terminal qualified as Term
-import Effects.Time (getSystemTime)
+import Effectful.FileSystem.HandleWriter.Dynamic qualified as HW
+import Effectful.Terminal.Dynamic qualified as Term
+import Effectful.Time.Dynamic (getSystemTime)
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index)
@@ -46,6 +47,20 @@ import SafeRm.Trash qualified as Trash
 import SafeRm.Utils qualified as U
 import System.IO qualified as IO
 
+-- NOTE: [Effectful Type Inference]
+--
+-- Effectful can sometimes choke on type inference (e.g. with Reader), so we
+-- need to manually add type annotations. This is annoying, so there is a
+-- GHC plugin provided in effectful-plugin. Unfortunately, this does not seem
+-- to work with nix i.e. 'nix build' was throwing an error about being unable
+-- to find the required plugin, despite it existing. This is especially weird
+-- as the package built and all tests passes. It was only at the very end
+-- when GHC complained.
+--
+-- Thus, we manually provide annotations instead of using the plugin.
+-- Hopefully one day the type inference will be fixed w/o the need for the
+-- plugin.
+
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
 
@@ -53,42 +68,42 @@ import System.IO qualified as IO
 -- writes an entry in the trash index. If the trash location is not given,
 -- defaults to XDG data e.g. @~\/.local/share/safe-rm/@.
 delete ::
-  forall env m.
+  forall env es.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
-    MonadCatch m,
-    MonadFileWriter m,
-    MonadIORef m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadTime m
+    FileWriterDynamic :> es,
+    IORefStatic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es,
+    TimeDynamic :> es
   ) =>
   UniqueSeq (PathI TrashEntryOriginalPath) ->
-  m ()
+  Eff es ()
 delete paths = addNamespace "delete" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
-  Trash.createTrash
+  Trash.createTrash @env
 
   someExRef <- newIORef Nothing
   currTime <- MkTimestamp <$> getSystemTime
 
   -- move paths to trash
   addNamespace "deleting" $ for_ paths $ \fp ->
-    Trash.mvOriginalToTrash trashHome currTime fp
-      `catchAnyCS` \ex -> do
-        $(logWarn) (T.pack $ displayNoCS ex)
+    Trash.mvOriginalToTrash @env trashHome currTime fp
+      `catchAny` \ex -> do
+        $(logWarn) (T.pack $ displayException ex)
         putStrLn
           $ mconcat
             [ "Error deleting path '",
               decodeOsToFpShow $ fp ^. #unPathI,
               "': ",
-              displayNoCS ex
+              displayException ex
             ]
         writeIORef someExRef (Just ex)
 
@@ -96,28 +111,27 @@ delete paths = addNamespace "delete" $ do
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
-  forall env m.
+  forall env es.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadFileReader m,
-    MonadHandleWriter m,
-    MonadIORef m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadPosixCompat m,
-    MonadLoggerNS m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    Concurrent :> es,
+    FileReaderDynamic :> es,
+    HandleWriterDynamic :> es,
+    IORefStatic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    PosixCompatStatic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
-  m ()
+  Eff es ()
 permDelete force paths = addNamespace "permDelete" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
@@ -125,15 +139,15 @@ permDelete force paths = addNamespace "permDelete" $ do
   -- permanently delete paths
   addNamespace "deleting" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.permDeleteFromTrash force trashHome p >>= U.setRefIfJust someExRef)
-      `catchAnyCS` \ex -> do
-        $(logWarn) (T.pack $ displayNoCS ex)
+    (Trash.permDeleteFromTrash @env force trashHome p >>= U.setRefIfJust someExRef)
+      `catchAny` \ex -> do
+        $(logWarn) (T.pack $ displayException ex)
         putStrLn
           $ mconcat
             [ "Error permanently deleting path '",
               decodeOsToFpShow $ p ^. #unPathI,
               "': ",
-              displayNoCS ex
+              displayException ex
             ]
         -- in case Trash.permDeleteFromTrash throws an exception
         writeIORef someExRef (Just ex)
@@ -143,47 +157,45 @@ permDelete force paths = addNamespace "permDelete" $ do
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
 getIndex ::
-  forall env m.
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
     HasTrashHome env,
-    MonadFileReader m,
-    MonadPathReader m,
-    MonadLoggerNS m,
-    MonadReader env m,
-    MonadThrow m
+    FileReaderDynamic :> es,
+    PathReaderDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    Reader env :> es
   ) =>
-  m Index
+  Eff es Index
 getIndex = addNamespace "getIndex" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
 
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
-  Trash.doesTrashExist >>= \case
-    True -> Index.readIndex trashHome
+  Trash.doesTrashExist @env >>= \case
+    True -> Index.readIndex @env trashHome
     False -> do
       $(logDebug) "Trash does not exist."
       pure Index.empty
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
-  forall m env.
+  forall env es.
   ( HasBackend env,
-    HasCallStack,
     HasTrashHome env,
-    MonadFileReader m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadReader env m,
-    MonadThrow m
+    FileReaderDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    Reader env :> es
   ) =>
-  m Metadata
+  Eff es Metadata
 getMetadata = addNamespace "getMetadata" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   trashLog <- Env.getTrashLog
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
-  Trash.doesTrashExist >>= \case
-    True -> Metadata.toMetadata (trashHome, trashLog)
+  Trash.doesTrashExist @env >>= \case
+    True -> Metadata.toMetadata @env (trashHome, trashLog)
     False -> do
       $(logInfo) "Trash does not exist."
       pure Metadata.empty
@@ -191,23 +203,23 @@ getMetadata = addNamespace "getMetadata" $ do
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
 restore ::
-  forall env m.
+  forall env es.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
-    MonadCatch m,
-    MonadFileReader m,
-    MonadIORef m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+    FileReaderDynamic :> es,
+    IORefStatic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
-  m ()
+  Eff es ()
 restore paths = addNamespace "restore" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
@@ -215,15 +227,15 @@ restore paths = addNamespace "restore" $ do
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.restoreTrashToOriginal trashHome p >>= U.setRefIfJust someExRef)
-      `catchAnyCS` \ex -> do
-        $(logWarn) (T.pack $ displayNoCS ex)
+    (Trash.restoreTrashToOriginal @env trashHome p >>= U.setRefIfJust someExRef)
+      `catchAny` \ex -> do
+        $(logWarn) (T.pack $ displayException ex)
         putStrLn
           $ mconcat
             [ "Error restoring path '",
               decodeOsToFpShow $ p ^. #unPathI,
               "': ",
-              displayNoCS ex
+              displayException ex
             ]
         writeIORef someExRef (Just ex)
 
@@ -231,23 +243,23 @@ restore paths = addNamespace "restore" $ do
 
 -- | Empties the trash.
 emptyTrash ::
-  forall m env.
+  forall env es.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
-    MonadFileReader m,
-    MonadHandleWriter m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadLoggerNS m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThrow m
+    FileReaderDynamic :> es,
+    HandleWriterDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   Bool ->
-  m ()
+  Eff es ()
 emptyTrash force = addNamespace "emptyTrash" $ do
-  trashHome@(MkPathI th) <- asks getTrashHome
+  trashHome@(MkPathI th) <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   exists <- doesDirectoryExist th
@@ -259,10 +271,10 @@ emptyTrash force = addNamespace "emptyTrash" $ do
       if force
         then do
           removeDirectoryRecursive th
-          Trash.createTrash
+          Trash.createTrash @env
         else do
           noBuffering
-          metadata <- getMetadata
+          metadata <- getMetadata @env
           putStrLn ""
           putTextLn $ U.renderPretty metadata
           putStr "Permanently delete all contents (y/n)? "
@@ -271,7 +283,7 @@ emptyTrash force = addNamespace "emptyTrash" $ do
             | c == 'y' -> do
                 $(logDebug) "Deleting contents."
                 removeDirectoryRecursive th
-                Trash.createTrash
+                Trash.createTrash @env
                 putStrLn ""
             | c == 'n' -> do
                 $(logDebug) "Not deleting contents."
@@ -279,25 +291,26 @@ emptyTrash force = addNamespace "emptyTrash" $ do
             | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
 convert ::
+  forall env es.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
-    MonadCatch m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+    FileReaderDynamic :> es,
+    FileWriterDynamic :> es,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   Backend ->
-  m ()
+  Eff es ()
 convert dest = addNamespace "convert" $ do
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
-  src <- asks getBackend
+  src <- asks @env getBackend
   if src == dest
     then do
       let msg =
@@ -309,24 +322,22 @@ convert dest = addNamespace "convert" $ do
       putStrLn msg
     else do
       $(logDebug) $ "Current backend: " <> T.pack (Backend.backendArg src)
-      Trash.convertBackend dest
+      Trash.convertBackend @env dest
 
 merge ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadFileReader m,
-    MonadIORef m,
-    MonadLoggerNS m,
-    MonadMask m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+  forall env es.
+  ( HasTrashHome env,
+    LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es,
+    PathWriterDynamic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   PathI TrashHome ->
-  m ()
+  Eff es ()
 merge dest = addNamespace "merge" $ do
-  src <- asks getTrashHome
+  src <- asks @env getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText src)
 
   src' <- Paths.liftPathIF' canonicalizePath src
@@ -348,7 +359,7 @@ merge dest = addNamespace "merge" $ do
       $(logDebug) $ "Dest path: " <> Paths.toText dest
       Trash.mergeTrashDirs src dest
 
-noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
+noBuffering :: (HandleWriterDynamic :> es) => Eff es ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout
   where
     buffOff h = HW.hSetBuffering h NoBuffering

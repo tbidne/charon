@@ -33,7 +33,7 @@ tests testEnv =
 emptyTrash :: IO TestEnv -> TestTree
 emptyTrash getTestEnv = testCase "Empties trash" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptyTrash" $ do
+  usingTestM testEnv $ appendTestDirM "emptyTrash" $ do
     testDir <- getTestDir
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
@@ -101,7 +101,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
 emptyTrashTwice :: IO TestEnv -> TestTree
 emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptyTrashTwice" $ do
+  usingTestM testEnv $ appendTestDirM "emptyTrashTwice" $ do
     emptyArgs <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgs
     runSafeRm emptyArgs
@@ -109,7 +109,7 @@ emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
 emptyNoForce :: IO TestEnv -> TestTree
 emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptyNoForce" $ do
+  usingTestM testEnv $ appendTestDirM "emptyNoForce" $ do
     testDir <- getTestDir
     let fileDeleteNames = show @Int <$> [1 .. 5]
         fileDeletePaths = (testDir </>!) <$> fileDeleteNames
@@ -167,7 +167,7 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
 missingInfoForcesDelete :: IO TestEnv -> TestTree
 missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad directory (no info.)" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "missingInfoForcesDelete" $ do
+  usingTestM testEnv $ appendTestDirM "missingInfoForcesDelete" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash
@@ -237,7 +237,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
 missingPathsForcesDelete :: IO TestEnv -> TestTree
 missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad directory (no paths/)" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "missingPathsForcesDelete" $ do
+  usingTestM testEnv $ appendTestDirM "missingPathsForcesDelete" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash

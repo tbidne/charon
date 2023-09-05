@@ -14,11 +14,18 @@ module SafeRm.Env
   )
 where
 
-import Effects.FileSystem.PathReader (getXdgState)
 import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashDirFiles, TrashDirInfo, TrashEntryFileName, TrashEntryInfo, TrashEntryPath, TrashHome, TrashLog),
+    PathIndex
+      ( TrashDirFiles,
+        TrashDirInfo,
+        TrashEntryFileName,
+        TrashEntryInfo,
+        TrashEntryPath,
+        TrashHome,
+        TrashLog
+      ),
     liftPathI',
     (<//>),
   )
@@ -37,7 +44,7 @@ class HasTrashHome a where
   getTrashHome = view #trashHome
 
 -- | Retrieves the trash log path.
-getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
+getTrashLog :: (PathReaderDynamic :> es) => Eff es (PathI TrashLog)
 getTrashLog = MkPathI . (</> [osp|log|]) <$> getXdgState pathSafeRm
 
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath

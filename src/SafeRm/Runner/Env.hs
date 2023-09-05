@@ -9,21 +9,20 @@ module SafeRm.Runner.Env
   )
 where
 
-import Effects.LoggerNS (Namespace)
 import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 
 -- | Data for file logging.
-data LogFile m = MkLogFile
+data LogFile = MkLogFile
   { -- | File handle.
     handle :: !Handle,
     -- | Level in which to log.
     logLevel :: !LogLevel
   }
 
-instance Show (LogFile m) where
+instance Show LogFile where
   show (MkLogFile _ l) =
     "MkLogFile {handle = <handle>, logLevel ="
       <> show l
@@ -32,9 +31,9 @@ instance Show (LogFile m) where
 makeFieldLabelsNoPrefix ''LogFile
 
 -- | Holds logging env data.
-data LogEnv m = MkLogEnv
+data LogEnv = MkLogEnv
   { -- | Data for file logging.
-    logFile :: !(Maybe (LogFile m)),
+    logFile :: !(Maybe LogFile),
     -- | The current logging namespace.
     logNamespace :: !Namespace
   }
@@ -44,18 +43,18 @@ makeFieldLabelsNoPrefix ''LogEnv
 
 -- | Concrete environment type that can be used for running SafeRm
 -- functions.
-data Env m = MkEnv
+data Env = MkEnv
   { -- | Trash home.
     trashHome :: !(PathI TrashHome),
     -- | Backend.
     backend :: !Backend,
     -- | The logging environment.
-    logEnv :: !(LogEnv m)
+    logEnv :: !LogEnv
   }
   deriving stock (Show)
 
 makeFieldLabelsNoPrefix ''Env
 
-deriving anyclass instance HasTrashHome (Env m)
+deriving anyclass instance HasTrashHome Env
 
-deriving anyclass instance HasBackend (Env m)
+deriving anyclass instance HasBackend Env

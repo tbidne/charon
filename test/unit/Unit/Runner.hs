@@ -7,6 +7,9 @@ module Unit.Runner
   )
 where
 
+import Effectful.FileSystem.FileReader.Dynamic qualified as FR
+import Effectful.FileSystem.PathReader.Dynamic qualified as PR
+import Effectful.Optparse.Static qualified as OA
 import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.PathData.Formatting
@@ -16,7 +19,8 @@ import SafeRm.Data.PathData.Formatting
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Runner (getConfiguration)
 import SafeRm.Runner.Command
-  ( _Delete,
+  ( CommandP2,
+    _Delete,
     _Empty,
     _List,
     _Metadata,
@@ -30,6 +34,7 @@ import SafeRm.Runner.FileSizeMode
         FileSizeModeWarn
       ),
   )
+import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import Unit.Prelude
 
@@ -59,7 +64,7 @@ argsTests =
 
 delete :: TestTree
 delete = testCase "Parses delete" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Delete
@@ -68,7 +73,7 @@ delete = testCase "Parses delete" $ do
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just (False, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
@@ -77,7 +82,7 @@ permDelete = testCase "Parses perm delete" $ do
 
 permDeleteForce :: TestTree
 permDeleteForce = testCase "Parses perm delete with force" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just (True, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
@@ -86,7 +91,7 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just False @=? cmd ^? _Empty
@@ -95,7 +100,7 @@ emptyTrash = testCase "Parses empty" $ do
 
 emptyTrashForce :: TestTree
 emptyTrashForce = testCase "Parses empty with force" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just True @=? cmd ^? _Empty
@@ -104,7 +109,7 @@ emptyTrashForce = testCase "Parses empty with force" $ do
 
 restore :: TestTree
 restore = testCase "Parses restore" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Restore
@@ -113,7 +118,7 @@ restore = testCase "Parses restore" $ do
 
 list :: TestTree
 list = testCase "Parses list" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just defList @=? cmd ^? _List
@@ -128,7 +133,7 @@ list = testCase "Parses list" $ do
 
 listNonDefaults :: TestTree
 listNonDefaults = testCase "List non-default args" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just defList @=? cmd ^? _List
@@ -153,7 +158,7 @@ listNonDefaults = testCase "List non-default args" $ do
 
 listNonDefaultsNoFormat :: TestTree
 listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just defList @=? cmd ^? _List
@@ -176,7 +181,7 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
 
 metadata :: TestTree
 metadata = testCase "Parses metadata" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  (cfg, cmd) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Just () @=? cmd ^? _Metadata
@@ -195,7 +200,7 @@ tomlTests =
 
 parsesExample :: TestTree
 parsesExample = testCase "Parses example" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  (cfg, _) <- SysEnv.withArgs argList getConfigurationIO
 
   Just (MkPathI [osp|./tmp|]) @=? cfg ^. #trashHome
   Just BackendFdo @=? cfg ^. #backend
@@ -206,7 +211,7 @@ parsesExample = testCase "Parses example" $ do
 
 argsOverridesToml :: TestTree
 argsOverridesToml = testCase "Args overrides Toml" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  (cfg, _) <- SysEnv.withArgs argList getConfigurationIO
 
   Just (MkPathI [osp|not-tmp|]) @=? cfg ^. #trashHome
   Just BackendCbor @=? cfg ^. #backend
@@ -230,7 +235,7 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
 
 argsDisablesTomlLogging :: TestTree
 argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  (cfg, _) <- SysEnv.withArgs argList getConfigurationIO
 
   Just Nothing @=? cfg ^. #logLevel
   where
@@ -245,7 +250,7 @@ argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
 
 defaultConfig :: TestTree
 defaultConfig = testCase "Default config" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  (cfg, _) <- SysEnv.withArgs argList getConfigurationIO
 
   Nothing @=? cfg ^. #trashHome
   Nothing @=? cfg ^. #logLevel
@@ -256,3 +261,12 @@ defaultConfig = testCase "Default config" $ do
         "delete",
         "foo"
       ]
+
+getConfigurationIO :: IO (TomlConfig, CommandP2)
+getConfigurationIO = run getConfiguration
+  where
+    run =
+      runEff
+        . FR.runFileReaderDynamicIO
+        . PR.runPathReaderDynamicIO
+        . OA.runOptparseStaticIO

@@ -6,7 +6,7 @@ where
 
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
+import Effectful.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata
   ( Metadata
@@ -41,7 +41,7 @@ tests testEnv =
 deletesOne :: IO TestEnv -> TestTree
 deletesOne getTestEnv = testCase "Deletes one" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
+  usingTestM testEnv $ appendTestDirM "deletesOne" $ do
     testDir <- getTestDir
     let trashDir = testDir </> (testEnv ^. #trashDir)
         f1 = testDir </>! "f1"
@@ -53,7 +53,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     assertPathsExist [f1]
     argList <- withSrArgsM ["delete", unsafeDecodeOsToFp f1]
 
-    liftIO $ runSafeRm argList
+    runSafeRm argList
 
     -- file assertions
     trashPaths <- mkAllTrashPathsM ["f1"]
@@ -64,7 +64,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     (idxSet, metadata) <- runIndexMetadataM
 
     assertSetEq expectedIdxSet idxSet
-    liftIO $ expectedMetadata @=? metadata
+    expectedMetadata @=? metadata
   where
     expectedMetadata =
       MkMetadata
@@ -77,7 +77,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv = testCase "Deletes many paths" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
+  usingTestM testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
         dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
@@ -91,7 +91,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
     createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
-    liftIO $ runSafeRm argList
+    runSafeRm argList
 
     -- file assertions
     fileTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
@@ -111,7 +111,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
         ]
 
     assertSetEq expectedIdxSet idxSet
-    liftIO $ expectedMetadata @=? metadata
+    expectedMetadata @=? metadata
   where
     expectedMetadata =
       MkMetadata
@@ -124,7 +124,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deleteUnknownError" $ do
+  usingTestM testEnv $ appendTestDirM "deleteUnknownError" $ do
     testDir <- getTestDir
     let file = testDir </>! "bad file"
 
@@ -133,7 +133,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
+    (ex, _) <- captureSafeRmExceptionLogs @FileNotFoundE argList
 
     assertMatch expectedEx ex
 
@@ -141,7 +141,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     (idxSet, metadata) <- runIndexMetadataM
 
     assertSetEq expectedIdxSet idxSet
-    liftIO $ expectedMetadata @=? metadata
+    expectedMetadata @=? metadata
   where
     expectedEx =
       Outfixes
@@ -155,7 +155,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
 deleteDuplicateFile :: IO TestEnv -> TestTree
 deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deleteDuplicateFile" $ do
+  usingTestM testEnv $ appendTestDirM "deleteDuplicateFile" $ do
     testDir <- getTestDir
     let trashDir = testDir </> (testEnv ^. #trashDir)
         file = testDir </>! "f1"
@@ -202,7 +202,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
 deletesSome :: IO TestEnv -> TestTree
 deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesSome" $ do
+  usingTestM testEnv $ appendTestDirM "deletesSome" $ do
     testDir <- getTestDir
     let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
         filesTryDelete = (testDir </>!) <$> ["f1", "f2", "f3", "f4", "f5"]
@@ -213,7 +213,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
+    (ex, _) <- captureSafeRmExceptionLogs @FileNotFoundE argList
 
     -- file assertions
     trashPaths1 <- mkAllTrashPathsM ["f1", "f2", "f5"]
@@ -234,7 +234,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
         ]
 
     assertSetEq expectedIdxSet idxSet
-    liftIO $ expectedMetadata @=? metadata
+    expectedMetadata @=? metadata
   where
     expectedEx =
       Outfixes

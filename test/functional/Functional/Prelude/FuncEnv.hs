@@ -2,20 +2,19 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Functional.Prelude.FuncEnv
   ( -- * Types
-    FuncIO (..),
     runFuncIO,
     FuncEnv (..),
     mkFuncEnv,
 
-    -- * Running SafeRm
+    -- * Running Test Environment
     TestM,
     TestEnv (..),
+    usingTestM,
 
-    -- ** Runners
+    -- ** Running Safe-rm
     runSafeRm,
     runSafeRmException,
     runIndexMetadataM,
@@ -35,23 +34,66 @@ module Functional.Prelude.FuncEnv
 where
 
 import Data.HashSet qualified as HSet
+import Data.IORef qualified as IORef
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
-import Effects.FileSystem.PathReader (XdgDirectory (XdgState))
-import Effects.FileSystem.PathReader qualified as PR
-import Effects.FileSystem.PathWriter qualified as PW
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
-import Effects.LoggerNS
+import Effectful.Environment qualified as EffEnv
+import Effectful.FileSystem.FileReader.Dynamic (runFileReaderDynamicIO)
+import Effectful.FileSystem.FileWriter.Dynamic (runFileWriterDynamicIO)
+import Effectful.FileSystem.HandleWriter.Dynamic (runHandleWriterDynamicIO)
+import Effectful.FileSystem.PathReader.Dynamic
+  ( PathReaderDynamic
+      ( CanonicalizePath,
+        DoesDirectoryExist,
+        DoesFileExist,
+        DoesPathExist,
+        GetFileSize,
+        GetXdgDirectory,
+        ListDirectory,
+        PathIsSymbolicLink
+      ),
+    XdgDirectory (XdgState),
+  )
+import Effectful.FileSystem.PathReader.Static (PathReaderStatic)
+import Effectful.FileSystem.PathReader.Static qualified as PRStatic
+import Effectful.FileSystem.PathWriter.Dynamic
+  ( PathWriterDynamic
+      ( CopyFileWithMetadata,
+        CreateDirectory,
+        CreateDirectoryIfMissing,
+        RemoveDirectory,
+        RemoveDirectoryRecursive,
+        RemoveFile,
+        RenameDirectory,
+        RenameFile
+      ),
+  )
+import Effectful.FileSystem.PathWriter.Static (PathWriterStatic)
+import Effectful.FileSystem.PathWriter.Static qualified as PWStatic
+import Effectful.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
+import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
+import Effectful.LoggerNS.Dynamic
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
-    Namespace,
+    LoggerNSDynamic (GetNamespace, LocalNamespace),
   )
-import Effects.LoggerNS qualified as Logger
-import Effects.System.Terminal (Window (Window))
-import Effects.System.Terminal qualified as Term
-import Effects.Time
-  ( MonadTime (getMonotonicTime, getSystemZonedTime),
+import Effectful.LoggerNS.Dynamic qualified as Logger
+import Effectful.Terminal.Dynamic
+  ( TerminalDynamic
+      ( GetChar,
+        GetContents',
+        GetLine,
+        GetTerminalSize,
+        PutBinary,
+        PutStr,
+        PutStrLn
+      ),
+    Window (Window),
+  )
+import Effectful.Terminal.Dynamic qualified as Term
+import Effectful.Time.Dynamic
+  ( TimeDynamic (GetMonotonicTime, GetSystemZonedTime),
   )
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
@@ -66,11 +108,20 @@ import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
-import System.Environment qualified as SysEnv
 import System.Exit (die)
+import System.IO qualified as IO
 
-type TestM a = ReaderT TestEnv IO a
+-- | The test runner.
+type TestM a =
+  Eff
+    [ PathReaderStatic,
+      PathWriterStatic,
+      Reader TestEnv,
+      IOE
+    ]
+    a
 
+-- | The test environment
 data TestEnv = MkTestEnv
   { backend :: Backend,
     -- The test dir relative to testRoot e.g. delete/deletesMany
@@ -83,6 +134,14 @@ data TestEnv = MkTestEnv
 
 makeFieldLabelsNoPrefix ''TestEnv
 
+-- | Runs a given test with the environment.
+usingTestM :: TestEnv -> TestM a -> IO a
+usingTestM env =
+  runEff
+    . runReader env
+    . PWStatic.runPathWriterStaticIO
+    . PRStatic.runPathReaderStaticIO
+
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
 -- | Infinite stream of chars.
@@ -94,7 +153,7 @@ infixr 5 :>
 altAnswers :: CharStream
 altAnswers = 'n' :> 'y' :> altAnswers
 
--- | Environment for running functional tests.
+-- | Safe-rm environment for functional tests.
 data FuncEnv = MkFuncEnv
   { -- | Trash home.
     trashHome :: !(PathI TrashHome),
@@ -127,90 +186,81 @@ deriving anyclass instance HasBackend FuncEnv
 
 deriving anyclass instance HasTrashHome FuncEnv
 
--- | Type for running functional tests.
-newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
-  deriving
-    ( Applicative,
-      Functor,
-      Monad,
-      MonadAsync,
-      MonadCatch,
-      MonadFileReader,
-      MonadFileWriter,
-      MonadHandleWriter,
-      MonadIO,
-      MonadIORef,
-      MonadMask,
-      MonadPosixCompat,
-      MonadThread,
-      MonadThrow,
-      MonadReader env
-    )
-    via (ReaderT env IO)
-
--- Overriding this for getXdgDirectory
-instance
-  ( Is k A_Getter,
-    LabelOptic' "trashHome" k env (PathI TrashHome)
+runPathReader ::
+  ( IOE :> es,
+    Reader FuncEnv :> es
   ) =>
-  MonadPathReader (FuncIO env)
-  where
-  doesFileExist = liftIO . PR.doesFileExist
-  doesDirectoryExist = liftIO . PR.doesDirectoryExist
-  doesPathExist = liftIO . PR.doesPathExist
-  listDirectory = liftIO . PR.listDirectory
-  canonicalizePath = liftIO . PR.canonicalizePath
-  pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
-
-  getFileSize _ = pure 5
-
+  Eff (PathReaderDynamic : es) a ->
+  Eff es a
+runPathReader = reinterpret PRStatic.runPathReaderStaticIO $ \_ -> \case
+  DoesFileExist p -> PRStatic.doesFileExist p
+  DoesDirectoryExist p -> PRStatic.doesDirectoryExist p
+  DoesPathExist p -> PRStatic.doesPathExist p
+  ListDirectory p -> PRStatic.listDirectory p
+  CanonicalizePath p -> PRStatic.canonicalizePath p
+  PathIsSymbolicLink p -> PRStatic.pathIsSymbolicLink p
+  GetFileSize _ -> pure 5
   -- Redirecting the xdg state to the trash dir so that we do not interact with
   -- the real state (~/.local/state/safe-rm) and instead use our testing
   -- trash dir
-  getXdgDirectory XdgState _ = do
-    MkPathI th <- asks (view #trashHome)
-    pure th
-  getXdgDirectory xdg p = liftIO $ PR.getXdgDirectory xdg p
+  GetXdgDirectory xdg p ->
+    case xdg of
+      XdgState -> do
+        MkPathI th <- asks @FuncEnv (view #trashHome)
+        pure th
+      _ -> PRStatic.getXdgDirectory xdg p
+  _ -> error "Functional.Prelude.FuncEnv.runPathReader: unimplemented"
 
-instance MonadPathWriter (FuncIO env) where
-  createDirectory = liftIO . PW.createDirectory
-  createDirectoryIfMissing b = liftIO . PW.createDirectoryIfMissing b
-  renameDirectory x = liftIO . PW.renameDirectory x
-  renameFile x = liftIO . PW.renameFile x
-  removeDirectory = liftIO . PW.removeDirectory
-  removeDirectoryRecursive = liftIO . PW.removeDirectoryRecursive
-  copyFileWithMetadata src = liftIO . PW.copyFileWithMetadata src
-
-  removeFile x
-    -- This is for X.deletesSomeWildcards test
-    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecodeOsToFp x) =
-        throwString "Mock: cannot delete fooBadbar"
-    | otherwise = liftIO $ PW.removeFile x
-
-instance
-  ( Is k A_Getter,
-    LabelOptic' "terminalRef" k env (IORef Text),
-    Is l A_Getter,
-    LabelOptic' "charStream" l env (IORef CharStream)
+runPathWriter ::
+  ( IOE :> es
   ) =>
-  MonadTerminal (FuncIO env)
-  where
-  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
-  getChar = do
-    charStream <- asks (view #charStream)
+  Eff (PathWriterDynamic : es) a ->
+  Eff es a
+runPathWriter = reinterpret PWStatic.runPathWriterStaticIO $ \_ -> \case
+  CreateDirectory p -> PWStatic.createDirectory p
+  CreateDirectoryIfMissing b p -> PWStatic.createDirectoryIfMissing b p
+  RenameDirectory d1 d2 -> PWStatic.renameDirectory d1 d2
+  RenameFile f1 f2 -> PWStatic.renameFile f1 f2
+  RemoveDirectory d -> PWStatic.removeDirectory d
+  RemoveDirectoryRecursive d -> PWStatic.removeDirectoryRecursive d
+  CopyFileWithMetadata f1 f2 -> PWStatic.copyFileWithMetadata f1 f2
+  RemoveFile x
+    -- This is for X.deletesSomeWildcards test
+    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecodeOsToFp x) ->
+        throwString "Mock: cannot delete fooBadbar"
+    | otherwise -> PWStatic.removeFile x
+  _ -> error "Functional.Prelude.FuncEnv.runPathWriter: unimplemented"
+
+runTerminal ::
+  ( IORefStatic :> es,
+    Reader FuncEnv :> es
+  ) =>
+  Eff (TerminalDynamic : es) a ->
+  Eff es a
+runTerminal = interpret $ \_ -> \case
+  PutStr s ->
+    asks @FuncEnv (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
+  GetChar -> do
+    charStream <- asks @FuncEnv (view #charStream)
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure c
-  getTerminalSize =
+  GetTerminalSize ->
     pure
       $ Window
         { height = 50,
           width = 100
         }
+  PutStrLn s ->
+    asks @FuncEnv (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack (s <> "\n"))
+  PutBinary _ -> error "PutBinary: unimplemented"
+  GetLine -> error "GetLine: unimplemented"
+  GetContents' -> error "GetContents': unimplemented"
 
-instance MonadTime (FuncIO env) where
-  getSystemZonedTime = pure $ ZonedTime localTime utc
-  getMonotonicTime = pure 0
+runTime :: Eff (TimeDynamic : es) a -> Eff es a
+runTime = interpret $ \_ -> \case
+  GetSystemZonedTime -> pure $ ZonedTime localTime utc
+  GetMonotonicTime -> pure 0
 
 fixedTimestamp :: Timestamp
 fixedTimestamp = MkTimestamp localTime
@@ -218,11 +268,19 @@ fixedTimestamp = MkTimestamp localTime
 localTime :: LocalTime
 localTime = LocalTime (toEnum 59_000) midday
 
-instance MonadLogger (FuncIO FuncEnv) where
-  monadLoggerLog loc _src lvl msg = do
+runLogger ::
+  ( Reader FuncEnv :> es,
+    IORefStatic :> es,
+    LoggerNSDynamic :> es,
+    TimeDynamic :> es
+  ) =>
+  Eff (LoggerDynamic : es) a ->
+  Eff es a
+runLogger = interpret $ \_ -> \case
+  LoggerLog loc _src lvl msg -> do
     formatted <- Logger.formatLog (mkFormatter loc) lvl msg
     let txt = Logger.logStrToText formatted
-    logsRef <- asks (view #logsRef)
+    logsRef <- asks @FuncEnv (view #logsRef)
     modifyIORef' logsRef (<> txt)
     where
       mkFormatter l =
@@ -232,17 +290,60 @@ instance MonadLogger (FuncIO FuncEnv) where
             timezone = False
           }
 
-instance MonadLoggerNS (FuncIO FuncEnv) where
-  getNamespace = asks (view #logNamespace)
-  localNamespace f = local (over' #logNamespace f)
+runLoggerNS :: (Reader FuncEnv :> es) => Eff (LoggerNSDynamic : es) a -> Eff es a
+runLoggerNS = interpret $ \env -> \case
+  GetNamespace -> asks @FuncEnv (view #logNamespace)
+  LocalNamespace f m -> localSeqUnlift env $ \runner ->
+    local @FuncEnv (over' #logNamespace f) (runner m)
 
-runFuncIO :: (FuncIO env) a -> env -> IO a
-runFuncIO (MkFuncIO rdr) = runReaderT rdr
+-- | Runs a safe-rm action.
+runFuncIO ::
+  Eff
+    [ FileReaderDynamic,
+      FileWriterDynamic,
+      HandleWriterDynamic,
+      LoggerDynamic,
+      LoggerNSDynamic,
+      PathReaderDynamic,
+      PathWriterDynamic,
+      PosixCompatStatic,
+      TerminalDynamic,
+      TimeDynamic,
+      IORefStatic,
+      Reader FuncEnv,
+      Concurrent,
+      IOE
+    ]
+    a ->
+  FuncEnv ->
+  IO a
+runFuncIO m env =
+  runEff
+    . runConcurrent
+    . runReader env
+    . runIORefStaticIO
+    . runTime
+    . runTerminal
+    . runPosixCompatStaticIO
+    . runPathWriter
+    . runPathReader
+    . runLoggerNS
+    . runLogger
+    . runHandleWriterDynamicIO
+    . runFileWriterDynamicIO
+    . runFileReaderDynamicIO
+    $ m
 
-mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfig -> IORef Text -> IORef Text -> m FuncEnv
+-- | Creates the environment for safe-rm.
+mkFuncEnv ::
+  (MonadIO m) =>
+  TomlConfig ->
+  IORef Text ->
+  IORef Text ->
+  m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- liftIO getTrashHome
-  charStream <- liftIO $ newIORef altAnswers
+  charStream <- liftIO $ IORef.newIORef altAnswers
   pure
     $ MkFuncEnv
       { trashHome = trashHome,
@@ -258,84 +359,94 @@ mkFuncEnv toml logsRef terminalRef = do
       Just th -> pure th
 
 -- | Runs safe-rm.
-runSafeRm :: (MonadIO m) => [String] -> m ()
+runSafeRm :: [String] -> TestM ()
 runSafeRm = void . captureSafeRm
 
 -- | Runs safe-rm and captures terminal output.
-captureSafeRm :: (MonadIO m) => [String] -> m [Text]
+captureSafeRm :: [String] -> TestM [Text]
 captureSafeRm = fmap (view _1) . captureSafeRmLogs
 
 -- | Runs safe-rm and captures (terminal output, logs).
 captureSafeRmLogs ::
-  (MonadIO m) =>
   -- Args.
   [String] ->
-  m ([Text], [Text])
+  TestM ([Text], [Text])
 captureSafeRmLogs argList = liftIO $ do
-  terminalRef <- newIORef ""
-  logsRef <- newIORef ""
+  terminalRef <- IORef.newIORef ""
+  logsRef <- IORef.newIORef ""
 
-  (toml, cmd) <- getConfig
-  env <- mkFuncEnv toml logsRef terminalRef
+  (toml, cmd) <-
+    runEff
+      $ EffEnv.runEnvironment
+      $ runFileReaderDynamicIO
+      $ runOptparseStaticIO
+      $ runPathReaderDynamicIO getConfig
+  env :: FuncEnv <- mkFuncEnv toml logsRef terminalRef
 
-  runFuncIO (Runner.runCmd cmd) env
-    `catchAny` \ex -> do
-      putStrLn "TERMINAL"
-      readIORef terminalRef >>= putStrLn . T.unpack
-      putStrLn "\n\nLOGS"
-      readIORef logsRef >>= putStrLn . T.unpack
-      putStrLn ""
-      throwCS ex
+  _ <-
+    runFuncIO (Runner.runCmd @FuncEnv cmd) env
+      `catchAny` \ex -> do
+        IO.putStrLn "TERMINAL"
+        IORef.readIORef terminalRef >>= IO.putStrLn . T.unpack
+        IO.putStrLn "\n\nLOGS"
+        IORef.readIORef logsRef >>= IO.putStrLn . T.unpack
+        IO.putStrLn ""
+        throwM ex
 
-  terminal <- T.lines <$> readIORef terminalRef
-  logs <- T.lines <$> readIORef logsRef
+  terminal <- T.lines <$> IORef.readIORef terminalRef
+  logs <- T.lines <$> IORef.readIORef logsRef
 
   pure (terminal, logs)
   where
     argList' = "-c" : "none" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+    getConfig = EffEnv.withArgs argList' Runner.getConfiguration
 
 -- | Runs SafeRm, catching the expected exception.
-runSafeRmException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
+runSafeRmException :: forall e. (Exception e) => [String] -> TestM ()
 runSafeRmException = void . captureSafeRmExceptionLogs @e
 
 -- | Runs safe-rm and captures a thrown exception and logs.
 captureSafeRmExceptionLogs ::
-  forall e m.
-  (Exception e, MonadIO m) =>
+  forall e.
+  (Exception e) =>
   -- Args.
   [String] ->
-  m (Text, [Text])
+  TestM (Text, [Text])
 captureSafeRmExceptionLogs argList = liftIO $ do
-  terminalRef <- newIORef ""
-  logsRef <- newIORef ""
+  terminalRef <- IORef.newIORef ""
+  logsRef <- IORef.newIORef ""
 
-  (toml, cmd) <- getConfig
+  (toml, cmd) <-
+    runEff
+      $ EffEnv.runEnvironment
+      $ runFileReaderDynamicIO
+      $ runOptparseStaticIO
+      $ runPathReaderDynamicIO getConfig
   env <- mkFuncEnv toml logsRef terminalRef
 
   let runCatch = do
-        result <- tryCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
+        result <- try @_ @e $ (runFuncIO (Runner.runCmd @FuncEnv cmd) env)
 
         case result of
           Right _ ->
             error
               "captureSafeRmExceptionLogs: Expected exception, received none"
           Left ex -> do
-            logs <- T.lines <$> readIORef logsRef
+            logs <- T.lines <$> IORef.readIORef logsRef
             pure (T.pack (displayException ex), logs)
 
   runCatch
     `catchAny` \ex -> do
       -- Handle any uncaught exceptions
-      putStrLn "TERMINAL"
-      readIORef terminalRef >>= putStrLn . T.unpack
-      putStrLn "\n\nLOGS"
-      readIORef logsRef >>= putStrLn . T.unpack
-      putStrLn ""
-      throwCS ex
+      IO.putStrLn "TERMINAL"
+      IORef.readIORef terminalRef >>= IO.putStrLn . T.unpack
+      IO.putStrLn "\n\nLOGS"
+      IORef.readIORef logsRef >>= IO.putStrLn . T.unpack
+      IO.putStrLn ""
+      throwM ex
   where
     argList' = "-c" : "none" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+    getConfig = EffEnv.withArgs argList' Runner.getConfiguration
 
 -- | Runs SafeRm's Index and Metadata commands, using the TestEnv to determine
 -- the test directory.
@@ -347,13 +458,14 @@ runIndexMetadataM = do
 -- | Runs SafeRm's Index and Metadata commands with the given test directory.
 runIndexMetadataTestDirM :: OsPath -> TestM (HashSet PathData, Metadata)
 runIndexMetadataTestDirM testDir = do
-  env <- ask
-  terminalRef <- newIORef ""
-  logsRef <- newIORef ""
-  charStream <- newIORef altAnswers
+  env :: TestEnv <- ask
+  terminalRef <- liftIO $ IORef.newIORef ""
+  logsRef <- liftIO $ IORef.newIORef ""
+  charStream <- liftIO $ IORef.newIORef altAnswers
 
   let trashDir = env ^. #trashDir
       backend = env ^. #backend
+      funcEnv :: FuncEnv
       funcEnv =
         MkFuncEnv
           { trashHome = MkPathI (testDir </> trashDir),
@@ -365,10 +477,10 @@ runIndexMetadataTestDirM testDir = do
           }
 
   -- Need to canonicalize due to windows aliases
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
+  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
 
-  idx <- liftIO $ view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
-  mdata <- liftIO $ runFuncIO SafeRm.getMetadata funcEnv
+  idx <- liftIO $ view #unIndex <$> runFuncIO (SafeRm.getIndex @FuncEnv) funcEnv
+  mdata <- liftIO $ runFuncIO (SafeRm.getMetadata @FuncEnv) funcEnv
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
@@ -406,10 +518,10 @@ mkPathDataSetM paths = do
 -- rather than having it determined by the TestEnv.
 mkPathDataSetTestDirM :: OsPath -> [String] -> TestM (HashSet PathData)
 mkPathDataSetTestDirM testDir paths = do
-  env <- ask
+  env :: TestEnv <- ask
   let backend = env ^. #backend
 
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
+  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -447,11 +559,11 @@ mkPathDataSetTestDirM testDir paths = do
 -- @
 mkPathDataSetM2 :: [(String, String)] -> TestM (HashSet PathData)
 mkPathDataSetM2 paths = do
-  env <- ask
+  env :: TestEnv <- ask
   let backend = env ^. #backend
 
   testDir <- getTestDir
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
+  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -491,16 +603,16 @@ mkPathDataSetM2 paths = do
 -- /tmp/safe-rm/functional/delete/deleteOne-fdo
 getTestDir :: TestM OsPath
 getTestDir = do
-  env <- ask
+  env :: TestEnv <- ask
 
-  -- See Note [OSX temp symlink]
-  testRoot <- PR.canonicalizePath (env ^. #testRoot)
+  -- See NOTE: [OSX temp symlink]
+  testRoot <- PRStatic.canonicalizePath (env ^. #testRoot)
 
   let testDir =
         testRoot
           </> (env ^. #testDir)
           <> [osp|-|]
           <> Backend.backendArgOsPath (env ^. #backend)
-  PW.createDirectoryIfMissing True testDir
+  PWStatic.createDirectoryIfMissing True testDir
 
   pure testDir

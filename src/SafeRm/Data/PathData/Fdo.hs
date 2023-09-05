@@ -48,15 +48,14 @@ makeFieldLabelsNoPrefix ''PathData
 -- * Unique name to be used in the trash directory.
 -- * File/directory type.
 toPathData ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+  ( LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es
   ) =>
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
+  Eff es (PathData, PathType)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   (fileName', originalPath', pathType) <- Common.getPathInfo trashHome origPath
 

@@ -33,7 +33,7 @@ module SafeRm.Exception
   )
 where
 
-import Effects.FileSystem.Utils qualified as FsUtils
+import Effectful.FileSystem.Utils qualified as FsUtils
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex

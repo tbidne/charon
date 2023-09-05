@@ -5,7 +5,7 @@ module Functional.Commands.List
 where
 
 import Data.Text qualified as T
-import Effects.FileSystem.PathWriter qualified as PW
+import Effectful.FileSystem.PathWriter.Static qualified as PWStatic
 import Functional.Prelude
 import SafeRm.Exception
   ( TrashDirFilesNotFoundE,
@@ -30,7 +30,7 @@ tests testEnv =
 emptySucceeds :: IO TestEnv -> TestTree
 emptySucceeds getTestEnv = testCase "List on empty directory succeeds" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
+  usingTestM testEnv $ appendTestDirM "emptySucceeds" $ do
     argList <- withSrArgsM ["list", "--format", "m"]
 
     (result, logs) <- captureSafeRmLogs argList
@@ -50,7 +50,7 @@ emptySucceeds getTestEnv = testCase "List on empty directory succeeds" $ do
 noPathsError :: IO TestEnv -> TestTree
 noPathsError getTestEnv = testCase "No Paths Error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "noPathsError" $ do
+  usingTestM testEnv $ appendTestDirM "noPathsError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash
@@ -79,7 +79,7 @@ noPathsError getTestEnv = testCase "No Paths Error" $ do
 noInfoError :: IO TestEnv -> TestTree
 noInfoError getTestEnv = testCase "No Info Error" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "noInfoError" $ do
+  usingTestM testEnv $ appendTestDirM "noInfoError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash
@@ -108,7 +108,7 @@ noInfoError getTestEnv = testCase "No Info Error" $ do
 missingPathError :: IO TestEnv -> TestTree
 missingPathError getTestEnv = testCase "Entry Missing Path" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "missingPathError" $ do
+  usingTestM testEnv $ appendTestDirM "missingPathError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash
@@ -123,7 +123,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     runSafeRm delArgList
 
     -- delete file from trash for expected error
-    PW.removeFile (trashDir </> pathFiles </>! "missing")
+    PWStatic.removeFile (trashDir </> pathFiles </>! "missing")
 
     -- Creating empty file so that we don't get the "size mismatch" error.
     -- We specifically want the "missing.trashinfo has no corresponding missing" error.
@@ -155,7 +155,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
 missingInfoError :: IO TestEnv -> TestTree
 missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "missingInfoError" $ do
+  usingTestM testEnv $ appendTestDirM "missingInfoError" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash

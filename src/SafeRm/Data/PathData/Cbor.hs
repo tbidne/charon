@@ -56,15 +56,14 @@ makeFieldLabelsNoPrefix ''PathData
 -- * Unique name to be used in the trash directory.
 -- * File/directory type.
 toPathData ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+  ( LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es
   ) =>
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
+  Eff es (PathData, PathType)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   (fileName', originalPath', pathType) <- Common.getPathInfo trashHome origPath
 
@@ -106,13 +105,11 @@ instance Serialize PathData where
 -- corresponds to an extant trash entry. In particular, if the 'PathData' has
 -- not been created yet, this can fail.
 pathDataToType ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+  ( PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   PathData ->
-  m PathType
+  Eff es PathType
 pathDataToType trashHome pd = do
   fileExists <- doesFileExist path
   if fileExists
@@ -125,7 +122,7 @@ pathDataToType trashHome pd = do
           -- for a better error message
           pathExists <- doesPathExist path
           if pathExists
-            then throwCS $ MkPathNotFileDirE path
-            else throwCS $ MkFileNotFoundE path
+            then throwM $ MkPathNotFileDirE path
+            else throwM $ MkFileNotFoundE path
   where
     MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)

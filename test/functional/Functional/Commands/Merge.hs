@@ -6,7 +6,7 @@ module Functional.Commands.Merge
   )
 where
 
-import Effects.FileSystem.PathWriter (PathExistsException)
+import Effectful.FileSystem.PathWriter.Dynamic (PathExistsException)
 import Functional.Prelude
 import SafeRm.Data.Metadata
   ( Metadata
@@ -31,12 +31,12 @@ tests testEnv =
 mergeSucceeds :: IO TestEnv -> TestTree
 mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "mergeSucceeds" $ do
+  usingTestM testEnv $ appendTestDirM "mergeSucceeds" $ do
     testDir <- getTestDir
 
     -- SETUP SRC
 
-    local (set' #trashDir pathSrc) $ do
+    local @TestEnv (set' #trashDir pathSrc) $ do
       let filesToDelete = (testDir </>!) <$> ["sf1", "sf2", "sf3"]
           dirsToDelete = (testDir </>!) <$> ["sdir1", "sdir2"]
       delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
@@ -68,7 +68,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 
     -- SETUP DEST
 
-    local (set' #trashDir pathDest) $ do
+    local @TestEnv (set' #trashDir pathDest) $ do
       let filesToDelete = (testDir </>!) <$> ["df1", "df2", "df3"]
           dirsToDelete = (testDir </>!) <$> ["ddir1", "ddir2"]
       delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
@@ -99,13 +99,13 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       delExpectedMetadata @=? delMetadata
 
     -- MERGE FROM SRC TO DEST
-    local (set' #trashDir pathSrc) $ do
+    local @TestEnv (set' #trashDir pathSrc) $ do
       let dest = testDir </> pathDest
       mergeArgs <- withSrArgsPathsM ["merge", "-d"] [dest]
       runSafeRm mergeArgs
 
     -- VERIFY DEST
-    local (set' #trashDir pathDest) $ do
+    local @TestEnv (set' #trashDir pathDest) $ do
       -- file assertions
       mergedTrashPaths <-
         mkAllTrashPathsM
@@ -161,14 +161,14 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 mergeCollisionFails :: IO TestEnv -> TestTree
 mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "mergeCollisionFails" $ do
+  usingTestM testEnv $ appendTestDirM "mergeCollisionFails" $ do
     testDir <- getTestDir
 
     let trashDirDest = testDir </>! "dest"
 
     -- SETUP SRC
 
-    (delTrashPathsSrc, pathsToDeleteSrc) <- local (set' #trashDir pathSrc) $ do
+    (delTrashPathsSrc, pathsToDeleteSrc) <- local @TestEnv (set' #trashDir pathSrc) $ do
       let filesToDelete = (testDir </>!) <$> ["sf1", "sf2", "sf3"]
           dirsToDelete = (testDir </>!) <$> ["sdir1", "dir2"]
 
@@ -203,7 +203,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
     -- SETUP DEST
 
     (delTrashPathsDest, pathsToDeleteDest, delExpectedIdxSetDest) <-
-      local (set' #trashDir pathDest) $ do
+      local @TestEnv (set' #trashDir pathDest) $ do
         let filesToDelete = (testDir </>!) <$> ["df1", "df2", "df3"]
             dirsToDelete = (testDir </>!) <$> ["ddir1", "dir2"]
 
@@ -237,7 +237,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
 
     -- MERGE
 
-    local (set' #trashDir pathSrc) $ do
+    local @TestEnv (set' #trashDir pathSrc) $ do
       mergeArgs <- withSrArgsPathsM ["merge", "-d"] [trashDirDest]
       runSafeRmException @PathExistsException mergeArgs
 
@@ -245,7 +245,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       assertPathsExist (delTrashPathsSrc ++ delTrashPathsDest)
       assertPathsDoNotExist (pathsToDeleteSrc ++ pathsToDeleteDest)
 
-    local (set' #trashDir pathDest) $ do
+    local @TestEnv (set' #trashDir pathDest) $ do
       -- verify dest unchanged
       (mergeIdxSetDest, mergeMetadataDest) <- runIndexMetadataM
       assertSetEq delExpectedIdxSetDest mergeIdxSetDest

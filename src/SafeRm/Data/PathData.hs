@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -120,28 +121,26 @@ instance
 -- renameDirectory). We cannot rely on pathDataToType as that function is
 -- only valid when the PathData entry has already been created in the trash.
 toPathData ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+  ( LoggerDynamic :> es,
+    LoggerNSDynamic :> es,
+    PathReaderDynamic :> es
   ) =>
   Backend ->
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
+  Eff es (PathData, PathType)
 toPathData BackendCbor ts th = fmap (first PathDataCbor) . Cbor.toPathData ts th
 toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.
 trashPathExists ::
-  ( HasCallStack,
-    MonadPathReader m
+  ( PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   PathData ->
-  m Bool
+  Eff es Bool
 trashPathExists th pd = doesPathExist trashPath'
   where
     -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
@@ -152,13 +151,11 @@ trashPathExists th pd = doesPathExist trashPath'
 -- | Returns 'True' if the 'PathData'\'s @originalPath@ corresponds to a real
 -- path that exists.
 originalPathExists ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+  ( PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   PathData ->
-  m Bool
+  Eff es Bool
 originalPathExists th pd = do
   -- See Note [PathData PathType conditions].
   pathType <- pathDataToType th pd
@@ -167,14 +164,12 @@ originalPathExists th pd = do
 
 -- | Deletes the pathdata's fileName from the trashHome.
 deleteFileName ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadThrow m
+  ( PathReaderDynamic :> es,
+    PathWriterDynamic :> es
   ) =>
   PathI TrashHome ->
   PathData ->
-  m ()
+  Eff es ()
 deleteFileName trashHome pd = do
   -- See Note [PathData PathType conditions].
   pathType <- pathDataToType trashHome pd
@@ -186,26 +181,23 @@ deleteFileName trashHome pd = do
 -- 'Default.PathData'. This is so we can functionality that relies on this
 -- more specific type e.g. formatting.
 normalizeCore ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadIORef m,
-    MonadLogger m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+  forall env es.
+  ( HasTrashHome env,
+    Concurrent :> es,
+    LoggerDynamic :> es,
+    PathReaderDynamic :> es,
+    PosixCompatStatic :> es,
+    Reader env :> es,
+    TerminalDynamic :> es
   ) =>
   PathData ->
-  m Core.PathData
+  Eff es Core.PathData
 normalizeCore pd = do
   let fileName = pd ^. #fileName
       originalPath = pd ^. #originalPath
       created = pd ^. #created
 
-  trashHome <- asks getTrashHome
+  trashHome <- asks @env getTrashHome
   pathType <- Common.pathDataToType trashHome pd
 
   let MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
@@ -259,13 +251,11 @@ normalizeCore pd = do
 -- in turn cause the error to degrade to a basic FileNotFound, obviously not
 -- what we want.
 pathDataToType ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+  ( PathReaderDynamic :> es
   ) =>
   PathI TrashHome ->
   PathData ->
-  m PathType
+  Eff es PathType
 pathDataToType trashHome (PathDataCbor pd) = Common.pathDataToType trashHome pd
 pathDataToType trashHome (PathDataFdo pd) = Common.pathDataToType trashHome pd
 

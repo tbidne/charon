@@ -8,7 +8,14 @@ module Benchmarks.ReadIndex
 where
 
 import Benchmarks.Prelude
-import Effects.FileSystem.Utils ((</>!))
+import Effectful.FileSystem.FileReader.Dynamic (runFileReaderDynamicIO)
+import Effectful.FileSystem.FileWriter.Dynamic (runFileWriterDynamicIO)
+import Effectful.FileSystem.FileWriter.Static (FileWriterStatic)
+import Effectful.FileSystem.FileWriter.Static qualified as FWStatic
+import Effectful.FileSystem.HandleWriter.Dynamic (runHandleWriterDynamicIO)
+import Effectful.FileSystem.Utils ((</>!))
+import Effectful.Terminal.Dynamic (runTerminalDynamicIO)
+import Effectful.Time.Dynamic (runTimeDynamicIO)
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
@@ -17,7 +24,7 @@ import SafeRm.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
   )
-import SafeRm.Runner.SafeRmT (runSafeRmT)
+import SafeRm.Runner.Logging (runLoggerDynamic, runLoggerNSDynamic)
 
 -- | Index reading benchmarks.
 benchmarks :: OsPath -> Benchmark
@@ -30,7 +37,14 @@ benchmarks tmpDir = do
     ]
 
 -- | Setup for index reading.
-setup :: OsPath -> IO ()
+setup ::
+  forall es.
+  ( FileWriterStatic :> es,
+    IOE :> es,
+    IORefStatic :> es
+  ) =>
+  OsPath ->
+  Eff es ()
 setup testDir = do
   setupRead r1 [1 .. 1_000]
   setupRead r2 [1 .. 10_000]
@@ -40,7 +54,7 @@ setup testDir = do
     r2 = testDir </> [osp|read2/|]
     r3 = testDir </> [osp|read3/|]
 
-    setupRead :: OsPath -> [Int] -> IO ()
+    setupRead :: OsPath -> [Int] -> Eff es ()
     setupRead dir files = do
       clearDirectory dir
       clearDirectory trashDir
@@ -49,26 +63,57 @@ setup testDir = do
 
       for_ files $ \filename -> do
         let filepath = dir </>! show filename
-        writeBinaryFile filepath ""
+        FWStatic.writeBinaryFile filepath ""
         modifyIORef' uniqueSeqRef (`UniqueSeq.append` MkPathI filepath)
 
       uniqueSeq <- readIORef uniqueSeqRef
-      env <- mkEnv $ MkPathI trashDir
-      runSafeRmT (SafeRm.delete uniqueSeq) env
+      let env = mkEnv $ MkPathI trashDir
+      runSafeRm env (SafeRm.delete @Env uniqueSeq)
       where
         trashDir = dir </> [osp|.trash/|]
 
 readIndex :: String -> PathI TrashHome -> Benchmark
-readIndex desc =
+readIndex desc thome =
   bench desc
-    . nfIO
-    . (runSafeRmT SafeRm.getIndex <=< mkEnv)
+    $ nfIO
+    $ runEff (runSafeRm (mkEnv thome) (SafeRm.getIndex @Env))
 
-mkEnv :: PathI TrashHome -> IO (Env IO)
-mkEnv trashHome = do
-  pure
-    $ MkEnv
-      { trashHome = trashHome,
-        backend = BackendCbor,
-        logEnv = MkLogEnv Nothing ""
-      }
+mkEnv :: PathI TrashHome -> Env
+mkEnv trashHome =
+  MkEnv
+    { trashHome = trashHome,
+      backend = BackendCbor,
+      logEnv = MkLogEnv Nothing ""
+    }
+
+runSafeRm ::
+  (IOE :> es) =>
+  Env ->
+  Eff
+    ( LoggerDynamic
+        : LoggerNSDynamic
+        : FileWriterDynamic
+        : PathWriterDynamic
+        : PathReaderDynamic
+        : TerminalDynamic
+        : TimeDynamic
+        : HandleWriterDynamic
+        : FileReaderDynamic
+        : IORefStatic
+        : Reader Env
+        : es
+    )
+    a ->
+  Eff es a
+runSafeRm env =
+  runReader env
+    . runIORefStaticIO
+    . runFileReaderDynamicIO
+    . runHandleWriterDynamicIO
+    . runTimeDynamicIO
+    . runTerminalDynamicIO
+    . runPathReaderDynamicIO
+    . runPathWriterDynamicIO
+    . runFileWriterDynamicIO
+    . runLoggerNSDynamic
+    . runLoggerDynamic

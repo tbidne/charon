@@ -28,7 +28,11 @@ import Data.Char qualified as Ch
 import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.FileSystem.Utils qualified as FsUtils
+import Effectful.FileSystem.FileWriter.Static qualified as FW
+import Effectful.FileSystem.PathReader.Static qualified as PR
+import Effectful.FileSystem.PathWriter.Static qualified as PW
+import Effectful.FileSystem.Utils qualified as FsUtils
+import Effectful.Terminal.Static qualified as Term
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import SafeRm.Prelude
@@ -55,11 +59,12 @@ createFileContents ::
   f (OsPath, ByteString) ->
   m ()
 createFileContents paths = liftIO
+  $ runEffIO
   $ for_ paths
   $ \(p, c) ->
-    writeBinaryFile p c
-      `catchAnyCS` \ex -> do
-        putStrLn
+    FW.writeBinaryFile p c
+      `catchAny` \ex -> do
+        Term.putStrLn
           $ mconcat
             [ "[Test.Utils.createFileContents] Encountered an exception\n",
               "OsPath: '",
@@ -75,20 +80,21 @@ createFileContents paths = liftIO
               displayException ex,
               "'"
             ]
-        throwCS ex
+        throwM ex
 
 -- | Creates empty files at the specified paths.
-createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
+createDirectories :: (Foldable f, MonadIO m) => f OsPath -> m ()
 createDirectories paths = liftIO
+  $ runEffIO
   $ for_ paths
-  $ \p -> createDirectoryIfMissing True p
+  $ \p -> PW.createDirectoryIfMissing True p
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
-clearDirectory :: (HasCallStack, MonadIO m) => OsPath -> m ()
-clearDirectory path = liftIO $ do
-  exists <- doesDirectoryExist path
-  when exists $ removePathForcibly path
-  createDirectoryIfMissing True path
+clearDirectory :: (MonadIO m) => OsPath -> m ()
+clearDirectory path = liftIO $ runEffIO $ do
+  exists <- PR.doesDirectoryExist path
+  when exists $ PW.removePathForcibly path
+  PW.createDirectoryIfMissing True path
 
 -- | Data type used for testing text matches.
 data TextMatch
@@ -211,7 +217,8 @@ genPathCharIO :: (MonadGen m, MonadIO m) => Bool -> m Char
 genPathCharIO asciiOnly = do
   x <- charMapper <$> genChar asciiOnly
   liftIO
-    $ putStrLn
+    $ runEffIO
+    $ Term.putStrLn
     $ mconcat
       [ "genPathCharIO: (",
         [x],
@@ -320,3 +327,20 @@ massageTextPath = T.replace "/" "\\"
 #else
 massageTextPath = id
 #endif
+
+runEffIO ::
+  Eff
+    [ PW.PathWriterStatic,
+      PR.PathReaderStatic,
+      Term.TerminalStatic,
+      FW.FileWriterStatic,
+      IOE
+    ]
+    a ->
+  IO a
+runEffIO =
+  runEff
+    . FW.runFileWriterStaticIO
+    . Term.runTerminalStaticIO
+    . PR.runPathReaderStaticIO
+    . PW.runPathWriterStaticIO

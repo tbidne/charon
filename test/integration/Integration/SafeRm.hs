@@ -3,7 +3,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Property tests for the SafeRm API.
 module Integration.SafeRm
@@ -11,13 +10,27 @@ module Integration.SafeRm
   )
 where
 
-import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
+import Data.IORef qualified as IORef
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.LoggerNS (Namespace, defaultLogFormatter)
-import Effects.LoggerNS qualified as Logger
+import Effectful.Exception (MonadCatch)
+import Effectful.FileSystem.FileReader.Dynamic (runFileReaderDynamicIO)
+import Effectful.FileSystem.FileWriter.Dynamic (runFileWriterDynamicIO)
+import Effectful.FileSystem.HandleWriter.Dynamic (runHandleWriterDynamicIO)
+import Effectful.FileSystem.PathReader.Dynamic qualified as PR
+import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
+import Effectful.LoggerNS.Dynamic
+  ( LoggerNSDynamic
+      ( GetNamespace,
+        LocalNamespace
+      ),
+    defaultLogFormatter,
+  )
+import Effectful.LoggerNS.Dynamic qualified as Logger
+import Effectful.Terminal.Dynamic (TerminalDynamic (PutStr, PutStrLn))
+import Effectful.Time.Dynamic (runTimeDynamicIO)
 import GHC.Exts (IsList (Item, fromList))
 import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
@@ -37,7 +50,6 @@ import SafeRm.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
   )
-import SafeRm.Runner.SafeRmT (SafeRmT (MkSafeRmT))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
@@ -46,7 +58,7 @@ import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 -- We could use this to later verify logs, if we wished.
 
 data IntEnv = MkIntEnv
-  { coreEnv :: Env IO,
+  { coreEnv :: Env,
     termLogsRef :: IORef [Text],
     logsRef :: IORef [Text],
     namespace :: !Namespace
@@ -60,55 +72,75 @@ instance HasBackend IntEnv where
 instance HasTrashHome IntEnv where
   getTrashHome = view (#coreEnv % #trashHome)
 
--- | Type for running integration tests.
-newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
-  deriving
-    ( Applicative,
-      Functor,
-      Monad,
-      MonadAsync,
-      MonadIO,
-      MonadCatch,
-      MonadFileReader,
-      MonadFileWriter,
-      MonadHandleWriter,
-      MonadIORef,
-      MonadPathReader,
-      MonadPathWriter,
-      MonadPosixCompat,
-      MonadReader IntEnv,
-      MonadThread,
-      MonadThrow,
-      MonadTime
-    )
-    via (SafeRmT IntEnv IO)
-
-instance MonadLogger IntIO where
-  monadLoggerLog loc _ lvl msg = do
+runLogger ::
+  ( IORefStatic :> es,
+    LoggerNSDynamic :> es,
+    Reader IntEnv :> es,
+    TimeDynamic :> es
+  ) =>
+  Eff (LoggerDynamic : es) a ->
+  Eff es a
+runLogger = interpret $ \_ -> \case
+  LoggerLog loc _ lvl msg -> do
     formatted <- Logger.formatLog (defaultLogFormatter loc) lvl msg
     let txt = Logger.logStrToText formatted
-    logsRef <- asks (view #logsRef)
+    logsRef <- asks @IntEnv (view #logsRef)
     modifyIORef' logsRef (txt :)
 
-instance MonadLoggerNS IntIO where
-  getNamespace = view #namespace <$> ask
-  localNamespace f = local (over' #namespace f)
+runLoggerNS ::
+  ( Reader IntEnv :> es
+  ) =>
+  Eff (LoggerNSDynamic : es) a ->
+  Eff es a
+runLoggerNS = interpret $ \env -> \case
+  GetNamespace -> view #namespace <$> ask @IntEnv
+  LocalNamespace f m ->
+    localSeqUnlift env $ \runner -> local @IntEnv (over' #namespace f) (runner m)
 
--- Wno-missing-methods
-instance MonadTerminal IntIO where
-  putStr s =
-    asks (view #termLogsRef)
+runTerminal ::
+  ( IORefStatic :> es,
+    Reader IntEnv :> es
+  ) =>
+  Eff (TerminalDynamic : es) a ->
+  Eff es a
+runTerminal = interpret $ \_ -> \case
+  PutStr s ->
+    asks @IntEnv (view #termLogsRef)
       >>= \ref -> modifyIORef' ref ((:) . T.pack $ s)
+  PutStrLn s ->
+    asks @IntEnv (view #termLogsRef)
+      >>= \ref -> modifyIORef' ref ((:) . T.pack $ (s <> "\n"))
+  _ -> error "runTerminal: unimplemented"
 
 -- | Default way to run integration tests. Ensures uncaught exceptions do not
 -- mess with annotations
-usingIntIO :: IntEnv -> IntIO a -> PropertyT IO a
-usingIntIO env rdr = do
+-- usingIntIO :: IntEnv -> IntIO a -> PropertyT IO a
+usingIntIO ::
+  IntEnv ->
+  Eff
+    [ FileReaderDynamic,
+      FileWriterDynamic,
+      HandleWriterDynamic,
+      LoggerDynamic,
+      LoggerNSDynamic,
+      PathReaderDynamic,
+      PathWriterDynamic,
+      PosixCompatStatic,
+      TerminalDynamic,
+      IORefStatic,
+      TimeDynamic,
+      Reader IntEnv,
+      Concurrent,
+      IOE
+    ]
+    a ->
+  PropertyT IO a
+usingIntIO env m = do
   -- NOTE: Evidently annotations do not work with uncaught exceptions.
   -- Therefore we catch any exceptions here, print out any relevant data,
   -- then use Hedgehog's failure to die.
   result <-
-    usingIntIONoCatch env rdr `catchAny` \ex -> do
+    usingIntIONoCatch env m `catchAny` \ex -> do
       printLogs
       annotate $ displayException ex
       failure
@@ -119,8 +151,8 @@ usingIntIO env rdr = do
   pure result
   where
     printLogs = do
-      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
-      logs <- liftIO $ readIORef (env ^. #logsRef)
+      termLogs <- liftIO $ IORef.readIORef (env ^. #termLogsRef)
+      logs <- liftIO $ IORef.readIORef (env ^. #logsRef)
       annotate "TERMINAL LOGS"
       for_ termLogs (annotate . T.unpack)
       annotate "FILE LOGS"
@@ -128,8 +160,43 @@ usingIntIO env rdr = do
 
 -- | Use this for when we are expecting an exception and want to specifically
 -- handle it in the test
-usingIntIONoCatch :: IntEnv -> IntIO a -> PropertyT IO a
-usingIntIONoCatch env (MkIntIO rdr) = liftIO $ runReaderT rdr env
+usingIntIONoCatch ::
+  IntEnv ->
+  Eff
+    [ FileReaderDynamic,
+      FileWriterDynamic,
+      HandleWriterDynamic,
+      LoggerDynamic,
+      LoggerNSDynamic,
+      PathReaderDynamic,
+      PathWriterDynamic,
+      PosixCompatStatic,
+      TerminalDynamic,
+      IORefStatic,
+      TimeDynamic,
+      Reader IntEnv,
+      Concurrent,
+      IOE
+    ]
+    a ->
+  PropertyT IO a
+usingIntIONoCatch env m = liftIO $ run m
+  where
+    run =
+      runEff
+        . runConcurrent
+        . runReader env
+        . runTimeDynamicIO
+        . runIORefStaticIO
+        . runTerminal
+        . runPosixCompatStaticIO
+        . runPathWriterDynamicIO
+        . runPathReaderDynamicIO
+        . runLoggerNS
+        . runLogger
+        . runHandleWriterDynamicIO
+        . runFileWriterDynamicIO
+        . runFileReaderDynamicIO
 
 tests :: IO OsPath -> TestTree
 tests testDir =
@@ -170,7 +237,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -179,7 +246,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTest
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
 
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
@@ -210,8 +277,8 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTest `USeq.union` toTestDir β
 
       caughtEx <-
-        tryCS @_ @FileNotFoundE
-          $ usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
+        try @_ @FileNotFoundE
+          $ usingIntIONoCatch env (SafeRm.delete @IntEnv (USeq.map MkPathI toDelete))
 
       ex <-
         either
@@ -222,7 +289,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- should have printed exactly 1 message for each bad filename
-      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
+      termLogs <- liftIO $ IORef.readIORef (env ^. #termLogsRef)
       length termLogs === length β
 
       -- assert original files moved to trash
@@ -232,7 +299,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist βTrash
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
 
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
@@ -257,7 +324,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -267,10 +334,10 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- permanently delete files
       let toPermDelete = USeq.map MkPathI α
-      usingIntIO env $ SafeRm.permDelete True toPermDelete
+      usingIntIO env $ SafeRm.permDelete @IntEnv True toPermDelete
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
 
       [] === index
@@ -301,7 +368,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir toDelete
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -315,8 +382,8 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (SafeRm.permDelete True toPermDelete)
+        try @_ @TrashEntryNotFoundE
+          $ usingIntIONoCatch env (SafeRm.permDelete @IntEnv True toPermDelete)
 
       ex <-
         either
@@ -327,7 +394,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
@@ -358,7 +425,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -368,10 +435,10 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- restore files
       let toRestore = USeq.map MkPathI α
-      usingIntIO env $ SafeRm.restore toRestore
+      usingIntIO env $ SafeRm.restore @IntEnv toRestore
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
 
       [] === index
@@ -401,7 +468,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir toDelete
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -415,8 +482,8 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (SafeRm.restore toRestore)
+        try @_ @TrashEntryNotFoundE
+          $ usingIntIONoCatch env (SafeRm.restore @IntEnv toRestore)
 
       ex <-
         either
@@ -427,7 +494,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
@@ -459,7 +526,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -468,10 +535,10 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTest
 
       -- empty trash
-      usingIntIO env $ SafeRm.emptyTrash True
+      usingIntIO env $ SafeRm.emptyTrash @IntEnv True
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- view #unIndex <$> usingIntIO env (SafeRm.getIndex @IntEnv)
       annotateShow index
 
       [] === index
@@ -496,7 +563,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
+      usingIntIO env $ SafeRm.delete @IntEnv (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
       annotate "Assert files exist"
@@ -505,7 +572,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTest
 
       -- get metadata
-      metadata' <- usingIntIO env SafeRm.getMetadata
+      metadata' <- usingIntIO env (SafeRm.getMetadata @IntEnv)
 
       length α === natToInt (metadata' ^. #numEntries)
       length α === natToInt (metadata' ^. #numFiles)
@@ -522,8 +589,8 @@ toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 
 mkEnv :: Backend -> OsPath -> IO IntEnv
 mkEnv backend fp = do
-  termLogsRef <- newIORef []
-  logsRef <- newIORef []
+  termLogsRef <- IORef.newIORef []
+  logsRef <- IORef.newIORef []
 
   pure
     $ MkIntEnv
@@ -573,8 +640,10 @@ mkTrashPaths backend trashHome =
 -- This is not needed on linux but also appears unharmful.
 getTestPath :: (MonadIO m) => IO OsPath -> OsPath -> Backend -> m OsPath
 getTestPath mtestPath p backend = do
-  testPath <- liftIO $ canonicalizePath =<< mtestPath
+  testPath <- liftIO $ (run . canonicalizePath) =<< mtestPath
   pure $ testPath </> p </> Backend.backendArgOsPath backend
+  where
+    run = runEff . PR.runPathReaderDynamicIO
 
 setupDir ::
   ( MonadCatch m,
