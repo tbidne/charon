@@ -4,8 +4,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 -- | Property tests for the SafeRm API.
 module Integration.SafeRm
@@ -14,21 +12,14 @@ module Integration.SafeRm
 where
 
 import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.Bifunctor (Bifunctor (first))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
-import Data.Hashable (Hashable (hash))
-import Data.List (unzip)
 import Data.List qualified as L
 import Data.Text qualified as T
-import Effects.FileSystem.Utils qualified as FsUtils
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
 import GHC.Exts (IsList (Item, fromList))
-import Hedgehog (GenT, PropertyT, forAll)
-import Hedgehog.Gen qualified as Gen
-import Hedgehog.Range (Range)
-import Hedgehog.Range qualified as Range
+import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
 import Integration.Utils qualified as IntUtils
@@ -37,7 +28,7 @@ import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
-import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
+import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Data.UniqueSeq qualified as USeq
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
@@ -48,8 +39,6 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (MkSafeRmT))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
-import System.OsPath qualified as OsPath
-import Test.Utils qualified as TestUtils
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -152,14 +141,14 @@ testsBackend :: IO OsPath -> Backend -> TestTree
 testsBackend testDir b =
   testGroup
     (Backend.backendTestDesc b)
-    [ delete b testDir
-    -- deleteSome b testDir,
-    -- permDelete b testDir,
-    -- permDeleteSome b testDir,
-    -- restore b testDir,
-    -- restoreSome b testDir,
-    -- emptyTrash b testDir,
-    -- metadata b testDir
+    [ delete b testDir,
+      deleteSome b testDir,
+      permDelete b testDir,
+      permDeleteSome b testDir,
+      restore b testDir,
+      restoreSome b testDir,
+      emptyTrash b testDir,
+      metadata b testDir
     ]
 
 delete :: Backend -> IO OsPath -> TestTree
