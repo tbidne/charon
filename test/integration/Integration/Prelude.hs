@@ -16,7 +16,6 @@ module Integration.Prelude
   )
 where
 
-import Data.IORef qualified as IORef
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
@@ -93,7 +92,7 @@ import Test.Utils as X
 assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ runPathReader $ doesFileExist p
+    exists <- liftIO $ doesFileExist p
     annotate $ "Expected file to exist: " <> show p
     assert exists
 
@@ -101,14 +100,9 @@ assertPathsExist paths =
 assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsDoNotExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ runPathReader $ doesFileExist p
+    exists <- liftIO $ doesFileExist p
     annotate $ "Expected file not to exist: " <> show p
     assert (not exists)
-
-runPathReader :: Eff [PathReaderDynamic, IOE] a -> IO a
-runPathReader =
-  runEff
-    . runPathReaderDynamicIO
 
 -- | Environment for running pure integration tests.
 data IntPureEnv = MkIntPureEnv
@@ -238,8 +232,8 @@ captureSafeRmIntExceptionPure ::
   [String] ->
   IO (Text, Text, Text)
 captureSafeRmIntExceptionPure argList = do
-  terminalRef <- IORef.newIORef ""
-  deletedPathsRef <- IORef.newIORef []
+  terminalRef <- newIORef ""
+  deletedPathsRef <- newIORef []
 
   (toml, cmd) <- getConfig
   env <- mkIntPureEnv toml terminalRef deletedPathsRef
@@ -251,8 +245,8 @@ captureSafeRmIntExceptionPure argList = do
       error
         "captureSafeRmExceptionLogs: Expected exception, received none"
     Left ex -> do
-      terminal <- IORef.readIORef terminalRef
-      deletedPaths <- IORef.readIORef deletedPathsRef
+      terminal <- readIORef terminalRef
+      deletedPaths <- readIORef deletedPathsRef
 
       pure
         ( T.pack (displayException ex),

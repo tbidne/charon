@@ -34,7 +34,6 @@ module Functional.Prelude.FuncEnv
 where
 
 import Data.HashSet qualified as HSet
-import Data.IORef qualified as IORef
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
@@ -55,7 +54,6 @@ import Effectful.FileSystem.PathReader.Dynamic
       ),
     XdgDirectory (XdgState),
   )
-import Effectful.FileSystem.PathReader.Static (PathReaderStatic)
 import Effectful.FileSystem.PathReader.Static qualified as PRStatic
 import Effectful.FileSystem.PathWriter.Dynamic
   ( PathWriterDynamic
@@ -69,7 +67,6 @@ import Effectful.FileSystem.PathWriter.Dynamic
         RenameFile
       ),
   )
-import Effectful.FileSystem.PathWriter.Static (PathWriterStatic)
 import Effectful.FileSystem.PathWriter.Static qualified as PWStatic
 import Effectful.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
@@ -109,14 +106,11 @@ import SafeRm.Prelude
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
 import System.Exit (die)
-import System.IO qualified as IO
 
 -- | The test runner.
 type TestM a =
   Eff
-    [ PathReaderStatic,
-      PathWriterStatic,
-      Reader TestEnv,
+    [ Reader TestEnv,
       IOE
     ]
     a
@@ -136,11 +130,7 @@ makeFieldLabelsNoPrefix ''TestEnv
 
 -- | Runs a given test with the environment.
 usingTestM :: TestEnv -> TestM a -> IO a
-usingTestM env =
-  runEff
-    . runReader env
-    . PWStatic.runPathWriterStaticIO
-    . PRStatic.runPathReaderStaticIO
+usingTestM env = runEff . runReader env
 
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
@@ -343,7 +333,7 @@ mkFuncEnv ::
   m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- liftIO getTrashHome
-  charStream <- liftIO $ IORef.newIORef altAnswers
+  charStream <- liftIO $ newIORef altAnswers
   pure
     $ MkFuncEnv
       { trashHome = trashHome,
@@ -372,8 +362,8 @@ captureSafeRmLogs ::
   [String] ->
   TestM ([Text], [Text])
 captureSafeRmLogs argList = liftIO $ do
-  terminalRef <- IORef.newIORef ""
-  logsRef <- IORef.newIORef ""
+  terminalRef <- newIORef ""
+  logsRef <- newIORef ""
 
   (toml, cmd) <-
     runEff
@@ -386,15 +376,15 @@ captureSafeRmLogs argList = liftIO $ do
   _ <-
     runFuncIO (Runner.runCmd @FuncEnv cmd) env
       `catchAny` \ex -> do
-        IO.putStrLn "TERMINAL"
-        IORef.readIORef terminalRef >>= IO.putStrLn . T.unpack
-        IO.putStrLn "\n\nLOGS"
-        IORef.readIORef logsRef >>= IO.putStrLn . T.unpack
-        IO.putStrLn ""
+        putStrLn "TERMINAL"
+        readIORef terminalRef >>= putStrLn . T.unpack
+        putStrLn "\n\nLOGS"
+        readIORef logsRef >>= putStrLn . T.unpack
+        putStrLn ""
         throwM ex
 
-  terminal <- T.lines <$> IORef.readIORef terminalRef
-  logs <- T.lines <$> IORef.readIORef logsRef
+  terminal <- T.lines <$> readIORef terminalRef
+  logs <- T.lines <$> readIORef logsRef
 
   pure (terminal, logs)
   where
@@ -413,8 +403,8 @@ captureSafeRmExceptionLogs ::
   [String] ->
   TestM (Text, [Text])
 captureSafeRmExceptionLogs argList = liftIO $ do
-  terminalRef <- IORef.newIORef ""
-  logsRef <- IORef.newIORef ""
+  terminalRef <- newIORef ""
+  logsRef <- newIORef ""
 
   (toml, cmd) <-
     runEff
@@ -432,17 +422,17 @@ captureSafeRmExceptionLogs argList = liftIO $ do
             error
               "captureSafeRmExceptionLogs: Expected exception, received none"
           Left ex -> do
-            logs <- T.lines <$> IORef.readIORef logsRef
+            logs <- T.lines <$> readIORef logsRef
             pure (T.pack (displayException ex), logs)
 
   runCatch
     `catchAny` \ex -> do
       -- Handle any uncaught exceptions
-      IO.putStrLn "TERMINAL"
-      IORef.readIORef terminalRef >>= IO.putStrLn . T.unpack
-      IO.putStrLn "\n\nLOGS"
-      IORef.readIORef logsRef >>= IO.putStrLn . T.unpack
-      IO.putStrLn ""
+      putStrLn "TERMINAL"
+      readIORef terminalRef >>= putStrLn . T.unpack
+      putStrLn "\n\nLOGS"
+      readIORef logsRef >>= putStrLn . T.unpack
+      putStrLn ""
       throwM ex
   where
     argList' = "-c" : "none" : argList
@@ -459,9 +449,9 @@ runIndexMetadataM = do
 runIndexMetadataTestDirM :: OsPath -> TestM (HashSet PathData, Metadata)
 runIndexMetadataTestDirM testDir = do
   env :: TestEnv <- ask
-  terminalRef <- liftIO $ IORef.newIORef ""
-  logsRef <- liftIO $ IORef.newIORef ""
-  charStream <- liftIO $ IORef.newIORef altAnswers
+  terminalRef <- liftIO $ newIORef ""
+  logsRef <- liftIO $ newIORef ""
+  charStream <- liftIO $ newIORef altAnswers
 
   let trashDir = env ^. #trashDir
       backend = env ^. #backend
@@ -477,7 +467,7 @@ runIndexMetadataTestDirM testDir = do
           }
 
   -- Need to canonicalize due to windows aliases
-  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
+  tmpDir <- liftIO $ PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
 
   idx <- liftIO $ view #unIndex <$> runFuncIO (SafeRm.getIndex @FuncEnv) funcEnv
   mdata <- liftIO $ runFuncIO (SafeRm.getMetadata @FuncEnv) funcEnv
@@ -521,7 +511,7 @@ mkPathDataSetTestDirM testDir paths = do
   env :: TestEnv <- ask
   let backend = env ^. #backend
 
-  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
+  tmpDir <- liftIO $ PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -563,7 +553,7 @@ mkPathDataSetM2 paths = do
   let backend = env ^. #backend
 
   testDir <- getTestDir
-  tmpDir <- PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
+  tmpDir <- liftIO $ PRStatic.canonicalizePath =<< PRStatic.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
           $ T.unpack
@@ -606,13 +596,13 @@ getTestDir = do
   env :: TestEnv <- ask
 
   -- See NOTE: [OSX temp symlink]
-  testRoot <- PRStatic.canonicalizePath (env ^. #testRoot)
+  testRoot <- liftIO $ PRStatic.canonicalizePath (env ^. #testRoot)
 
   let testDir =
         testRoot
           </> (env ^. #testDir)
           <> [osp|-|]
           <> Backend.backendArgOsPath (env ^. #backend)
-  PWStatic.createDirectoryIfMissing True testDir
+  liftIO $ PWStatic.createDirectoryIfMissing True testDir
 
   pure testDir

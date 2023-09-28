@@ -84,17 +84,17 @@ infix 1 @=?
 assertPathsExist :: [OsPath] -> TestM ()
 assertPathsExist paths =
   for_ paths
-    $ \p -> do
+    $ \p -> liftIO $ do
       exists <- PRStatic.doesPathExist p
-      liftIO $ assertBool ("Expected path to exist: " <> show p) exists
+      assertBool ("Expected path to exist: " <> show p) exists
 
 -- | Asserts that paths do not exist.
 assertPathsDoNotExist :: [OsPath] -> TestM ()
 assertPathsDoNotExist paths =
   for_ paths
-    $ \p -> do
+    $ \p -> liftIO $ do
       exists <- PRStatic.doesPathExist p
-      liftIO $ assertBool ("Expected path not to exist: " <> show p) (not exists)
+      assertBool ("Expected path not to exist: " <> show p) (not exists)
 
 -- | Transform each filepath @p@ to its files/ and info/ path, taking in
 -- the env's trash root, test dir, trash dir, and backend.

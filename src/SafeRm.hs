@@ -327,6 +327,7 @@ convert dest = addNamespace "convert" $ do
 merge ::
   forall env es.
   ( HasTrashHome env,
+    IORefStatic :> es,
     LoggerDynamic :> es,
     LoggerNSDynamic :> es,
     PathReaderDynamic :> es,

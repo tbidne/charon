@@ -12,14 +12,12 @@ where
 
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
-import Data.IORef qualified as IORef
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effectful.Exception (MonadCatch)
 import Effectful.FileSystem.FileReader.Dynamic (runFileReaderDynamicIO)
 import Effectful.FileSystem.FileWriter.Dynamic (runFileWriterDynamicIO)
 import Effectful.FileSystem.HandleWriter.Dynamic (runHandleWriterDynamicIO)
-import Effectful.FileSystem.PathReader.Dynamic qualified as PR
 import Effectful.Logger.Dynamic (LoggerDynamic (LoggerLog))
 import Effectful.LoggerNS.Dynamic
   ( LoggerNSDynamic
@@ -151,8 +149,8 @@ usingIntIO env m = do
   pure result
   where
     printLogs = do
-      termLogs <- liftIO $ IORef.readIORef (env ^. #termLogsRef)
-      logs <- liftIO $ IORef.readIORef (env ^. #logsRef)
+      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
+      logs <- liftIO $ readIORef (env ^. #logsRef)
       annotate "TERMINAL LOGS"
       for_ termLogs (annotate . T.unpack)
       annotate "FILE LOGS"
@@ -289,7 +287,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- should have printed exactly 1 message for each bad filename
-      termLogs <- liftIO $ IORef.readIORef (env ^. #termLogsRef)
+      termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
       length termLogs === length β
 
       -- assert original files moved to trash
@@ -589,8 +587,8 @@ toOrigPath acc pd = HSet.insert (pd ^. #originalPath % #unPathI) acc
 
 mkEnv :: Backend -> OsPath -> IO IntEnv
 mkEnv backend fp = do
-  termLogsRef <- IORef.newIORef []
-  logsRef <- IORef.newIORef []
+  termLogsRef <- newIORef []
+  logsRef <- newIORef []
 
   pure
     $ MkIntEnv
@@ -640,10 +638,8 @@ mkTrashPaths backend trashHome =
 -- This is not needed on linux but also appears unharmful.
 getTestPath :: (MonadIO m) => IO OsPath -> OsPath -> Backend -> m OsPath
 getTestPath mtestPath p backend = do
-  testPath <- liftIO $ (run . canonicalizePath) =<< mtestPath
+  testPath <- liftIO $ canonicalizePath =<< mtestPath
   pure $ testPath </> p </> Backend.backendArgOsPath backend
-  where
-    run = runEff . PR.runPathReaderDynamicIO
 
 setupDir ::
   ( MonadCatch m,

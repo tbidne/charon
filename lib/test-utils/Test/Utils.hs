@@ -59,7 +59,6 @@ createFileContents ::
   f (OsPath, ByteString) ->
   m ()
 createFileContents paths = liftIO
-  $ runEffIO
   $ for_ paths
   $ \(p, c) ->
     FW.writeBinaryFile p c
@@ -85,13 +84,12 @@ createFileContents paths = liftIO
 -- | Creates empty files at the specified paths.
 createDirectories :: (Foldable f, MonadIO m) => f OsPath -> m ()
 createDirectories paths = liftIO
-  $ runEffIO
   $ for_ paths
   $ \p -> PW.createDirectoryIfMissing True p
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
 clearDirectory :: (MonadIO m) => OsPath -> m ()
-clearDirectory path = liftIO $ runEffIO $ do
+clearDirectory path = liftIO $ do
   exists <- PR.doesDirectoryExist path
   when exists $ PW.removePathForcibly path
   PW.createDirectoryIfMissing True path
@@ -217,7 +215,6 @@ genPathCharIO :: (MonadGen m, MonadIO m) => Bool -> m Char
 genPathCharIO asciiOnly = do
   x <- charMapper <$> genChar asciiOnly
   liftIO
-    $ runEffIO
     $ Term.putStrLn
     $ mconcat
       [ "genPathCharIO: (",
@@ -327,20 +324,3 @@ massageTextPath = T.replace "/" "\\"
 #else
 massageTextPath = id
 #endif
-
-runEffIO ::
-  Eff
-    [ PW.PathWriterStatic,
-      PR.PathReaderStatic,
-      Term.TerminalStatic,
-      FW.FileWriterStatic,
-      IOE
-    ]
-    a ->
-  IO a
-runEffIO =
-  runEff
-    . FW.runFileWriterStaticIO
-    . Term.runTerminalStaticIO
-    . PR.runPathReaderStaticIO
-    . PW.runPathWriterStaticIO

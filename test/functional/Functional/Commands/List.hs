@@ -123,7 +123,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     runSafeRm delArgList
 
     -- delete file from trash for expected error
-    PWStatic.removeFile (trashDir </> pathFiles </>! "missing")
+    liftIO $ PWStatic.removeFile (trashDir </> pathFiles </>! "missing")
 
     -- Creating empty file so that we don't get the "size mismatch" error.
     -- We specifically want the "missing.trashinfo has no corresponding missing" error.

@@ -7,7 +7,6 @@ module Unit.Trash
   )
 where
 
-import Data.IORef qualified as IORef
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effectful.FileSystem.FileWriter.Dynamic
@@ -37,7 +36,6 @@ import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)
 import SafeRm.Exception (EmptyPathE, RootE)
 import SafeRm.Trash qualified as Trash
-import System.IO qualified as IO
 import Unit.Prelude
 
 tests :: TestTree
@@ -103,10 +101,10 @@ runPathDataT ::
     a ->
   IO (Text, a)
 runPathDataT b x = do
-  ref <- IORef.newIORef ""
-  logsRef <- IORef.newIORef ""
+  ref <- newIORef ""
+  logsRef <- newIORef ""
   result <- runPathDataHelper ref logsRef b x
-  t <- IORef.readIORef ref
+  t <- readIORef ref
   pure (t, result)
 
 runPathDataTLogs ::
@@ -125,18 +123,18 @@ runPathDataTLogs ::
     a ->
   IO (Text, a)
 runPathDataTLogs b x = do
-  ref <- IORef.newIORef ""
-  logsRef <- IORef.newIORef ""
+  ref <- newIORef ""
+  logsRef <- newIORef ""
 
   result <-
     runPathDataHelper ref logsRef b x
       `catchAny` \ex -> do
-        IO.putStrLn "LOGS"
-        IORef.readIORef logsRef >>= IO.putStrLn . T.unpack
-        IO.putStrLn ""
+        putStrLn "LOGS"
+        readIORef logsRef >>= putStrLn . T.unpack
+        putStrLn ""
         throwM ex
 
-  t <- IORef.readIORef ref
+  t <- readIORef ref
   pure (t, result)
 
 runLogger ::

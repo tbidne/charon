@@ -37,7 +37,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/effectful-effects.git
-    tag: 034e068331e0b18a629a322bedf8e65a481417e1
+    tag: 9e0785f0d2d89efa9567603e941ec57f6c93b5be
     subdir:
         lib/exceptions-effectful
         lib/fs-effectful
@@ -53,7 +53,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: 78c4e7a292e88f6070a8c6c77526e81c4333ca3e
+    tag: 4fec5e43d341c2a649ce911547d4f2ab82e7188b
 
 source-repository-package
     type: git

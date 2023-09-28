@@ -10,7 +10,6 @@ where
 import Benchmarks.Prelude
 import Effectful.FileSystem.FileReader.Dynamic (runFileReaderDynamicIO)
 import Effectful.FileSystem.FileWriter.Dynamic (runFileWriterDynamicIO)
-import Effectful.FileSystem.FileWriter.Static (FileWriterStatic)
 import Effectful.FileSystem.FileWriter.Static qualified as FWStatic
 import Effectful.FileSystem.HandleWriter.Dynamic (runHandleWriterDynamicIO)
 import Effectful.FileSystem.Utils ((</>!))
@@ -37,14 +36,7 @@ benchmarks tmpDir = do
     ]
 
 -- | Setup for index reading.
-setup ::
-  forall es.
-  ( FileWriterStatic :> es,
-    IOE :> es,
-    IORefStatic :> es
-  ) =>
-  OsPath ->
-  Eff es ()
+setup :: OsPath -> IO ()
 setup testDir = do
   setupRead r1 [1 .. 1_000]
   setupRead r2 [1 .. 10_000]
@@ -54,7 +46,7 @@ setup testDir = do
     r2 = testDir </> [osp|read2/|]
     r3 = testDir </> [osp|read3/|]
 
-    setupRead :: OsPath -> [Int] -> Eff es ()
+    setupRead :: OsPath -> [Int] -> IO ()
     setupRead dir files = do
       clearDirectory dir
       clearDirectory trashDir
@@ -76,7 +68,7 @@ readIndex :: String -> PathI TrashHome -> Benchmark
 readIndex desc thome =
   bench desc
     $ nfIO
-    $ runEff (runSafeRm (mkEnv thome) (SafeRm.getIndex @Env))
+    $ runSafeRm (mkEnv thome) (SafeRm.getIndex @Env)
 
 mkEnv :: PathI TrashHome -> Env
 mkEnv trashHome =
@@ -87,26 +79,26 @@ mkEnv trashHome =
     }
 
 runSafeRm ::
-  (IOE :> es) =>
   Env ->
   Eff
-    ( LoggerDynamic
-        : LoggerNSDynamic
-        : FileWriterDynamic
-        : PathWriterDynamic
-        : PathReaderDynamic
-        : TerminalDynamic
-        : TimeDynamic
-        : HandleWriterDynamic
-        : FileReaderDynamic
-        : IORefStatic
-        : Reader Env
-        : es
-    )
+    [ LoggerDynamic,
+      LoggerNSDynamic,
+      FileWriterDynamic,
+      PathWriterDynamic,
+      PathReaderDynamic,
+      TerminalDynamic,
+      TimeDynamic,
+      HandleWriterDynamic,
+      FileReaderDynamic,
+      IORefStatic,
+      Reader Env,
+      IOE
+    ]
     a ->
-  Eff es a
+  IO a
 runSafeRm env =
-  runReader env
+  runEff
+    . runReader env
     . runIORefStaticIO
     . runFileReaderDynamicIO
     . runHandleWriterDynamicIO

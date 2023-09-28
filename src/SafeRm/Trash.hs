@@ -515,7 +515,8 @@ convertBackend dest = addNamespace "convertBackend" $ do
 
 -- | Merges source into dest, failing if there are any collisions.
 mergeTrashDirs ::
-  ( LoggerDynamic :> es,
+  ( IORefStatic :> es,
+    LoggerDynamic :> es,
     LoggerNSDynamic :> es,
     PathReaderDynamic :> es,
     PathWriterDynamic :> es

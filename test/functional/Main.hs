@@ -19,14 +19,13 @@ import GHC.Conc (setUncaughtExceptionHandler)
 import SafeRm.Data.Backend (Backend (BackendCbor))
 import SafeRm.Data.Backend qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
-import System.IO qualified as IO
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
 
 -- | Runs functional tests.
 main :: IO ()
 main = do
-  setUncaughtExceptionHandler $ \ex -> IO.putStrLn ("\n" <> displayException ex)
+  setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
   Tasty.defaultMain
     $ Tasty.withResource setup teardown
@@ -62,10 +61,9 @@ main = do
 setup :: IO TestEnv
 setup = do
   tmpDir <-
-    run $ do
-      d <- (\tmp -> tmp </> pathSafeRm </> [osp|functional|]) <$> PRStatic.getTemporaryDirectory
-      PWStatic.createDirectoryIfMissing True d
-      pure d
+    (\tmp -> tmp </> pathSafeRm </> [osp|functional|])
+      <$> PRStatic.getTemporaryDirectory
+  PWStatic.createDirectoryIfMissing True tmpDir
 
   testDir <- encodeUtf ""
   pure
@@ -80,12 +78,6 @@ teardown :: TestEnv -> IO ()
 teardown env = guardOrElse' "NO_CLEANUP" ExpectEnvSet doNothing cleanup
   where
     fp = env ^. #testRoot
-    cleanup = run $ PWStatic.removePathForcibly fp
+    cleanup = PWStatic.removePathForcibly fp
     doNothing =
-      IO.putStrLn $ "*** Not cleaning up tmp dir: " <> show fp
-
-run :: Eff [PWStatic.PathWriterStatic, PRStatic.PathReaderStatic, IOE] a -> IO a
-run =
-  runEff
-    . PRStatic.runPathReaderStaticIO
-    . PWStatic.runPathWriterStaticIO
+      putStrLn $ "*** Not cleaning up tmp dir: " <> show fp
