@@ -136,6 +136,11 @@ matchesWildcards matchStr toMatch = case splitMatchStr matchStr of
   where
     go [] s = T.null s
     go [""] _ = True
+    -- NOTE: Why stripInfix? Say we have @matchesWildcards "foo*bar" "foobazbar"@.
+    -- After the first case split above, we will have @go ["bar"] "bazbar"@.
+    -- The '*' is meant to match to the right as far as possible, so we need
+    -- the __first__ occurrence of "bar", wherever that occurs, which is
+    -- exactly what stripInfix does.
     go (m : ms) s = case stripInfix m s of
       Nothing -> False
       Just (_, s') -> go ms s'
