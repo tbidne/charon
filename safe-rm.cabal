@@ -58,6 +58,7 @@ library
     SafeRm.Data.PathData.Core
     SafeRm.Data.PathData.Fdo
     SafeRm.Data.PathData.Formatting
+    SafeRm.Data.PathData.Json
     SafeRm.Data.Paths
     SafeRm.Data.PathType
     SafeRm.Data.Serialize
@@ -79,6 +80,7 @@ library
     SafeRm.Utils
 
   build-depends:
+    , aeson                 >=2.0       && <2.3
     , algebra-simple        ^>=0.1
     , base                  >=4.17.0.0  && <4.19
     , bytestring            >=0.11.1.0  && <0.13

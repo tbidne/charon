@@ -153,16 +153,29 @@ backendParser =
     $ mconcat
       [ OA.long "backend",
         OA.short 'b',
-        OA.metavar "(cbor|fdo)",
-        mkHelp helpTxt
+        OA.metavar "(cbor|fdo|json)",
+        OA.helpDoc helpTxt
       ]
   where
     helpTxt =
       mconcat
-        [ "Backend to use with safe-rm. This option affects how path metadata ",
-          "is stored. The fdo option is compatible with the FreeDesktop.org ",
-          "trash specification file format. Defaults to 'cbor'."
+        [ intro,
+          Just Pretty.hardline,
+          cbor,
+          fdo,
+          js,
+          Just Pretty.hardline
         ]
+
+    intro =
+      Chunk.unChunk
+        $ Chunk.paragraph
+          "Backend to use with safe-rm. This option affects how path metadata is stored. Options are: "
+    cbor = Just Pretty.hardline <> toMDoc "- cbor: Space efficient, not inspectable."
+    fdo = Just Pretty.hardline <> toMDoc "- fdo: Compatible with FreeDesktop.org."
+    js = Just Pretty.hardline <> toMDoc "- json: Inspectable."
+
+    toMDoc = Chunk.unChunk . Chunk.paragraph
 
 backendDestParser :: Parser Backend
 backendDestParser =
@@ -170,7 +183,7 @@ backendDestParser =
     $ mconcat
       [ OA.long "dest",
         OA.short 'd',
-        OA.metavar "(cbor|fdo)",
+        OA.metavar "(cbor|fdo|json)",
         mkHelp helpTxt
       ]
   where

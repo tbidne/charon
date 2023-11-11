@@ -54,12 +54,13 @@ import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo))
+import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo, PathDataJson))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
+import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Env (HasBackend, HasTrashHome)
@@ -385,6 +386,7 @@ runIndexMetadataTestDirM testDir = do
        in case pd of
             PathDataCbor d -> HSet.insert (PathDataCbor $ over' #originalPath fixPath d) acc
             PathDataFdo d -> HSet.insert (PathDataFdo $ over' #originalPath fixPath d) acc
+            PathDataJson d -> HSet.insert (PathDataJson $ over' #originalPath fixPath d) acc
 
 -- | Transforms the list of filepaths into a Set PathData i.e. for each @p@,
 --
@@ -435,6 +437,13 @@ mkPathDataSetTestDirM testDir paths = do
                     originalPath = MkPathI (testDir' </> p'),
                     created = fixedTimestamp
                   }
+            BackendJson ->
+              PathDataJson
+                $ Json.UnsafePathData
+                  { fileName = MkPathI p',
+                    originalPath = MkPathI (testDir' </> p'),
+                    created = fixedTimestamp
+                  }
 
 -- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
 -- originalPath differ i.e. for each @(p, q)@
@@ -477,6 +486,13 @@ mkPathDataSetM2 paths = do
             BackendFdo ->
               PathDataFdo
                 $ Fdo.UnsafePathData
+                  { fileName = MkPathI fn',
+                    originalPath = MkPathI (testDir' </> opath'),
+                    created = fixedTimestamp
+                  }
+            BackendJson ->
+              PathDataJson
+                $ Json.UnsafePathData
                   { fileName = MkPathI fn',
                     originalPath = MkPathI (testDir' </> opath'),
                     created = fixedTimestamp

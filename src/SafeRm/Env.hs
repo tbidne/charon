@@ -15,10 +15,18 @@ module SafeRm.Env
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashDirFiles, TrashDirInfo, TrashEntryFileName, TrashEntryInfo, TrashEntryPath, TrashHome, TrashLog),
+    PathIndex
+      ( TrashDirFiles,
+        TrashDirInfo,
+        TrashEntryFileName,
+        TrashEntryInfo,
+        TrashEntryPath,
+        TrashHome,
+        TrashLog
+      ),
     liftPathI',
     (<//>),
   )
@@ -64,11 +72,13 @@ getTrashInfoDir trashHome = trashHome <//> MkPathI pathInfo
 trashInfoExtensionOsPath :: Backend -> OsPath
 trashInfoExtensionOsPath BackendCbor = [osp|.cbor|]
 trashInfoExtensionOsPath BackendFdo = [osp|.trashinfo|]
+trashInfoExtensionOsPath BackendJson = [osp|.json|]
 
 -- | Returns the extension for the trash info files.
 trashInfoExtension :: (IsString a) => Backend -> a
 trashInfoExtension BackendCbor = ".cbor"
 trashInfoExtension BackendFdo = ".trashinfo"
+trashInfoExtension BackendJson = ".json"
 
 -- | Class for retrieving the backend.
 class HasBackend a where

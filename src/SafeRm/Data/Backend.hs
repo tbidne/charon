@@ -20,6 +20,8 @@ data Backend
     BackendCbor
   | -- | For use with the FreeDesktopOrg backend.
     BackendFdo
+  | -- | For use with the json backend.
+    BackendJson
   deriving stock (Bounded, Enum, Eq, Show)
 
 instance DecodeTOML Backend where
@@ -29,6 +31,7 @@ instance DecodeTOML Backend where
 parseBackend :: (MonadFail m) => Text -> m Backend
 parseBackend "cbor" = pure BackendCbor
 parseBackend "fdo" = pure BackendFdo
+parseBackend "json" = pure BackendJson
 parseBackend other =
   fail
     $ mconcat
@@ -40,11 +43,14 @@ parseBackend other =
 backendTestDesc :: Backend -> String
 backendTestDesc BackendCbor = "(backend := cbor)"
 backendTestDesc BackendFdo = "(backend := fdo)"
+backendTestDesc BackendJson = "(backend := json)"
 
 backendArg :: Backend -> String
 backendArg BackendCbor = "cbor"
 backendArg BackendFdo = "fdo"
+backendArg BackendJson = "json"
 
 backendArgOsPath :: Backend -> OsPath
 backendArgOsPath BackendCbor = [osp|cbor|]
 backendArgOsPath BackendFdo = [osp|fdo|]
+backendArgOsPath BackendJson = [osp|json|]

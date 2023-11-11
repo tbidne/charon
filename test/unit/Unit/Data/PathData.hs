@@ -13,11 +13,12 @@ import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo))
+import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo, PathDataJson))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Fdo qualified as Fdo
+import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
@@ -73,6 +74,13 @@ serializeRoundtripSpecs backend params = testCase desc $ do
     backendToMk BackendFdo name opath ts =
       PathDataFdo
         $ Fdo.UnsafePathData
+          { fileName = MkPathI name,
+            originalPath = MkPathI opath,
+            created = ts
+          }
+    backendToMk BackendJson name opath ts =
+      PathDataJson
+        $ Json.UnsafePathData
           { fileName = MkPathI name,
             originalPath = MkPathI opath,
             created = ts

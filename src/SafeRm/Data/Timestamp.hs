@@ -13,6 +13,7 @@ where
 
 import Codec.Serialise (Serialise)
 import Codec.Serialise qualified as Serialise
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text qualified as T
 import Data.Time (Day (ModifiedJulianDay), TimeOfDay (TimeOfDay))
 import Data.Time.Format qualified as Format
@@ -35,7 +36,7 @@ newtype Timestamp = MkTimestamp
   }
   deriving stock (Eq, Generic, Ord, Show)
   deriving anyclass (NFData)
-  deriving (Hashable) via LocalTime
+  deriving (FromJSON, Hashable, ToJSON) via LocalTime
 
 makeFieldLabelsNoPrefix ''Timestamp
 

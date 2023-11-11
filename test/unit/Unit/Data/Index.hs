@@ -17,7 +17,7 @@ import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Backend qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
@@ -28,6 +28,7 @@ import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatMultiline, FormatTabular),
   )
+import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (getTrashHome))
@@ -209,6 +210,10 @@ testFormatTabularAutoApprox b = testGoldenFormat b desc fileName mkIdx formatTab
             [ PathData.PathDataFdo $ Fdo.UnsafePathData (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') ts,
               PathData.PathDataFdo $ Fdo.UnsafePathData (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) ts
             ]
+          BackendJson ->
+            [ PathData.PathDataJson $ Json.UnsafePathData (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') ts,
+              PathData.PathDataJson $ Json.UnsafePathData (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) ts
+            ]
 
 testFormatTabularAutoEmpty :: Backend -> TestTree
 testFormatTabularAutoEmpty b = testGoldenFormat b desc fileName mkIdx formatTabularAuto 100
@@ -350,6 +355,15 @@ mkIndex b = do
                 Fdo.UnsafePathData (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) ts,
                 Fdo.UnsafePathData (MkPathI [osp|d|]) (MkPathI [osp|/d|]) ts,
                 Fdo.UnsafePathData (MkPathI [osp|z|]) (MkPathI [osp|/z|]) ts
+              ]
+      BackendJson ->
+        PathData.PathDataJson
+          <$> [ Json.UnsafePathData (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) ts,
+                Json.UnsafePathData (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) ts,
+                Json.UnsafePathData (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) ts,
+                Json.UnsafePathData (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) ts,
+                Json.UnsafePathData (MkPathI [osp|d|]) (MkPathI [osp|/d|]) ts,
+                Json.UnsafePathData (MkPathI [osp|z|]) (MkPathI [osp|/z|]) ts
               ]
   where
     -- 5,000 Y

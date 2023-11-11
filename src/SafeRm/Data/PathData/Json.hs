@@ -2,16 +2,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Provides 'PathData' for use with the Cbor backend.
-module SafeRm.Data.PathData.Cbor
+-- | Provides 'PathData' for use with the Json backend.
+module SafeRm.Data.PathData.Json
   ( -- * PathData
     PathData (..),
     toPathData,
   )
 where
 
-import Codec.Serialise qualified as Serialise
-import Data.Bifunctor (Bifunctor (first))
+import Data.Aeson
+  ( FromJSON (parseJSON),
+    KeyValue ((.=)),
+    ToJSON (toJSON),
+    (.:),
+  )
+import Data.Aeson qualified as Asn
 import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType)
@@ -69,25 +74,39 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
       pathType
     )
 
+newtype PathDataJSON = MkPathDataJSON (FilePath, Timestamp)
+
+instance ToJSON PathDataJSON where
+  toJSON (MkPathDataJSON (opathStr, ts)) =
+    Asn.object
+      [ "path" .= opathStr,
+        "created" .= ts
+      ]
+
+instance FromJSON PathDataJSON where
+  parseJSON = Asn.withObject "PathDataJSON" $ \v ->
+    fmap MkPathDataJSON
+      $ (,)
+      <$> v
+      .: "path"
+      <*> v
+      .: "created"
+
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString
   encode (UnsafePathData _ (MkPathI opath) ts) =
-    case decodeOsToFp opath of
-      Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (opath', ts)
-      Left ex -> Left $ displayException ex
+    bimap
+      displayException
+      (BSL.toStrict . Asn.encode . MkPathDataJSON . (,ts))
+      (decodeOsToFp opath)
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    (opath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
+    MkPathDataJSON (opathStr, ts) <- Asn.eitherDecode $ BSL.fromStrict bs
 
-    case encodeFpToOs opath of
-      Right opath' ->
-        Right
-          $ UnsafePathData
-            { fileName = name,
-              originalPath = MkPathI opath',
-              created
-            }
-      Left ex -> Left $ displayException ex
+    bimap
+      displayException
+      (\opath -> UnsafePathData name (MkPathI opath) ts)
+      (encodeFpToOs opathStr)

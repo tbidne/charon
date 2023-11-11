@@ -39,11 +39,12 @@ import PathSize
       ),
     pathSizeRecursive,
   )
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.PathData.Cbor qualified as Cbor
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathData.Core qualified as Core
 import SafeRm.Data.PathData.Fdo qualified as Fdo
+import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
@@ -66,6 +67,7 @@ import SafeRm.Prelude
 data PathData
   = PathDataCbor Cbor.PathData
   | PathDataFdo Fdo.PathData
+  | PathDataJson Json.PathData
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)
 
@@ -73,9 +75,11 @@ instance Serialize PathData where
   type DecodeExtra PathData = (Backend, PathI TrashEntryFileName)
   encode (PathDataCbor pd) = encode pd
   encode (PathDataFdo pd) = encode pd
+  encode (PathDataJson pd) = encode pd
 
   decode (BackendCbor, fileName) bs = PathDataCbor <$> decode fileName bs
   decode (BackendFdo, fileName) bs = PathDataFdo <$> decode fileName bs
+  decode (BackendJson, fileName) bs = PathDataJson <$> decode fileName bs
 
 instance
   (k ~ A_Getter, a ~ PathI TrashEntryFileName, b ~ PathI TrashEntryFileName) =>
@@ -85,6 +89,7 @@ instance
     where
       getter (PathDataCbor pd) = pd ^. #fileName
       getter (PathDataFdo pd) = pd ^. #fileName
+      getter (PathDataJson pd) = pd ^. #fileName
   {-# INLINE labelOptic #-}
 
 instance
@@ -95,6 +100,7 @@ instance
     where
       getter (PathDataCbor pd) = pd ^. #originalPath
       getter (PathDataFdo pd) = pd ^. #originalPath
+      getter (PathDataJson pd) = pd ^. #originalPath
   {-# INLINE labelOptic #-}
 
 instance
@@ -105,6 +111,7 @@ instance
     where
       getter (PathDataCbor pd) = pd ^. #created
       getter (PathDataFdo pd) = pd ^. #created
+      getter (PathDataJson pd) = pd ^. #created
   {-# INLINE labelOptic #-}
 
 -- | For a given filepath, attempts to capture the following data:
@@ -132,6 +139,7 @@ toPathData ::
   m (PathData, PathType)
 toPathData BackendCbor ts th = fmap (first PathDataCbor) . Cbor.toPathData ts th
 toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
+toPathData BackendJson ts th = fmap (first PathDataJson) . Json.toPathData ts th
 
 -- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
 -- that exists in 'TrashHome'.
@@ -268,6 +276,7 @@ pathDataToType ::
   m PathType
 pathDataToType trashHome (PathDataCbor pd) = Common.pathDataToType trashHome pd
 pathDataToType trashHome (PathDataFdo pd) = Common.pathDataToType trashHome pd
+pathDataToType trashHome (PathDataJson pd) = Common.pathDataToType trashHome pd
 
 -- \| Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
 --
@@ -285,10 +294,16 @@ pathDataToTrashInfoPath trashHome backend =
 -- are already in sync then this is a no-op.
 convert :: PathData -> Backend -> PathData
 convert pd@(PathDataCbor _) BackendCbor = pd
-convert pd@(PathDataFdo _) BackendFdo = pd
 convert pd@(PathDataCbor _) BackendFdo =
   PathDataFdo
     $ Fdo.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }
+convert pd@(PathDataCbor _) BackendJson =
+  PathDataJson
+    $ Json.UnsafePathData
       { fileName = pd ^. #fileName,
         originalPath = pd ^. #originalPath,
         created = pd ^. #created
@@ -300,3 +315,26 @@ convert pd@(PathDataFdo _) BackendCbor =
         originalPath = pd ^. #originalPath,
         created = pd ^. #created
       }
+convert pd@(PathDataFdo _) BackendFdo = pd
+convert pd@(PathDataFdo _) BackendJson =
+  PathDataJson
+    $ Json.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }
+convert pd@(PathDataJson _) BackendCbor =
+  PathDataCbor
+    $ Cbor.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }
+convert pd@(PathDataJson _) BackendFdo =
+  PathDataFdo
+    $ Fdo.UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }
+convert pd@(PathDataJson _) BackendJson = pd
