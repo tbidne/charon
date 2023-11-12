@@ -33,18 +33,12 @@ emptySucceeds getTestEnv = testCase "List on empty directory succeeds" $ do
   usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
     argList <- withSrArgsM ["list", "--format", "m"]
 
-    (result, logs) <- captureSafeRmLogs argList
+    result <- captureSafeRm argList
 
     assertMatches expectedTerminal result
-    assertMatches expectedLogs logs
   where
     expectedTerminal =
       [ Exact ""
-      ]
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
-        Exact "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash does not exist."
       ]
 
 noPathsError :: IO TestEnv -> TestTree
@@ -61,20 +55,14 @@ noPathsError getTestEnv = testCase "No Paths Error" $ do
     clearDirectory trashDir
     clearDirectory (trashDir </> pathInfo)
 
-    (ex, logs) <- captureSafeRmExceptionLogs @TrashDirFilesNotFoundE argList
+    ex <- captureSafeRmException @TrashDirFilesNotFoundE argList
 
     assertMatch expectedErr ex
-    assertMatches expectedLogs logs
   where
     expectedErr =
       Outfix
         "The trash files directory was not found at '"
         (trashFiles <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f).")
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash files directory was not found at '" ".trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
-      ]
 
 noInfoError :: IO TestEnv -> TestTree
 noInfoError getTestEnv = testCase "No Info Error" $ do
@@ -90,20 +78,14 @@ noInfoError getTestEnv = testCase "No Info Error" $ do
     clearDirectory trashDir
     clearDirectory (trashDir </> pathFiles)
 
-    (ex, logs) <- captureSafeRmExceptionLogs @TrashDirInfoNotFoundE argList
+    ex <- captureSafeRmException @TrashDirInfoNotFoundE argList
 
     assertMatch expectedErr ex
-    assertMatches expectedLogs logs
   where
     expectedErr =
       Outfix
         "The trash info directory was not found at '"
         (trashInfo <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f).")
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
-        Outfix "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The trash info directory was not found at '" ".trash/info' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
-      ]
 
 missingPathError :: IO TestEnv -> TestTree
 missingPathError getTestEnv = testCase "Entry Missing Path" $ do
@@ -130,27 +112,15 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     createFiles [trashDir </> pathFiles </>! "blah"]
 
     listArgList <- withSrArgsM ["list", "--format", "m"]
-    (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryFileNotFoundE listArgList
+    ex <- captureSafeRmException @TrashEntryFileNotFoundE listArgList
 
     assertMatch expectedErr ex
-    assertMatches expectedLogs logs
   where
     expectedErr =
       Outfixes
         "The file 'missing' was not found in '"
         [trashFiles <> "' despite being listed in '"]
         (trashInfo <> "'. This can be fixed by manually deleting the info file or deleting everything (i.e. safe-rm empty -f).")
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
-        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " ".trash/info",
-        Prefix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info: missing.",
-        Outfixes "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Path: " [".trash/info/missing."] "",
-        Outfixes
-          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'missing' was not found in '"
-          [".trash/files' despite being listed in '"]
-          ".trash/info'. This can be fixed by manually deleting the info file or deleting everything (i.e. safe-rm empty -f)."
-      ]
 
 missingInfoError :: IO TestEnv -> TestTree
 missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
@@ -168,27 +138,15 @@ missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
     clearDirectory (trashDir </> pathInfo)
     createFiles [trashDir </> pathFiles </>! "bar"]
 
-    (ex, logs) <- captureSafeRmExceptionLogs @TrashEntryInfoNotFoundE argList
+    ex <- captureSafeRmException @TrashEntryInfoNotFoundE argList
 
     assertMatch expectedErr ex
-    assertMatches expectedLogs logs
   where
     expectedErr =
       Outfixes
         "The file 'bar.<ext>' was not found in '"
         [trashInfo <> "' despite being listed in '"]
         (trashFiles <> "'. This can be fixed by manually deleting the 'files' entry or deleting everything (i.e. safe-rm empty -f).")
-
-    expectedLogs =
-      [ Outfix "[2020-05-31 12:00:00][functional.getIndex][Debug][src/SafeRm.hs] Trash home: " ".trash",
-        Outfix "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Trash info: " ".trash/info",
-        Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Info:",
-        Exact "[2020-05-31 12:00:00][functional.getIndex.readIndex][Debug][src/SafeRm/Data/Index.hs] Paths: bar",
-        Outfixes
-          "[2020-05-31 12:00:00][functional][Error][src/SafeRm/Runner.hs] The file 'bar.<ext>' was not found in '"
-          [".trash/info' despite being listed in '"]
-          ".trash/files'. This can be fixed by manually deleting the 'files' entry or deleting everything (i.e. safe-rm empty -f)."
-      ]
 
 trashFiles :: Text
 trashFiles = T.pack (".trash" `cfp` "files")

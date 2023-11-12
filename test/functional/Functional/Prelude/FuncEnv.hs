@@ -24,6 +24,7 @@ module Functional.Prelude.FuncEnv
     -- *** Data capture
     captureSafeRm,
     captureSafeRmLogs,
+    captureSafeRmException,
     captureSafeRmExceptionLogs,
 
     -- * Misc
@@ -299,6 +300,15 @@ captureSafeRmLogs argList = liftIO $ do
 -- | Runs SafeRm, catching the expected exception.
 runSafeRmException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
 runSafeRmException = void . captureSafeRmExceptionLogs @e
+
+-- | Runs safe-rm and captures a thrown exception and logs.
+captureSafeRmException ::
+  forall e m.
+  (Exception e, MonadIO m) =>
+  -- Args.
+  [String] ->
+  m Text
+captureSafeRmException = fmap (view _1) . captureSafeRmExceptionLogs @e
 
 -- | Runs safe-rm and captures a thrown exception and logs.
 captureSafeRmExceptionLogs ::

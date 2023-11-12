@@ -23,6 +23,7 @@ module Functional.Prelude
     -- ** Data capture
     FuncEnv.captureSafeRm,
     FuncEnv.captureSafeRmLogs,
+    FuncEnv.captureSafeRmException,
     FuncEnv.captureSafeRmExceptionLogs,
 
     -- * Assertions

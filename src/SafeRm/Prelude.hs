@@ -96,7 +96,7 @@ import Data.String as X (IsString (fromString), String)
 import Data.Text as X (Text)
 import Data.Text qualified as T
 import Data.Traversable as X (traverse)
-import Data.Tuple as X (curry, uncurry)
+import Data.Tuple as X (curry, fst, uncurry)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
 #endif
