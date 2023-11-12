@@ -49,7 +49,7 @@ data IntEnv = MkIntEnv
   { coreEnv :: Env IO,
     termLogsRef :: IORef [Text],
     logsRef :: IORef [Text],
-    namespace :: !Namespace
+    namespace :: Namespace
   }
 
 makeFieldLabelsNoPrefix ''IntEnv

@@ -86,8 +86,8 @@ makeFieldLabelsNoPrefix ''TestEnv
 
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
--- | Infinite stream of chars.
-data CharStream = Char :> CharStream
+-- | Infinite stream of chars. Lazy annotation needed due to -XStrictData.
+data CharStream = Char :> ~CharStream
 
 infixr 5 :>
 
@@ -98,16 +98,16 @@ altAnswers = 'n' :> 'y' :> altAnswers
 -- | Environment for running functional tests.
 data FuncEnv = MkFuncEnv
   { -- | Trash home.
-    trashHome :: !(PathI TrashHome),
-    backend :: !Backend,
+    trashHome :: PathI TrashHome,
+    backend :: Backend,
     -- | Log namespace.
-    logNamespace :: !Namespace,
+    logNamespace :: Namespace,
     -- | Saves the terminal output.
-    terminalRef :: !(IORef Text),
+    terminalRef :: IORef Text,
     -- | Saves the logs output.
-    logsRef :: !(IORef Text),
+    logsRef :: IORef Text,
     -- | Used to alternate responses to getChar.
-    charStream :: !(IORef CharStream)
+    charStream :: IORef CharStream
   }
 
 instance Show FuncEnv where

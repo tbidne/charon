@@ -28,8 +28,8 @@ import SafeRm.Prelude
 
 -- | Like 'Seq' but with the guarantee that all elements are unique.
 data UniqueSeq a = UnsafeUniqueSeq
-  { seq :: !(Seq a),
-    set :: !(HashSet a)
+  { seq :: Seq a,
+    set :: HashSet a
   }
   deriving stock (Eq, Show)
 

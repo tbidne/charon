@@ -18,9 +18,9 @@ import SafeRm.Prelude
 -- | Data for file logging.
 data LogFile m = MkLogFile
   { -- | File handle.
-    handle :: !Handle,
+    handle :: Handle,
     -- | Level in which to log.
-    logLevel :: !LogLevel
+    logLevel :: LogLevel
   }
 
 instance Show (LogFile m) where
@@ -36,7 +36,7 @@ data LogEnv m = MkLogEnv
   { -- | Data for file logging.
     logFile :: !(Maybe (LogFile m)),
     -- | The current logging namespace.
-    logNamespace :: !Namespace
+    logNamespace :: Namespace
   }
   deriving stock (Show)
 
@@ -46,11 +46,11 @@ makeFieldLabelsNoPrefix ''LogEnv
 -- functions.
 data Env m = MkEnv
   { -- | Trash home.
-    trashHome :: !(PathI TrashHome),
+    trashHome :: PathI TrashHome,
     -- | Backend.
-    backend :: !Backend,
+    backend :: Backend,
     -- | The logging environment.
-    logEnv :: !(LogEnv m)
+    logEnv :: LogEnv m
   }
   deriving stock (Show)
 

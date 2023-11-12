@@ -51,20 +51,20 @@ data Command s
     Delete !(UniqueSeq (PathI TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
     PermDelete
-      !Bool
-      !(UniqueSeq (PathI TrashEntryFileName))
+      Bool
+      (UniqueSeq (PathI TrashEntryFileName))
   | -- | Empties the trash.
-    Empty !Bool
+    Empty Bool
   | -- | Restores a path.
     Restore (UniqueSeq (PathI TrashEntryFileName))
   | -- | List all trash contents.
-    List !(ListCmd s)
+    List (ListCmd s)
   | -- | Prints trash metadata.
     Metadata
   | -- | Converts backend files.
-    Convert !Backend
+    Convert Backend
   | -- | Merges trash home directories.
-    Merge !(PathI TrashHome)
+    Merge (PathI TrashHome)
 
 makePrisms ''Command
 

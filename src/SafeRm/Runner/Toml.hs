@@ -29,12 +29,12 @@ data TomlConfig = MkTomlConfig
   { -- | Trash home.
     trashHome :: !(Maybe (PathI TrashHome)),
     -- | Backend.
-    backend :: !(Maybe Backend),
+    backend :: Maybe Backend,
     -- | Log level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
     logLevel :: !(Maybe (Maybe LogLevel)),
     -- | Whether to warn/delete large log files.
-    logSizeMode :: !(Maybe FileSizeMode)
+    logSizeMode :: Maybe FileSizeMode
   }
   deriving stock (Eq, Show)
 

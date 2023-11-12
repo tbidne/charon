@@ -92,12 +92,12 @@ clearDirectory path = liftIO $ do
 
 -- | Data type used for testing text matches.
 data TextMatch
-  = Exact !Text
-  | Prefix !Text
-  | Infix !Text
-  | Suffix !Text
-  | Outfix !Text !Text
-  | Outfixes !Text ![Text] !Text
+  = Exact Text
+  | Prefix Text
+  | Infix Text
+  | Suffix Text
+  | Outfix Text Text
+  | Outfixes Text [Text] Text
   deriving stock (Eq, Show)
 
 mapTextMatch :: (Text -> Text) -> TextMatch -> TextMatch

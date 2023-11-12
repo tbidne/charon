@@ -69,9 +69,9 @@ assertPathsDoNotExist paths =
 
 -- | Environment for running pure integration tests.
 data IntPureEnv = MkIntPureEnv
-  { backend :: !Backend,
-    trashHome :: !(PathI TrashHome),
-    terminalRef :: !(IORef Text),
+  { backend :: Backend,
+    trashHome :: PathI TrashHome,
+    terminalRef :: IORef Text,
     deletedPathsRef :: !(IORef [OsPath])
   }
 

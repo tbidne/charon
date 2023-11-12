@@ -47,11 +47,11 @@ parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 -- truncation params.
 data ListFormatPhase1 = MkListFormatPhase1
   { -- | Format style.
-    style :: !(Maybe ListFormatStyle),
+    style :: Maybe ListFormatStyle,
     -- | Name truncation.
-    nameTrunc :: !(Maybe ColFormat),
+    nameTrunc :: Maybe ColFormat,
     -- | Original path truncation.
-    origTrunc :: !(Maybe ColFormat)
+    origTrunc :: Maybe ColFormat
   }
   deriving stock (Eq, Show)
 
@@ -85,11 +85,11 @@ instance AdvancePhase ListFormatPhase1 where
 type ListCmd :: Phase -> Type
 data ListCmd p = MkListCmd
   { -- | Format style.
-    format :: !(ListFormatPhaseF p),
+    format :: ListFormatPhaseF p,
     -- | How to sort the list.
-    sort :: !(MaybePhaseF p Sort),
+    sort :: MaybePhaseF p Sort,
     -- | Whether to reverse the sort.
-    revSort :: !(MaybePhaseF p Bool)
+    revSort :: MaybePhaseF p Bool
   }
 
 makeFieldLabelsNoPrefix ''ListCmd

@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -117,7 +116,7 @@ readIndex trashHome = addNamespace "readIndex" $ do
             (accSeq, accSet) <- macc
             pure (pd :<| accSeq, HSet.insert (pd ^. #fileName) accSet)
 
-  (indexSeq, pathSet) <- foldr seqify (pure ([], HSet.empty)) paths
+  (indexSeq, pathSet) <- foldr seqify (pure (Seq.empty, HSet.empty)) paths
 
   -- NOTE: Check that all files in /files exist in the index.
   allTrashPaths <- listDirectory trashPathsDir'

@@ -26,15 +26,15 @@ import SafeRm.Utils qualified as U
 -- the root nor is it empty.
 data PathData = UnsafePathData
   { -- | The type of the path.
-    pathType :: !PathType,
+    pathType :: PathType,
     -- | The path to be used in the trash directory.
-    fileName :: !(PathI TrashEntryFileName),
+    fileName :: PathI TrashEntryFileName,
     -- | The original path on the file system.
-    originalPath :: !(PathI TrashEntryOriginalPath),
+    originalPath :: PathI TrashEntryOriginalPath,
     -- | The size of the file or directory.
-    size :: !(Bytes B Natural),
+    size :: Bytes B Natural,
     -- | Time this entry was created.
-    created :: !Timestamp
+    created :: Timestamp
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)

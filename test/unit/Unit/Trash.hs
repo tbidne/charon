@@ -36,10 +36,10 @@ tests =
     ]
 
 data TestEnv = MkTestEnv
-  { renameResult :: !(IORef Text),
-    backend :: !Backend,
-    logsRef :: !(IORef Text),
-    logNamespace :: !Namespace
+  { renameResult :: IORef Text,
+    backend :: Backend,
+    logsRef :: IORef Text,
+    logNamespace :: Namespace
   }
   deriving stock (Generic)
   deriving anyclass (HasBackend)

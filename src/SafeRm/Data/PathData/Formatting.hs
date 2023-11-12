@@ -32,7 +32,7 @@ import SafeRm.Utils qualified as U
 
 data ColFormat
   = -- | Fixed length format.
-    ColFormatFixed !Natural
+    ColFormatFixed Natural
   | -- | Format the column according to its longest entry, if possible.
     ColFormatMax
   deriving stock (Eq, Show)
@@ -62,7 +62,7 @@ data PathDataFormat
   = -- | Formats each file on its own line.
     FormatMultiline
   | -- | Formats all fields on the same line.
-    FormatTabular !(Maybe ColFormat) !(Maybe ColFormat)
+    FormatTabular (Maybe ColFormat) (Maybe ColFormat)
   deriving stock (Eq, Show)
 
 sortNameCreated :: PathData -> PathData -> Ordering

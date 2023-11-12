@@ -75,7 +75,7 @@ data TomlConfigPath
   | -- | Attempts to read the Toml file at the default path.
     TomlDefault
   | -- | Path to Toml file.
-    TomlPath !OsPath
+    TomlPath OsPath
   deriving stock
     ( Eq,
       Show
@@ -84,18 +84,18 @@ data TomlConfigPath
 -- | CLI args.
 data Args = MkArgs
   { -- | Path to toml config.
-    tomlConfigPath :: !TomlConfigPath,
+    tomlConfigPath :: TomlConfigPath,
     -- | Backend to use.
-    backend :: !(Maybe Backend),
+    backend :: Maybe Backend,
     -- | Path to trash home.
     trashHome :: !(Maybe (PathI TrashHome)),
     -- | The file logging level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
     logLevel :: !(Maybe (Maybe LogLevel)),
     -- | Whether to warn/delete for large log files.
-    logSizeMode :: !(Maybe FileSizeMode),
+    logSizeMode :: Maybe FileSizeMode,
     -- | Command to run.
-    command :: !CommandP1
+    command :: CommandP1
   }
   deriving stock (Eq, Generic, Show)
 

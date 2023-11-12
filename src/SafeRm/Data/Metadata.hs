@@ -31,13 +31,13 @@ import SafeRm.Utils qualified as U
 data Metadata = MkMetadata
   { -- | Number of top level entries in the trash index. This should be the
     -- same as the index length.
-    numEntries :: !Natural,
+    numEntries :: Natural,
     -- | Number of total files in the trash.
-    numFiles :: !Natural,
+    numFiles :: Natural,
     -- | Size of the log file.
-    logSize :: !(SomeSize Double),
+    logSize :: SomeSize Double,
     -- | Total size of the trash directory.
-    size :: !(SomeSize Double)
+    size :: SomeSize Double
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (NFData)

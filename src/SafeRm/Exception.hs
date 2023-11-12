@@ -75,8 +75,8 @@ instance Exception RenameDuplicateE where
 -- in @trash\/info@ but did not look in @trash\/files@.
 data TrashEntryNotFoundE
   = MkTrashEntryNotFoundE
-      !(PathI TrashEntryFileName)
-      !(PathI TrashEntryInfo)
+      (PathI TrashEntryFileName)
+      (PathI TrashEntryInfo)
   deriving stock (Show)
 
 instance Exception TrashEntryNotFoundE where
@@ -105,8 +105,8 @@ instance Exception TrashEntryWildcardNotFoundE where
 -- | Path found in @trash\/info@ but not @trash\/files@ error.
 data TrashEntryFileNotFoundE
   = MkTrashEntryFileNotFoundE
-      !(PathI TrashHome)
-      !(PathI TrashEntryFileName)
+      (PathI TrashHome)
+      (PathI TrashEntryFileName)
   deriving stock (Show)
 
 instance Exception TrashEntryFileNotFoundE where
@@ -128,8 +128,8 @@ instance Exception TrashEntryFileNotFoundE where
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
 data TrashEntryInfoNotFoundE
   = MkTrashEntryInfoNotFoundE
-      !(PathI TrashHome)
-      !(PathI TrashEntryFileName)
+      (PathI TrashHome)
+      (PathI TrashEntryFileName)
   deriving stock (Show)
 
 instance Exception TrashEntryInfoNotFoundE where
@@ -156,9 +156,9 @@ instance Exception TrashEntryInfoNotFoundE where
 -- | Path found in @trash\/files@ but not @trash\/info@ error.
 data TrashEntryInfoBadExtE
   = MkTrashEntryInfoBadExtE
-      !(PathI TrashEntryFileName)
-      !String
-      !String
+      (PathI TrashEntryFileName)
+      String
+      String
   deriving stock (Show)
 
 instance Exception TrashEntryInfoBadExtE where
@@ -206,8 +206,8 @@ instance Exception TrashDirInfoNotFoundE where
 -- | Collision with existing file when attempting a restore.
 data RestoreCollisionE
   = MkRestoreCollisionE
-      !(PathI TrashEntryFileName)
-      !(PathI TrashEntryOriginalPath)
+      (PathI TrashEntryFileName)
+      (PathI TrashEntryOriginalPath)
   deriving stock (Show)
 
 instance Exception RestoreCollisionE where
