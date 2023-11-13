@@ -51,6 +51,7 @@ library
   exposed-modules:
     SafeRm
     SafeRm.Backend.Cbor
+    SafeRm.Backend.Common
     SafeRm.Backend.Fdo
     SafeRm.Backend.Json
     SafeRm.Data.Backend
