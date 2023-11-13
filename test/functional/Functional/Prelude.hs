@@ -31,16 +31,23 @@ module Functional.Prelude
     assertPathsDoNotExist,
     assertSetEq,
 
+    -- * Lookup
+    mkLookupSimple,
+    mkLookupFileOpath,
+    mkLookupDirSize,
+    mkLookupFull,
+    mkLookupFullPath,
+
     -- * Misc
     withSrArgsM,
     withSrArgsPathsM,
+    withSrArgsTestDirM,
     FuncEnv.mkPathDataSetM,
     FuncEnv.mkPathDataSetM2,
     FuncEnv.mkPathDataSetTestDirM,
     appendTestDir,
     appendTestDirM,
     FuncEnv.getTestDir,
-    mkAllTrashPathsM,
     (</>!),
     foldFilePaths,
     foldFilePathsAcc,
@@ -49,6 +56,8 @@ module Functional.Prelude
 where
 
 import Data.HashSet qualified as HSet
+import Data.List qualified as L
+import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Effects.FileSystem.Utils
   ( unsafeDecodeOsToFp,
@@ -60,7 +69,6 @@ import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Data.Backend qualified as Backend
-import SafeRm.Env qualified as Env
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
@@ -95,41 +103,59 @@ assertPathsDoNotExist paths = liftIO
     exists <- doesPathExist p
     assertBool ("Expected path not to exist: " <> show p) (not exists)
 
--- | Transform each filepath @p@ to its files/ and info/ path, taking in
--- the env's trash root, test dir, trash dir, and backend.
-mkAllTrashPathsM :: [FilePath] -> TestM [OsPath]
-mkAllTrashPathsM paths = liftA2 (++) trashPaths trashInfoPaths
+mkLookupSimple :: [Text] -> [Text] -> TestM [TextMatch]
+mkLookupSimple files dirs =
+  mkLookupFull ((\n -> (n, n)) <$> files) ((,Nothing) <$> dirs)
+
+mkLookupFileOpath :: [(Text, Text)] -> [Text] -> TestM [TextMatch]
+mkLookupFileOpath files dirs =
+  mkLookupFull files ((,Nothing) <$> dirs)
+
+mkLookupDirSize :: [Text] -> [(Text, Maybe Text)] -> TestM [TextMatch]
+mkLookupDirSize files = mkLookupFull ((\n -> (n, n)) <$> files)
+
+mkLookupFull :: [(Text, Text)] -> [(Text, Maybe Text)] -> TestM [TextMatch]
+mkLookupFull files dirs = do
+  testDir <- asks (view #testDir)
+  mkLookupFullPath testDir files dirs
+
+mkLookupFullPath :: OsPath -> [(Text, Text)] -> [(Text, Maybe Text)] -> TestM [TextMatch]
+mkLookupFullPath testDir files dirs = do
+  testDirTxt <- T.pack <$> decodeOsToFpThrowM testDir
+
+  let fromFile :: (Text, Text) -> [TextMatch]
+      fromFile (n, o) =
+        [ Exact $ "Name:      " <> n,
+          Outfixes "Original:  /tmp/" ["/safe-rm/functional/" <> testDirTxt] o,
+          Exact "Type:      File",
+          Exact "Size:      5.00B",
+          Exact "Created:   2020-05-31 12:00:00"
+        ]
+      fromDir :: (Text, Maybe Text) -> [TextMatch]
+      fromDir (d, sz) =
+        [ Exact $ "Name:      " <> d,
+          Outfixes "Original:  /tmp/" ["/safe-rm/functional/" <> testDirTxt] d,
+          Exact "Type:      Directory",
+          Exact $ "Size:      " <> fromMaybe "5.00B" sz,
+          Exact "Created:   2020-05-31 12:00:00"
+        ]
+
+      -- manual recursion so we can ensure files and dirs are interleaved
+      -- correctly in sorted order
+      foldPath [] [] = []
+      foldPath (f : fs) [] = fromFile f : foldPath fs []
+      foldPath [] (d : ds) = fromDir d : foldPath [] ds
+      foldPath fss@(f@(fName, _) : fs) dss@(d@(dName, _) : ds)
+        | fName <= dName = fromFile f : foldPath fs dss
+        | otherwise = fromDir d : foldPath fss ds
+
+      allMatches = foldPath filesSorted dirsSorted
+
+  -- add newline between entries
+  pure $ L.intercalate [Exact ""] allMatches
   where
-    trashPaths = mkTrashPathsM (fmap unsafeEncodeFpToOs paths)
-    trashInfoPaths = mkTrashInfoPathsM (fmap unsafeEncodeFpToOs paths)
-
--- | Transform each path @p@ to
--- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/info\/p.<ext>@.
-mkTrashInfoPathsM :: [OsPath] -> TestM [OsPath]
-mkTrashInfoPathsM files = do
-  env <- ask
-  testDir <- FuncEnv.getTestDir
-  let ext = Env.trashInfoExtensionOsPath (env ^. #backend)
-      mkTrashInfoPath p =
-        testDir
-          </> (env ^. #trashDir)
-          </> pathInfo
-          </> p
-          <> ext
-  pure $ fmap mkTrashInfoPath files
-
--- | Transform each path @p@ to
--- @<testRoot>\/<testDir>-<backend>\/<trashDir>\/files\/p@.
-mkTrashPathsM :: [OsPath] -> TestM [OsPath]
-mkTrashPathsM files = do
-  env <- ask
-  testDir <- FuncEnv.getTestDir
-  let mkTrashPath p =
-        testDir
-          </> (env ^. #trashDir)
-          </> pathFiles
-          </> p
-  pure $ fmap mkTrashPath files
+    filesSorted = L.sortOn (\(f, _) -> T.toLower f) files
+    dirsSorted = L.sortOn (\(d, _) -> T.toLower d) dirs
 
 assertSetEq :: (Hashable a, MonadIO m, Show a) => HashSet a -> HashSet a -> m ()
 assertSetEq x y = do
@@ -167,9 +193,15 @@ assertSetEq x y = do
 -- @trashDir == <testRoot>\/<testDir>-<backend>\/<trashDir>@
 withSrArgsM :: [String] -> TestM [String]
 withSrArgsM as = do
+  testDir <- FuncEnv.getTestDir
+  withSrArgsTestDirM testDir as
+
+-- | Differs from 'withSrArgsM' in that we receive the literal testDir,
+-- rather than grabbing it from the env.
+withSrArgsTestDirM :: OsPath -> [String] -> TestM [String]
+withSrArgsTestDirM testDir as = do
   env <- ask
 
-  testDir <- FuncEnv.getTestDir
   let backend = env ^. #backend
       trashDir = testDir </> (env ^. #trashDir)
   pure $ ["-t", unsafeDecodeOsToFp trashDir, "-b", Backend.backendArg backend] ++ as

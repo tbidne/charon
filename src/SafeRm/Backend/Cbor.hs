@@ -11,6 +11,7 @@ module SafeRm.Backend.Cbor
     restore,
 
     -- * Information
+    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -21,6 +22,8 @@ module SafeRm.Backend.Cbor
 where
 
 import Data.Char qualified as Ch
+import Data.Sequence qualified as Seq
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.System.Terminal qualified as Term
@@ -31,6 +34,7 @@ import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.Metadata qualified as Metadata
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
@@ -40,6 +44,7 @@ import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
+import SafeRm.Exception (EmptySearchResults (MkEmptySearchResults))
 import SafeRm.Prelude
 import SafeRm.Trash qualified as Trash
 import SafeRm.Utils qualified as U
@@ -346,6 +351,30 @@ merge dest = addNamespace "merge" $ do
     else do
       $(logDebug) $ "Dest path: " <> Paths.toText dest
       Trash.mergeTrashDirs src dest
+
+-- | Looks up the trash entry file name, throwing an exception if none is
+-- found.
+lookupTrashName ::
+  ( HasBackend env,
+    HasTrashHome env,
+    MonadLoggerNS m,
+    MonadFileReader m,
+    MonadPathReader m,
+    MonadReader env m,
+    MonadThrow m
+  ) =>
+  UniqueSeq (PathI TrashEntryFileName) ->
+  m (NESeq PathData)
+lookupTrashName pathNames = addNamespace "lookupTrashName" $ do
+  trashHome <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+
+  results <- traverse (Trash.findPathData trashHome) (pathNames ^. #seq)
+  case results of
+    -- TODO: This __should__ be impossible as the UniqueSeq is non-empty, though
+    -- it would be nice to have a better type for this (i.e. UniqueSeqNE).
+    Seq.Empty -> throwCS $ MkEmptySearchResults pathNames
+    (x :<|| xs) :<| ys -> pure $ x :<|| (xs <> (ys >>= NESeq.toSeq))
 
 noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
 noBuffering = buffOff IO.stdin *> buffOff IO.stdout

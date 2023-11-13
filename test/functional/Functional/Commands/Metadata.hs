@@ -46,9 +46,14 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
-    assertPathsExist delTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -70,8 +75,11 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     (metadataResult, _) <- captureSafeRmLogs metaArgList
 
     -- assert nothing changed
-    assertPathsExist delTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    assertMatches expectedLookup lookupResult2
 
     assertMatches expectedMetadata metadataResult
 

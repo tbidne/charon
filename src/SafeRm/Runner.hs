@@ -14,15 +14,16 @@ where
 
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
 import SafeRm.Data.Backend (Backend (BackendCbor))
-import SafeRm.Data.Index (Sort)
+import SafeRm.Data.Index (Index (MkIndex), Sort (Name))
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData.Formatting (PathDataFormat)
+import SafeRm.Data.PathData.Formatting (PathDataFormat (FormatMultiline))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
@@ -44,6 +45,7 @@ import SafeRm.Runner.Command
         Delete,
         Empty,
         List,
+        LookupTrashName,
         Merge,
         Metadata,
         PermDelete,
@@ -128,6 +130,11 @@ runCmd cmd =
       PermDelete force paths -> SafeRm.permDelete force paths
       Empty force -> SafeRm.emptyTrash force
       Restore paths -> SafeRm.restore paths
+      LookupTrashName paths -> do
+        results <- SafeRm.lookupTrashName paths
+        let index = MkIndex (NESeq.toSeq results)
+        formatted <- Index.formatIndex FormatMultiline Name False index
+        putTextLn formatted
       List listCmd ->
         printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
       Metadata -> printMetadata

@@ -9,6 +9,7 @@ module SafeRm
     restore,
 
     -- * Information
+    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -24,6 +25,7 @@ import SafeRm.Backend.Json qualified as Json
 import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Metadata (Metadata)
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths
   ( PathI,
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
@@ -108,9 +110,9 @@ getIndex ::
 getIndex =
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.getIndex
-      BackendFdo -> addNamespace "fdo" $ Fdo.getIndex
-      BackendJson -> addNamespace "json" $ Json.getIndex
+      BackendCbor -> addNamespace "cbor" Cbor.getIndex
+      BackendFdo -> addNamespace "fdo" Fdo.getIndex
+      BackendJson -> addNamespace "json" Json.getIndex
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
@@ -128,9 +130,9 @@ getMetadata ::
 getMetadata =
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.getMetadata
-      BackendFdo -> addNamespace "fdo" $ Fdo.getMetadata
-      BackendJson -> addNamespace "json" $ Json.getMetadata
+      BackendCbor -> addNamespace "cbor" Cbor.getMetadata
+      BackendFdo -> addNamespace "fdo" Fdo.getMetadata
+      BackendJson -> addNamespace "json" Json.getMetadata
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
@@ -219,8 +221,26 @@ merge ::
   PathI TrashHome ->
   m ()
 merge dest =
-asks getBackend
+  asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.merge dest
       BackendFdo -> addNamespace "fdo" $ Fdo.merge dest
       BackendJson -> addNamespace "json" $ Json.merge dest
+
+lookupTrashName ::
+  ( HasBackend env,
+    HasTrashHome env,
+    MonadFileReader m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadReader env m,
+    MonadThrow m
+  ) =>
+  UniqueSeq (PathI TrashEntryFileName) ->
+  m (NESeq PathData)
+lookupTrashName name =
+  asks getBackend
+    >>= \case
+      BackendCbor -> addNamespace "cbor" $ Cbor.lookupTrashName name
+      BackendFdo -> addNamespace "fdo" $ Fdo.lookupTrashName name
+      BackendJson -> addNamespace "json" $ Json.lookupTrashName name

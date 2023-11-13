@@ -30,10 +30,12 @@ module SafeRm.Exception
     EmptyPathE (..),
     InfoDecodeE (..),
     PathNotFileDirE (..),
+    EmptySearchResults (..),
   )
 where
 
 import Effects.FileSystem.Utils qualified as FsUtils
+import GHC.Exts (IsList (toList))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -44,6 +46,8 @@ import SafeRm.Data.Paths
         TrashHome
       ),
   )
+import SafeRm.Data.Paths qualified as Paths
+import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import System.OsPath (encodeUtf)
 
@@ -259,4 +263,15 @@ instance Exception PathNotFileDirE where
       [ "Path exists but is not a file or directory: '",
         FsUtils.osToFp p,
         "'"
+      ]
+
+newtype EmptySearchResults
+  = MkEmptySearchResults (UniqueSeq (PathI TrashEntryFileName))
+  deriving stock (Show)
+
+instance Exception EmptySearchResults where
+  displayException (MkEmptySearchResults useq) =
+    mconcat
+      [ "Search for paths failed: ",
+        Paths.showPaths $ toList (useq ^. #seq)
       ]

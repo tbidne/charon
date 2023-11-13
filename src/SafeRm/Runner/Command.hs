@@ -39,6 +39,7 @@ instance AdvancePhase (Command Phase1) where
   advancePhase (PermDelete force paths) = PermDelete force paths
   advancePhase (Empty b) = Empty b
   advancePhase (Restore paths) = Restore paths
+  advancePhase (LookupTrashName paths) = LookupTrashName paths
   advancePhase Metadata = Metadata
   advancePhase (List cfg) = List $ advancePhase cfg
   advancePhase (Convert dest) = Convert dest
@@ -48,7 +49,7 @@ instance AdvancePhase (Command Phase1) where
 type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
-    Delete !(UniqueSeq (PathI TrashEntryOriginalPath))
+    Delete (UniqueSeq (PathI TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
     PermDelete
       Bool
@@ -57,6 +58,8 @@ data Command s
     Empty Bool
   | -- | Restores a path.
     Restore (UniqueSeq (PathI TrashEntryFileName))
+  | -- | Lookup trash names.
+    LookupTrashName (UniqueSeq (PathI TrashEntryFileName))
   | -- | List all trash contents.
     List (ListCmd s)
   | -- | Prints trash metadata.

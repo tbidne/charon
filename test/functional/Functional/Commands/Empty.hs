@@ -50,9 +50,14 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
-    assertPathsExist delTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f*", "d*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -74,13 +79,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     runSafeRm emptyArgList
 
     -- file assertions
-    emptyTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir2"]
-    assertPathsDoNotExist
-      ( emptyTrashPaths
-          ++ filesToDelete
-          ++ dirsToDelete
-          ++ delTrashPaths
-      )
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
@@ -124,9 +123,13 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     runSafeRm delArgList
 
     -- file assertions
-    dirTrashPaths <- mkAllTrashPathsM fileDeleteNames
-    assertPathsExist dirTrashPaths
     assertPathsDoNotExist fileDeletePaths
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["1", "2", "3", "4", "5"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -147,9 +150,10 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     emptyArgList <- withSrArgsM ["empty"]
     runSafeRm emptyArgList
 
-    -- file assertions
+    -- lookup assertions
     -- First getChar response was 'n', so files should still exist
-    assertPathsExist dirTrashPaths
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    assertMatches expectedLookup lookupResult2
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
@@ -186,9 +190,13 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-    assertPathsExist delTrashPaths
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -209,12 +217,6 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgList
-
-    -- file assertions
-    emptyTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f3"]
-    emptyTrashDirs <- mkAllTrashPathsM ["dir2"]
-    assertPathsDoNotExist (emptyTrashFiles ++ emptyTrashDirs)
-    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
     assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
 
@@ -257,9 +259,13 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-    assertPathsExist delTrashPaths
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -282,7 +288,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     runSafeRm emptyArgList
 
     -- file assertions
-    assertPathsDoNotExist (delTrashPaths ++ filesToDelete ++ dirsToDelete)
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
     assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
 
     -- trash structure assertions

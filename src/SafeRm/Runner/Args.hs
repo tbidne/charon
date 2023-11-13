@@ -51,6 +51,7 @@ import SafeRm.Runner.Command
         Delete,
         Empty,
         List,
+        LookupTrashName,
         Merge,
         Metadata,
         PermDelete,
@@ -241,7 +242,8 @@ commandParser =
       )
     <|> OA.hsubparser
       ( mconcat
-          [ mkCommand "list" listParser listTxt,
+          [ mkCommand "lookup" lookupParser lookupTxt,
+            mkCommand "list" listParser listTxt,
             mkCommand "l" listParser (mkCmdDesc "Alias for list."),
             mkCommand "metadata" metadataParser metadataTxt,
             mkCommand "m" metadataParser (mkCmdDesc "Alias for metadata."),
@@ -276,6 +278,8 @@ commandParser =
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (safe-rm restore '\\*foo')."
           ]
+    -- TODO: Better desc
+    lookupTxt = mkCmdDesc "Performs a lookup on the paths."
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
     convertTxt = mkCmdDesc "Converts the backend."
@@ -285,6 +289,7 @@ commandParser =
     permDelParser = PermDelete <$> forceParser <*> pathsParser
     emptyParser = Empty <$> forceParser
     restoreParser = Restore <$> pathsParser
+    lookupParser = LookupTrashName <$> pathsParser
     listParser =
       fmap List
         $ MkListCmd

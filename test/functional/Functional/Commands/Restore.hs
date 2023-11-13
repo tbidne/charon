@@ -60,9 +60,13 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ["f1"]
-    assertPathsExist (trashDir : delTrashFiles)
     assertPathsDoNotExist [f1]
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1"]
@@ -77,7 +81,6 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
 
     -- file assertions
     assertPathsExist [trashDir, f1]
-    assertPathsDoNotExist delTrashFiles
 
     -- trash structure assertions
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
@@ -101,8 +104,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
   usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </>! ".trash"
-        filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
         dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
 
     delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
@@ -119,9 +121,14 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
-    assertPathsExist delTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "dir1", "dir2"]
@@ -136,11 +143,10 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     restoreArgList <- withSrArgsM ["restore", "f1", "f3", "dir1", "dir2"]
     runSafeRm restoreArgList
 
-    -- file assertions
-    restoreTrashPaths <- mkAllTrashPathsM ["f1", "f3", "dir1", "dir2"]
-    notRestoreTrashFiles <- mkAllTrashPathsM ["f2"]
-    assertPathsExist (trashDir : notRestoreTrashFiles)
-    assertPathsDoNotExist restoreTrashPaths
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <- mkLookupSimple ["f2"] []
+    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     restoreExpectedIdxSet <- mkPathDataSetM ["f2"]
@@ -169,8 +175,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
   usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </>! ".trash"
-        f1 = testDir </>! "f1"
+    let f1 = testDir </>! "f1"
     delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
@@ -186,9 +191,13 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ["f1"]
-    assertPathsExist (trashDir : delTrashFiles)
     assertPathsDoNotExist [f1]
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1"]
@@ -200,7 +209,9 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     restoreArgList <- withSrArgsM ["restore", "bad file"]
     (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
-    assertPathsExist delTrashFiles
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    assertMatches expectedLookup lookupResult2
 
     assertMatch expectedEx ex
 
@@ -230,8 +241,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
   usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </>! ".trash"
-        f1 = testDir </>! "f1"
+    let f1 = testDir </>! "f1"
     delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
@@ -242,9 +252,11 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     runSafeRm delArgList
     createFiles [f1]
 
-    -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ["f1"]
-    assertPathsExist (trashDir : delTrashFiles)
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1"]
@@ -256,7 +268,9 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     restoreArgList <- withSrArgsM ["restore", "f1"]
     (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
 
-    assertPathsExist delTrashFiles
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    assertMatches expectedLookup lookupResult2
 
     assertMatch expectedEx ex
 
@@ -284,8 +298,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
   usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </>! ".trash"
-        f1 = testDir </>! "f1"
+    let f1 = testDir </>! "f1"
         f2 = testDir </>! "f2"
         f3 = testDir </>! "f3"
     delArgList <- withSrArgsPathsM ["delete"] [f1]
@@ -299,9 +312,12 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     createFiles [f1]
     runSafeRm delArgList
 
-    -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ["f1 (1)", "f1", "f2", "f3"]
-    assertPathsExist (trashDir : delTrashFiles)
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupFileOpath [("f1", "f1"), ("f1 (1)", "f1"), ("f2", "f2"), ("f3", "f3")] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -319,8 +335,11 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
     (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
 
-    restoreTrashFiles <- mkAllTrashPathsM ["f1 (1)", "f3"]
-    assertPathsExist restoreTrashFiles
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <-
+      mkLookupFileOpath [("f1 (1)", "f1"), ("f3", "f3")] []
+    assertMatches expectedLookup2 lookupResult2
 
     assertMatch expectedEx ex
 
@@ -361,8 +380,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
   usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
     testDir <- getTestDir
 
-    let trashDir = testDir </>! ".trash"
-        realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
+    let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
         filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
     delArgList <- withSrArgsPathsM ["delete"] realFiles
 
@@ -375,9 +393,13 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f5"]
-    assertPathsExist (trashDir : delTrashFiles)
     assertPathsDoNotExist realFiles
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1", "f2", "f5"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f5"]
@@ -390,7 +412,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
-    assertPathsDoNotExist (((testDir </>!) <$> ["f3", "f4"]) ++ delTrashFiles)
+    assertPathsDoNotExist (((testDir </>!) <$> ["f3", "f4"]))
     assertPathsExist ((testDir </>!) <$> ["f1", "f2", "f5"])
 
     assertMatch expectedEx ex
@@ -435,10 +457,14 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     runSafeRm delArgList
 
     -- file assertions
-    restoreTrashFiles <- mkAllTrashPathsM ["f1", "f2", "f3", "1f", "2f", "3f"]
-    noRestoreTrashFiles <- mkAllTrashPathsM ["g1", "g2", "g3", "1g", "2g", "3g"]
-    assertPathsExist (restoreTrashFiles ++ noRestoreTrashFiles)
     assertPathsDoNotExist (filesToRestore ++ otherFiles)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupSimple ["1f", "1g", "2f", "2g", "3f", "3g", "f1", "f2", "f3", "g1", "g2", "g3"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -466,9 +492,11 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     restoreArgList <- withSrArgsM ["restore", "*f*"]
     runSafeRm restoreArgList
 
-    -- file assertions
-    assertPathsExist (filesToRestore ++ noRestoreTrashFiles)
-    assertPathsDoNotExist restoreTrashFiles
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <-
+      mkLookupSimple ["1g", "2g", "3g", "g1", "g2", "g3"] []
+    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     restoreExpectedIdxSet <-
@@ -517,9 +545,14 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM files
-    assertPathsExist delTrashFiles
     assertPathsDoNotExist testFiles
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupSimple ["1g", "2g", "3g", "fooBadbar", "foobar", "fooXbar", "g1", "g2", "g3"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -548,12 +581,15 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     runSafeRmException @RestoreCollisionE restoreArgList
 
     -- file assertions
-    noRestoreTrashFiles <- mkAllTrashPathsM ["fooBadbar"]
     -- 1. Everything restored but fooBarBar but that is because it already exists
     -- at original location, so everything should be there
     assertPathsExist testFiles
     -- 2. Only fooBadBar should be left in trash
-    assertPathsExist noRestoreTrashFiles
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <-
+      mkLookupSimple ["fooBadbar"] []
+    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     restoreExpectedIdxSet <- mkPathDataSetM ["fooBadbar"]
@@ -603,9 +639,13 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM ("*" : files)
-    assertPathsExist delTrashFiles
     assertPathsDoNotExist (testWcLiteral : testFiles)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["*", "1f", "2f", "3f", "f1", "f2", "f3"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "1f", "2f", "3f", "*"]
@@ -619,11 +659,10 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     restoreArgList <- withSrArgsM ["restore", "\\*"]
     runSafeRm restoreArgList
 
-    -- file assertions
-    restoreTrashFiles <- mkAllTrashPathsM ["*"]
-    noRestoreTrashFiles <- mkAllTrashPathsM files
-    assertPathsDoNotExist restoreTrashFiles
-    assertPathsExist (testWcLiteral : noRestoreTrashFiles)
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <- mkLookupSimple ["1f", "2f", "3f", "f1", "f2", "f3"] []
+    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     restoreExpectedIdxSet <- mkPathDataSetM ["f1", "f2", "f3", "1f", "2f", "3f"]
@@ -665,9 +704,14 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     runSafeRm delArgList
 
     -- file assertions
-    delTrashFiles <- mkAllTrashPathsM (wcLiterals <> files)
-    assertPathsExist delTrashFiles
     assertPathsDoNotExist (testWcLiterals <> testFiles)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupSimple ["yxxbar", "yxxbaz", "yxxfoo", "y*xxbar", "y*xxbaz", "y*xxfoo"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM
@@ -688,10 +732,13 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     runSafeRm restoreArgList
 
     -- file assertions
-    restoreTrashFiles <- mkAllTrashPathsM wcLiterals
-    noRestoreTrashFiles <- mkAllTrashPathsM files
-    assertPathsDoNotExist restoreTrashFiles
-    assertPathsExist (testWcLiterals ++ noRestoreTrashFiles)
+    assertPathsExist testWcLiterals
+
+    -- lookup assertions
+    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup2 <-
+      mkLookupSimple ["yxxbar", "yxxbaz", "yxxfoo"] []
+    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     restoreExpectedIdxSet <- mkPathDataSetM

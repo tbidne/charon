@@ -243,7 +243,7 @@ runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
 mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfig -> IORef Text -> IORef Text -> m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
-  trashHome <- liftIO getTrashHome
+  trashHome <- liftIO getTrashHome'
   charStream <- liftIO $ newIORef altAnswers
   pure
     $ MkFuncEnv
@@ -255,7 +255,7 @@ mkFuncEnv toml logsRef terminalRef = do
         charStream
       }
   where
-    getTrashHome = case toml ^. #trashHome of
+    getTrashHome' = case toml ^. #trashHome of
       Nothing -> die "Setup error, no trash home on config"
       Just th -> pure th
 

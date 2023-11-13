@@ -15,6 +15,9 @@ module SafeRm.Trash
     -- * Transformations
     convertBackend,
     mergeTrashDirs,
+
+    -- * Utils
+    findPathData,
   )
 where
 

@@ -48,9 +48,14 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       runSafeRm delArgList
 
       -- file assertions
-      delTrashPathsS <- mkAllTrashPathsM ["sf1", "sf2", "sf3", "sdir1", "sdir2"]
-      assertPathsExist delTrashPathsS
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+      -- lookup assertions
+      lookupArgs <- withSrArgsM ["lookup", "*"]
+      lookupResult <- liftIO $ captureSafeRm lookupArgs
+      expectedLookup <-
+        mkLookupDirSize ["sf1", "sf2", "sf3"] [("sdir1", Nothing), ("sdir2", Just "15.00B")]
+      assertMatches expectedLookup lookupResult
 
       -- trash structure assertions
       delExpectedIdxSet <-
@@ -80,9 +85,13 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       runSafeRm delArgList
 
       -- file assertions
-      delTrashPaths <- mkAllTrashPathsM ["df1", "df2", "df3", "ddir1", "ddir2"]
-      assertPathsExist delTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+      -- lookup assertions
+      lookupArgs <- withSrArgsM ["lookup", "*"]
+      lookupResult <- liftIO $ captureSafeRm lookupArgs
+      expectedLookup <- mkLookupDirSize ["df1", "df2", "df3"] [("ddir1", Nothing), ("ddir2", Just "15.00B")]
+      assertMatches expectedLookup lookupResult
 
       -- trash structure assertions
       delExpectedIdxSet <-
@@ -106,21 +115,18 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 
     -- VERIFY DEST
     local (set' #trashDir pathDest) $ do
-      -- file assertions
-      mergedTrashPaths <-
-        mkAllTrashPathsM
-          [ "sf1",
-            "sf2",
-            "sf3",
-            "sdir1",
-            "sdir2",
-            "df1",
-            "df2",
-            "df3",
-            "ddir1",
-            "ddir2"
-          ]
-      assertPathsExist mergedTrashPaths
+      -- lookup assertions
+      lookupArgsS <- withSrArgsM ["lookup", "s*"]
+      lookupResultS <- liftIO $ captureSafeRm lookupArgsS
+      expectedLookupS <-
+        mkLookupDirSize ["sf1", "sf2", "sf3"] [("sdir1", Nothing), ("sdir2", Just "15.00B")]
+      assertMatches expectedLookupS lookupResultS
+
+      lookupArgsD <- withSrArgsM ["lookup", "d*"]
+      lookupResultD <- liftIO $ captureSafeRm lookupArgsD
+      expectedLookupD <-
+        mkLookupDirSize ["df1", "df2", "df3"] [("ddir1", Nothing), ("ddir2", Just "15.00B")]
+      assertMatches expectedLookupD lookupResultD
 
       -- trash structure assertions
       mergeExpectedIdxSet <-
@@ -168,7 +174,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
 
     -- SETUP SRC
 
-    (delTrashPathsSrc, pathsToDeleteSrc) <- local (set' #trashDir pathSrc) $ do
+    pathsToDeleteSrc <- local (set' #trashDir pathSrc) $ do
       let filesToDelete = (testDir </>!) <$> ["sf1", "sf2", "sf3"]
           dirsToDelete = (testDir </>!) <$> ["sdir1", "dir2"]
 
@@ -180,9 +186,14 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       runSafeRm delArgList
 
       -- file assertions
-      delTrashPaths <- mkAllTrashPathsM ["sf1", "sf2", "sf3", "sdir1", "dir2"]
-      assertPathsExist delTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+      -- lookup assertions
+      lookupArgs <- withSrArgsM ["lookup", "*"]
+      lookupResult <- liftIO $ captureSafeRm lookupArgs
+      expectedLookup <-
+        mkLookupDirSize ["sf1", "sf2", "sf3"] [("dir2", Just "15.00B"), ("sdir1", Nothing)]
+      assertMatches expectedLookup lookupResult
 
       -- trash structure assertions
       delExpectedIdxSet <-
@@ -198,11 +209,11 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       assertSetEq delExpectedIdxSet delIdxSet
       delExpectedMetadata @=? delMetadata
 
-      pure (delTrashPaths, filesToDelete ++ dirsToDelete)
+      pure (filesToDelete ++ dirsToDelete)
 
     -- SETUP DEST
 
-    (delTrashPathsDest, pathsToDeleteDest, delExpectedIdxSetDest) <-
+    (pathsToDeleteDest, delExpectedIdxSetDest) <-
       local (set' #trashDir pathDest) $ do
         let filesToDelete = (testDir </>!) <$> ["df1", "df2", "df3"]
             dirsToDelete = (testDir </>!) <$> ["ddir1", "dir2"]
@@ -215,9 +226,14 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         runSafeRm delArgList
 
         -- file assertions
-        delTrashPaths <- mkAllTrashPathsM ["df1", "df2", "df3", "ddir1", "dir2"]
-        assertPathsExist delTrashPaths
         assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+        -- lookup assertions
+        lookupArgs <- withSrArgsM ["lookup", "*"]
+        lookupResult <- liftIO $ captureSafeRm lookupArgs
+        expectedLookup <-
+          mkLookupDirSize ["df1", "df2", "df3"] [("ddir1", Nothing), ("dir2", Just "15.00B")]
+        assertMatches expectedLookup lookupResult
 
         -- trash structure assertions
         delExpectedIdxSet <-
@@ -233,7 +249,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         assertSetEq delExpectedIdxSet delIdxSet
         delExpectedMetadata @=? delMetadata
 
-        pure (delTrashPaths, filesToDelete ++ dirsToDelete, delExpectedIdxSet)
+        pure (filesToDelete ++ dirsToDelete, delExpectedIdxSet)
 
     -- MERGE
 
@@ -242,14 +258,27 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       runSafeRmException @PathExistsException mergeArgs
 
       -- verify src unchanged
-      assertPathsExist (delTrashPathsSrc ++ delTrashPathsDest)
       assertPathsDoNotExist (pathsToDeleteSrc ++ pathsToDeleteDest)
+
+      -- lookup assertions
+      lookupArgs <- withSrArgsM ["lookup", "*"]
+      lookupResult <- liftIO $ captureSafeRm lookupArgs
+      expectedLookup <-
+        mkLookupDirSize ["sf1", "sf2", "sf3"] [("dir2", Just "15.00B"), ("sdir1", Nothing)]
+      assertMatches expectedLookup lookupResult
 
     local (set' #trashDir pathDest) $ do
       -- verify dest unchanged
       (mergeIdxSetDest, mergeMetadataDest) <- runIndexMetadataM
       assertSetEq delExpectedIdxSetDest mergeIdxSetDest
       delExpectedMetadata @=? mergeMetadataDest
+
+      -- lookup assertions
+      lookupArgs <- withSrArgsM ["lookup", "*"]
+      lookupResult <- liftIO $ captureSafeRm lookupArgs
+      expectedLookup <-
+        mkLookupDirSize ["df1", "df2", "df3"] [("ddir1", Nothing), ("dir2", Just "15.00B")]
+      assertMatches expectedLookup lookupResult
   where
     delExpectedMetadata =
       MkMetadata

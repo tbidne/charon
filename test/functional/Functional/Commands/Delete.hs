@@ -43,8 +43,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> (testEnv ^. #trashDir)
-        f1 = testDir </>! "f1"
+    let f1 = testDir </>! "f1"
 
     expectedIdxSet <- mkPathDataSetM ["f1"]
 
@@ -56,9 +55,13 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     liftIO $ runSafeRm argList
 
     -- file assertions
-    trashPaths <- mkAllTrashPathsM ["f1"]
-    assertPathsExist (trashDir : trashPaths)
     assertPathsDoNotExist [f1]
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f1"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -94,9 +97,14 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
     liftIO $ runSafeRm argList
 
     -- file assertions
-    fileTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
-    assertPathsExist fileTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f1", "f2", "f3", "dir*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -157,8 +165,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deleteDuplicateFile" $ do
     testDir <- getTestDir
-    let trashDir = testDir </> (testEnv ^. #trashDir)
-        file = testDir </>! "f1"
+    let file = testDir </>! "f1"
 
     argList <- withSrArgsM ["delete", unsafeDecodeOsToFp file]
 
@@ -175,9 +182,13 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     runSafeRm argList
 
     -- file assertions
-    fileTrashPaths <- mkAllTrashPathsM ["f1 (1)", "f1"]
-    assertPathsExist (trashDir : fileTrashPaths)
     assertPathsDoNotExist [file]
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f1 (1)", "f1"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupFileOpath [("f1", "f1"), ("f1 (1)", "f1")] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -215,13 +226,13 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
 
     (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
 
-    -- file assertions
-    trashPaths1 <- mkAllTrashPathsM ["f1", "f2", "f5"]
-    assertPathsExist trashPaths1
-    trashPaths2 <- mkAllTrashPathsM ["f3", "f4"]
-    assertPathsDoNotExist trashPaths2
-
     assertMatch expectedEx ex
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <- mkLookupSimple ["f1", "f2", "f5"] []
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM

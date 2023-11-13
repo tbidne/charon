@@ -40,6 +40,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
   usingReaderT testEnv $ appendTestDirM testDirPath $ do
     testDir <- getTestDir
+    relativeTestDir <- asks (view #testDir)
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
         dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
@@ -57,9 +58,14 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     runSafeRm delArgList
 
     -- file assertions
-    delTrashPaths <- mkAllTrashPathsM ["f1", "f2", "f3", "dir1", "dir2"]
-    assertPathsExist delTrashPaths
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+    -- lookup assertions
+    lookupArgs <- withSrArgsM ["lookup", "f1", "f2", "f3", "dir*"]
+    lookupResult <- liftIO $ captureSafeRm lookupArgs
+    expectedLookup <-
+      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
+    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -120,6 +126,16 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
                in [pathFile, infoFile]
       assertPathsExist convertTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+
+      -- lookup assertions
+      lookupArgs2 <- withSrArgsTestDirM testDir ["lookup", "f1", "f2", "f3", "dir*"]
+      lookupResult2 <- liftIO $ captureSafeRm lookupArgs2
+      expectedLookup2 <-
+        mkLookupFullPath
+          relativeTestDir
+          [("f1", "f1"), ("f2", "f2"), ("f3", "f3")]
+          [("dir1", Nothing), ("dir2", Just "15.00B")]
+      assertMatches expectedLookup2 lookupResult2
 
       -- trash structure assertions
       convertExpectedIdxSet <-
