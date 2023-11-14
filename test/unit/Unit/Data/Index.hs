@@ -17,18 +17,18 @@ import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Cbor.PathData qualified as Cbor
+import SafeRm.Backend.Fdo.PathData qualified as Fdo
+import SafeRm.Backend.Json.PathData qualified as Json
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Cbor qualified as Cbor
-import SafeRm.Data.PathData.Fdo qualified as Fdo
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatMultiline, FormatTabular),
   )
-import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (getTrashHome))

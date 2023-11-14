@@ -13,12 +13,12 @@ import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Cbor.PathData qualified as Cbor
+import SafeRm.Backend.Fdo.PathData qualified as Fdo
+import SafeRm.Backend.Json.PathData qualified as Json
 import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo, PathDataJson))
-import SafeRm.Data.PathData.Cbor qualified as Cbor
-import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))

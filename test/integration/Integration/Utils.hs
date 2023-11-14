@@ -30,8 +30,8 @@ import Hedgehog.Range qualified as Range
 import Integration.AsciiOnly (AsciiOnly)
 import Integration.Prelude
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend)
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)

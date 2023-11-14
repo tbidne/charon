@@ -15,7 +15,7 @@ module SafeRm.Env
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex

@@ -2,30 +2,30 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Provides 'PathData' for use with the Cbor backend.
-module SafeRm.Data.PathData.Cbor
+-- | Provides 'PathData' for use with the FreeDesktopOrg backend.
+module SafeRm.Backend.Fdo.PathData
   ( -- * PathData
     PathData (..),
     toPathData,
   )
 where
 
-import Codec.Serialise qualified as Serialise
-import Data.Bifunctor (Bifunctor (first))
-import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Char8 qualified as C8
+import Data.HashSet qualified as Set
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths
-  ( PathI (MkPathI),
+  ( PathI,
     PathIndex
       ( TrashEntryFileName,
         TrashEntryOriginalPath,
         TrashHome
       ),
   )
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
+import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
+import SafeRm.Utils qualified as U
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -73,21 +73,30 @@ instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString
-  encode (UnsafePathData _ (MkPathI opath) ts) =
-    case decodeOsToFp opath of
-      Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (opath', ts)
-      Left ex -> Left $ displayException ex
+  encode pd =
+    case (encode (pd ^. #originalPath), encode (pd ^. #created)) of
+      (Right opath, Right created) ->
+        Right
+          $ C8.unlines
+            [ "[Trash Info]",
+              "Path=" <> U.percentEncode opath,
+              "DeletionDate=" <> created
+            ]
+      (Left ex, _) -> Left ex
+      (_, Left ex) -> Left ex
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    (opath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
+    mp <- Common.parseTrashInfoMap expectedKeys bs
 
-    case encodeFpToOs opath of
-      Right opath' ->
-        Right
-          $ UnsafePathData
-            { fileName = name,
-              originalPath = MkPathI opath',
-              created
-            }
-      Left ex -> Left $ displayException ex
+    originalPath <- decodeUnit . U.percentDecode =<< Common.lookup "Path" mp
+    created <- decodeUnit =<< Common.lookup "DeletionDate" mp
+
+    Right
+      $ UnsafePathData
+        { fileName = name,
+          originalPath,
+          created
+        }
+    where
+      expectedKeys = Set.fromList ["Path", "DeletionDate"]

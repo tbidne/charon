@@ -1,5 +1,3 @@
-
-
 -- | The Cbor backend.
 module SafeRm.Backend.Cbor
   ( -- * Delete
@@ -21,8 +19,8 @@ module SafeRm.Backend.Cbor
   )
 where
 
+import SafeRm.Backend (Backend)
 import SafeRm.Backend.Common qualified as Common
-import SafeRm.Data.Backend (Backend)
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData (PathData)

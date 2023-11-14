@@ -39,7 +39,7 @@ import Hedgehog as X
     withTests,
     (===),
   )
-import SafeRm.Data.Backend (Backend (BackendCbor))
+import SafeRm.Backend (Backend (BackendCbor))
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude as X

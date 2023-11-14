@@ -39,12 +39,12 @@ import PathSize
       ),
     pathSizeRecursive,
   )
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Data.PathData.Cbor qualified as Cbor
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend.Cbor.PathData qualified as Cbor
+import SafeRm.Backend.Fdo.PathData qualified as Fdo
+import SafeRm.Backend.Json.PathData qualified as Json
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathData.Core qualified as Core
-import SafeRm.Data.PathData.Fdo qualified as Fdo
-import SafeRm.Data.PathData.Json qualified as Json
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths

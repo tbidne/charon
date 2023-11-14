@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Provides the 'Backend' data type.
-module SafeRm.Data.Backend
+module SafeRm.Backend
   ( Backend (..),
     parseBackend,
     backendTestDesc,

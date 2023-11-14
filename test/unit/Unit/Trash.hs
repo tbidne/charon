@@ -17,8 +17,8 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo))
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)

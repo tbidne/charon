@@ -19,10 +19,10 @@ module SafeRm
   )
 where
 
+import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Backend.Cbor qualified as Cbor
 import SafeRm.Backend.Fdo qualified as Fdo
 import SafeRm.Backend.Json qualified as Json
-import SafeRm.Data.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData (PathData)

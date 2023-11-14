@@ -28,8 +28,8 @@ import Data.Text qualified as T
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend)
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)

@@ -2,30 +2,35 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Provides 'PathData' for use with the FreeDesktopOrg backend.
-module SafeRm.Data.PathData.Fdo
+-- | Provides 'PathData' for use with the Json backend.
+module SafeRm.Backend.Json.PathData
   ( -- * PathData
     PathData (..),
     toPathData,
   )
 where
 
-import Data.ByteString.Char8 qualified as C8
-import Data.HashSet qualified as Set
+import Data.Aeson
+  ( FromJSON (parseJSON),
+    KeyValue ((.=)),
+    ToJSON (toJSON),
+    (.:),
+  )
+import Data.Aeson qualified as Asn
+import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Data.PathData.Common qualified as Common
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths
-  ( PathI,
+  ( PathI (MkPathI),
     PathIndex
       ( TrashEntryFileName,
         TrashEntryOriginalPath,
         TrashHome
       ),
   )
-import SafeRm.Data.Serialize (Serialize (..), decodeUnit)
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
-import SafeRm.Utils qualified as U
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -69,34 +74,39 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
       pathType
     )
 
+newtype PathDataJSON = MkPathDataJSON (FilePath, Timestamp)
+
+instance ToJSON PathDataJSON where
+  toJSON (MkPathDataJSON (opathStr, ts)) =
+    Asn.object
+      [ "path" .= opathStr,
+        "created" .= ts
+      ]
+
+instance FromJSON PathDataJSON where
+  parseJSON = Asn.withObject "PathDataJSON" $ \v ->
+    fmap MkPathDataJSON
+      $ (,)
+      <$> v
+      .: "path"
+      <*> v
+      .: "created"
+
 instance Serialize PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString
-  encode pd =
-    case (encode (pd ^. #originalPath), encode (pd ^. #created)) of
-      (Right opath, Right created) ->
-        Right
-          $ C8.unlines
-            [ "[Trash Info]",
-              "Path=" <> U.percentEncode opath,
-              "DeletionDate=" <> created
-            ]
-      (Left ex, _) -> Left ex
-      (_, Left ex) -> Left ex
+  encode (UnsafePathData _ (MkPathI opath) ts) =
+    bimap
+      displayException
+      (BSL.toStrict . Asn.encode . MkPathDataJSON . (,ts))
+      (decodeOsToFp opath)
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
-    mp <- Common.parseTrashInfoMap expectedKeys bs
+    MkPathDataJSON (opathStr, ts) <- Asn.eitherDecode $ BSL.fromStrict bs
 
-    originalPath <- decodeUnit . U.percentDecode =<< Common.lookup "Path" mp
-    created <- decodeUnit =<< Common.lookup "DeletionDate" mp
-
-    Right
-      $ UnsafePathData
-        { fileName = name,
-          originalPath,
-          created
-        }
-    where
-      expectedKeys = Set.fromList ["Path", "DeletionDate"]
+    bimap
+      displayException
+      (\opath -> UnsafePathData name (MkPathI opath) ts)
+      (encodeFpToOs opathStr)

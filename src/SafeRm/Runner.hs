@@ -20,7 +20,7 @@ import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (BackendCbor))
+import SafeRm.Backend (Backend (BackendCbor))
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData.Formatting (PathDataFormat (FormatMultiline))

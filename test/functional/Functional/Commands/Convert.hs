@@ -6,8 +6,8 @@ where
 
 import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend)
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.Metadata
   ( Metadata
       ( MkMetadata,

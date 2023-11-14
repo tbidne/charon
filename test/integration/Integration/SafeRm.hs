@@ -24,8 +24,8 @@ import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
 import Integration.Utils qualified as IntUtils
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend)
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq)

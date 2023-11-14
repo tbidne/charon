@@ -10,7 +10,7 @@ where
 import Benchmarks.Prelude
 import Effects.FileSystem.Utils ((</>!))
 import SafeRm qualified
-import SafeRm.Data.Backend (Backend (BackendCbor))
+import SafeRm.Backend (Backend (BackendCbor))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.UniqueSeq qualified as UniqueSeq
 import SafeRm.Runner.Env

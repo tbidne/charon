@@ -50,20 +50,20 @@ library
   autogen-modules:  Paths_safe_rm
   exposed-modules:
     SafeRm
+    SafeRm.Backend
     SafeRm.Backend.Cbor
+    SafeRm.Backend.Cbor.PathData
     SafeRm.Backend.Common
     SafeRm.Backend.Fdo
+    SafeRm.Backend.Fdo.PathData
     SafeRm.Backend.Json
-    SafeRm.Data.Backend
+    SafeRm.Backend.Json.PathData
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData
-    SafeRm.Data.PathData.Cbor
     SafeRm.Data.PathData.Common
     SafeRm.Data.PathData.Core
-    SafeRm.Data.PathData.Fdo
     SafeRm.Data.PathData.Formatting
-    SafeRm.Data.PathData.Json
     SafeRm.Data.Paths
     SafeRm.Data.PathType
     SafeRm.Data.Serialize

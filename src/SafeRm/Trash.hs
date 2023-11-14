@@ -34,8 +34,8 @@ import Effects.FileSystem.PathWriter
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
 import Effects.System.Terminal qualified as Term
-import SafeRm.Data.Backend (Backend)
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend)
+import SafeRm.Backend qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData (PathData)

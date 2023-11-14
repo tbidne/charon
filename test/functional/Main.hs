@@ -15,8 +15,8 @@ import Functional.Commands.PermDelete qualified as PermDelete
 import Functional.Commands.Restore qualified as Restore
 import Functional.Prelude
 import GHC.Conc (setUncaughtExceptionHandler)
-import SafeRm.Data.Backend (Backend (BackendCbor))
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend (Backend (BackendCbor))
+import SafeRm.Backend qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty

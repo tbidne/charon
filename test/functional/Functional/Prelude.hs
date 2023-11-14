@@ -68,7 +68,7 @@ import Effects.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
-import SafeRm.Data.Backend qualified as Backend
+import SafeRm.Backend qualified as Backend
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
