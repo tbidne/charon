@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+
 
 -- | The Cbor backend.
 module SafeRm.Backend.Cbor

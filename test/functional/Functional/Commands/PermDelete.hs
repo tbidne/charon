@@ -233,7 +233,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     expectedEx =
       Outfixes
         "No entry for 'bad file'; did not find '"
-        [ combineFps ["deleteUnknownError-"],
+        [ combineFps ["deleteUnknownError"],
           T.pack $ foldFilePaths [".trash", "info", "bad file"]
         ]
         ""
@@ -804,4 +804,4 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
 combineFps :: [FilePath] -> Text
 combineFps =
   T.pack
-    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "perm-delete")
+    . foldFilePathsAcc "perm-delete"

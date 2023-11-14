@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+
 
 -- | The Json backend.
 module SafeRm.Backend.Json

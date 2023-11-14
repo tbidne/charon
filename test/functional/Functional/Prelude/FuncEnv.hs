@@ -524,9 +524,8 @@ getTestDir = do
 
   let testDir =
         testRoot
+          </> Backend.backendArgOsPath (env ^. #backend)
           </> (env ^. #testDir)
-          <> [osp|-|]
-          <> Backend.backendArgOsPath (env ^. #backend)
   PW.createDirectoryIfMissing True testDir
 
   pure testDir

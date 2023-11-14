@@ -154,7 +154,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     expectedEx =
       Outfixes
         "File not found: "
-        [combineFps ["deleteUnknownError-"]]
+        [combineFps ["deleteUnknownError"]]
         "bad file"
 
     expectedIdxSet = HashSet.fromList []
@@ -250,7 +250,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     expectedEx =
       Outfixes
         "File not found: "
-        [combineFps ["deletesSome-"]]
+        [combineFps ["deletesSome"]]
         "/f4"
     expectedMetadata =
       MkMetadata
@@ -263,4 +263,4 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
 combineFps :: [FilePath] -> Text
 combineFps =
   T.pack
-    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "delete")
+    . foldFilePathsAcc "delete"

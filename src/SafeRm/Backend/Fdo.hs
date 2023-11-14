@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+
 
 -- | The Fdo backend.
 module SafeRm.Backend.Fdo

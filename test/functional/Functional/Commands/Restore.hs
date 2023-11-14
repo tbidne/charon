@@ -223,7 +223,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     expectedEx =
       Outfixes
         "No entry for 'bad file'; did not find '"
-        [ combineFps ["restoreUnknownError-"],
+        [ combineFps ["restoreUnknownError"],
           T.pack $ foldFilePaths [".trash", "info", "bad file"]
         ]
         ""
@@ -282,7 +282,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     expectedEx =
       Outfixes
         "Cannot restore the trash file 'f1' as one exists at the original location: '"
-        [combineFps ["restoreCollisionError-"]]
+        [combineFps ["restoreCollisionError"]]
         "/f1'"
     delExpectedMetadata =
       MkMetadata
@@ -357,7 +357,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     expectedEx =
       Outfixes
         "Cannot restore the trash file 'f1 (1)' as one exists at the original location: '"
-        [combineFps ["restoreSimultaneousCollisionError-"]]
+        [combineFps ["restoreSimultaneousCollisionError"]]
         "/f1'"
     delExpectedMetadata =
       MkMetadata
@@ -412,7 +412,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
-    assertPathsDoNotExist (((testDir </>!) <$> ["f3", "f4"]))
+    assertPathsDoNotExist ((testDir </>!) <$> ["f3", "f4"])
     assertPathsExist ((testDir </>!) <$> ["f1", "f2", "f5"])
 
     assertMatch expectedEx ex
@@ -425,7 +425,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     expectedEx =
       Outfixes
         "No entry for 'f4'; did not find '"
-        [ "/safe-rm/functional/restore/restoresSome-",
+        [ "restore/restoresSome",
           "/.trash/info/f4."
         ]
         ""
@@ -775,4 +775,4 @@ wildcardLiteralTests = const []
 combineFps :: [FilePath] -> Text
 combineFps =
   T.pack
-    . foldFilePathsAcc ("safe-rm" `cfp` "functional" `cfp` "restore")
+    . foldFilePathsAcc "restore"

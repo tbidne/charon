@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Entrypoint for functional tests.
 module Main (main) where
 
@@ -57,7 +59,7 @@ main = do
 
 setup :: IO TestEnv
 setup = do
-  tmpDir <- (\tmp -> tmp </> pathSafeRm </>! "functional") <$> Dir.getTemporaryDirectory
+  tmpDir <- (\tmp -> tmp </> pathSafeRm </> [osp|functional|]) <$> Dir.getTemporaryDirectory
   createDirectoryIfMissing True tmpDir
   testDir <- encodeUtf ""
   pure

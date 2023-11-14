@@ -45,7 +45,7 @@ backendTestDesc BackendCbor = "(backend := cbor)"
 backendTestDesc BackendFdo = "(backend := fdo)"
 backendTestDesc BackendJson = "(backend := json)"
 
-backendArg :: Backend -> String
+backendArg :: (IsString s) => Backend -> s
 backendArg BackendCbor = "cbor"
 backendArg BackendFdo = "fdo"
 backendArg BackendJson = "json"

@@ -33,9 +33,8 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
   testEnv <- getTestEnv
   let testDirPath =
         mconcat
-          [ "convertsBackend-(dest=",
-            destDesc,
-            ")"
+          [ "convertsBackend-",
+            destDesc
           ]
 
   usingReaderT testEnv $ appendTestDirM testDirPath $ do
