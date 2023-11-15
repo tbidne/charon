@@ -50,19 +50,24 @@ library
   autogen-modules:  Paths_safe_rm
   exposed-modules:
     SafeRm
-    SafeRm.Backend
     SafeRm.Backend.Cbor
+    SafeRm.Backend.Cbor.BackendArgs
     SafeRm.Backend.Cbor.PathData
-    SafeRm.Backend.Common
+    SafeRm.Backend.Data
+    SafeRm.Backend.Default
+    SafeRm.Backend.Default.BackendArgs
+    SafeRm.Backend.Default.Index
+    SafeRm.Backend.Default.Trash
+    SafeRm.Backend.Default.Utils
     SafeRm.Backend.Fdo
+    SafeRm.Backend.Fdo.BackendArgs
     SafeRm.Backend.Fdo.PathData
     SafeRm.Backend.Json
+    SafeRm.Backend.Json.BackendArgs
     SafeRm.Backend.Json.PathData
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData
-    SafeRm.Data.PathData.Common
-    SafeRm.Data.PathData.Core
     SafeRm.Data.PathData.Formatting
     SafeRm.Data.Paths
     SafeRm.Data.PathType
@@ -81,7 +86,6 @@ library
     SafeRm.Runner.Phase
     SafeRm.Runner.SafeRmT
     SafeRm.Runner.Toml
-    SafeRm.Trash
     SafeRm.Utils
 
   build-depends:
@@ -155,15 +159,18 @@ test-suite unit
   type:             exitcode-stdio-1.0
   main-is:          Main.hs
   other-modules:
+    Unit.Backend.Cbor.PathData
+    Unit.Backend.Default.Trash
+    Unit.Backend.Fdo.PathData
+    Unit.Backend.Json.PathData
     Unit.Data.Index
-    Unit.Data.PathData
     Unit.Data.UniqueSeq
     Unit.Prelude
     Unit.Runner
-    Unit.Trash
     Unit.Utils
 
   build-depends:
+    , algebra-simple
     , base
     , containers
     , effects-fs

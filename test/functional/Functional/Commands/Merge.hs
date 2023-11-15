@@ -60,11 +60,11 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       -- trash structure assertions
       delExpectedIdxSet <-
         mkPathDataSetM
-          [ "sf1",
-            "sf2",
-            "sf3",
-            "sdir1",
-            "sdir2"
+          [ ("sf1", PathTypeFile, 5),
+            ("sf2", PathTypeFile, 5),
+            ("sf3", PathTypeFile, 5),
+            ("sdir1", PathTypeDirectory, 5),
+            ("sdir2", PathTypeDirectory, 15)
           ]
 
       (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -96,11 +96,11 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       -- trash structure assertions
       delExpectedIdxSet <-
         mkPathDataSetM
-          [ "df1",
-            "df2",
-            "df3",
-            "ddir1",
-            "ddir2"
+          [ ("df1", PathTypeFile, 5),
+            ("df2", PathTypeFile, 5),
+            ("df3", PathTypeFile, 5),
+            ("ddir1", PathTypeDirectory, 5),
+            ("ddir2", PathTypeDirectory, 15)
           ]
 
       (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -131,16 +131,16 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       -- trash structure assertions
       mergeExpectedIdxSet <-
         mkPathDataSetM
-          [ "sf1",
-            "sf2",
-            "sf3",
-            "df1",
-            "df2",
-            "df3",
-            "sdir1",
-            "sdir2",
-            "ddir1",
-            "ddir2"
+          [ ("sf1", PathTypeFile, 5),
+            ("sf2", PathTypeFile, 5),
+            ("sf3", PathTypeFile, 5),
+            ("df1", PathTypeFile, 5),
+            ("df2", PathTypeFile, 5),
+            ("df3", PathTypeFile, 5),
+            ("sdir1", PathTypeDirectory, 5),
+            ("sdir2", PathTypeDirectory, 15),
+            ("ddir1", PathTypeDirectory, 5),
+            ("ddir2", PathTypeDirectory, 15)
           ]
 
       (mergeIdxSetDest, mergeMetadataDest) <- runIndexMetadataM
@@ -198,11 +198,11 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       -- trash structure assertions
       delExpectedIdxSet <-
         mkPathDataSetM
-          [ "sf1",
-            "sf2",
-            "sf3",
-            "sdir1",
-            "dir2"
+          [ ("sf1", PathTypeFile, 5),
+            ("sf2", PathTypeFile, 5),
+            ("sf3", PathTypeFile, 5),
+            ("sdir1", PathTypeDirectory, 5),
+            ("dir2", PathTypeDirectory, 15)
           ]
 
       (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -238,11 +238,11 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         -- trash structure assertions
         delExpectedIdxSet <-
           mkPathDataSetM
-            [ "df1",
-              "df2",
-              "df3",
-              "ddir1",
-              "dir2"
+            [ ("df1", PathTypeFile, 5),
+              ("df2", PathTypeFile, 5),
+              ("df3", PathTypeFile, 5),
+              ("ddir1", PathTypeDirectory, 5),
+              ("dir2", PathTypeDirectory, 15)
             ]
 
         (delIdxSet, delMetadata) <- runIndexMetadataM

@@ -62,11 +62,11 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -134,11 +134,11 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "1",
-          "2",
-          "3",
-          "4",
-          "5"
+        [ ("1", PathTypeFile, 5),
+          ("2", PathTypeFile, 5),
+          ("3", PathTypeFile, 5),
+          ("4", PathTypeFile, 5),
+          ("5", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -201,11 +201,11 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -270,11 +270,11 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM

@@ -45,7 +45,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     testDir <- getTestDir
     let f1 = testDir </>! "f1"
 
-    expectedIdxSet <- mkPathDataSetM ["f1"]
+    expectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
 
     -- setup
     createFiles [f1]
@@ -111,11 +111,11 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
 
     expectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     assertSetEq expectedIdxSet idxSet
@@ -195,8 +195,8 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
 
     expectedIdxSet <-
       mkPathDataSetM2
-        [ ("f1", "f1"),
-          ("f1 (1)", "f1")
+        [ ("f1", "f1", PathTypeFile, 5),
+          ("f1 (1)", "f1", PathTypeFile, 5)
         ]
 
     assertSetEq expectedIdxSet idxSet
@@ -239,9 +239,9 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
 
     expectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f5"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f5", PathTypeFile, 5)
         ]
 
     assertSetEq expectedIdxSet idxSet

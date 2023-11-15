@@ -2,339 +2,72 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | Interface for backend-agnostic 'PathData' operations. Modules should
--- generally use this instead of the backend-specific modules.
+-- | Core 'PathData'. This intended to be the 'main' type representing path
+-- data. Actual backends are transformed to/from this type.
 module SafeRm.Data.PathData
   ( -- * PathData
     PathData (..),
-
-    -- * Creation
-    toPathData,
-
-    -- * Elimination
-    deleteFileName,
-
-    -- * Existence
-    trashPathExists,
+    headerNames,
     originalPathExists,
-
-    -- * Operations
-    pathDataToType,
-    convert,
-
-    -- * Miscellaneous
-    normalizeCore,
-    pathDataToTrashPath,
-    pathDataToTrashInfoPath,
   )
 where
 
-import Data.Bifunctor (first)
-import Data.Text qualified as T
-import PathSize
-  ( PathSizeResult
-      ( PathSizeFailure,
-        PathSizePartial,
-        PathSizeSuccess
-      ),
-    pathSizeRecursive,
-  )
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Backend.Cbor.PathData qualified as Cbor
-import SafeRm.Backend.Fdo.PathData qualified as Fdo
-import SafeRm.Backend.Json.PathData qualified as Json
-import SafeRm.Data.PathData.Common qualified as Common
-import SafeRm.Data.PathData.Core qualified as Core
+import GHC.Exts (IsList)
+import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
-  ( PathI (MkPathI),
-    PathIndex
-      ( TrashEntryFileName,
-        TrashEntryInfo,
-        TrashEntryOriginalPath,
-        TrashEntryPath,
-        TrashHome
-      ),
+  ( PathI,
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath),
   )
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
-import SafeRm.Env (HasTrashHome (getTrashHome))
-import SafeRm.Env qualified as Env
 import SafeRm.Prelude
+import SafeRm.Utils qualified as U
 
--- | Holds information about a file path.
-data PathData
-  = PathDataCbor Cbor.PathData
-  | PathDataFdo Fdo.PathData
-  | PathDataJson Json.PathData
+-- TODO: Should PathData have a field for current trash path?
+
+-- | Data for a path. Maintains an invariant that the original path is not
+-- the root nor is it empty.
+data PathData = UnsafePathData
+  { -- | The type of the path.
+    pathType :: PathType,
+    -- | The path to be used in the trash directory.
+    fileName :: PathI TrashEntryFileName,
+    -- | The original path on the file system.
+    originalPath :: PathI TrashEntryOriginalPath,
+    -- | The size of the file or directory.
+    size :: Bytes B Natural,
+    -- | Time this entry was created.
+    created :: Timestamp
+  }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)
 
-instance Serialize PathData where
-  type DecodeExtra PathData = (Backend, PathI TrashEntryFileName)
-  encode (PathDataCbor pd) = encode pd
-  encode (PathDataFdo pd) = encode pd
-  encode (PathDataJson pd) = encode pd
+makeFieldLabelsNoPrefix ''PathData
 
-  decode (BackendCbor, fileName) bs = PathDataCbor <$> decode fileName bs
-  decode (BackendFdo, fileName) bs = PathDataFdo <$> decode fileName bs
-  decode (BackendJson, fileName) bs = PathDataJson <$> decode fileName bs
-
-instance
-  (k ~ A_Getter, a ~ PathI TrashEntryFileName, b ~ PathI TrashEntryFileName) =>
-  LabelOptic "fileName" k PathData PathData a b
-  where
-  labelOptic = to getter
+instance Pretty PathData where
+  pretty pd = vsep strs
     where
-      getter (PathDataCbor pd) = pd ^. #fileName
-      getter (PathDataFdo pd) = pd ^. #fileName
-      getter (PathDataJson pd) = pd ^. #fileName
-  {-# INLINE labelOptic #-}
+      strs = zipWith (flip ($)) headerNames labelFn
+      labelFn =
+        [ \x -> x <> ":     " <+> pretty (decodeOsToFpShowText $ pd ^. #fileName % #unPathI),
+          \x -> x <> ": " <+> pretty (decodeOsToFpShowText $ pd ^. #originalPath % #unPathI),
+          \x -> x <> ":     " <+> pretty (pd ^. #pathType),
+          \x -> x <> ":     " <+> pretty (U.normalizedFormat $ pd ^. #size),
+          \x -> x <> ":  " <+> pretty (pd ^. #created)
+        ]
 
-instance
-  (k ~ A_Getter, a ~ PathI TrashEntryOriginalPath, b ~ PathI TrashEntryOriginalPath) =>
-  LabelOptic "originalPath" k PathData PathData a b
-  where
-  labelOptic = to getter
-    where
-      getter (PathDataCbor pd) = pd ^. #originalPath
-      getter (PathDataFdo pd) = pd ^. #originalPath
-      getter (PathDataJson pd) = pd ^. #originalPath
-  {-# INLINE labelOptic #-}
-
-instance
-  (k ~ A_Getter, a ~ Timestamp, b ~ Timestamp) =>
-  LabelOptic "created" k PathData PathData a b
-  where
-  labelOptic = to getter
-    where
-      getter (PathDataCbor pd) = pd ^. #created
-      getter (PathDataFdo pd) = pd ^. #created
-      getter (PathDataJson pd) = pd ^. #created
-  {-# INLINE labelOptic #-}
-
--- | For a given filepath, attempts to capture the following data:
---
--- * Canonical path.
--- * Unique name to be used in the trash directory.
--- * Created time.
--- * Any extra backend-specific fields (i.e. path type and size for default).
---
--- Additionally, we explicitly return the PathType. We do this because
--- the PathType does not exist on all backends (e.g. fdo) yet we need it upon
--- creation for choosing the correct move function (renameFile vs.
--- renameDirectory). We cannot rely on pathDataToType as that function is
--- only valid when the PathData entry has already been created in the trash.
-toPathData ::
-  ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
-  ) =>
-  Backend ->
-  Timestamp ->
-  PathI TrashHome ->
-  PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
-toPathData BackendCbor ts th = fmap (first PathDataCbor) . Cbor.toPathData ts th
-toPathData BackendFdo ts th = fmap (first PathDataFdo) . Fdo.toPathData ts th
-toPathData BackendJson ts th = fmap (first PathDataJson) . Json.toPathData ts th
-
--- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
--- that exists in 'TrashHome'.
-trashPathExists ::
-  ( HasCallStack,
-    MonadPathReader m
-  ) =>
-  PathI TrashHome ->
-  PathData ->
-  m Bool
-trashPathExists th pd = doesPathExist trashPath'
-  where
-    -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
-    -- the path type. See Note [PathData PathType conditions].
-
-    MkPathI trashPath' = Env.getTrashPath th (pd ^. #fileName)
+-- | Header names.
+headerNames :: (IsList a, IsString (Exts.Item a)) => a
+headerNames = ["Name", "Original", "Type", "Size", "Created"]
 
 -- | Returns 'True' if the 'PathData'\'s @originalPath@ corresponds to a real
 -- path that exists.
 originalPathExists ::
   ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    MonadPathReader m
   ) =>
-  PathI TrashHome ->
   PathData ->
   m Bool
-originalPathExists th pd = do
-  -- See Note [PathData PathType conditions].
-  pathType <- pathDataToType th pd
-
-  PathType.existsFn pathType (pd ^. (#originalPath % #unPathI))
-
--- | Deletes the pathdata's fileName from the trashHome.
-deleteFileName ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadThrow m
-  ) =>
-  PathI TrashHome ->
-  PathData ->
-  m ()
-deleteFileName trashHome pd = do
-  -- See Note [PathData PathType conditions].
-  pathType <- pathDataToType trashHome pd
-  PathType.deleteFn pathType trashPath'
-  where
-    MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
-
--- | Normalizes the wrapper 'PathData' into the specific default backend's
--- 'Default.PathData'. This is so we can functionality that relies on this
--- more specific type e.g. formatting.
-normalizeCore ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadIORef m,
-    MonadLogger m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
-  ) =>
-  PathData ->
-  m Core.PathData
-normalizeCore pd = do
-  let fileName = pd ^. #fileName
-      originalPath = pd ^. #originalPath
-      created = pd ^. #created
-
-  trashHome <- asks getTrashHome
-  pathType <- Common.pathDataToType trashHome pd
-
-  let MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
-
-  size <-
-    fmap (MkBytes @B)
-      $ pathSizeRecursive path
-      >>= \case
-        PathSizeSuccess n -> pure n
-        PathSizePartial errs n -> do
-          -- We received a value but had some errors.
-          putStrLn "Encountered errors retrieving size."
-          for_ errs $ \e -> do
-            let errMsg = T.pack $ displayException e
-            putTextLn errMsg
-            $(logError) errMsg
-          pure n
-        PathSizeFailure errs -> do
-          putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
-          for_ errs $ \e -> do
-            let errMsg = T.pack $ displayException e
-            putTextLn errMsg
-            $(logError) errMsg
-          pure 0
-  pure
-    $ Core.UnsafePathData
-      { fileName,
-        originalPath,
-        created,
-        pathType,
-        size
-      }
-
--- | Returns the path type.
---
--- NOTE: [PathData PathType conditions]
---
--- __IMPORTANT:__ This function is only guaranteed to work if the 'PathData'
--- corresponds to an extant trash entry. In particular, if the 'PathData' has
--- not been created yet, this can fail with the fdo backend.
---
--- Also, this function should not be used when we are testing to see if a
--- a path exists e.g. to see if a path exists in both files/ and info/.
---
--- For instance, we want to give a precise error message when a path p exists
--- in info/ but not files/. Notice this requires successfully testing the
--- existence of both files/p and info/p.trashinfo. If we use pathDataToType
--- to grab the "right" existence function (doesFileExist vs. doesDirectoryExist),
--- then we will inadvertently be performing the existence check here, with one
--- key difference: we throw an exception rather than return a Bool! This will
--- in turn cause the error to degrade to a basic FileNotFound, obviously not
--- what we want.
-pathDataToType ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
-  ) =>
-  PathI TrashHome ->
-  PathData ->
-  m PathType
-pathDataToType trashHome (PathDataCbor pd) = Common.pathDataToType trashHome pd
-pathDataToType trashHome (PathDataFdo pd) = Common.pathDataToType trashHome pd
-pathDataToType trashHome (PathDataJson pd) = Common.pathDataToType trashHome pd
-
--- \| Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
---
---
-pathDataToTrashPath :: PathI TrashHome -> PathData -> PathI TrashEntryPath
-pathDataToTrashPath trashHome = Env.getTrashPath trashHome . view #fileName
-
--- | Gives the 'PathData'\'s full trash path in the given 'TrashHome'.
-pathDataToTrashInfoPath :: PathI TrashHome -> Backend -> PathData -> PathI TrashEntryInfo
-pathDataToTrashInfoPath trashHome backend =
-  Env.getTrashInfoPath backend trashHome
-    . view #fileName
-
--- | Converts the given 'PathData' to the corresponding 'Backend'. If they
--- are already in sync then this is a no-op.
-convert :: PathData -> Backend -> PathData
-convert pd@(PathDataCbor _) BackendCbor = pd
-convert pd@(PathDataCbor _) BackendFdo =
-  PathDataFdo
-    $ Fdo.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataCbor _) BackendJson =
-  PathDataJson
-    $ Json.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataFdo _) BackendCbor =
-  PathDataCbor
-    $ Cbor.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataFdo _) BackendFdo = pd
-convert pd@(PathDataFdo _) BackendJson =
-  PathDataJson
-    $ Json.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataJson _) BackendCbor =
-  PathDataCbor
-    $ Cbor.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataJson _) BackendFdo =
-  PathDataFdo
-    $ Fdo.UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
-convert pd@(PathDataJson _) BackendJson = pd
+originalPathExists pd =
+  PathType.existsFn (pd ^. #pathType) (pd ^. (#originalPath % #unPathI))

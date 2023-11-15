@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | Interface for the trash directory
-module SafeRm.Trash
+-- | Interface for the default trash directory
+module SafeRm.Backend.Default.Trash
   ( -- * Trash directory
     createTrash,
     doesTrashExist,
@@ -18,6 +18,7 @@ module SafeRm.Trash
 
     -- * Utils
     findPathData,
+    getTrashPath,
   )
 where
 
@@ -25,7 +26,6 @@ import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig),
     Overwrite (OverwriteDirectories),
@@ -34,26 +34,30 @@ import Effects.FileSystem.PathWriter
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
 import Effects.System.Terminal qualified as Term
-import SafeRm.Backend (Backend)
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend.Data qualified as Backend.Data
+import SafeRm.Backend.Default.BackendArgs (BackendArgs)
+import SafeRm.Backend.Default.Index qualified as Default.Index
+import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Data.Index (Index (MkIndex))
-import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathData qualified as PathData
+import SafeRm.Data.PathData qualified as PathData.Core
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
       ( TrashEntryFileName,
+        TrashEntryInfo,
         TrashEntryOriginalPath,
+        TrashEntryPath,
         TrashHome
       ),
+    (<//>),
   )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
+import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
-import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     RestoreCollisionE (MkRestoreCollisionE),
@@ -65,7 +69,6 @@ import SafeRm.Exception
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
-import System.IO qualified as IO
 
 -- | Creates the trash directory if it does not exist.
 createTrash ::
@@ -77,8 +80,8 @@ createTrash ::
   m ()
 createTrash = do
   trashHome <- asks getTrashHome
-  let trashPathDir = Env.getTrashPathDir trashHome
-      trashInfoDir = Env.getTrashInfoDir trashHome
+  let trashPathDir = Default.Utils.getTrashPathDir trashHome
+      trashInfoDir = Default.Utils.getTrashInfoDir trashHome
 
   Paths.applyPathI (createDirectoryIfMissing False) trashHome
   Paths.applyPathI (createDirectoryIfMissing False) trashPathDir
@@ -103,8 +106,8 @@ doesTrashExist ::
   m Bool
 doesTrashExist = do
   trashHome <- asks getTrashHome
-  let MkPathI trashPathDir' = Env.getTrashPathDir trashHome
-      MkPathI trashInfoDir' = Env.getTrashInfoDir trashHome
+  let MkPathI trashPathDir' = Default.Utils.getTrashPathDir trashHome
+      MkPathI trashInfoDir' = Default.Utils.getTrashInfoDir trashHome
 
   homeExists <- doesDirectoryExist (trashHome ^. #unPathI)
   if not homeExists
@@ -131,24 +134,30 @@ doesTrashExist = do
 mvOriginalToTrash ::
   ( HasBackend env,
     HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
     MonadCatch m,
     MonadFileWriter m,
     MonadLoggerNS m,
-    MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m
+    MonadReader env m,
+    Serialize pd,
+    Show pd
   ) =>
+  BackendArgs m pd ->
   PathI TrashHome ->
   Timestamp ->
   PathI TrashEntryOriginalPath ->
   m ()
-mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
+mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
   backend <- asks getBackend
-  (pd, pathType) <- PathData.toPathData backend currTime trashHome path
+  (pd, pathType) <- (backendArgs ^. #toPd) currTime trashHome path
   $(logDebug) ("Deleting: " <> showt pd)
 
-  let MkPathI trashPath = PathData.pathDataToTrashPath trashHome pd
-      MkPathI trashInfoPath = PathData.pathDataToTrashInfoPath trashHome backend pd
+  let fileName = pd ^. #fileName
+      MkPathI trashPath = getTrashPath trashHome fileName
+      MkPathI trashInfoPath = getTrashInfoPath backend trashHome fileName
 
   -- 2. Write info file
   --
@@ -158,7 +167,8 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
   writeBinaryFile trashInfoPath encoded
 
   -- 4. Move file to trash
-  let moveFn = PathType.renameFn pathType (pd ^. #originalPath % #unPathI) trashPath
+  let MkPathI opath = pd ^. #originalPath
+      moveFn = PathType.renameFn pathType opath trashPath
 
   -- 5. If move failed, roll back info file
   moveFn `catchAny` \ex -> do
@@ -172,9 +182,11 @@ mvOriginalToTrash trashHome currTime path = addNamespace "mvOriginalToTrash" $ d
 -- In this case, the error has already been reported, so this is purely for
 -- signaling (i.e. should we exit with an error).
 permDeleteFromTrash ::
-  ( HasBackend env,
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
     HasCallStack,
-    HasTrashHome env,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
@@ -183,17 +195,17 @@ permDeleteFromTrash ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m
+    Serialize pd
   ) =>
+  BackendArgs m pd ->
   Bool ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (Maybe SomeException)
-permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
-  pathDatas <- findPathData trashHome pathName
+permDeleteFromTrash backendArgs force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
+  pathDatas <- findPathData backendArgs trashHome pathName
   backend <- asks getBackend
 
   anyExRef <- newIORef Nothing
@@ -214,11 +226,9 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
             --
             -- - No buffering on output so the "Permanently delete..." string gets
             --   printed w/o the newline.
-            noBuffering
+            Utils.noBuffering
 
-            -- NOTE: We normalize the path data as we want to display all fields here.
-            pathData' <- PathData.normalizeCore pathData
-            let pdStr = Utils.renderPretty pathData'
+            let pdStr = Utils.renderPretty pathData
             putTextLn pdStr
             putStr "\nPermanently delete (y/n)? "
             c <- Ch.toLower <$> Term.getChar
@@ -243,9 +253,9 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
   readIORef anyExRef
   where
     deleteFn' b pd = do
-      let MkPathI trashInfoPath' = Env.getTrashInfoPath b trashHome (pd ^. #fileName)
+      let MkPathI trashInfoPath' = getTrashInfoPath b trashHome (pd ^. #fileName)
 
-      PathData.deleteFileName trashHome pd
+      deleteFileName trashHome pd
       $(logDebug) ("Deleted: " <> showt pd)
       PW.removeFile trashInfoPath'
 
@@ -254,8 +264,11 @@ permDeleteFromTrash force trashHome pathName = addNamespace "permDeleteFromTrash
 -- reported, so this is purely for signaling (i.e. should we exit with
 -- an error).
 restoreTrashToOriginal ::
-  ( HasBackend env,
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
     HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadIORef m,
@@ -263,14 +276,16 @@ restoreTrashToOriginal ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    Serialize pd
   ) =>
+  BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (Maybe SomeException)
-restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
+restoreTrashToOriginal backendArgs trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
-  pathDatas <- findPathData trashHome pathName
+  pathDatas <- findPathData backendArgs trashHome pathName
   backend <- asks getBackend
 
   someExRef <- newIORef Nothing
@@ -281,12 +296,12 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
         $(logDebug) ("Restoring: " <> Paths.toText fileName)
 
         -- 2. Verify original path is empty
-        exists <- PathData.originalPathExists trashHome pd
+        exists <- PathData.Core.originalPathExists pd
         when exists
           $ throwCS
           $ MkRestoreCollisionE fileName originalPath
 
-        pathType <- PathData.pathDataToType trashHome pd
+        let pathType = pd ^. #pathType
         restoreFn' backend pathType pd
 
   -- Need our own error handling here since if we are restoring multiple
@@ -305,8 +320,8 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
   readIORef someExRef
   where
     restoreFn' b pt pd = do
-      let MkPathI trashPath' = Env.getTrashPath trashHome (pd ^. #fileName)
-          MkPathI trashInfoPath' = Env.getTrashInfoPath b trashHome (pd ^. #fileName)
+      let MkPathI trashPath' = getTrashPath trashHome (pd ^. #fileName)
+          MkPathI trashInfoPath' = getTrashInfoPath b trashHome (pd ^. #fileName)
 
       -- 3. Attempt restore
       PathType.renameFn pt trashPath' (pd ^. #originalPath % #unPathI)
@@ -319,20 +334,24 @@ restoreTrashToOriginal trashHome pathName = addNamespace "restoreTrashToOriginal
       PW.removeFile trashInfoPath'
 
 findOnePathData ::
-  ( HasBackend env,
+  forall m env pd.
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
     HasCallStack,
     MonadFileReader m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m
+    MonadThrow m,
+    Serialize pd
   ) =>
   PathI TrashHome ->
   PathI TrashEntryFileName ->
+  BackendArgs m pd ->
   m PathData
-findOnePathData trashHome pathName = do
+findOnePathData trashHome pathName backendArgs = do
   backend <- asks getBackend
   let trashInfoPath@(MkPathI trashInfoPath') =
-        Env.getTrashInfoPath backend trashHome pathName
+        getTrashInfoPath backend trashHome pathName
 
   pathInfoExists <- doesFileExist trashInfoPath'
   unless pathInfoExists
@@ -340,11 +359,11 @@ findOnePathData trashHome pathName = do
     $ MkTrashEntryNotFoundE pathName trashInfoPath
 
   contents <- readBinaryFile trashInfoPath'
-  pathData <- case decode (backend, pathName) contents of
+  pathData <- case decode @pd pathName contents of
     Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
-    Right pd -> pure pd
+    Right pd -> (backendArgs ^. #toCorePathData) trashHome pd
 
-  pathExists <- PathData.trashPathExists trashHome pathData
+  pathExists <- trashPathExists trashHome pathData
   unless pathExists
     $ throwCS
     $ MkTrashEntryFileNotFoundE trashHome pathName
@@ -352,19 +371,22 @@ findOnePathData trashHome pathName = do
   pure pathData
 
 findManyPathData ::
-  ( HasBackend env,
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadReader env m,
-    MonadThrow m
+    MonadThrow m,
+    Serialize pd
   ) =>
+  BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (NESeq PathData)
-findManyPathData trashHome pathName = do
-  MkIndex index <- Index.readIndex trashHome
+findManyPathData backendArgs trashHome pathName = do
+  index <- fmap (view _1) . view #unIndex <$> Default.Index.readIndex backendArgs trashHome
 
   pathNameText <- T.pack <$> decodeOsToFpThrowM (pathName ^. #unPathI)
 
@@ -377,25 +399,25 @@ findManyPathData trashHome pathName = do
       fp <- decodeOsToFpThrowM (pd ^. (#fileName % #unPathI))
       pure $ Utils.matchesWildcards pathNameText' (T.pack fp)
 
-noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
-noBuffering = buffOff IO.stdin *> buffOff IO.stdout
-  where
-    buffOff h = HW.hSetBuffering h NoBuffering
-
 -- | Searches for the given trash name in the trash.
 findPathData ::
-  ( HasBackend env,
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
     HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m
+    MonadThrow m,
+    Serialize pd
   ) =>
+  BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (NESeq PathData)
-findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
+findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
   pathNameStr <- decodeOsToFpThrowM pathName'
   let pathNameTxt = T.pack pathNameStr
 
@@ -404,7 +426,7 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
     -- where pathName also includes the sequence \\*).
     | hasWildcard pathNameStr -> do
         $(logDebug) $ "Performing wildcard search: '" <> pathNameTxt <> "'"
-        findManyPathData trashHome pathName
+        findManyPathData backendArgs trashHome pathName
     -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
     -- wildcards by this point, we can simply findOne as normal, after removing
     -- the escape.
@@ -417,12 +439,12 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
             ]
         let literal = T.replace "\\*" "*" pathNameTxt
         literalPath <- encodeFpToOsThrowM $ T.unpack literal
-        NESeq.singleton <$> findOnePathData trashHome (MkPathI literalPath)
+        NESeq.singleton <$> findOnePathData trashHome (MkPathI literalPath) backendArgs
 
     -- 3. No * at all; normal
     | otherwise -> do
         $(logDebug) $ "Normal search: '" <> pathNameTxt <> "'"
-        NESeq.singleton <$> findOnePathData trashHome pathName
+        NESeq.singleton <$> findOnePathData trashHome pathName backendArgs
   where
     hasWildcard [] = False
     -- escaped; ignore
@@ -431,9 +453,14 @@ findPathData trashHome pathName@(MkPathI pathName') = addNamespace "findPathData
     hasWildcard (_ : xs) = hasWildcard xs
 
 convertBackend ::
-  ( HasBackend env,
+  forall m env pdSrc pdDest k.
+  ( DecodeExtra pdDest ~ PathI TrashEntryFileName,
+    DecodeExtra pdSrc ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pdDest (PathI TrashEntryFileName),
+    LabelOptic' "fileName" k pdSrc (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
@@ -441,27 +468,36 @@ convertBackend ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    Serialize pdDest,
+    Serialize pdSrc
   ) =>
-  Backend ->
+  BackendArgs m pdSrc ->
+  BackendArgs m pdDest ->
   m ()
-convertBackend dest = addNamespace "convertBackend" $ do
-  $(logDebug) $ "Converting backend to: " <> T.pack (Backend.backendArg dest)
+convertBackend backendArgsSrc backendArgsDest = addNamespace "convertBackend" $ do
+  let dest = backendArgsDest ^. #backend
+  $(logDebug) $ "Converting backend to: " <> T.pack (Backend.Data.backendName dest)
   trashHome@(MkPathI th) <- asks getTrashHome
-  MkIndex index <- Index.readIndex trashHome
+
+  MkIndex index <- Default.Index.readIndex backendArgsSrc trashHome
 
   let newInfo = th </> [osp|tmp_info_new|]
   PW.createDirectory newInfo
 
+  let fromCorePathData = backendArgsDest ^. #fromCorePathData
+
   -- NOTE: This is not in-place.
 
-  let createTmp = for_ index $ \pd -> do
-        let pd' = PathData.convert pd dest
+  let createTmp = for_ index $ \(pd, _) -> do
+        pd' :: pd <- fromCorePathData pd
         encoded <- encodeThrowM pd'
-        let filePath =
+        let MkPathI fileName = view #fileName pd'
+            filePath :: OsPath
+            filePath =
               newInfo
-                </> (pd' ^. (#fileName % #unPathI))
-                <> Env.trashInfoExtensionOsPath dest
+                </> fileName
+                <.> Backend.Data.backendExt dest
 
         writeBinaryFile filePath encoded
 
@@ -478,7 +514,7 @@ convertBackend dest = addNamespace "convertBackend" $ do
     removeDirectoryRecursive newInfo
     throwM ex
 
-  let MkPathI trashInfoDir = Env.getTrashInfoDir trashHome
+  let MkPathI trashInfoDir = Default.Utils.getTrashInfoDir trashHome
       oldInfo = th </> [osp|tmp_info_old|]
 
   -- 2. Move current trash/info to trash/tmp_info_old
@@ -537,3 +573,48 @@ mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
         { overwrite = OverwriteDirectories,
           targetName = TargetNameDest
         }
+
+deleteFileName ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathI TrashHome ->
+  PathData ->
+  m ()
+deleteFileName trashHome pd = PathType.deleteFn (pd ^. #pathType) trashPath'
+  where
+    MkPathI trashPath' = getTrashPath trashHome (pd ^. #fileName)
+
+-- | Returns 'True' if the 'PathData'\'s @fileName@ corresponds to a real path
+-- that exists in 'TrashHome'.
+trashPathExists ::
+  ( HasCallStack,
+    MonadPathReader m
+  ) =>
+  PathI TrashHome ->
+  PathData ->
+  m Bool
+trashPathExists th pd = doesPathExist trashPath'
+  where
+    -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
+    -- the path type. See Note [PathData PathType conditions].
+
+    MkPathI trashPath' = getTrashPath th (pd ^. #fileName)
+
+getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
+getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
+
+getTrashInfoPath ::
+  Backend ->
+  PathI TrashHome ->
+  PathI TrashEntryFileName ->
+  PathI TrashEntryInfo
+getTrashInfoPath backend trashHome name =
+  trashHome
+    <//> MkPathI pathInfo
+    <//> Paths.liftPathI' (<.> trashInfoExtensionOsPath backend) name
+
+trashInfoExtensionOsPath :: Backend -> OsPath
+trashInfoExtensionOsPath BackendCbor = [osp|.cbor|]
+trashInfoExtensionOsPath BackendFdo = [osp|.trashinfo|]
+trashInfoExtensionOsPath BackendJson = [osp|.json|]

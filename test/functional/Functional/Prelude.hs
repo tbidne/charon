@@ -68,7 +68,8 @@ import Effects.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data qualified as Backend
+import SafeRm.Data.PathType as X (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
@@ -204,7 +205,7 @@ withSrArgsTestDirM testDir as = do
 
   let backend = env ^. #backend
       trashDir = testDir </> (env ^. #trashDir)
-  pure $ ["-t", unsafeDecodeOsToFp trashDir, "-b", Backend.backendArg backend] ++ as
+  pure $ ["-t", unsafeDecodeOsToFp trashDir, "-b", Backend.backendName backend] ++ as
 
 -- | Prepends the given arguments with the trash directory and backend,
 -- according to the environment i.e.

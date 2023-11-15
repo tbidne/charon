@@ -6,15 +6,13 @@ module SafeRm.Data.Index
   ( Index (..),
     empty,
 
-    -- * Reading
-    readIndex,
-
     -- * Formatting
     formatIndex,
     Sort (..),
     readSort,
 
     -- * Low level utils
+    formatIndex',
     fromList,
     insert,
   )
@@ -22,15 +20,13 @@ where
 
 import Data.Foldable (toList)
 import Data.HashMap.Strict qualified as HMap
-import Data.HashSet qualified as HSet
 import Data.Ord (Ord (max))
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
 import GHC.Real (RealFrac (floor))
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathData.Core qualified as PathDataCore
+import SafeRm.Data.PathData qualified as PathDataCore
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatMultiline, FormatTabular),
@@ -38,25 +34,15 @@ import SafeRm.Data.PathData.Formatting
 import SafeRm.Data.PathData.Formatting qualified as Formatting
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashHome),
-  )
-import SafeRm.Data.Serialize (Serialize (decode))
-import SafeRm.Env (HasBackend (getBackend), HasTrashHome)
-import SafeRm.Env qualified as Env
-import SafeRm.Exception
-  ( InfoDecodeE (MkInfoDecodeE),
-    TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
-    TrashEntryInfoBadExtE (MkTrashEntryInfoBadExtE),
-    TrashEntryInfoNotFoundE (MkTrashEntryInfoNotFoundE),
+    PathIndex (TrashEntryFileName, TrashEntryPath),
   )
 import SafeRm.Prelude
-import System.OsPath qualified as FP
 
 type PathDataCore = PathDataCore.PathData
 
 -- | Index that stores the trash data.
 newtype Index = MkIndex
-  { unIndex :: Seq PathData
+  { unIndex :: Seq (PathDataCore, PathI TrashEntryPath)
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (NFData)
@@ -66,88 +52,6 @@ makeFieldLabelsNoPrefix ''Index
 -- | Empty index.
 empty :: Index
 empty = MkIndex mempty
-
--- | Reads the trash directory into the 'Index'. If this succeeds then
--- everything is 'well-formed' i.e. there is a bijection between trash/files
--- and trash/info.
-readIndex ::
-  forall m env.
-  ( HasBackend env,
-    HasCallStack,
-    MonadFileReader m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadReader env m,
-    MonadThrow m
-  ) =>
-  PathI TrashHome ->
-  m Index
-readIndex trashHome = addNamespace "readIndex" $ do
-  paths <- listDirectory trashInfoDir'
-  $(logDebug) ("Trash info: " <> decodeOsToFpShowText trashInfoDir')
-  $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpShowText <$> paths))
-  backend <- asks getBackend
-
-  -- TODO: Maybe this shouldn't report errors eagerly
-
-  let seqify ::
-        OsPath ->
-        m (Seq PathData, HashSet (PathI TrashEntryFileName)) ->
-        m (Seq PathData, HashSet (PathI TrashEntryFileName))
-      seqify p macc = do
-        actualExt <- decodeOsToFpThrowM (FP.takeExtension p)
-        let expectedExt = Env.trashInfoExtension backend
-
-        when (actualExt /= expectedExt)
-          $ throwCS
-          $ MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
-
-        let path = trashInfoDir' </> p
-        $(logDebug) ("Path: " <> decodeOsToFpShowText path)
-
-        contents <- readBinaryFile path
-        let -- NOTE: We want the name without the suffix
-            fileName = FP.dropExtension $ FP.takeFileName path
-            decoded = decode (backend, MkPathI fileName) contents
-        case decoded of
-          Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
-          Right pd -> do
-            throwIfTrashNonExtant trashHome pd
-            (accSeq, accSet) <- macc
-            pure (pd :<| accSeq, HSet.insert (pd ^. #fileName) accSet)
-
-  (indexSeq, pathSet) <- foldr seqify (pure (Seq.empty, HSet.empty)) paths
-
-  -- NOTE: Check that all files in /files exist in the index.
-  allTrashPaths <- listDirectory trashPathsDir'
-  $(logDebug) ("Paths: " <> T.intercalate ", " (decodeOsToFpShowText <$> allTrashPaths))
-  for_ allTrashPaths $ \p -> do
-    let pName = MkPathI $ FP.takeFileName p
-    unless (pName `HSet.member` pathSet)
-      $ throwCS
-      $ MkTrashEntryInfoNotFoundE trashHome pName
-
-  pure $ MkIndex indexSeq
-  where
-    MkPathI trashPathsDir' = Env.getTrashPathDir trashHome
-    MkPathI trashInfoDir' = Env.getTrashInfoDir trashHome
-
--- | Verifies that the 'PathData'\'s @fileName@ actually exists.
-throwIfTrashNonExtant ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
-  ) =>
-  PathI TrashHome ->
-  PathData ->
-  m ()
-throwIfTrashNonExtant trashHome pd = do
-  exists <- PathData.trashPathExists trashHome pd
-  unless exists
-    $ throwCS
-    $ MkTrashEntryFileNotFoundE trashHome filePath
-  where
-    filePath = pd ^. #fileName
 
 -- | How to sort the index list.
 data Sort
@@ -173,18 +77,12 @@ sortFn b = \case
 
 -- | Formats the 'Index' in a pretty way.
 formatIndex ::
-  forall m env.
+  forall m.
   ( HasCallStack,
-    HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   -- | Format to use
   PathDataFormat ->
@@ -195,8 +93,29 @@ formatIndex ::
   -- | The index to format
   Index ->
   m Text
-formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
-  FormatMultiline -> multiline (sortFn revSort sort) <$> indexToSeq idx
+formatIndex style sort revSort idx =
+  formatIndex' style sort revSort (view _1 <$> view #unIndex idx)
+
+-- | Formats the 'Index' in a pretty way.
+formatIndex' ::
+  forall m.
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadTerminal m
+  ) =>
+  -- | Format to use
+  PathDataFormat ->
+  -- | How to sort
+  Sort ->
+  -- | If true, reverses the sortPathData
+  Bool ->
+  -- | The index to format
+  Seq PathDataCore ->
+  m Text
+formatIndex' style sort revSort idx = addNamespace "formatIndex" $ case style of
+  FormatMultiline -> pure $ multiline (sortFn revSort sort) idx
   FormatTabular nameFormat origFormat -> do
     -- NOTE: We want to format the table such that we (concisely) display as
     -- much information as possible while trying to avoid ugly text wrapping
@@ -240,7 +159,7 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
 
     -- maxNameLen := longest name
     -- maxOrigLen := orig path
-    (maxNameLen, maxOrigLen) <- foldl' foldMap (pure maxStart) (idx ^. #unIndex)
+    (maxNameLen, maxOrigLen) <- foldl' foldMap (pure maxStart) idx
 
     -- maxLen := maximum terminal width
     maxLen <- getMaxLen
@@ -278,10 +197,10 @@ formatIndex style sort revSort idx = addNamespace "formatIndex" $ case style of
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 
-    tabular (sortFn revSort sort) nameLen origLen <$> indexToSeq idx
+    pure $ tabular (sortFn revSort sort) nameLen origLen idx
     where
       -- Search the index; find the longest name and orig path
-      foldMap :: m (Natural, Natural) -> PathData -> m (Natural, Natural)
+      foldMap :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
       foldMap acc pd = do
         (!maxNameSoFar, !maxOrigSoFar) <- acc
         nameLen <- pathLen $ pd ^. #fileName
@@ -422,20 +341,3 @@ insert ::
   HashMap (PathI TrashEntryFileName) PathData ->
   HashMap (PathI TrashEntryFileName) PathData
 insert pd = HMap.insert (pd ^. #fileName) pd
-
-indexToSeq ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadIORef m,
-    MonadLogger m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
-  ) =>
-  Index ->
-  m (Seq PathDataCore)
-indexToSeq = traverse PathData.normalizeCore . view #unIndex

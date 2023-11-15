@@ -24,8 +24,8 @@ import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
 import Integration.Utils qualified as IntUtils
 import SafeRm qualified
-import SafeRm.Backend (Backend)
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data (Backend)
+import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
@@ -39,6 +39,10 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (MkSafeRmT))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
+
+-- FIXME: These tests rely on knowledge of the internal trash structure.
+-- We should do the same thing we did for the functional tests i.e.
+-- divorce assertions from backend knowledge.
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -140,7 +144,7 @@ tests testDir =
 testsBackend :: IO OsPath -> Backend -> TestTree
 testsBackend testDir b =
   testGroup
-    (Backend.backendTestDesc b)
+    (Backend.Data.backendTestDesc b)
     [ delete b testDir,
       deleteSome b testDir,
       permDelete b testDir,
@@ -179,7 +183,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTest
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
 
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
@@ -232,7 +236,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist βTrash
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
 
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
@@ -270,7 +274,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.permDelete True toPermDelete
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
 
       [] === index
@@ -327,7 +331,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
@@ -371,7 +375,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.restore toRestore
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
 
       [] === index
@@ -427,7 +431,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow ex
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
       let indexOrigPaths = foldl' toOrigPath HSet.empty index
 
@@ -471,7 +475,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.emptyTrash True
 
       -- get index
-      index <- view #unIndex <$> usingIntIO env SafeRm.getIndex
+      index <- getIndex env
       annotateShow index
 
       [] === index
@@ -551,7 +555,7 @@ mkTrashPaths backend trashHome =
   fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
   where
     mkTrashPath p = trashHome </> pathFiles </> p
-    mkTrashInfoPath p = trashHome </> pathInfo </> p <> Env.trashInfoExtensionOsPath backend
+    mkTrashInfoPath p = trashHome </> pathInfo </> p <> Backend.Data.backendExt backend
 
 -- NOTE: [OSX temp symlink]
 --
@@ -574,7 +578,7 @@ mkTrashPaths backend trashHome =
 getTestPath :: (MonadIO m) => IO OsPath -> OsPath -> Backend -> m OsPath
 getTestPath mtestPath p backend = do
   testPath <- liftIO $ canonicalizePath =<< mtestPath
-  pure $ testPath </> p </> Backend.backendArgOsPath backend
+  pure $ testPath </> p </> Backend.Data.backendArgOsPath backend
 
 setupDir ::
   ( MonadCatch m,
@@ -593,3 +597,6 @@ setupDir dir files = do
   action `catchAny` \ex -> do
     annotate $ displayException ex
     failure
+
+getIndex :: IntEnv -> PropertyT IO (Seq PathData)
+getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env SafeRm.getIndex

@@ -7,7 +7,7 @@ module Unit.Runner
   )
 where
 
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo))
+import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo))
 import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),

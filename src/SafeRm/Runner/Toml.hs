@@ -9,7 +9,7 @@ module SafeRm.Runner.Toml
   )
 where
 
-import SafeRm.Backend (Backend)
+import SafeRm.Backend.Data (Backend)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Prelude
 import SafeRm.Runner.Args (Args)

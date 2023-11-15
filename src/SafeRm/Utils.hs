@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Provides internal utility functions
 module SafeRm.Utils
   ( -- * FAM combinators
@@ -31,6 +33,9 @@ module SafeRm.Utils
     filterSeqM,
     renderPretty,
     setRefIfJust,
+    noBuffering,
+    getPathSize,
+    getAllFiles,
   )
 where
 
@@ -48,7 +53,18 @@ import Data.Text qualified as T
 import Data.Text.Internal (Text (Text))
 import Data.Text.Internal qualified as TI
 import Data.Text.Internal.Search qualified as TIS
+import Effects.FileSystem.HandleWriter qualified as HW
+import PathSize
+  ( PathSizeResult
+      ( PathSizeFailure,
+        PathSizePartial,
+        PathSizeSuccess
+      ),
+  )
+import PathSize qualified
+import SafeRm.Exception (FileNotFoundE (MkFileNotFoundE))
 import SafeRm.Prelude
+import System.IO qualified as IO
 import Text.Printf (PrintfArg)
 import URI.ByteString qualified as URI
 
@@ -239,3 +255,61 @@ filterSeqM p = foldl' foldP (pure Seq.empty)
 -- | When for monadic bool.
 whenM :: (Monad m) => m Bool -> m () -> m ()
 whenM mb ma = mb >>= (`when` ma)
+
+-- | Sets NoBuffering.
+noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
+noBuffering = buffOff IO.stdin *> buffOff IO.stdout
+  where
+    buffOff h = HW.hSetBuffering h NoBuffering
+
+getPathSize ::
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadTerminal m,
+    MonadThread m
+  ) =>
+  OsPath ->
+  m (Bytes B Natural)
+getPathSize path = do
+  fmap (MkBytes @B)
+    $ PathSize.pathSizeRecursive path
+    >>= \case
+      PathSizeSuccess n -> pure n
+      PathSizePartial errs n -> do
+        -- We received a value but had some errors.
+        putStrLn "Encountered errors retrieving size."
+        for_ errs $ \e -> do
+          let errMsg = T.pack $ displayException e
+          putTextLn errMsg
+          $(logError) errMsg
+        pure n
+      PathSizeFailure errs -> do
+        putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
+        for_ errs $ \e -> do
+          let errMsg = T.pack $ displayException e
+          putTextLn errMsg
+          $(logError) errMsg
+        pure 0
+
+getAllFiles ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  OsPath ->
+  m [OsPath]
+getAllFiles fp =
+  doesFileExist fp >>= \case
+    True -> pure [fp]
+    False ->
+      doesDirectoryExist fp >>= \case
+        True ->
+          listDirectory fp
+            >>= fmap join
+            . traverse (getAllFiles . (fp </>))
+        False -> throwCS $ MkFileNotFoundE fp

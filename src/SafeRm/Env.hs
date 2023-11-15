@@ -4,31 +4,18 @@
 module SafeRm.Env
   ( HasTrashHome (..),
     getTrashLog,
-    getTrashPathDir,
-    getTrashInfoDir,
-    getTrashPath,
-    getTrashInfoPath,
-    trashInfoExtension,
-    trashInfoExtensionOsPath,
     HasBackend (..),
   )
 where
 
 import Effects.FileSystem.PathReader (getXdgState)
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend.Data (Backend)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
-      ( TrashDirFiles,
-        TrashDirInfo,
-        TrashEntryFileName,
-        TrashEntryInfo,
-        TrashEntryPath,
-        TrashHome,
+      ( TrashHome,
         TrashLog
       ),
-    liftPathI',
-    (<//>),
   )
 import SafeRm.Prelude
 
@@ -47,38 +34,6 @@ class HasTrashHome a where
 -- | Retrieves the trash log path.
 getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
 getTrashLog = MkPathI . (</> [osp|log|]) <$> getXdgState pathSafeRm
-
-getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
-getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
-
-getTrashInfoPath ::
-  Backend ->
-  PathI TrashHome ->
-  PathI TrashEntryFileName ->
-  PathI TrashEntryInfo
-getTrashInfoPath backend trashHome name =
-  trashHome
-    <//> MkPathI pathInfo
-    <//> liftPathI' (<> trashInfoExtensionOsPath backend) name
-
--- | Retrieves the trash path dir.
-getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
-getTrashPathDir trashHome = trashHome <//> MkPathI pathFiles
-
--- | Retrieves the trash info dir.
-getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
-getTrashInfoDir trashHome = trashHome <//> MkPathI pathInfo
-
-trashInfoExtensionOsPath :: Backend -> OsPath
-trashInfoExtensionOsPath BackendCbor = [osp|.cbor|]
-trashInfoExtensionOsPath BackendFdo = [osp|.trashinfo|]
-trashInfoExtensionOsPath BackendJson = [osp|.json|]
-
--- | Returns the extension for the trash info files.
-trashInfoExtension :: (IsString a) => Backend -> a
-trashInfoExtension BackendCbor = ".cbor"
-trashInfoExtension BackendFdo = ".trashinfo"
-trashInfoExtension BackendJson = ".json"
 
 -- | Class for retrieving the backend.
 class HasBackend a where

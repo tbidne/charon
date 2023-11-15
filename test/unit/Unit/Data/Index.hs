@@ -17,18 +17,17 @@ import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Backend qualified as Backend
-import SafeRm.Backend.Cbor.PathData qualified as Cbor
-import SafeRm.Backend.Fdo.PathData qualified as Fdo
-import SafeRm.Backend.Json.PathData qualified as Json
+import Numeric.Literal.Integer (FromInteger (afromInteger))
+import SafeRm.Backend.Data (Backend)
+import SafeRm.Backend.Data qualified as Backend
 import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
 import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData qualified as PathData
+import SafeRm.Data.PathData (PathData (UnsafePathData))
 import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatMultiline, FormatTabular),
   )
+import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (getTrashHome))
@@ -181,13 +180,13 @@ tabularAutoTests b =
     ]
 
 testFormatTabularAutoNormal :: Backend -> TestTree
-testFormatTabularAutoNormal b = testGoldenFormat b desc fileName (mkIndex b) formatTabularAuto 100
+testFormatTabularAutoNormal b = testGoldenFormat b desc fileName mkIndex formatTabularAuto 100
   where
     desc = "Auto tabular format"
     fileName = [osp|tabular-auto-normal|]
 
 testFormatTabularAutoMinTermSize :: Backend -> TestTree
-testFormatTabularAutoMinTermSize b = testGoldenFormat b desc fileName (mkIndex b) formatTabularAuto 59
+testFormatTabularAutoMinTermSize b = testGoldenFormat b desc fileName mkIndex formatTabularAuto 59
   where
     desc = "Auto tabular formats minimum terminal size"
     fileName = [osp|tabular-auto-min|]
@@ -200,27 +199,16 @@ testFormatTabularAutoApprox b = testGoldenFormat b desc fileName mkIdx formatTab
     mkIdx = do
       ts <- fromText "2020-05-31T12:00:00"
       pure
-        $ MkIndex
-        $ case b of
-          BackendCbor ->
-            [ PathData.PathDataCbor $ Cbor.UnsafePathData (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') ts,
-              PathData.PathDataCbor $ Cbor.UnsafePathData (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) ts
-            ]
-          BackendFdo ->
-            [ PathData.PathDataFdo $ Fdo.UnsafePathData (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') ts,
-              PathData.PathDataFdo $ Fdo.UnsafePathData (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) ts
-            ]
-          BackendJson ->
-            [ PathData.PathDataJson $ Json.UnsafePathData (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') ts,
-              PathData.PathDataJson $ Json.UnsafePathData (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) ts
-            ]
+        [ UnsafePathData PathTypeFile (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') (afromInteger 70) ts,
+          UnsafePathData PathTypeFile (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) (afromInteger 10) ts
+        ]
 
 testFormatTabularAutoEmpty :: Backend -> TestTree
 testFormatTabularAutoEmpty b = testGoldenFormat b desc fileName mkIdx formatTabularAuto 100
   where
     desc = "Auto tabular empty"
     fileName = [osp|tabular-auto-empty|]
-    mkIdx = pure $ MkIndex []
+    mkIdx = pure []
 
 formatTabularAutoFail :: TestTree
 formatTabularAutoFail = testCase desc $ do
@@ -259,35 +247,35 @@ tabularMaxTests b =
     ]
 
 testFormatTabularMaxNameAutoOrig :: Backend -> TestTree
-testFormatTabularMaxNameAutoOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularMaxNameAutoOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular (Just ColFormatMax) Nothing
     desc = "Tabular max file name, auto orig"
     fileName = [osp|tabular-max-name-auto-orig|]
 
 testFormatTabularMaxNameAutoOrigTrunc :: Backend -> TestTree
-testFormatTabularMaxNameAutoOrigTrunc b = testGoldenFormat b desc fileName (mkIndex b) fmt 70
+testFormatTabularMaxNameAutoOrigTrunc b = testGoldenFormat b desc fileName mkIndex fmt 70
   where
     fmt = FormatTabular (Just ColFormatMax) Nothing
     desc = "Tabular max file name, auto orig truncates orig"
     fileName = [osp|tabular-max-name-auto-orig-trunc|]
 
 testFormatTabularAutoNameMaxOrig :: Backend -> TestTree
-testFormatTabularAutoNameMaxOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularAutoNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular Nothing (Just ColFormatMax)
     desc = "Tabular auto name, max original path"
     fileName = [osp|tabular-auto-name-max-orig|]
 
 testFormatTabularAutoNameMaxOrigTrunc :: Backend -> TestTree
-testFormatTabularAutoNameMaxOrigTrunc b = testGoldenFormat b desc fileName (mkIndex b) fmt 70
+testFormatTabularAutoNameMaxOrigTrunc b = testGoldenFormat b desc fileName mkIndex fmt 70
   where
     fmt = FormatTabular Nothing (Just ColFormatMax)
     desc = "Tabular auto name, max original path truncates name"
     fileName = [osp|tabular-auto-name-max-orig-trunc|]
 
 testFormatTabularMaxNameMaxOrig :: Backend -> TestTree
-testFormatTabularMaxNameMaxOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularMaxNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular (Just ColFormatMax) (Just ColFormatMax)
     desc = "Tabular max file name and max original path"
@@ -305,66 +293,44 @@ tabularMiscTests b =
     ]
 
 testFormatTabularFixedNameMaxOrig :: Backend -> TestTree
-testFormatTabularFixedNameMaxOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularFixedNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular (Just $ ColFormatFixed 50) (Just ColFormatMax)
     desc = "Tabular fixed file name and max original path"
     fileName = [osp|tabular-fix-name-max-orig|]
 
 testFormatTabularFixedNameAutoOrig :: Backend -> TestTree
-testFormatTabularFixedNameAutoOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularFixedNameAutoOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular (Just $ ColFormatFixed 50) Nothing
     desc = "Tabular fixed file name and auto original path"
     fileName = [osp|tabular-fix-name-auto-orig|]
 
 testFormatTabularMaxNameFixedOrig :: Backend -> TestTree
-testFormatTabularMaxNameFixedOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularMaxNameFixedOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular (Just ColFormatMax) (Just $ ColFormatFixed 50)
     desc = "Tabular max file name and fixed original path"
     fileName = [osp|tabular-max-name-fix-orig|]
 
 testFormatTabularAutoNameFixedOrig :: Backend -> TestTree
-testFormatTabularAutoNameFixedOrig b = testGoldenFormat b desc fileName (mkIndex b) fmt 100
+testFormatTabularAutoNameFixedOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
     fmt = FormatTabular Nothing (Just $ ColFormatFixed 50)
     desc = "Tabular auto file name and fixed original path"
     fileName = [osp|tabular-auto-name-fix-orig|]
 
-mkIndex :: (MonadFail f) => Backend -> f Index
-mkIndex b = do
+mkIndex :: (MonadFail f) => f (Seq PathData)
+mkIndex = do
   ts <- ts'
   pure
-    $ MkIndex
-    $ case b of
-      BackendCbor ->
-        PathData.PathDataCbor
-          <$> [ Cbor.UnsafePathData (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) ts,
-                Cbor.UnsafePathData (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) ts,
-                Cbor.UnsafePathData (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) ts,
-                Cbor.UnsafePathData (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) ts,
-                Cbor.UnsafePathData (MkPathI [osp|d|]) (MkPathI [osp|/d|]) ts,
-                Cbor.UnsafePathData (MkPathI [osp|z|]) (MkPathI [osp|/z|]) ts
-              ]
-      BackendFdo ->
-        PathData.PathDataFdo
-          <$> [ Fdo.UnsafePathData (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) ts,
-                Fdo.UnsafePathData (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) ts,
-                Fdo.UnsafePathData (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) ts,
-                Fdo.UnsafePathData (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) ts,
-                Fdo.UnsafePathData (MkPathI [osp|d|]) (MkPathI [osp|/d|]) ts,
-                Fdo.UnsafePathData (MkPathI [osp|z|]) (MkPathI [osp|/z|]) ts
-              ]
-      BackendJson ->
-        PathData.PathDataJson
-          <$> [ Json.UnsafePathData (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) ts,
-                Json.UnsafePathData (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) ts,
-                Json.UnsafePathData (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) ts,
-                Json.UnsafePathData (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) ts,
-                Json.UnsafePathData (MkPathI [osp|d|]) (MkPathI [osp|/d|]) ts,
-                Json.UnsafePathData (MkPathI [osp|z|]) (MkPathI [osp|/z|]) ts
-              ]
+    [ UnsafePathData PathTypeFile (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) (afromInteger 70) ts,
+      UnsafePathData PathTypeFile (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) (afromInteger 5_000) ts,
+      UnsafePathData PathTypeDirectory (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) (afromInteger 20_230) ts,
+      UnsafePathData PathTypeFile (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) (afromInteger 13_070_000) ts,
+      UnsafePathData PathTypeDirectory (MkPathI [osp|d|]) (MkPathI [osp|/d|]) (afromInteger 5_000_000_000_000_000_000_000_000_000) ts,
+      UnsafePathData PathTypeFile (MkPathI [osp|z|]) (MkPathI [osp|/z|]) (afromInteger 200_120) ts
+    ]
   where
     -- 5,000 Y
     ts' :: (MonadFail f) => f Timestamp
@@ -393,7 +359,7 @@ testGoldenFormatParams ::
   Bool ->
   TestTree
 testGoldenFormatParams backend desc fileName style sortCol rev =
-  testGolden backend desc fileName (mkIndex backend) style sortCol rev 61
+  testGolden backend desc fileName mkIndex style sortCol rev 61
 
 -- Golden tests for different combinations of PathDataFormat + Index +
 -- Terminal size.
@@ -407,7 +373,7 @@ testGoldenFormat ::
   -- | Golden filepath
   OsPath ->
   -- | Action producing the index
-  IO Index ->
+  IO (Seq PathData) ->
   -- | Style
   PathDataFormat ->
   -- | Terminal size
@@ -425,7 +391,7 @@ testGolden ::
   -- | Golden filepath
   OsPath ->
   -- | Action producing the index
-  IO Index ->
+  IO (Seq PathData) ->
   -- | Style
   PathDataFormat ->
   -- | Column on which to sort
@@ -445,7 +411,7 @@ testGolden
   rev
   termWidth = goldenVsFile desc (unsafeDecodeOsToFp gpath) (unsafeDecodeOsToFp apath) $ do
     idx <- mkIdx
-    let fmt = Index.formatIndex style sortFn rev idx
+    let fmt = Index.formatIndex' style sortFn rev idx
     formatted <- runConfigIO fmt termWidth
     writeBinaryFile apath (toBS formatted)
     where
@@ -459,5 +425,5 @@ mkGoldenPaths b fp =
     goldenPath </> fpBackend <> [osp|.actual|]
   )
   where
-    fpBackend = fp <> [osp|-|] <> unsafeEncodeFpToOs (Backend.backendArg b)
+    fpBackend = fp <> [osp|-|] <> unsafeEncodeFpToOs (Backend.backendName b)
     goldenPath = [osp|test|] </> [osp|unit|] </> [osp|Unit|] </> [osp|Data|] </> [osp|Index|]

@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Unit.Data.PathData
+module Unit.Backend.Fdo.PathData
   ( tests,
   )
 where
@@ -13,12 +13,8 @@ import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Backend qualified as Backend
-import SafeRm.Backend.Cbor.PathData qualified as Cbor
+import SafeRm.Backend.Fdo.PathData (PathData (UnsafePathData))
 import SafeRm.Backend.Fdo.PathData qualified as Fdo
-import SafeRm.Backend.Json.PathData qualified as Json
-import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo, PathDataJson))
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
@@ -30,27 +26,26 @@ import Unit.Prelude
 tests :: TestTree
 tests =
   testGroup
-    "Data.PathData"
+    "Backend.Fdo.PathData"
     ( serializeRoundtripProp
-        : [serializeRoundtripSpecs b specs | b <- backends]
+        : [serializeRoundtripSpecs specs]
     )
   where
-    backends = [minBound .. maxBound]
     specs =
       [ ([osp|1|], [osp|\t|]),
         ([osp|2|], [osp|path\\nnew\\n\\nlines|]),
         ([osp|3|], [osp|path\\n\\n|])
       ]
 
-serializeRoundtripSpecs :: Backend -> [(OsPath, OsPath)] -> TestTree
-serializeRoundtripSpecs backend params = testCase desc $ do
+serializeRoundtripSpecs :: [(OsPath, OsPath)] -> TestTree
+serializeRoundtripSpecs params = testCase desc $ do
   ts <- Timestamp.fromText "1858-11-17T00:00:00"
 
   for_ params $ \(fileName, originalPath) -> do
-    let pd = backendToMk backend fileName originalPath ts
+    let pd = mkPd fileName originalPath ts
     encoded <- encodeThrowM pd
 
-    case decode (backend, MkPathI fileName) encoded of
+    case decode (MkPathI fileName) encoded of
       Left err ->
         assertFailure
           $ mconcat
@@ -63,34 +58,20 @@ serializeRoundtripSpecs backend params = testCase desc $ do
             ]
       Right decoded -> pd @=? decoded
   where
-    desc = "decode . encode ~ id (specs) " ++ Backend.backendTestDesc backend
-    backendToMk BackendCbor name opath ts =
-      PathDataCbor
-        $ Cbor.UnsafePathData
-          { fileName = MkPathI name,
-            originalPath = MkPathI opath,
-            created = ts
-          }
-    backendToMk BackendFdo name opath ts =
-      PathDataFdo
-        $ Fdo.UnsafePathData
-          { fileName = MkPathI name,
-            originalPath = MkPathI opath,
-            created = ts
-          }
-    backendToMk BackendJson name opath ts =
-      PathDataJson
-        $ Json.UnsafePathData
-          { fileName = MkPathI name,
-            originalPath = MkPathI opath,
-            created = ts
-          }
+    desc = "decode . encode ~ id (specs)"
+
+    mkPd name opath ts =
+      UnsafePathData
+        { fileName = MkPathI name,
+          originalPath = MkPathI opath,
+          created = ts
+        }
 
 serializeRoundtripProp :: TestTree
 serializeRoundtripProp =
   testPropertyNamed "decode . encode ~ id (prop)" "serializeRoundtripProp" $ do
     property $ do
-      (pathData, backend) <- forAll genPathData
+      pathData <- forAll genPathData
       let fileName = pathData ^. #fileName
       -- NOTE:
       -- Two caveats on injectivity:
@@ -106,33 +87,16 @@ serializeRoundtripProp =
       -- resolution. This is acceptable, as we do not care about
       -- precision > second.
       encoded <- encodeThrowM pathData
-      let decoded = decode (backend, fileName) encoded
+      let decoded = decode fileName encoded
 
       annotateShow encoded
       annotateShow decoded
 
       Right pathData === decoded
 
-genPathData :: Gen (PathData, Backend)
+genPathData :: Gen PathData
 genPathData =
-  Gen.choice
-    [ (\x -> (PathDataCbor x, BackendCbor)) <$> genCborPathData,
-      (\x -> (PathDataFdo x, BackendFdo)) <$> genFdoPathData
-    ]
-
-genCborPathData :: Gen Cbor.PathData
-genCborPathData =
-  Cbor.UnsafePathData
-    <$> genFileName
-    <*> genOriginalPath
-    <*> genTimestamp
-  where
-    genFileName = toPathI <$> Gen.string (Range.exponential 1 100) genPathChar
-    genOriginalPath = toPathI <$> Gen.string (Range.linear 1 100) genPathChar
-
-genFdoPathData :: Gen Fdo.PathData
-genFdoPathData =
-  Fdo.UnsafePathData
+  UnsafePathData
     <$> genFileName
     <*> genOriginalPath
     <*> genTimestamp

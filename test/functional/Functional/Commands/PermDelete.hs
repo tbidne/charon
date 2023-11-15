@@ -70,7 +70,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     -- trash structure assertions
     (delIdxSet, delMetadata) <- runIndexMetadataM
 
-    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
 
     assertSetEq delExpectedIdxSet delIdxSet
     liftIO $ delExpectedMetadata @=? delMetadata
@@ -130,11 +130,11 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
 
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     -- trash structure assertions
@@ -154,7 +154,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
-    permDelExpectedIdxSet <- mkPathDataSetM ["f2"]
+    permDelExpectedIdxSet <- mkPathDataSetM [("f2", PathTypeFile, 5)]
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
@@ -208,7 +208,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
@@ -276,9 +276,9 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f5"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f5", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -342,7 +342,14 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM ["1", "2", "3", "4", "5"]
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("1", PathTypeFile, 5),
+          ("2", PathTypeFile, 5),
+          ("3", PathTypeFile, 5),
+          ("4", PathTypeFile, 5),
+          ("5", PathTypeFile, 5)
+        ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
@@ -361,7 +368,12 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
-    permDelExpectedIdxSet <- mkPathDataSetM ["1", "3", "5"]
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("1", PathTypeFile, 5),
+          ("3", PathTypeFile, 5),
+          ("5", PathTypeFile, 5)
+        ]
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
@@ -411,18 +423,18 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "1f",
-          "2f",
-          "3f",
-          "g1",
-          "g2",
-          "g3",
-          "1g",
-          "2g",
-          "3g"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("1f", PathTypeFile, 5),
+          ("2f", PathTypeFile, 5),
+          ("3f", PathTypeFile, 5),
+          ("g1", PathTypeFile, 5),
+          ("g2", PathTypeFile, 5),
+          ("g3", PathTypeFile, 5),
+          ("1g", PathTypeFile, 5),
+          ("2g", PathTypeFile, 5),
+          ("3g", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -444,12 +456,12 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     -- trash structure assertions
     permDelExpectedIdxSet <-
       mkPathDataSetM
-        [ "g1",
-          "g2",
-          "g3",
-          "1g",
-          "2g",
-          "3g"
+        [ ("g1", PathTypeFile, 5),
+          ("g2", PathTypeFile, 5),
+          ("g3", PathTypeFile, 5),
+          ("1g", PathTypeFile, 5),
+          ("2g", PathTypeFile, 5),
+          ("3g", PathTypeFile, 5)
         ]
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
@@ -500,15 +512,15 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "foobar",
-          "fooBadbar",
-          "fooXbar",
-          "g1",
-          "g2",
-          "g3",
-          "1g",
-          "2g",
-          "3g"
+        [ ("foobar", PathTypeFile, 5),
+          ("fooBadbar", PathTypeFile, 5),
+          ("fooXbar", PathTypeFile, 5),
+          ("g1", PathTypeFile, 5),
+          ("g2", PathTypeFile, 5),
+          ("g3", PathTypeFile, 5),
+          ("1g", PathTypeFile, 5),
+          ("2g", PathTypeFile, 5),
+          ("3g", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -533,7 +545,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
-    permDelExpectedIdxSet <- mkPathDataSetM ["fooBadbar"]
+    permDelExpectedIdxSet <- mkPathDataSetM [("fooBadbar", PathTypeFile, 5)]
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
@@ -592,13 +604,13 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "1f",
-          "2f",
-          "3f",
-          "*"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("1f", PathTypeFile, 5),
+          ("2f", PathTypeFile, 5),
+          ("3f", PathTypeFile, 5),
+          ("*", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -619,12 +631,12 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     -- trash structure assertions
     permDelExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "1f",
-          "2f",
-          "3f"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("1f", PathTypeFile, 5),
+          ("2f", PathTypeFile, 5),
+          ("3f", PathTypeFile, 5)
         ]
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
@@ -677,12 +689,12 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "xxfoo",
-          "xxbar",
-          "xxbaz",
-          "y*xxfoo",
-          "y*xxbar",
-          "y*xxbaz"
+        [ ("xxfoo", PathTypeFile, 5),
+          ("xxbar", PathTypeFile, 5),
+          ("xxbaz", PathTypeFile, 5),
+          ("y*xxfoo", PathTypeFile, 5),
+          ("y*xxbar", PathTypeFile, 5),
+          ("y*xxbaz", PathTypeFile, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -704,9 +716,9 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- trash structure assertions
     permDelExpectedIdxSet <-
       mkPathDataSetM
-        [ "xxfoo",
-          "xxbar",
-          "xxbaz"
+        [ ("xxfoo", PathTypeFile, 5),
+          ("xxbar", PathTypeFile, 5),
+          ("xxbaz", PathTypeFile, 5)
         ]
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
@@ -760,7 +772,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
     assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM ["f1"]
+    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet

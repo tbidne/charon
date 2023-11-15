@@ -272,6 +272,7 @@ import System.IO as X
     IO,
     IOMode (AppendMode),
   )
+import System.OsPath as X ((<.>))
 import Text.Show as X (Show (show))
 
 showt :: (Show a) => a -> Text

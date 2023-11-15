@@ -8,8 +8,8 @@ where
 
 import Data.Text qualified as T
 import Integration.Prelude
-import SafeRm.Backend (Backend)
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data (Backend)
+import SafeRm.Backend.Data qualified as Backend
 import SafeRm.Exception (RootE)
 
 tests :: TestTree
@@ -51,4 +51,4 @@ deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
         "Attempted to delete root! This is not allowed."
 
     argList :: [String]
-    argList = "delete" : r : ["-t", "/dev/null", "--backend", Backend.backendArg b]
+    argList = "delete" : r : ["-t", "/dev/null", "--backend", Backend.backendName b]

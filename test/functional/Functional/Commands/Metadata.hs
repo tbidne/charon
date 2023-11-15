@@ -58,11 +58,11 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM

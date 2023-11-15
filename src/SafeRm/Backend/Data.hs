@@ -1,12 +1,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Provides the 'Backend' data type.
-module SafeRm.Backend
+module SafeRm.Backend.Data
   ( Backend (..),
     parseBackend,
     backendTestDesc,
-    backendArg,
+    backendName,
     backendArgOsPath,
+    backendExt,
   )
 where
 
@@ -45,12 +46,17 @@ backendTestDesc BackendCbor = "(backend := cbor)"
 backendTestDesc BackendFdo = "(backend := fdo)"
 backendTestDesc BackendJson = "(backend := json)"
 
-backendArg :: (IsString s) => Backend -> s
-backendArg BackendCbor = "cbor"
-backendArg BackendFdo = "fdo"
-backendArg BackendJson = "json"
+backendName :: (IsString s) => Backend -> s
+backendName BackendCbor = "cbor"
+backendName BackendFdo = "fdo"
+backendName BackendJson = "json"
 
 backendArgOsPath :: Backend -> OsPath
 backendArgOsPath BackendCbor = [osp|cbor|]
 backendArgOsPath BackendFdo = [osp|fdo|]
 backendArgOsPath BackendJson = [osp|json|]
+
+backendExt :: Backend -> OsPath
+backendExt BackendCbor = [osp|.cbor|]
+backendExt BackendFdo = [osp|.trashinfo|]
+backendExt BackendJson = [osp|.json|]

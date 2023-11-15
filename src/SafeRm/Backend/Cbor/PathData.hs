@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -7,13 +6,17 @@ module SafeRm.Backend.Cbor.PathData
   ( -- * PathData
     PathData (..),
     toPathData,
+    toCorePathData,
+    fromCorePathData,
   )
 where
 
 import Codec.Serialise qualified as Serialise
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
-import SafeRm.Data.PathData.Common qualified as Common
+import SafeRm.Backend.Default.Trash qualified as Trash
+import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -26,6 +29,7 @@ import SafeRm.Data.Paths
 import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
+import SafeRm.Utils qualified as Utils
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -58,7 +62,7 @@ toPathData ::
   PathI TrashEntryOriginalPath ->
   m (PathData, PathType)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
-  (fileName', originalPath', pathType) <- Common.getPathInfo trashHome origPath
+  (fileName', originalPath', pathType) <- Default.Utils.getPathInfo trashHome origPath
 
   pure
     ( UnsafePathData
@@ -91,3 +95,46 @@ instance Serialize PathData where
               created
             }
       Left ex -> Left $ displayException ex
+
+toCorePathData ::
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadTerminal m,
+    MonadThread m
+  ) =>
+  PathI TrashHome ->
+  PathData ->
+  m PathData.PathData
+toCorePathData trashHome pd = do
+  pathType <- Default.Utils.pathDataToType trashHome pd
+
+  size <- Utils.getPathSize path
+
+  pure
+    $ PathData.UnsafePathData
+      { pathType,
+        fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        size,
+        created = pd ^. #created
+      }
+  where
+    MkPathI path = Trash.getTrashPath trashHome (pd ^. #fileName)
+
+fromCorePathData ::
+  ( Monad m
+  ) =>
+  PathData.PathData ->
+  m PathData
+fromCorePathData pd =
+  pure
+    $ UnsafePathData
+      { fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        created = pd ^. #created
+      }

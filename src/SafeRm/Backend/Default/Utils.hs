@@ -1,11 +1,16 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SafeRm.Data.PathData.Common
-  ( getPathInfo,
+module SafeRm.Backend.Default.Utils
+  ( -- * Trash paths
+    getTrashPathDir,
+    getTrashInfoDir,
+    getTrashPath,
+
+    -- * Misc
+    getPathInfo,
     parseTrashInfoMap,
-    lookup,
     pathDataToType,
+    lookup,
   )
 where
 
@@ -17,14 +22,16 @@ import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
-      ( TrashEntryFileName,
+      ( TrashDirFiles,
+        TrashDirInfo,
+        TrashEntryFileName,
         TrashEntryOriginalPath,
         TrashEntryPath,
         TrashHome
       ),
+    (<//>),
   )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Env qualified as Env
 import SafeRm.Exception
   ( EmptyPathE (MkEmptyPathE),
     FileNotFoundE (MkFileNotFoundE),
@@ -35,6 +42,17 @@ import SafeRm.Exception
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
 import System.OsPath qualified as FP
+
+-- | Retrieves the trash path dir.
+getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
+getTrashPathDir trashHome = trashHome <//> MkPathI pathFiles
+
+-- | Retrieves the trash info dir.
+getTrashInfoDir :: PathI TrashHome -> PathI TrashDirInfo
+getTrashInfoDir trashHome = trashHome <//> MkPathI pathInfo
+
+getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
+getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 
 -- | For a given path, retrieves its unique trash entry file name,
 -- original path, and type.
@@ -69,7 +87,7 @@ getPathInfo trashHome origPath = do
   -- This works for directories too because canonicalizePath drops the
   -- trailing slashes.
   let fileName = Paths.liftPathI' FP.takeFileName originalPath
-  uniqPath <- mkUniqPath (Env.getTrashPath trashHome (Paths.reindex fileName))
+  uniqPath <- mkUniqPath (getTrashPath trashHome (Paths.reindex fileName))
   let uniqName = Paths.liftPathI FP.takeFileName uniqPath
 
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
@@ -221,4 +239,4 @@ pathDataToType trashHome pd = do
             then throwCS $ MkPathNotFileDirE path
             else throwCS $ MkFileNotFoundE path
   where
-    MkPathI path = Env.getTrashPath trashHome (pd ^. #fileName)
+    MkPathI path = getTrashPath trashHome (pd ^. #fileName)

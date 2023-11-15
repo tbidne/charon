@@ -10,7 +10,7 @@ module SafeRm.Runner.Env
 where
 
 import Effects.LoggerNS (Namespace)
-import SafeRm.Backend (Backend)
+import SafeRm.Backend.Data (Backend)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
 import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude

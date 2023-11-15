@@ -8,6 +8,9 @@ where
 
 import SafeRm.Prelude
 
+-- REVIEW: Consider renaming this class to disambiguate from the Serialise
+-- class used with cbor e.g. SerializeTrash.
+
 -- | Class for (de)serializing data.
 class Serialize a where
   -- | Extra data used for decoding.

@@ -6,8 +6,8 @@ where
 
 import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
-import SafeRm.Backend (Backend)
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data (Backend)
+import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Data.Metadata
   ( Metadata
       ( MkMetadata,
@@ -17,7 +17,6 @@ import SafeRm.Data.Metadata
         size
       ),
   )
-import SafeRm.Env qualified as Env
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -69,11 +68,11 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ "f1",
-          "f2",
-          "f3",
-          "dir1",
-          "dir2"
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -82,7 +81,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
     -- CONVERT
 
-    convertArgList <- withSrArgsM ["convert", "-d", Backend.backendArg dest]
+    convertArgList <- withSrArgsM ["convert", "-d", Backend.Data.backendName dest]
     runSafeRm convertArgList
 
     -- we changed the backend, so have to update our env here
@@ -98,7 +97,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       -- i.e. they use getTestDir, which appends:
       --
       --      <> "-"
-      --      <> Backend.backendArg (env ^. #backend)
+      --      <> Backend.Data.backendName (env ^. #backend)
       --
       -- onto the end of the path. This is normally what we want, but here
       -- it isn't, as it will calculate a new (wrong) trash directory.
@@ -121,7 +120,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
             ["f1", "f2", "f3", "dir1", "dir2"] >>= \fp ->
               let fp' = unsafeEncodeFpToOs fp
                   pathFile = testDir </> pathDotTrash </> pathFiles </> fp'
-                  infoFile = testDir </> pathDotTrash </> pathInfo </> fp' <> Env.trashInfoExtensionOsPath newBackend
+                  infoFile = testDir </> pathDotTrash </> pathInfo </> fp' <> Backend.Data.backendExt newBackend
                in [pathFile, infoFile]
       assertPathsExist convertTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -141,11 +140,11 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
         -- See Note [Test dir and backend changes].
         mkPathDataSetTestDirM
           testDir
-          [ "f1",
-            "f2",
-            "f3",
-            "dir1",
-            "dir2"
+          [ ("f1", PathTypeFile, 5),
+            ("f2", PathTypeFile, 5),
+            ("f3", PathTypeFile, 5),
+            ("dir1", PathTypeDirectory, 5),
+            ("dir2", PathTypeDirectory, 15)
           ]
 
       -- See Note [Test dir and backend changes].
@@ -153,7 +152,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       assertSetEq convertExpectedIdxSet convertIdxSet
       delExpectedMetadata @=? convertMetadata
   where
-    destDesc = Backend.backendArg dest
+    destDesc = Backend.Data.backendName dest
 
     delExpectedMetadata =
       MkMetadata

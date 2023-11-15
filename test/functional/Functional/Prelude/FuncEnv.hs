@@ -54,14 +54,22 @@ import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
+import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm qualified
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
-import SafeRm.Backend qualified as Backend
-import SafeRm.Backend.Cbor.PathData qualified as Cbor
-import SafeRm.Backend.Fdo.PathData qualified as Fdo
-import SafeRm.Backend.Json.PathData qualified as Json
+import SafeRm.Backend.Data (Backend (BackendCbor))
+import SafeRm.Backend.Data qualified as Backend
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData (PathData (PathDataCbor, PathDataFdo, PathDataJson))
+import SafeRm.Data.PathData
+  ( PathData
+      ( UnsafePathData,
+        created,
+        fileName,
+        originalPath,
+        pathType,
+        size
+      ),
+  )
+import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Env (HasBackend, HasTrashHome)
@@ -378,7 +386,7 @@ runIndexMetadataTestDirM testDir = do
   -- Need to canonicalize due to windows aliases
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
 
-  idx <- liftIO $ view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
+  idx <- liftIO $ fmap (view _1) . view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
   mdata <- liftIO $ runFuncIO SafeRm.getMetadata funcEnv
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
@@ -393,10 +401,7 @@ runIndexMetadataTestDirM testDir = do
               . T.pack
               . unsafeDecodeOsToFp
               . view #unPathI
-       in case pd of
-            PathDataCbor d -> HSet.insert (PathDataCbor $ over' #originalPath fixPath d) acc
-            PathDataFdo d -> HSet.insert (PathDataFdo $ over' #originalPath fixPath d) acc
-            PathDataJson d -> HSet.insert (PathDataJson $ over' #originalPath fixPath d) acc
+       in HSet.insert (over' #originalPath fixPath pd) acc
 
 -- | Transforms the list of filepaths into a Set PathData i.e. for each @p@,
 --
@@ -409,18 +414,18 @@ runIndexMetadataTestDirM testDir = do
 --
 -- The type of PathData that is returned depends on the test env's current
 -- backend.
-mkPathDataSetM :: [String] -> TestM (HashSet PathData)
+mkPathDataSetM :: [(String, PathType, Integer)] -> TestM (HashSet PathData)
 mkPathDataSetM paths = do
   testDir <- getTestDir
   mkPathDataSetTestDirM testDir paths
 
 -- | Like 'mkPathDataSetM', except uses the given path as the test directory,
 -- rather than having it determined by the TestEnv.
-mkPathDataSetTestDirM :: OsPath -> [String] -> TestM (HashSet PathData)
-mkPathDataSetTestDirM testDir paths = do
-  env <- ask
-  let backend = env ^. #backend
-
+mkPathDataSetTestDirM ::
+  OsPath ->
+  [(String, PathType, Integer)] ->
+  TestM (HashSet PathData)
+mkPathDataSetTestDirM testDir pathData = do
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
         unsafeEncodeFpToOs
@@ -429,31 +434,16 @@ mkPathDataSetTestDirM testDir paths = do
 
   pure
     $ HSet.fromList
-    $ paths
-    <&> \p ->
+    $ pathData
+    <&> \(p, pathType, sizeNat) ->
       let p' = unsafeEncodeFpToOs p
-       in case backend of
-            BackendCbor ->
-              PathDataCbor
-                $ Cbor.UnsafePathData
-                  { fileName = MkPathI p',
-                    originalPath = MkPathI (testDir' </> p'),
-                    created = fixedTimestamp
-                  }
-            BackendFdo ->
-              PathDataFdo
-                $ Fdo.UnsafePathData
-                  { fileName = MkPathI p',
-                    originalPath = MkPathI (testDir' </> p'),
-                    created = fixedTimestamp
-                  }
-            BackendJson ->
-              PathDataJson
-                $ Json.UnsafePathData
-                  { fileName = MkPathI p',
-                    originalPath = MkPathI (testDir' </> p'),
-                    created = fixedTimestamp
-                  }
+       in UnsafePathData
+            { fileName = MkPathI p',
+              originalPath = MkPathI (testDir' </> p'),
+              created = fixedTimestamp,
+              pathType = pathType,
+              size = afromInteger sizeNat
+            }
 
 -- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
 -- originalPath differ i.e. for each @(p, q)@
@@ -464,11 +454,8 @@ mkPathDataSetTestDirM testDir paths = do
 --   created = fixedTimestamp
 -- }
 -- @
-mkPathDataSetM2 :: [(String, String)] -> TestM (HashSet PathData)
-mkPathDataSetM2 paths = do
-  env <- ask
-  let backend = env ^. #backend
-
+mkPathDataSetM2 :: [(String, String, PathType, Integer)] -> TestM (HashSet PathData)
+mkPathDataSetM2 pathData = do
   testDir <- getTestDir
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
@@ -481,32 +468,17 @@ mkPathDataSetM2 paths = do
 
   pure
     $ HSet.fromList
-    $ paths
-    <&> \(fn, opath) ->
+    $ pathData
+    <&> \(fn, opath, pathType, sizeNat) ->
       let fn' = unsafeEncodeFpToOs fn
           opath' = unsafeEncodeFpToOs opath
-       in case backend of
-            BackendCbor ->
-              PathDataCbor
-                $ Cbor.UnsafePathData
-                  { fileName = MkPathI fn',
-                    originalPath = MkPathI (testDir' </> opath'),
-                    created = fixedTimestamp
-                  }
-            BackendFdo ->
-              PathDataFdo
-                $ Fdo.UnsafePathData
-                  { fileName = MkPathI fn',
-                    originalPath = MkPathI (testDir' </> opath'),
-                    created = fixedTimestamp
-                  }
-            BackendJson ->
-              PathDataJson
-                $ Json.UnsafePathData
-                  { fileName = MkPathI fn',
-                    originalPath = MkPathI (testDir' </> opath'),
-                    created = fixedTimestamp
-                  }
+       in UnsafePathData
+            { fileName = MkPathI fn',
+              originalPath = MkPathI (testDir' </> opath'),
+              created = fixedTimestamp,
+              pathType,
+              size = afromInteger sizeNat
+            }
 
 -- | Returns the full test dir for the given environment i.e.
 --

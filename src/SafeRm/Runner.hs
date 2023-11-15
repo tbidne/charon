@@ -20,8 +20,8 @@ import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import SafeRm qualified
-import SafeRm.Backend (Backend (BackendCbor))
-import SafeRm.Data.Index (Index (MkIndex), Sort (Name))
+import SafeRm.Backend.Data (Backend (BackendCbor))
+import SafeRm.Data.Index (Sort (Name))
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.PathData.Formatting (PathDataFormat (FormatMultiline))
 import SafeRm.Data.Paths
@@ -132,8 +132,8 @@ runCmd cmd =
       Restore paths -> SafeRm.restore paths
       LookupTrashName paths -> do
         results <- SafeRm.lookupTrashName paths
-        let index = MkIndex (NESeq.toSeq results)
-        formatted <- Index.formatIndex FormatMultiline Name False index
+        let index = NESeq.toSeq results
+        formatted <- Index.formatIndex' FormatMultiline Name False index
         putTextLn formatted
       List listCmd ->
         printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
@@ -250,12 +250,16 @@ printMetadata ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
     MonadFileReader m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThrow m
+    MonadThread m
   ) =>
   m ()
 printMetadata = SafeRm.getMetadata >>= prettyDel

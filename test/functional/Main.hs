@@ -15,8 +15,8 @@ import Functional.Commands.PermDelete qualified as PermDelete
 import Functional.Commands.Restore qualified as Restore
 import Functional.Prelude
 import GHC.Conc (setUncaughtExceptionHandler)
-import SafeRm.Backend (Backend (BackendCbor))
-import SafeRm.Backend qualified as Backend
+import SafeRm.Backend.Data (Backend (BackendCbor))
+import SafeRm.Backend.Data qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
@@ -52,7 +52,7 @@ main = do
     backendDescs :: [(Backend, String)]
     backendDescs =
       [minBound .. maxBound] <&> \b ->
-        (b, titleCase $ Backend.backendArg b)
+        (b, titleCase $ Backend.backendName b)
 
     titleCase [] = []
     titleCase (c : cs) = Ch.toTitle c : cs

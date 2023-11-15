@@ -24,7 +24,7 @@ where
 
 import Data.Char qualified as Ch
 import Data.Text qualified as T
-import SafeRm.Data.PathData.Core (PathData)
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import SafeRm.Prelude

@@ -51,6 +51,12 @@ import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import System.OsPath (encodeUtf)
 
+-- NOTE: Many of these exceptions are backend-specific e.g.
+-- TrashEntryFileNotFoundE arguably only makes sense for backends with
+-- a trash/info directory. These could either be moved to the Backend.Default
+-- module or have the description generalized (i.e. "index info found but not
+-- path").
+
 -- | Path is not found.
 newtype FileNotFoundE = MkFileNotFoundE OsPath
   deriving stock (Show)
@@ -161,8 +167,8 @@ instance Exception TrashEntryInfoNotFoundE where
 data TrashEntryInfoBadExtE
   = MkTrashEntryInfoBadExtE
       (PathI TrashEntryFileName)
-      String
-      String
+      OsPath
+      OsPath
   deriving stock (Show)
 
 instance Exception TrashEntryInfoBadExtE where
@@ -171,9 +177,9 @@ instance Exception TrashEntryInfoBadExtE where
       [ "The trash info file '",
         FsUtils.osToFp $ name ^. #unPathI,
         "' has an unexpected file extension: '",
-        actualExt,
+        FsUtils.osToFp actualExt,
         "'. Expected '",
-        expectedExt,
+        FsUtils.osToFp expectedExt,
         "'"
       ]
 

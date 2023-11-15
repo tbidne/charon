@@ -19,8 +19,8 @@ module SafeRm
   )
 where
 
-import SafeRm.Backend (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Backend.Cbor qualified as Cbor
+import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Backend.Fdo qualified as Fdo
 import SafeRm.Backend.Json qualified as Json
 import SafeRm.Data.Index (Index)
@@ -45,14 +45,17 @@ delete ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
+    MonadThread m,
     MonadTime m
   ) =>
   UniqueSeq (PathI TrashEntryOriginalPath) ->
@@ -100,11 +103,16 @@ getIndex ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
     MonadFileReader m,
-    MonadPathReader m,
+    MonadIORef m,
     MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
     MonadReader env m,
-    MonadThrow m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   m Index
 getIndex =
@@ -120,11 +128,16 @@ getMetadata ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
     MonadFileReader m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixCompat m,
     MonadReader env m,
-    MonadThrow m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   m Metadata
 getMetadata =
@@ -141,14 +154,17 @@ restore ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
@@ -165,14 +181,18 @@ emptyTrash ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
+    MonadIORef m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadLoggerNS m,
+    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThrow m
+    MonadThread m
   ) =>
   Bool ->
   m ()
@@ -187,14 +207,18 @@ convert ::
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   Backend ->
   m ()
@@ -230,11 +254,16 @@ merge dest =
 lookupTrashName ::
   ( HasBackend env,
     HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
     MonadFileReader m,
+    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixCompat m,
     MonadReader env m,
-    MonadThrow m
+    MonadTerminal m,
+    MonadThread m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m (NESeq PathData)

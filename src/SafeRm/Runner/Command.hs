@@ -18,7 +18,7 @@ module SafeRm.Runner.Command
   )
 where
 
-import SafeRm.Backend (Backend)
+import SafeRm.Backend.Data (Backend)
 import SafeRm.Data.Paths
   ( PathI,
     PathIndex
