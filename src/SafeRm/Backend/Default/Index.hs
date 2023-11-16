@@ -143,4 +143,5 @@ lookupTrashPath trashHome pd = do
     -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
     -- the path type. See Note [PathData PathType conditions].
     trashPath :: PathI 'TrashEntryPath
-    trashPath@(MkPathI trashPath') = trashHome <//> MkPathI pathFiles <//> (pd ^. #fileName)
+    trashPath@(MkPathI trashPath') =
+      trashHome <//> MkPathI Default.Utils.pathFiles <//> (pd ^. #fileName)

@@ -41,6 +41,7 @@ import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)
 import SafeRm.Exception (EmptyPathE, RootE)
 import System.OsPath (encodeUtf)
+import System.OsPath qualified as FP
 import Unit.Prelude
 
 tests :: TestTree
@@ -207,7 +208,7 @@ instance MonadPathReader PathDataT where
   canonicalizePath = pure . ([osp|home|] </>)
 
   doesPathExist p
-    | p `L.elem` nexists = pure False
+    | pName `L.elem` nexists = pure False
     | otherwise =
         error
           $ mconcat
@@ -217,9 +218,10 @@ instance MonadPathReader PathDataT where
               show nexists
             ]
     where
+      pName = FP.takeFileName p
       nexists =
-        [ pathTest </> pathUnit </> pathDotTrash </> pathFiles </> [osp|foo|],
-          pathTest </> pathUnit </> pathDotTrash </> pathFiles </> [osp| |]
+        [ [osp|foo|],
+          [osp| |]
         ]
 
   doesFileExist p
@@ -360,9 +362,3 @@ windowsify (c:cs)
 #else
 windowsify = id
 #endif
-
-pathTest :: OsPath
-pathTest = [osp|test|]
-
-pathUnit :: OsPath
-pathUnit = [osp|unit|]

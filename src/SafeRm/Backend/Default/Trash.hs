@@ -37,6 +37,10 @@ import Effects.System.Terminal qualified as Term
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Backend.Default.BackendArgs (BackendArgs)
+import SafeRm.Backend.Default.Exception
+  ( TrashDirFilesNotFoundE (MkTrashDirFilesNotFoundE),
+    TrashDirInfoNotFoundE (MkTrashDirInfoNotFoundE),
+  )
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Data.Index (Index (MkIndex))
@@ -61,8 +65,6 @@ import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     RestoreCollisionE (MkRestoreCollisionE),
-    TrashDirFilesNotFoundE (MkTrashDirFilesNotFoundE),
-    TrashDirInfoNotFoundE (MkTrashDirInfoNotFoundE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
     TrashEntryNotFoundE (MkTrashEntryNotFoundE),
     TrashEntryWildcardNotFoundE (MkTrashEntryWildcardNotFoundE),
@@ -602,7 +604,7 @@ trashPathExists th pd = doesPathExist trashPath'
     MkPathI trashPath' = getTrashPath th (pd ^. #fileName)
 
 getTrashPath :: PathI TrashHome -> PathI TrashEntryFileName -> PathI TrashEntryPath
-getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
+getTrashPath trashHome name = trashHome <//> MkPathI Default.Utils.pathFiles <//> name
 
 getTrashInfoPath ::
   Backend ->
@@ -611,5 +613,5 @@ getTrashInfoPath ::
   PathI TrashEntryInfo
 getTrashInfoPath backend trashHome name =
   trashHome
-    <//> MkPathI pathInfo
+    <//> MkPathI Default.Utils.pathInfo
     <//> Paths.liftPathI' (<.> Backend.Data.backendExt backend) name

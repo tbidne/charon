@@ -6,6 +6,7 @@ where
 
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
+import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Data.Metadata
   ( Metadata
       ( MkMetadata,
@@ -16,6 +17,10 @@ import SafeRm.Data.Metadata
       ),
   )
 import SafeRm.Data.Metadata qualified as Metadata
+
+-- NOTE: These tests currently rely on internal details for the trash
+-- structure (see the usage of Default.Utils). If we ever get a non-compliant
+-- backend, this will have to change.
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -213,12 +218,12 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     delExpectedMetadata @=? delMetadata
 
     -- delete info dir, leaving trash dir in bad state
-    clearDirectory (trashDir </> pathInfo)
+    clearDirectory (trashDir </> Default.Utils.pathInfo)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgList
 
-    assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
+    assertPathsExist $ fmap (trashDir </>) [Default.Utils.pathInfo, Default.Utils.pathFiles]
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
@@ -282,14 +287,14 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     delExpectedMetadata @=? delMetadata
 
     -- delete info dir, leaving trash dir in bad state
-    clearDirectory (trashDir </> pathFiles)
+    clearDirectory (trashDir </> Default.Utils.pathFiles)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
     runSafeRm emptyArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-    assertPathsExist $ fmap (trashDir </>) [pathInfo, pathFiles]
+    assertPathsExist $ fmap (trashDir </>) [Default.Utils.pathInfo, Default.Utils.pathFiles]
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM

@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Tests for l command.
 module Functional.Commands.List
   ( tests,
@@ -7,12 +9,19 @@ where
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter qualified as PW
 import Functional.Prelude
-import SafeRm.Exception
+import SafeRm.Backend.Default.Exception
   ( TrashDirFilesNotFoundE,
     TrashDirInfoNotFoundE,
-    TrashEntryFileNotFoundE,
+  )
+import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Exception
+  ( TrashEntryFileNotFoundE,
     TrashEntryInfoNotFoundE,
   )
+
+-- NOTE: These tests currently rely on internal details for the trash
+-- structure (see the usage of Default.Utils). If we ever get a non-compliant
+-- backend, this will have to change.
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -53,7 +62,7 @@ noPathsError getTestEnv = testCase "No Paths Error" $ do
     -- setup
     clearDirectory testDir
     clearDirectory trashDir
-    clearDirectory (trashDir </> pathInfo)
+    clearDirectory (trashDir </> Default.Utils.pathInfo)
 
     ex <- captureSafeRmException @TrashDirFilesNotFoundE argList
 
@@ -76,7 +85,7 @@ noInfoError getTestEnv = testCase "No Info Error" $ do
     -- setup
     clearDirectory testDir
     clearDirectory trashDir
-    clearDirectory (trashDir </> pathFiles)
+    clearDirectory (trashDir </> Default.Utils.pathFiles)
 
     ex <- captureSafeRmException @TrashDirInfoNotFoundE argList
 
@@ -94,7 +103,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     testDir <- getTestDir
 
     let trashDir = testDir </> pathDotTrash
-        missing = testDir </>! "missing"
+        missing = testDir </> [osp|missing|]
 
     -- SETUP
 
@@ -105,11 +114,11 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     runSafeRm delArgList
 
     -- delete file from trash for expected error
-    PW.removeFile (trashDir </> pathFiles </>! "missing")
+    PW.removeFile (trashDir </> Default.Utils.pathFiles </> [osp|missing|])
 
     -- Creating empty file so that we don't get the "size mismatch" error.
     -- We specifically want the "missing.trashinfo has no corresponding missing" error.
-    createFiles [trashDir </> pathFiles </>! "blah"]
+    createFiles [trashDir </> Default.Utils.pathFiles </> [osp|blah|]]
 
     listArgList <- withSrArgsM ["list", "--format", "m"]
     ex <- captureSafeRmException @TrashEntryFileNotFoundE listArgList
@@ -117,10 +126,13 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     assertMatch expectedErr ex
   where
     expectedErr =
-      Outfixes
-        "The file 'missing' was not found in '"
-        [trashFiles <> "' despite being listed in '"]
-        (trashInfo <> "'. This can be fixed by manually deleting the info file or deleting everything (i.e. safe-rm empty -f).")
+      Outfix
+        "The file 'missing' was not found in the trash '"
+        ( mconcat
+            [ "' despite being listed in the index. This can be fixed by manually ",
+              "deleting the info file or deleting everything (i.e. safe-rm empty -f)."
+            ]
+        )
 
 missingInfoError :: IO TestEnv -> TestTree
 missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
@@ -134,19 +146,22 @@ missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
     -- setup
     clearDirectory testDir
     clearDirectory trashDir
-    clearDirectory (trashDir </> pathFiles)
-    clearDirectory (trashDir </> pathInfo)
-    createFiles [trashDir </> pathFiles </>! "bar"]
+    clearDirectory (trashDir </> Default.Utils.pathFiles)
+    clearDirectory (trashDir </> Default.Utils.pathInfo)
+    createFiles [trashDir </> Default.Utils.pathFiles </> [osp|bar|]]
 
     ex <- captureSafeRmException @TrashEntryInfoNotFoundE argList
 
     assertMatch expectedErr ex
   where
     expectedErr =
-      Outfixes
-        "The file 'bar.<ext>' was not found in '"
-        [trashInfo <> "' despite being listed in '"]
-        (trashFiles <> "'. This can be fixed by manually deleting the 'files' entry or deleting everything (i.e. safe-rm empty -f).")
+      Outfix
+        "The file 'bar.<ext>' was not found in the trash '"
+        ( mconcat
+            [ "/.trash' index despite existing in the trash itself. This can ",
+              "be fixed by manually deleting the entry or deleting everything (i.e. safe-rm empty -f)."
+            ]
+        )
 
 trashFiles :: Text
 trashFiles = T.pack (".trash" `cfp` "files")

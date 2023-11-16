@@ -31,6 +31,7 @@ import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (getTrashHome))
+import System.OsPath qualified as FP
 import Unit.Prelude
 
 tests :: TestTree
@@ -124,25 +125,24 @@ instance MonadPathReader ConfigIO where
   listDirectory _ = pure []
   pathIsSymbolicLink _ = pure False
 
-  doesFileExist = pure . not . (`L.elem` dirs)
-  doesDirectoryExist = pure . (`L.elem` dirs)
+  doesFileExist = pure . not . (`L.elem` dirs) . FP.takeFileName
+  doesDirectoryExist = pure . (`L.elem` dirs) . FP.takeFileName
 
-  getFileSize p
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|foo|] = pure 70
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|bazzz|] = pure 5_000
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|dir|] = pure 20_230
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|f|] = pure 13_070_000
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|z|] = pure 200_120
-    | p == [osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> [osp|d|] = pure 5_000_000_000_000_000_000_000_000_000
-    | p == ([osp|test|] </> [osp|unit|] </> [osp|index|] </> [osp|trash|] </> pathFiles </> unsafeEncodeFpToOs (L.replicate 50 'b')) = pure 10
-  getFileSize p = error $ "getFileSize: " <> show p
+  getFileSize p =
+    if
+      | name == [osp|foo|] -> pure 70
+      | name == [osp|bazzz|] -> pure 5_000
+      | name == [osp|dir|] -> pure 20_230
+      | name == [osp|f|] -> pure 13_070_000
+      | name == [osp|z|] -> pure 200_120
+      | name == [osp|d|] -> pure 55_000_000_000_000_000_000_000_000_000
+      | name == unsafeEncodeFpToOs (L.replicate 50 'b') -> pure 10
+      | otherwise -> error $ "getFileSize: " <> show p
+    where
+      name = FP.takeFileName p
 
 dirs :: [OsPath]
-dirs =
-  (\f -> trashPath </> pathFiles </> f)
-    <$> [ [osp|dir|],
-          [osp|d|]
-        ]
+dirs = [[osp|dir|], [osp|d|]]
 
 runConfigIO :: ConfigIO a -> Natural -> IO a
 runConfigIO (MkConfigIO x) = runReaderT x . (`MkTestEnv` MkPathI trashPath)

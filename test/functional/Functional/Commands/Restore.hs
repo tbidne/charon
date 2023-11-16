@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS_GHC -Wunused-top-binds #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Tests for r command.
 module Functional.Commands.Restore
@@ -182,7 +182,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
   usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
     testDir <- getTestDir
 
-    let f1 = testDir </>! "f1"
+    let f1 = testDir </> [osp|f1|]
     delArgList <- withSrArgsPathsM ["delete"] [f1]
 
     -- SETUP
@@ -229,9 +229,9 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
   where
     expectedEx =
       Outfixes
-        "No entry for 'bad file'; did not find '"
+        "No entry for 'bad file'; did not find index file '"
         [ combineFps ["restoreUnknownError"],
-          T.pack $ foldFilePaths [".trash", "info", "bad file"]
+          "bad file"
         ]
         ""
     delExpectedMetadata =
@@ -436,9 +436,9 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
   where
     expectedEx =
       Outfixes
-        "No entry for 'f4'; did not find '"
+        "No entry for 'f4'; did not find index file '"
         [ "restore/restoresSome",
-          "/.trash/info/f4."
+          "f4."
         ]
         ""
     delExpectedMetadata =

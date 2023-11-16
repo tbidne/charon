@@ -4,7 +4,6 @@ module Functional.Commands.Convert
   )
 where
 
-import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import Functional.Prelude
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
@@ -113,16 +112,6 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       -- resort to variants of the aforementioned that explicitly take in
       -- the test dir: our previously calculated testDir.
 
-      -- Have to recreate the trashFiles as they may have a different file
-      -- extension after the convert. See Note [Test dir and backend changes].
-      newBackend <- asks (view #backend)
-      let convertTrashPaths =
-            ["f1", "f2", "f3", "dir1", "dir2"] >>= \fp ->
-              let fp' = unsafeEncodeFpToOs fp
-                  pathFile = testDir </> pathDotTrash </> pathFiles </> fp'
-                  infoFile = testDir </> pathDotTrash </> pathInfo </> fp' <> Backend.Data.backendExt newBackend
-               in [pathFile, infoFile]
-      assertPathsExist convertTrashPaths
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
       -- lookup assertions

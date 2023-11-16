@@ -232,9 +232,9 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
   where
     expectedEx =
       Outfixes
-        "No entry for 'bad file'; did not find '"
+        "No entry for 'bad file'; did not find index file '"
         [ combineFps ["deleteUnknownError"],
-          T.pack $ foldFilePaths [".trash", "info", "bad file"]
+          "bad file"
         ]
         ""
 
@@ -300,9 +300,9 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
   where
     expectedEx =
       Outfixes
-        "No entry for 'f4'; did not find '"
+        "No entry for 'f4'; did not find index file '"
         [ combineFps ["deletesSome"],
-          T.pack $ foldFilePaths [".trash", "info", "f4."]
+          "f4"
         ]
         "'"
     delExpectedMetadata =

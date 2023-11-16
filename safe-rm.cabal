@@ -56,6 +56,7 @@ library
     SafeRm.Backend.Data
     SafeRm.Backend.Default
     SafeRm.Backend.Default.BackendArgs
+    SafeRm.Backend.Default.Exception
     SafeRm.Backend.Default.Index
     SafeRm.Backend.Default.Trash
     SafeRm.Backend.Default.Utils

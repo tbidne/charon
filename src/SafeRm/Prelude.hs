@@ -17,8 +17,6 @@ module SafeRm.Prelude
 
     -- ** Path literals
     pathDotTrash,
-    pathFiles,
-    pathInfo,
     pathSafeRm,
 
     -- * Misc
@@ -299,15 +297,6 @@ unpacked = iso T.unpack T.pack
 
 usingReaderT :: b -> ReaderT b m a -> m a
 usingReaderT = flip runReaderT
-
--- FIXME: pathFiles and pathInfo should not be here as they are
--- backend-specific.
-
-pathFiles :: OsPath
-pathFiles = [osp|files|]
-
-pathInfo :: OsPath
-pathInfo = [osp|info|]
 
 pathSafeRm :: OsPath
 pathSafeRm = [osp|safe-rm|]

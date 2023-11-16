@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module SafeRm.Backend.Default.Utils
@@ -5,6 +6,10 @@ module SafeRm.Backend.Default.Utils
     getTrashPathDir,
     getTrashInfoDir,
     getTrashPath,
+
+    -- * Paths
+    pathFiles,
+    pathInfo,
 
     -- * Misc
     getPathInfo,
@@ -246,3 +251,9 @@ pathDataToType trashHome pd = do
             else throwCS $ MkFileNotFoundE path
   where
     MkPathI path = getTrashPath trashHome (pd ^. #fileName)
+
+pathFiles :: OsPath
+pathFiles = [osp|files|]
+
+pathInfo :: OsPath
+pathInfo = [osp|info|]
