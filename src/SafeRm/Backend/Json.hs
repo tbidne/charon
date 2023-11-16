@@ -17,27 +17,33 @@ module SafeRm.Backend.Json
     getMetadata,
 
     -- * Transformations
-    convert,
     merge,
+
+    -- * Rosetta
+    toRosetta,
+    fromRosetta,
   )
 where
 
-import SafeRm.Backend.Cbor.BackendArgs qualified as Cbor.BackendArgs
-import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
+import Effects.FileSystem.PathWriter qualified as PW
+import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import SafeRm.Backend.Default qualified as Default
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Trash qualified as Default.Trash
-import SafeRm.Backend.Fdo.BackendArgs qualified as Fdo.BackendArgs
 import SafeRm.Backend.Json.BackendArgs (backendArgs)
+import SafeRm.Backend.Json.PathData qualified as Json.PathData
+import SafeRm.Backend.Rosetta (Rosetta (MkRosetta, index, size))
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData (PathData)
+import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
 import SafeRm.Data.Paths
-  ( PathI,
+  ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import SafeRm.Data.Paths qualified as Paths
+import SafeRm.Data.Serialize qualified as Serialize
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Prelude
@@ -187,28 +193,6 @@ emptyTrash ::
   m ()
 emptyTrash = Default.emptyTrash backendArgs
 
-convert ::
-  ( HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadIORef m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
-  ) =>
-  Backend ->
-  m ()
-convert BackendCbor = Default.convert backendArgs Cbor.BackendArgs.backendArgs
-convert BackendFdo = Default.convert backendArgs Fdo.BackendArgs.backendArgs
-convert BackendJson = Default.convert backendArgs backendArgs
-
 merge ::
   ( HasCallStack,
     HasTrashHome env,
@@ -244,3 +228,73 @@ lookupTrashName ::
   UniqueSeq (PathI TrashEntryFileName) ->
   m (NESeq PathData)
 lookupTrashName = Default.lookupTrashName backendArgs
+
+toRosetta ::
+  ( HasTrashHome env,
+    MonadAsync m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadFileReader m,
+    MonadIORef m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadReader env m,
+    MonadTerminal m,
+    MonadThread m
+  ) =>
+  m Rosetta
+toRosetta = addNamespace "toRosetta" $ do
+  trashHome <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+
+  index <- getIndex
+
+  let size = foldl' (\acc (pd, _) -> acc .+. pd ^. #size) zero (index ^. #unIndex)
+
+  pure
+    $ MkRosetta
+      { index,
+        size
+      }
+
+fromRosetta ::
+  ( MonadLoggerNS m,
+    MonadFileReader m,
+    MonadFileWriter m,
+    MonadIORef m,
+    MonadMask m,
+    MonadPathReader m,
+    MonadPathWriter m
+  ) =>
+  PathI TrashHome ->
+  Rosetta ->
+  m ()
+fromRosetta tmpDir rosetta = addNamespace "toRosetta" $ do
+  $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
+
+  -- create tmp trash
+  (MkPathI trashPathDir, MkPathI trashInfoDir) <-
+    Default.Trash.createTrashDir tmpDir
+
+  for_ (rosetta ^. (#index % #unIndex)) $ \(pd, MkPathI oldTrashPath) -> do
+    -- transform core path data to Json
+    jsonPathData <- Json.PathData.fromCorePathData pd
+    let newTrashPath =
+          trashPathDir
+            </> (jsonPathData ^. (#fileName % #unPathI))
+
+    -- copy file
+    case pd ^. #pathType of
+      PathTypeFile ->
+        PW.copyFileWithMetadata oldTrashPath newTrashPath
+      PathTypeDirectory ->
+        PW.copyDirectoryRecursive oldTrashPath trashPathDir
+
+    -- create info files
+    encoded <- Serialize.encodeThrowM jsonPathData
+    let filePath =
+          trashInfoDir
+            </> (jsonPathData ^. (#fileName % #unPathI))
+            <.> [osp|.json|]
+
+    writeBinaryFile filePath encoded

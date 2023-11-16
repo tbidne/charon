@@ -24,7 +24,6 @@ module SafeRm.Backend.Default
     getMetadata,
 
     -- * Transformations
-    convert,
     merge,
   )
 where
@@ -40,7 +39,6 @@ import GHC.Real (Integral)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
 import Numeric.Algebra.Additive.ASemigroup (ASemigroup ((.+.)))
 import Numeric.Literal.Rational (FromRational (afromRational))
-import SafeRm.Backend.Data qualified as Backend
 import SafeRm.Backend.Default.BackendArgs (BackendArgs)
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Trash qualified as Trash
@@ -100,7 +98,7 @@ delete backendArgs paths = addNamespace "delete" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
-  Trash.createTrash
+  void Trash.createTrash
 
   someExRef <- newIORef Nothing
   currTime <- MkTimestamp <$> getSystemTime
@@ -357,7 +355,7 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
       if force
         then do
           removeDirectoryRecursive th
-          Trash.createTrash
+          void Trash.createTrash
         else do
           Utils.noBuffering
           metadata <- getMetadata backendArgs
@@ -369,53 +367,12 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
             | c == 'y' -> do
                 $(logDebug) "Deleting contents."
                 removeDirectoryRecursive th
-                Trash.createTrash
+                void Trash.createTrash
                 putStrLn ""
             | c == 'n' -> do
                 $(logDebug) "Not deleting contents."
                 putStrLn ""
             | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
-
-convert ::
-  ( DecodeExtra pdDest ~ PathI TrashEntryFileName,
-    DecodeExtra pdSrc ~ PathI TrashEntryFileName,
-    HasCallStack,
-    HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pdDest (PathI TrashEntryFileName),
-    LabelOptic' "fileName" k pdSrc (PathI TrashEntryFileName),
-    MonadCatch m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m,
-    Serialize pdDest,
-    Serialize pdSrc
-  ) =>
-  BackendArgs m pdSrc ->
-  BackendArgs m pdDest ->
-  m ()
-convert backendArgsSrc backendArgsDest = addNamespace "convert" $ do
-  trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
-
-  let src = backendArgsSrc ^. #backend
-      dest = backendArgsDest ^. #backend
-  if src == dest
-    then do
-      let msg =
-            mconcat
-              [ "--backend == requested conversion type: " <> Backend.backendName dest,
-                ". Nothing to do."
-              ]
-      $(logDebug) $ T.pack msg
-      putStrLn msg
-    else do
-      $(logDebug) $ "Current backend: " <> T.pack (Backend.backendName src)
-      Trash.convertBackend backendArgsSrc backendArgsDest
 
 merge ::
   ( HasCallStack,
@@ -461,6 +418,7 @@ type PathDataCore = PathData.Core.PathData
 lookupTrashName ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasBackend env,
+    HasCallStack,
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),

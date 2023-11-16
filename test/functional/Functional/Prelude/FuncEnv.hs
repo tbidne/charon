@@ -44,7 +44,7 @@ import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.LoggerNS
-  ( LocStrategy (LocStable),
+  ( LocStrategy (LocPartial),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
     Namespace,
   )
@@ -171,6 +171,7 @@ instance
   listDirectory = liftIO . PR.listDirectory
   canonicalizePath = liftIO . PR.canonicalizePath
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
+  getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
   getFileSize _ = pure 5
 
@@ -238,7 +239,7 @@ instance MonadLogger (FuncIO FuncEnv) where
       mkFormatter l =
         MkLogFormatter
           { newline = True,
-            locStrategy = LocStable l,
+            locStrategy = LocPartial l,
             timezone = False
           }
 

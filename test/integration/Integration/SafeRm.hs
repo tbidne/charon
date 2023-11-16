@@ -54,6 +54,7 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (MkSafeRmT))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
+import System.OsString (osstr)
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -604,4 +605,6 @@ assertLookup testDir env genPaths = do
     fixedTimestamp = MkTimestamp $ LocalTime (toEnum 59_000) midday
 
     wildcardSeq :: UniqueSeq (PathI i)
-    wildcardSeq = USeq.singleton $ MkPathI [osp|*|]
+    -- \* is not a valid windows path, so we use osstr over osp, as
+    -- osstr does not perform the isValid check.
+    wildcardSeq = USeq.singleton $ MkPathI [osstr|*|]

@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE QuasiQuotes #-}
 
 -- | Provides exceptions used by SafeRm.
 module SafeRm.Exception
@@ -115,7 +114,7 @@ instance Exception TrashEntryFileNotFoundE where
       [ "The file '",
         FsUtils.osToFp $ name ^. #unPathI,
         "' was not found in the trash '",
-        FsUtils.osToFp $ thome,
+        FsUtils.osToFp thome,
         "' despite being listed in the index. This can be ",
         "fixed by manually deleting the info file or deleting everything ",
         "(i.e. safe-rm empty -f)."

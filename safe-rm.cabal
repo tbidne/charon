@@ -66,6 +66,7 @@ library
     SafeRm.Backend.Json
     SafeRm.Backend.Json.BackendArgs
     SafeRm.Backend.Json.PathData
+    SafeRm.Backend.Rosetta
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData

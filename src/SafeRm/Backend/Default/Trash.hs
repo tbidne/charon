@@ -5,6 +5,7 @@
 module SafeRm.Backend.Default.Trash
   ( -- * Trash directory
     createTrash,
+    createTrashDir,
     doesTrashExist,
 
     -- * Main actions
@@ -13,7 +14,6 @@ module SafeRm.Backend.Default.Trash
     permDeleteFromTrash,
 
     -- * Transformations
-    convertBackend,
     mergeTrashDirs,
 
     -- * Utils
@@ -43,14 +43,15 @@ import SafeRm.Backend.Default.Exception
   )
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
-import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData.Core
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
-      ( TrashEntryFileName,
+      ( TrashDirFiles,
+        TrashDirInfo,
+        TrashEntryFileName,
         TrashEntryInfo,
         TrashEntryOriginalPath,
         TrashEntryPath,
@@ -79,15 +80,25 @@ createTrash ::
     MonadPathWriter m,
     MonadReader env m
   ) =>
-  m ()
-createTrash = do
-  trashHome <- asks getTrashHome
+  m (PathI TrashDirFiles, PathI TrashDirInfo)
+createTrash = asks getTrashHome >>= createTrashDir
+
+-- | Creates the trash directory if it does not exist.
+createTrashDir ::
+  ( HasCallStack,
+    MonadPathWriter m
+  ) =>
+  PathI TrashHome ->
+  m (PathI TrashDirFiles, PathI TrashDirInfo)
+createTrashDir trashHome = do
   let trashPathDir = Default.Utils.getTrashPathDir trashHome
       trashInfoDir = Default.Utils.getTrashInfoDir trashHome
 
   Paths.applyPathI (createDirectoryIfMissing False) trashHome
   Paths.applyPathI (createDirectoryIfMissing False) trashPathDir
   Paths.applyPathI (createDirectoryIfMissing False) trashInfoDir
+
+  pure (trashPathDir, trashInfoDir)
 
 -- | Returns 'False' if @\<trash-home\>@ does not exist. If @\<trash-home\>@
 -- /does/ exist but is "badly-formed" i.e. one of
@@ -454,103 +465,6 @@ findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "
     hasWildcard ('*' : _) = True
     hasWildcard (_ : xs) = hasWildcard xs
 
-convertBackend ::
-  forall m env pdSrc pdDest k.
-  ( DecodeExtra pdDest ~ PathI TrashEntryFileName,
-    DecodeExtra pdSrc ~ PathI TrashEntryFileName,
-    HasCallStack,
-    HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pdDest (PathI TrashEntryFileName),
-    LabelOptic' "fileName" k pdSrc (PathI TrashEntryFileName),
-    MonadCatch m,
-    MonadFileReader m,
-    MonadFileWriter m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m,
-    Serialize pdDest,
-    Serialize pdSrc
-  ) =>
-  BackendArgs m pdSrc ->
-  BackendArgs m pdDest ->
-  m ()
-convertBackend backendArgsSrc backendArgsDest = addNamespace "convertBackend" $ do
-  let dest = backendArgsDest ^. #backend
-  $(logDebug) $ "Converting backend to: " <> T.pack (Backend.Data.backendName dest)
-  trashHome@(MkPathI th) <- asks getTrashHome
-
-  MkIndex index <- Default.Index.readIndex backendArgsSrc trashHome
-
-  let newInfo = th </> [osp|tmp_info_new|]
-  PW.createDirectory newInfo
-
-  let fromCorePathData = backendArgsDest ^. #fromCorePathData
-
-  -- NOTE: This is not in-place.
-
-  let createTmp = for_ index $ \(pd, _) -> do
-        pd' :: pd <- fromCorePathData pd
-        encoded <- encodeThrowM pd'
-        let MkPathI fileName = view #fileName pd'
-            filePath :: OsPath
-            filePath =
-              newInfo
-                </> fileName
-                <.> Backend.Data.backendExt dest
-
-        writeBinaryFile filePath encoded
-
-  -- 1. create converted copy at trash/tmp_info_new
-  createTmp `catchAny` \ex -> do
-    let msg =
-          mconcat
-            [ "Exception during conversion:\n",
-              displayException ex
-            ]
-    $(logError) $ T.pack msg
-    $(logError) $ "Deleting tmp dir: " <> decodeOsToFpShowText newInfo
-    putStrLn msg
-    removeDirectoryRecursive newInfo
-    throwM ex
-
-  let MkPathI trashInfoDir = Default.Utils.getTrashInfoDir trashHome
-      oldInfo = th </> [osp|tmp_info_old|]
-
-  -- 2. Move current trash/info to trash/tmp_info_old
-  renameDirectory trashInfoDir oldInfo
-    `catchAny` \ex -> do
-      let msg =
-            mconcat
-              [ "Exception moving old trash/info dir:\n",
-                displayException ex
-              ]
-      $(logError) $ T.pack msg
-      putStrLn msg
-      -- cleanup: remove tmp_info_new
-      removeDirectoryRecursive newInfo
-      throwM ex
-
-  -- 3. Move trash/tmp_info_new to trash/info
-  renameDirectory newInfo trashInfoDir
-    `catchAny` \ex -> do
-      let msg =
-            mconcat
-              [ "Exception moving new trash/info dir:\n",
-                displayException ex
-              ]
-      $(logError) $ T.pack msg
-      putStrLn msg
-      -- cleanup: remove tmp_info_new, move tmp_info_old back
-      removeDirectoryRecursive newInfo
-      renameDirectory oldInfo trashInfoDir
-      throwM ex
-
-  -- 4. Delete trash/tmp_info_old
-  removeDirectoryRecursive oldInfo
-
 -- | Merges source into dest, failing if there are any collisions.
 mergeTrashDirs ::
   ( HasCallStack,
@@ -567,6 +481,8 @@ mergeTrashDirs ::
   PathI TrashHome ->
   m ()
 mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
+  -- FIXME: This should perform a backend check to make sure
+  -- they are the same.
   WDir.copyDirectoryRecursiveConfig config src dest
   $(logDebug) "Merge successful"
   where
