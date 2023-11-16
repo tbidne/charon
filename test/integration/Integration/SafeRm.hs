@@ -15,19 +15,34 @@ import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
+import Data.Time (LocalTime (LocalTime))
+import Data.Time.LocalTime (midday)
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
-import GHC.Exts (IsList (Item, fromList))
+import GHC.IsList (IsList (toList))
 import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
 import Integration.Utils qualified as IntUtils
+import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm qualified
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
-import SafeRm.Data.PathData (PathData)
+import SafeRm.Data.PathData
+  ( PathData
+      ( UnsafePathData,
+        created,
+        fileName,
+        originalPath,
+        pathType,
+        size
+      ),
+  )
+import SafeRm.Data.PathType (PathType (PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI))
+import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Data.UniqueSeq qualified as USeq
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
@@ -39,10 +54,6 @@ import SafeRm.Runner.Env
   )
 import SafeRm.Runner.SafeRmT (SafeRmT (MkSafeRmT))
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
-
--- FIXME: These tests rely on knowledge of the internal trash structure.
--- We should do the same thing we did for the functional tests i.e.
--- divorce assertions from backend knowledge.
 
 -- Custom type for running the tests. Fo now, the only reason we do not use
 -- SafeRmT is to override getFileSize so that expected errors in tests
@@ -164,7 +175,6 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       (α, fps) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
@@ -176,9 +186,9 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       -- delete files
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
-      -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
+
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTest
 
@@ -200,8 +210,6 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
           αTest = toTestDir α
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
-          βTrash = mkTrashPaths backend trashDir β
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
@@ -230,10 +238,8 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       length termLogs === length β
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
-      annotate "Assert files do not exist"
-      assertPathsDoNotExist βTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
 
       -- get index
       index <- getIndex env
@@ -252,7 +258,6 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       (α, _) <- forAll (IntUtils.genFileNameSet b)
       let trashDir = testDir </> [osp|.trash|]
           αTest = USeq.map (testDir </>) α
-          αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
@@ -264,8 +269,8 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTest
 
@@ -278,7 +283,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow index
 
       [] === index
-      assertPathsDoNotExist (αTest `USeq.union` αTrash)
+      assertPathsDoNotExist αTest
   where
     desc = "All trash entries are permanently deleted"
 
@@ -292,10 +297,6 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
           toDelete = toTestDir (α `USeq.union` γ)
           trashDir = testDir </> [osp|.trash|]
-          trashSet = mkTrashPaths backend trashDir (α `USeq.union` γ)
-          αTrash = mkTrashPaths backend trashDir α
-          βTrash = mkTrashPaths backend trashDir β
-          γTrash = mkTrashPaths backend trashDir γ
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
@@ -308,8 +309,8 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist trashSet
+      annotate "Assert lookup"
+      assertLookup testDir env (α `USeq.union` γ)
       annotate "Assert files do not exist"
       assertPathsDoNotExist toDelete
 
@@ -338,10 +339,8 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       -- γ should still exist in the trash index
       toTestDir γ ^. #set === indexOrigPaths
 
-      annotate "Assert files do not exist"
-      assertPathsDoNotExist (αTrash `USeq.union` βTrash)
       annotate "Assert files exist"
-      assertPathsExist γTrash
+      assertLookup testDir env γ
   where
     desc = "Some trash entries are permanently deleted, others error"
 
@@ -353,7 +352,6 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow αTest
@@ -365,8 +363,8 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTest
 
@@ -381,8 +379,6 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       [] === index
       annotate "Assert files exist"
       assertPathsExist αTest
-      annotate "Assert files do not exist"
-      assertPathsDoNotExist αTrash
 
 restoreSome :: Backend -> IO OsPath -> TestTree
 restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
@@ -394,8 +390,6 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
           toDelete = toTestDir (α `USeq.union` γ)
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
-          γTrash = mkTrashPaths backend trashDir γ
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
@@ -408,8 +402,8 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI toDelete)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env (α `USeq.union` γ)
       annotate "Assert files do not exist"
       assertPathsDoNotExist toDelete
 
@@ -439,9 +433,9 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       toTestDir γ ^. #set === indexOrigPaths
 
       annotate "Assert files exist"
-      assertPathsExist (toTestDir α `USeq.union` γTrash)
-      annotate "Assert files do not exist"
-      assertPathsDoNotExist αTrash
+      assertPathsExist (toTestDir α)
+      annotate "Assert lookup"
+      assertLookup testDir env γ
   where
     desc = "Some trash entries are restored, others error"
 
@@ -453,7 +447,6 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
@@ -466,8 +459,8 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTest
 
@@ -480,7 +473,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       [] === index
       annotate "Assert files do not exist"
-      assertPathsDoNotExist (αTest `USeq.union` αTrash)
+      assertPathsDoNotExist αTest
 
 metadata :: Backend -> IO OsPath -> TestTree
 metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
@@ -490,7 +483,6 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       (α, _) <- forAll (IntUtils.genFileNameSet b)
       let αTest = USeq.map (testDir </>) α
           trashDir = testDir </> [osp|.trash|]
-          αTrash = mkTrashPaths backend trashDir α
       env <- liftIO $ mkEnv backend trashDir
 
       annotateShow testDir
@@ -503,8 +495,8 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       usingIntIO env $ SafeRm.delete (USeq.map MkPathI αTest)
 
       -- assert original files moved to trash
-      annotate "Assert files exist"
-      assertPathsExist αTrash
+      annotate "Assert lookup"
+      assertLookup testDir env α
       annotate "Assert files do not exist"
       assertPathsDoNotExist αTest
 
@@ -541,21 +533,6 @@ mkEnv backend fp = do
         logsRef,
         namespace = "integration"
       }
-
-mkTrashPaths ::
-  ( Foldable f,
-    IsList (f OsPath),
-    Item (f OsPath) ~ OsPath
-  ) =>
-  Backend ->
-  OsPath ->
-  f OsPath ->
-  f OsPath
-mkTrashPaths backend trashHome =
-  fromList . foldr (\p acc -> mkTrashPath p : mkTrashInfoPath p : acc) []
-  where
-    mkTrashPath p = trashHome </> pathFiles </> p
-    mkTrashInfoPath p = trashHome </> pathInfo </> p <> Backend.Data.backendExt backend
 
 -- NOTE: [OSX temp symlink]
 --
@@ -600,3 +577,31 @@ setupDir dir files = do
 
 getIndex :: IntEnv -> PropertyT IO (Seq PathData)
 getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env SafeRm.getIndex
+
+assertLookup :: OsPath -> IntEnv -> UniqueSeq OsPath -> PropertyT IO ()
+assertLookup testDir env genPaths = do
+  results <- neToList <$> usingIntIO env (SafeRm.lookupTrashName wildcardSeq)
+
+  -- zero timestamp
+  let results' = set' #created fixedTimestamp <$> results
+
+  -- fix order
+  HSet.fromList results' === HSet.fromList expected
+  where
+    expected =
+      toList genPaths <&> \path ->
+        UnsafePathData
+          { pathType = PathTypeFile,
+            fileName = MkPathI path,
+            originalPath = MkPathI $ testDir </> path,
+            created = fixedTimestamp,
+            size = afromInteger 0
+          }
+
+    neToList = toList . NESeq.toSeq
+
+    fixedTimestamp :: Timestamp
+    fixedTimestamp = MkTimestamp $ LocalTime (toEnum 59_000) midday
+
+    wildcardSeq :: UniqueSeq (PathI i)
+    wildcardSeq = USeq.singleton $ MkPathI [osp|*|]

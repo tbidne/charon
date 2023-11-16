@@ -59,6 +59,7 @@ data Command s
   | -- | Restores a path.
     Restore (UniqueSeq (PathI TrashEntryFileName))
   | -- | Lookup trash names.
+    -- TODO: This should take the same params as ListCmd
     LookupTrashName (UniqueSeq (PathI TrashEntryFileName))
   | -- | List all trash contents.
     List (ListCmd s)

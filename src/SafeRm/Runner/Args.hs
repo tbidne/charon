@@ -191,7 +191,7 @@ backendDestParser =
     helpTxt =
       mconcat
         [ "Backend to which we convert the current backend. See --backend ",
-          "for more details"
+          "for more details."
         ]
 
 configParser :: Parser TomlConfigPath
@@ -278,8 +278,7 @@ commandParser =
             "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
             " wildcard -- e.g. '*foo' -- the * must be escaped (safe-rm restore '\\*foo')."
           ]
-    -- TODO: Better desc
-    lookupTxt = mkCmdDesc "Performs a lookup on the paths."
+    lookupTxt = mkCmdDesc "Returns a list of all paths matching the input."
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
     convertTxt = mkCmdDesc "Converts the backend."
