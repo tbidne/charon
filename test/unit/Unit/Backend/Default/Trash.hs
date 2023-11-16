@@ -312,7 +312,11 @@ mvTrashRootError backendArgs = testCase desc $ do
   where
     desc = "mvOriginalToTrash throws exception for root original path"
 
+#if WINDOWS
+    rootDir = MkPathI [osp|c:\|]
+#else
     rootDir = MkPathI [osp|/|]
+#endif
 
 mvTrashEmptyError ::
   ( Is k A_Getter,
@@ -347,7 +351,15 @@ ts = case fromText "2020-05-31T12:00:00" of
   Just t -> t
 
 windowsify :: String -> String
+#if WINDOWS
+windowsify [] = []
+windowsify (c:cs)
+  -- double slash due to using Show
+  | c == '/' = '\\' : '\\' : windowsify cs
+  | otherwise = c : windowsify cs
+#else
 windowsify = id
+#endif
 
 pathTest :: OsPath
 pathTest = [osp|test|]

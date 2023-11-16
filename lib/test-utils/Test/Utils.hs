@@ -193,7 +193,7 @@ showTextMatch (Outfixes start ins end) =
   mconcat
     [ T.unpack start,
       wc,
-      foldl' (\acc t -> T.unpack t <> wc <> acc) "" ins,
+      foldl' (\acc t -> acc <> wc <> T.unpack t) "" ins,
       T.unpack end
     ]
 

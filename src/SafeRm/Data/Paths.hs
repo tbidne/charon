@@ -178,7 +178,7 @@ isRoot' p = do
   fp <- decodeOsToFpThrowM p
   pure $ f . T.unpack . T.strip . T.pack $ fp
   where
-    f (_ : ':' : rest) = null rest || rest == "\\"
+    f (_ : ':' : rest) = null rest || rest == "\\" || rest == "\\\\"
     f _ = False
 #else
 isRoot' p = do

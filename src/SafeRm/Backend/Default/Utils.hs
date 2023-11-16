@@ -56,6 +56,12 @@ getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 
 -- | For a given path, retrieves its unique trash entry file name,
 -- original path, and type.
+--
+-- NOTE: This function is __almost__ backend agnostic. AFAICT the only
+-- part that uses internal knowledge is the call to getTrashPath.
+-- If we ever write a non-default backend then we should extract that logic
+-- to a function and move this fn to Utils, as the rest of the logic is
+-- something we will want to use everywhere (e.g. throwIfIllegal).
 getPathInfo ::
   ( HasCallStack,
     MonadLoggerNS m,
@@ -66,7 +72,7 @@ getPathInfo ::
   PathI TrashEntryOriginalPath ->
   m (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathType)
 getPathInfo trashHome origPath = do
-  $(logDebug) $ "Retreiving path data: '" <> Paths.toText origPath <> "'"
+  $(logDebug) $ "Retrieving path data: '" <> Paths.toText origPath <> "'"
 
   -- NOTE: It is VERY important that this check is first i.e. we perform it
   -- on the original given path, before any processing. As an example of

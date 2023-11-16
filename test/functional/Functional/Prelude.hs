@@ -127,7 +127,7 @@ mkLookupFullPath testDir files dirs = do
   let fromFile :: (Text, Text) -> [TextMatch]
       fromFile (n, o) =
         [ Exact $ "Name:      " <> n,
-          Outfixes "Original:  /tmp/" ["/safe-rm/functional/", testDirTxt] o,
+          Outfixes "Original:  " ["/safe-rm/functional/", testDirTxt] o,
           Exact "Type:      File",
           Exact "Size:      5.00B",
           Exact "Created:   2020-05-31 12:00:00"
@@ -135,7 +135,7 @@ mkLookupFullPath testDir files dirs = do
       fromDir :: (Text, Maybe Text) -> [TextMatch]
       fromDir (d, sz) =
         [ Exact $ "Name:      " <> d,
-          Outfixes "Original:  /tmp/" ["/safe-rm/functional/", testDirTxt] d,
+          Outfixes "Original:  " ["/safe-rm/functional/", testDirTxt] d,
           Exact "Type:      Directory",
           Exact $ "Size:      " <> fromMaybe "5.00B" sz,
           Exact "Created:   2020-05-31 12:00:00"

@@ -34,7 +34,7 @@ import Effects.FileSystem.PathWriter
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
 import Effects.System.Terminal qualified as Term
-import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
+import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Backend.Default.BackendArgs (BackendArgs)
 import SafeRm.Backend.Default.Index qualified as Default.Index
@@ -612,9 +612,4 @@ getTrashInfoPath ::
 getTrashInfoPath backend trashHome name =
   trashHome
     <//> MkPathI pathInfo
-    <//> Paths.liftPathI' (<.> trashInfoExtensionOsPath backend) name
-
-trashInfoExtensionOsPath :: Backend -> OsPath
-trashInfoExtensionOsPath BackendCbor = [osp|.cbor|]
-trashInfoExtensionOsPath BackendFdo = [osp|.trashinfo|]
-trashInfoExtensionOsPath BackendJson = [osp|.json|]
+    <//> Paths.liftPathI' (<.> Backend.Data.backendExt backend) name

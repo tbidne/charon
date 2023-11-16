@@ -300,6 +300,9 @@ unpacked = iso T.unpack T.pack
 usingReaderT :: b -> ReaderT b m a -> m a
 usingReaderT = flip runReaderT
 
+-- FIXME: pathFiles and pathInfo should not be here as they are
+-- backend-specific.
+
 pathFiles :: OsPath
 pathFiles = [osp|files|]
 
