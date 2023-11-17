@@ -43,6 +43,7 @@ import SafeRm.Backend.Default.Exception
   )
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Class.Serial (Serial (DecodeExtra, decode), encodeThrowM)
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData.Core
 import SafeRm.Data.PathType qualified as PathType
@@ -60,7 +61,6 @@ import SafeRm.Data.Paths
     (<//>),
   )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Exception
@@ -155,7 +155,7 @@ mvOriginalToTrash ::
     MonadLoggerNS m,
     MonadPathWriter m,
     MonadReader env m,
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs m pd ->
@@ -210,7 +210,7 @@ permDeleteFromTrash ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   Bool ->
@@ -290,7 +290,7 @@ restoreTrashToOriginal ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   PathI TrashHome ->
@@ -355,7 +355,7 @@ findOnePathData ::
     MonadPathReader m,
     MonadReader env m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   PathI TrashHome ->
   PathI TrashEntryFileName ->
@@ -392,7 +392,7 @@ findManyPathData ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   PathI TrashHome ->
@@ -424,7 +424,7 @@ findPathData ::
     MonadPathReader m,
     MonadReader env m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   PathI TrashHome ->

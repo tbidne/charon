@@ -15,8 +15,8 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import SafeRm.Backend.Fdo.PathData (PathData (UnsafePathData))
 import SafeRm.Backend.Fdo.PathData qualified as Fdo
+import SafeRm.Class.Serial (Serial (decode), encodeThrowM)
 import SafeRm.Data.Paths (PathI (MkPathI))
-import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import Test.Utils qualified as TestUtils

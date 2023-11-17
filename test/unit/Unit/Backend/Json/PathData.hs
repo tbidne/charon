@@ -16,9 +16,9 @@ import Hedgehog.Range qualified as Range
 import Numeric.Algebra (AMonoid (zero))
 import SafeRm.Backend.Json.PathData (PathData (UnsafePathData))
 import SafeRm.Backend.Json.PathData qualified as Json
+import SafeRm.Class.Serial (Serial (decode), encodeThrowM)
 import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
 import SafeRm.Data.Paths (PathI (MkPathI))
-import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import Test.Utils qualified as TestUtils

@@ -32,6 +32,7 @@ import SafeRm.Backend.Default qualified as Default
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Trash qualified as Default.Trash
 import SafeRm.Backend.Rosetta (Rosetta (MkRosetta, index, size))
+import SafeRm.Class.Serial qualified as Serial
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)
@@ -42,7 +43,6 @@ import SafeRm.Data.Paths
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize qualified as Serialize
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Prelude
@@ -289,7 +289,7 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
     PathType.copyPath (pd ^. #pathType) oldTrashPath newTrashPath trashPathDir
 
     -- create info files
-    encoded <- Serialize.encodeThrowM cborPathData
+    encoded <- Serial.encodeThrowM cborPathData
     let filePath =
           trashInfoDir
             </> (cborPathData ^. (#fileName % #unPathI))

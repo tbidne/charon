@@ -67,13 +67,13 @@ library
     SafeRm.Backend.Json.BackendArgs
     SafeRm.Backend.Json.PathData
     SafeRm.Backend.Rosetta
+    SafeRm.Class.Serial
     SafeRm.Data.Index
     SafeRm.Data.Metadata
     SafeRm.Data.PathData
     SafeRm.Data.PathData.Formatting
     SafeRm.Data.Paths
     SafeRm.Data.PathType
-    SafeRm.Data.Serialize
     SafeRm.Data.Timestamp
     SafeRm.Data.UniqueSeq
     SafeRm.Env

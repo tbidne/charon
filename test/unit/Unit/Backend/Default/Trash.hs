@@ -36,10 +36,10 @@ import SafeRm.Backend.Default.Trash qualified as Trash
 import SafeRm.Backend.Fdo.PathData qualified as Fdo.PathData
 import SafeRm.Backend.Json.BackendArgs qualified as Json.BackendArgs
 import SafeRm.Backend.Json.PathData qualified as Json.PathData
+import SafeRm.Class.Serial (Serial)
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType (PathTypeFile))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome))
-import SafeRm.Data.Serialize (Serialize)
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)
 import SafeRm.Exception (EmptyPathE, RootE)
@@ -223,7 +223,7 @@ backendTests ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs PathDataT pd ->
@@ -241,7 +241,7 @@ mvTrash ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs PathDataT pd ->
@@ -256,7 +256,7 @@ mvTrashWhitespace ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs PathDataT pd ->
@@ -269,7 +269,7 @@ mvTrashRootError ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs PathDataT pd ->
@@ -295,7 +295,7 @@ mvTrashEmptyError ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs PathDataT pd ->

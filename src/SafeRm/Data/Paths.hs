@@ -36,7 +36,7 @@ where
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
+import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- | Types of filepaths used in SafeRm.
@@ -84,7 +84,7 @@ makeFieldLabelsNoPrefix ''PathI
 --
 -- https://github.com/haskell/filepath/issues/161
 
-instance Serialize (PathI i) where
+instance Serial (PathI i) where
   type DecodeExtra (PathI i) = ()
 
   encode =

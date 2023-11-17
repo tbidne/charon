@@ -18,7 +18,7 @@ import Data.Text qualified as T
 import Data.Time (Day (ModifiedJulianDay), TimeOfDay (TimeOfDay))
 import Data.Time.Format qualified as Format
 import Data.Time.LocalTime (LocalTime (LocalTime))
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
+import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- NOTE: We currently do not include any timezone information. We started
@@ -58,7 +58,11 @@ instance Serialise Timestamp where
       <*> Serialise.decode
       <*> Serialise.decode
 
-instance Serialize Timestamp where
+-- This instance instance exists for backends that need a general "serialize
+-- this timestamp" function without having any particular format. For instance,
+-- fdo backend needs to write timestamps to a string, but cbor/json will have
+-- their own strategies.
+instance Serial Timestamp where
   type DecodeExtra Timestamp = ()
   encode = pure . encodeUtf8 . toText
   decode _ bs = case decodeUtf8 bs of

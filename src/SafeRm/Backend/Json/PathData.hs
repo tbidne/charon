@@ -21,6 +21,7 @@ import Data.Aeson
 import Data.Aeson qualified as Asn
 import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths
@@ -31,7 +32,6 @@ import SafeRm.Data.Paths
         TrashHome
       ),
   )
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
@@ -114,7 +114,7 @@ instance FromJSON PathDataJSON where
       <*> v
       .: "size"
 
-instance Serialize PathData where
+instance Serial PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString

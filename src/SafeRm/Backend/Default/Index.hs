@@ -11,6 +11,8 @@ import Data.Text qualified as T
 import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Backend.Default.BackendArgs (BackendArgs)
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Class.Serial (Serial (DecodeExtra))
+import SafeRm.Class.Serial qualified as Serial
 import SafeRm.Data.Index (Index (MkIndex))
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths
@@ -22,8 +24,6 @@ import SafeRm.Data.Paths
       ),
     (<//>),
   )
-import SafeRm.Data.Serialize (Serialize (DecodeExtra))
-import SafeRm.Data.Serialize qualified as Serialize
 import SafeRm.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
@@ -48,7 +48,7 @@ readIndex ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   PathI TrashHome ->
@@ -76,7 +76,7 @@ readIndex backendArgs trashHome = addNamespace "readIndex" $ do
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
             fileName = FP.dropExtension $ FP.takeFileName path
-            decoded = Serialize.decode @pd (MkPathI fileName) contents
+            decoded = Serial.decode @pd (MkPathI fileName) contents
         case decoded of
           Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
           Right pd -> do

@@ -20,7 +20,7 @@ import Effects.FileSystem.PathWriter
     TargetName (TargetNameSrc),
   )
 import Effects.FileSystem.PathWriter qualified as PW
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
+-- import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
 -- | Path type.
@@ -63,17 +63,6 @@ instance Serialise PathType where
       'd' -> pure PathTypeDirectory
       's' -> pure PathTypeSymlink
       other -> fail $ "Expected (f|d|s), received: " ++ [other]
-
-instance Serialize PathType where
-  type DecodeExtra PathType = ()
-  encode PathTypeFile = pure "f"
-  encode PathTypeDirectory = pure "d"
-  encode PathTypeSymlink = pure "s"
-
-  decode _ "f" = Right PathTypeFile
-  decode _ "d" = Right PathTypeDirectory
-  decode _ "s" = Right PathTypeSymlink
-  decode _ other = Left $ "Could not decode path type: '" <> bsToStr other <> "'"
 
 -- | This function tests both existence __and__ that the the path is of the
 -- specified type.

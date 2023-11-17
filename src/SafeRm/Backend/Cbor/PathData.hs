@@ -15,6 +15,7 @@ import Codec.Serialise qualified as Serialise
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType)
 import SafeRm.Data.Paths
@@ -25,7 +26,6 @@ import SafeRm.Data.Paths
         TrashHome
       ),
   )
-import SafeRm.Data.Serialize (Serialize (DecodeExtra, decode, encode))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
 import SafeRm.Utils qualified as Utils
@@ -84,7 +84,7 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
       pathType
     )
 
-instance Serialize PathData where
+instance Serial PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString

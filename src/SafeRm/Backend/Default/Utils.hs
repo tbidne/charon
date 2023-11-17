@@ -236,26 +236,30 @@ pathDataToType ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k a (PathI TrashEntryFileName),
     HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    MonadCatch m,
+    MonadPathReader m
   ) =>
   PathI TrashHome ->
   a ->
   m PathType
 pathDataToType trashHome pd = do
-  fileExists <- doesFileExist path
-  if fileExists
-    then pure PathTypeFile
+  symlinkExists <- doesSymbolicLinkExist path
+  if symlinkExists
+    then pure PathTypeSymlink
     else do
-      dirExists <- doesDirectoryExist path
-      if dirExists
-        then pure PathTypeDirectory
+      fileExists <- doesFileExist path
+      if fileExists
+        then pure PathTypeFile
         else do
-          -- for a better error message
-          pathExists <- doesPathExist path
-          if pathExists
-            then throwCS $ MkPathNotFileDirE path
-            else throwCS $ MkFileNotFoundE path
+          dirExists <- doesDirectoryExist path
+          if dirExists
+            then pure PathTypeDirectory
+            else do
+              -- for a better error message
+              pathExists <- doesPathExist path
+              if pathExists
+                then throwCS $ MkPathNotFileDirE path
+                else throwCS $ MkFileNotFoundE path
   where
     MkPathI path = getTrashPath trashHome (pd ^. #fileName)
 

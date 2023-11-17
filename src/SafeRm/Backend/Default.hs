@@ -43,6 +43,7 @@ import SafeRm.Backend.Default.BackendArgs (BackendArgs)
 import SafeRm.Backend.Default.Index qualified as Default.Index
 import SafeRm.Backend.Default.Trash qualified as Trash
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
+import SafeRm.Class.Serial (Serial (DecodeExtra))
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata (MkMetadata))
@@ -57,7 +58,6 @@ import SafeRm.Data.Paths
       ),
   )
 import SafeRm.Data.Paths qualified as Paths
-import SafeRm.Data.Serialize (Serialize (DecodeExtra))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
@@ -88,7 +88,7 @@ delete ::
     MonadReader env m,
     MonadTerminal m,
     MonadTime m,
-    Serialize pd,
+    Serial pd,
     Show pd
   ) =>
   BackendArgs m pd ->
@@ -138,7 +138,7 @@ permDelete ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   Bool ->
@@ -182,7 +182,7 @@ getIndex ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   m Index
@@ -210,7 +210,7 @@ getMetadata ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadReader env m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   m Metadata
@@ -288,7 +288,7 @@ restore ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   UniqueSeq (PathI TrashEntryFileName) ->
@@ -332,7 +332,7 @@ emptyTrash ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   Bool ->
@@ -422,7 +422,7 @@ lookupTrashName ::
     MonadPathReader m,
     MonadReader env m,
     MonadThrow m,
-    Serialize pd
+    Serial pd
   ) =>
   BackendArgs m pd ->
   UniqueSeq (PathI TrashEntryFileName) ->
