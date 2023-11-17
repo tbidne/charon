@@ -25,7 +25,6 @@ module SafeRm.Backend.Cbor
   )
 where
 
-import Effects.FileSystem.PathWriter qualified as PW
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import SafeRm.Backend.Cbor.BackendArgs (backendArgs)
 import SafeRm.Backend.Cbor.PathData qualified as Cbor.PathData
@@ -37,7 +36,7 @@ import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
@@ -272,7 +271,7 @@ fromRosetta ::
   PathI TrashHome ->
   Rosetta ->
   m ()
-fromRosetta tmpDir rosetta = addNamespace "toRosetta" $ do
+fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
   $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
 
   -- create tmp trash
@@ -281,17 +280,13 @@ fromRosetta tmpDir rosetta = addNamespace "toRosetta" $ do
 
   for_ (rosetta ^. (#index % #unIndex)) $ \(pd, MkPathI oldTrashPath) -> do
     -- transform core path data to cbor
-    cborPathData <- Cbor.PathData.fromCorePathData pd
-    let newTrashPath =
+    let cborPathData = Cbor.PathData.fromCorePathData pd
+        newTrashPath =
           trashPathDir
             </> (cborPathData ^. (#fileName % #unPathI))
 
-    -- copy file
-    case pd ^. #pathType of
-      PathTypeFile ->
-        PW.copyFileWithMetadata oldTrashPath newTrashPath
-      PathTypeDirectory ->
-        PW.copyDirectoryRecursive oldTrashPath trashPathDir
+    -- copy dir
+    PathType.copyPath (pd ^. #pathType) oldTrashPath newTrashPath trashPathDir
 
     -- create info files
     encoded <- Serialize.encodeThrowM cborPathData

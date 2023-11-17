@@ -205,11 +205,11 @@ getMetadata ::
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m,
     Serialize pd
   ) =>
   BackendArgs m pd ->
@@ -247,9 +247,9 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
 
       -- Summed size
       allFiles <- Utils.getAllFiles trashPathsDir
-      allSizes <- toDouble <$> foldl' sumFileSizes (pure zero) allFiles
-      let numFiles = length allFiles
-          size = Bytes.normalize allSizes
+      let allSizes = foldl' (\acc (pd, _) -> (pd ^. #size) .+. acc) zero index
+          numFiles = length allFiles
+          size = fromIntegral <$> Bytes.normalize allSizes
 
       $(logDebug) ("Num all files: " <> showt numFiles)
       $(logDebug) ("Total size: " <> showt size)
@@ -265,11 +265,6 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
             size
           }
   where
-    sumFileSizes macc f = do
-      !acc <- macc
-      sz <- (MkBytes @B) <$> getFileSize f
-      pure $ acc .+. sz
-
     toDouble :: (Integral a) => Bytes s a -> Bytes s Double
     toDouble = fmap fromIntegral
     toNat :: Int -> Natural
@@ -329,14 +324,14 @@ emptyTrash ::
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThrow m,
     Serialize pd
   ) =>
   BackendArgs m pd ->

@@ -13,8 +13,10 @@ import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
+import Numeric.Algebra (AMonoid (zero))
 import SafeRm.Backend.Cbor.PathData (PathData (UnsafePathData))
 import SafeRm.Backend.Cbor.PathData qualified as Cbor
+import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Serialize (Serialize (decode), encodeThrowM)
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
@@ -62,9 +64,11 @@ serializeRoundtripSpecs params = testCase desc $ do
 
     mkPd name opath ts =
       UnsafePathData
-        { fileName = MkPathI name,
+        { pathType = PathTypeFile,
+          fileName = MkPathI name,
           originalPath = MkPathI opath,
-          created = ts
+          created = ts,
+          size = zero
         }
 
 serializeRoundtripProp :: TestTree
@@ -97,12 +101,16 @@ serializeRoundtripProp =
 genPathData :: Gen PathData
 genPathData =
   UnsafePathData
-    <$> genFileName
+    <$> genPathType
+    <*> genFileName
     <*> genOriginalPath
     <*> genTimestamp
+    <*> genSize
   where
+    genPathType = Gen.element [PathTypeFile, PathTypeDirectory, PathTypeSymlink]
     genFileName = toPathI <$> Gen.string (Range.exponential 1 100) genPathChar
     genOriginalPath = toPathI <$> Gen.string (Range.linear 1 100) genPathChar
+    genSize = MkBytes <$> Gen.integral (Range.exponential 1 1_000_000)
 
 toPathI :: FilePath -> PathI i
 toPathI = MkPathI . unsafeEncodeFpToOs

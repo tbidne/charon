@@ -33,7 +33,7 @@ class HasTrashHome a where
 
 -- | Retrieves the trash log path.
 getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
-getTrashLog = MkPathI . (</> [osp|log|]) <$> getXdgState pathSafeRm
+getTrashLog = MkPathI . (</> [osp|safe-rm.log|]) <$> getXdgState pathSafeRm
 
 -- | Class for retrieving the backend.
 class HasBackend a where

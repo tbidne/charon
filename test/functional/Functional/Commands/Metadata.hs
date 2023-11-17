@@ -93,7 +93,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }
 
     expectedMetadata =
@@ -101,7 +101,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
         <$> [ "Entries:      5",
               "Total Files:  4",
               "Log size:     0.00B",
-              "Size:         20.00B",
+              "Size:         35.00B",
               ""
             ]
 
@@ -125,7 +125,7 @@ empty getTestEnv = testCase "Prints empty metadata" $ do
       Exact
         <$> [ "Entries:      0",
               "Total Files:  0",
-              "Log size:     5.00B",
+              "Log size:     0.00B",
               "Size:         0.00B",
               ""
             ]

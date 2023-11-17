@@ -13,5 +13,6 @@ data Rosetta = MkRosetta
   { index :: Index,
     size :: Bytes B Natural
   }
+  deriving stock (Eq, Show)
 
 makeFieldLabelsNoPrefix ''Rosetta

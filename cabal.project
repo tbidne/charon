@@ -37,24 +37,24 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/monad-effects.git
-    tag: 85a5694c59cc130b185101f98aec1ce4c7e80733
+    tag: 0ee5277d0f46c58782fc1824802f60caa6aefde5
     subdir:
-        effects-async
-        effects-exceptions
-        effects-optparse
-        effects-fs
-        effects-ioref
-        effects-logger-ns
-        effects-stm
-        effects-terminal
-        effects-thread
-        effects-time
-        effects-unix-compat
+        lib/effects-async
+        lib/effects-exceptions
+        lib/effects-optparse
+        lib/effects-fs
+        lib/effects-ioref
+        lib/effects-logger-ns
+        lib/effects-stm
+        lib/effects-terminal
+        lib/effects-thread
+        lib/effects-time
+        lib/effects-unix-compat
 
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: abcf24fc2b810fc23732f04836e7565d947c4436
+    tag: 4bb7b5b0eca734070cf0b71c727dfa8a3e255a4f
 
 source-repository-package
     type: git

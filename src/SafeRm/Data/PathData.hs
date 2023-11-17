@@ -65,6 +65,7 @@ headerNames = ["Name", "Original", "Type", "Size", "Created"]
 -- path that exists.
 originalPathExists ::
   ( HasCallStack,
+    MonadCatch m,
     MonadPathReader m
   ) =>
   PathData ->

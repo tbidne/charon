@@ -22,8 +22,9 @@ where
 import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
+import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.Utils qualified as FsUtils
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -69,9 +70,9 @@ getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 -- something we will want to use everywhere (e.g. throwIfIllegal).
 getPathInfo ::
   ( HasCallStack,
+    MonadCatch m,
     MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+    MonadPathReader m
   ) =>
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
@@ -103,25 +104,31 @@ getPathInfo trashHome origPath = do
 
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
-  isFile <- Paths.applyPathI doesFileExist originalPath
-  if isFile
-    then pure (uniqName, originalPath, PathTypeFile)
+  -- NOTE: This has to be first as does(File/Directory)Exist traverses
+  -- symlinks.
+  isSymlink <- Paths.applyPathI PR.doesSymbolicLinkExist originalPath
+  if isSymlink
+    then pure (uniqName, originalPath, PathTypeSymlink)
     else do
-      isDir <- Paths.applyPathI doesDirectoryExist originalPath
-      if isDir
-        then
-          pure
-            ( -- NOTE: ensure paths do not have trailing slashes so that we can
-              -- ensure later lookups succeed (requires string equality)
-              Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
-              Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
-              PathTypeDirectory
-            )
+      isFile <- Paths.applyPathI doesFileExist originalPath
+      if isFile
+        then pure (uniqName, originalPath, PathTypeFile)
         else do
-          pathExists <- Paths.applyPathI doesPathExist originalPath
-          if pathExists
-            then throwCS $ MkPathNotFileDirE (originalPath ^. #unPathI)
-            else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
+          isDir <- Paths.applyPathI doesDirectoryExist originalPath
+          if isDir
+            then
+              pure
+                ( -- NOTE: ensure paths do not have trailing slashes so that we can
+                  -- ensure later lookups succeed (requires string equality)
+                  Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
+                  Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
+                  PathTypeDirectory
+                )
+            else do
+              pathExists <- Paths.applyPathI doesPathExist originalPath
+              if pathExists
+                then throwCS $ MkPathNotFileDirE (originalPath ^. #unPathI)
+                else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.

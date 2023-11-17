@@ -31,6 +31,6 @@ backendArgs =
   MkBackendArgs
     { backend = BackendJson,
       toPd = Json.PathData.toPathData,
-      toCorePathData = Json.PathData.toCorePathData,
-      fromCorePathData = Json.PathData.fromCorePathData
+      toCorePathData = const (pure . Json.PathData.toCorePathData),
+      fromCorePathData = pure . Json.PathData.fromCorePathData
     }

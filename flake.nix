@@ -22,7 +22,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     monad-effects = {
-      url = "github:tbidne/monad-effects";
+      # TODO: Move off branch
+      url = "github:tbidne/monad-effects/symlink";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -92,7 +93,7 @@
               "path-size"
               "si-bytes"
               "smart-math"
-            ] // nix-hs-utils.mkRelLibs monad-effects final [
+            ] // nix-hs-utils.mkRelLibs "${monad-effects}/lib" final [
               "effects-async"
               "effects-exceptions"
               "effects-ioref"
@@ -107,6 +108,7 @@
             ];
           };
           hlib = pkgs.haskell.lib;
+          compilerPkgs = { inherit compiler pkgs; };
           mkPkg = returnShellEnv:
             nix-hs-utils.mkHaskellPkg {
               inherit compiler pkgs returnShellEnv;
@@ -120,15 +122,9 @@
           devShells.default = mkPkg true;
 
           apps = {
-            format = nix-hs-utils.format {
-              inherit compiler hsDirs pkgs;
-            };
-            lint = nix-hs-utils.lint {
-              inherit compiler hsDirs pkgs;
-            };
-            lint-refactor = nix-hs-utils.lint-refactor {
-              inherit compiler hsDirs pkgs;
-            };
+            format = nix-hs-utils.format compilerPkgs;
+            lint = nix-hs-utils.lint compilerPkgs;
+            lintRefactor = nix-hs-utils.lintRefactor compilerPkgs;
           };
         };
       systems = [

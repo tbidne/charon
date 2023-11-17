@@ -54,9 +54,9 @@ makeFieldLabelsNoPrefix ''PathData
 -- * File/directory type.
 toPathData ::
   ( HasCallStack,
+    MonadCatch m,
     MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
+    MonadPathReader m
   ) =>
   Timestamp ->
   PathI TrashHome ->

@@ -31,6 +31,6 @@ backendArgs =
   MkBackendArgs
     { backend = BackendCbor,
       toPd = Cbor.PathData.toPathData,
-      toCorePathData = Cbor.PathData.toCorePathData,
-      fromCorePathData = Cbor.PathData.fromCorePathData
+      toCorePathData = const (pure . Cbor.PathData.toCorePathData),
+      fromCorePathData = pure . Cbor.PathData.fromCorePathData
     }

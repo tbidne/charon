@@ -298,18 +298,21 @@ getPathSize path = do
 
 getAllFiles ::
   ( HasCallStack,
-    MonadPathReader m,
-    MonadThrow m
+    MonadCatch m,
+    MonadPathReader m
   ) =>
   OsPath ->
   m [OsPath]
 getAllFiles fp =
-  doesFileExist fp >>= \case
+  doesSymbolicLinkExist fp >>= \case
     True -> pure [fp]
     False ->
-      doesDirectoryExist fp >>= \case
-        True ->
-          listDirectory fp
-            >>= fmap join
-            . traverse (getAllFiles . (fp </>))
-        False -> throwCS $ MkFileNotFoundE fp
+      doesFileExist fp >>= \case
+        True -> pure [fp]
+        False ->
+          doesDirectoryExist fp >>= \case
+            True ->
+              listDirectory fp
+                >>= fmap join
+                . traverse (getAllFiles . (fp </>))
+            False -> throwCS $ MkFileNotFoundE fp

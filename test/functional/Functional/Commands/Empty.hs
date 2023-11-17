@@ -96,7 +96,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }
 
     emptyExpectedIdxSet = HashSet.empty
@@ -235,7 +235,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }
 
     emptyExpectedIdxSet = HashSet.empty
@@ -306,7 +306,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }
 
     emptyExpectedIdxSet = HashSet.empty

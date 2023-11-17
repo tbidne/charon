@@ -218,7 +218,7 @@ newtype PathNotFileDirE = MkPathNotFileDirE OsPath
 instance Exception PathNotFileDirE where
   displayException (MkPathNotFileDirE p) =
     mconcat
-      [ "Path exists but is not a file or directory: '",
+      [ "Path exists but is not a file, directory, or symlink: '",
         FsUtils.osToFp p,
         "'"
       ]

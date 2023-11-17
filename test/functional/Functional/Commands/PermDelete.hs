@@ -165,7 +165,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }
 
     permDelExpectedMetadata =

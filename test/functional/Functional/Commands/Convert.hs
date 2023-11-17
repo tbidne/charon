@@ -148,5 +148,5 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
         { numEntries = 5,
           numFiles = 4,
           logSize = afromInteger 0,
-          size = afromInteger 20
+          size = afromInteger 35
         }

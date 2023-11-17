@@ -92,26 +92,27 @@
         ]
       },
       "locked": {
-        "lastModified": 1693048711,
-        "narHash": "sha256-zgMO+Jaw6vnYlzESKZx/XBOUQR2jrLqdcs0YpUIWPPk=",
+        "lastModified": 1700213527,
+        "narHash": "sha256-Z4yUPhZ7rBoeV6vPPIkA72/jmkhSDKX6rS5v/T9bK8E=",
         "owner": "tbidne",
         "repo": "monad-effects",
-        "rev": "85a5694c59cc130b185101f98aec1ce4c7e80733",
+        "rev": "0ee5277d0f46c58782fc1824802f60caa6aefde5",
         "type": "github"
       },
       "original": {
         "owner": "tbidne",
+        "ref": "symlink",
         "repo": "monad-effects",
         "type": "github"
       }
     },
     "nix-hs-utils": {
       "locked": {
-        "lastModified": 1692785004,
-        "narHash": "sha256-vIduZ18ljvfh5EhpZIKCMiLBrV3qgShHyESoNLr4tEE=",
+        "lastModified": 1695340755,
+        "narHash": "sha256-yb1FM96YxM9wVSkaSGZHCuNoLHeCdn5R0BAfSXJwTwY=",
         "owner": "tbidne",
         "repo": "nix-hs-utils",
-        "rev": "de183f4af585703c7be972fa071a9d0721ec8fae",
+        "rev": "2ee3a794e1534af18d4115119e5f5da63f0e4fa3",
         "type": "github"
       },
       "original": {
@@ -182,11 +183,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1693188274,
-        "narHash": "sha256-/jXEQZy/lEE9HlFM2DGXTusDQrlrGp3/X/9CFMpXVmE=",
+        "lastModified": 1694082353,
+        "narHash": "sha256-9jTD7xrQohwV5h4QNS6DaCNIyn4MBV49SkhHHBpAcUQ=",
         "owner": "tbidne",
         "repo": "path-size",
-        "rev": "abcf24fc2b810fc23732f04836e7565d947c4436",
+        "rev": "4bb7b5b0eca734070cf0b71c727dfa8a3e255a4f",
         "type": "github"
       },
       "original": {

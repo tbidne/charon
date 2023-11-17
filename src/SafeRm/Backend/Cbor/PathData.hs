@@ -14,7 +14,6 @@ where
 import Codec.Serialise qualified as Serialise
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
-import SafeRm.Backend.Default.Trash qualified as Trash
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType)
@@ -34,12 +33,16 @@ import SafeRm.Utils qualified as Utils
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
 data PathData = UnsafePathData
-  { -- | The path to be used in the trash directory.
+  { -- | The path type.
+    pathType :: PathType,
+    -- | The path to be used in the trash directory.
     fileName :: PathI TrashEntryFileName,
     -- | The original path on the file system.
     originalPath :: PathI TrashEntryOriginalPath,
     -- | Time this entry was created.
-    created :: Timestamp
+    created :: Timestamp,
+    -- | The size.
+    size :: Bytes B Natural
   }
   deriving stock (Eq, Generic, Show)
   deriving anyclass (Hashable, NFData)
@@ -53,51 +56,6 @@ makeFieldLabelsNoPrefix ''PathData
 -- * File/directory type.
 toPathData ::
   ( HasCallStack,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadThrow m
-  ) =>
-  Timestamp ->
-  PathI TrashHome ->
-  PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
-toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
-  (fileName', originalPath', pathType) <- Default.Utils.getPathInfo trashHome origPath
-
-  pure
-    ( UnsafePathData
-        { fileName = fileName',
-          originalPath = originalPath',
-          created = currTime
-        },
-      pathType
-    )
-
-instance Serialize PathData where
-  type DecodeExtra PathData = PathI TrashEntryFileName
-
-  encode :: PathData -> Either String ByteString
-  encode (UnsafePathData _ (MkPathI opath) ts) =
-    case decodeOsToFp opath of
-      Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (opath', ts)
-      Left ex -> Left $ displayException ex
-
-  decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
-  decode name bs = do
-    (opath, created) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
-
-    case encodeFpToOs opath of
-      Right opath' ->
-        Right
-          $ UnsafePathData
-            { fileName = name,
-              originalPath = MkPathI opath',
-              created
-            }
-      Left ex -> Left $ displayException ex
-
-toCorePathData ::
-  ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
     MonadIORef m,
@@ -107,34 +65,66 @@ toCorePathData ::
     MonadTerminal m,
     MonadThread m
   ) =>
+  Timestamp ->
   PathI TrashHome ->
-  PathData ->
-  m PathData.PathData
-toCorePathData trashHome pd = do
-  pathType <- Default.Utils.pathDataToType trashHome pd
-
-  size <- Utils.getPathSize path
+  PathI TrashEntryOriginalPath ->
+  m (PathData, PathType)
+toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
+  (fileName, originalPath, pathType) <- Default.Utils.getPathInfo trashHome origPath
+  size <- Utils.getPathSize (originalPath ^. #unPathI)
 
   pure
-    $ PathData.UnsafePathData
-      { pathType,
-        fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        size,
-        created = pd ^. #created
-      }
-  where
-    MkPathI path = Trash.getTrashPath trashHome (pd ^. #fileName)
+    ( UnsafePathData
+        { pathType,
+          fileName,
+          originalPath,
+          created = currTime,
+          size
+        },
+      pathType
+    )
 
-fromCorePathData ::
-  ( Monad m
-  ) =>
-  PathData.PathData ->
-  m PathData
+instance Serialize PathData where
+  type DecodeExtra PathData = PathI TrashEntryFileName
+
+  encode :: PathData -> Either String ByteString
+  encode (UnsafePathData pathType _ (MkPathI opath) ts (MkBytes sz)) =
+    case decodeOsToFp opath of
+      Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (pathType, opath', ts, sz)
+      Left ex -> Left $ displayException ex
+
+  decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
+  decode name bs = do
+    (pathType, opath, created, size) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
+
+    case encodeFpToOs opath of
+      Right opath' ->
+        Right
+          $ UnsafePathData
+            { pathType,
+              fileName = name,
+              originalPath = MkPathI opath',
+              created,
+              size = MkBytes size
+            }
+      Left ex -> Left $ displayException ex
+
+toCorePathData :: PathData -> PathData.PathData
+toCorePathData pd = do
+  PathData.UnsafePathData
+    { pathType = pd ^. #pathType,
+      fileName = pd ^. #fileName,
+      originalPath = pd ^. #originalPath,
+      size = pd ^. #size,
+      created = pd ^. #created
+    }
+
+fromCorePathData :: PathData.PathData -> PathData
 fromCorePathData pd =
-  pure
-    $ UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
+  UnsafePathData
+    { pathType = pd ^. #pathType,
+      fileName = pd ^. #fileName,
+      originalPath = pd ^. #originalPath,
+      created = pd ^. #created,
+      size = pd ^. #size
+    }

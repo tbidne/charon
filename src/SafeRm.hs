@@ -25,6 +25,7 @@ where
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter qualified as PW
+import Effects.Time (MonadTime (getMonotonicTime))
 import SafeRm.Backend.Cbor qualified as Cbor
 import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Backend.Data qualified as Backend.Data
@@ -41,6 +42,8 @@ import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Prelude
+
+-- TODO: We should really make it detect the backend, if not given.
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -226,7 +229,8 @@ convert ::
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m
+    MonadThread m,
+    MonadTime m
   ) =>
   Backend ->
   m ()
@@ -253,9 +257,15 @@ convert dest = addNamespace "convert" $ do
         BackendFdo -> addNamespace "fdo" Fdo.toRosetta
         BackendJson -> addNamespace "json" Json.toRosetta
 
+      $(logDebug) ("Rosetta: " <> showt rosetta)
+
+      -- If we are really paranoid we could either add a random string or
+      -- detect duplicates.
+      timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
+
       -- 2. Make new tmp trash
       tmpDir <- PR.getTemporaryDirectory
-      let newTrashTmpRaw = tmpDir </> [osp|tmp_trash_new|]
+      let newTrashTmpRaw = tmpDir </> [osp|tmp_trash_new_|] <> timeStr
 
           newTrashTmp :: PathI TrashHome
           newTrashTmp = MkPathI newTrashTmpRaw
@@ -267,7 +277,7 @@ convert dest = addNamespace "convert" $ do
           throwM ex
 
       -- 3. Back up old trash
-      let oldTrashTmpRaw = tmpDir </> [osp|tmp_trash_old|]
+      let oldTrashTmpRaw = tmpDir </> [osp|tmp_trash_old_|] <> timeStr
 
       renameDirectory trashHome' oldTrashTmpRaw
         `catchAny` \ex -> do

@@ -10,6 +10,7 @@ where
 
 import Data.List qualified as L
 import Data.Text qualified as T
+import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import Effects.LoggerNS
   ( LocStrategy (LocStable),
@@ -18,6 +19,7 @@ import Effects.LoggerNS
   )
 import Effects.LoggerNS qualified as Logger
 import Numeric.Literal.Integer (FromInteger (afromInteger))
+import SafeRm.Backend.Cbor.BackendArgs qualified as Cbor.BackendArgs
 import SafeRm.Backend.Cbor.PathData qualified as Cbor.PathData
 import SafeRm.Backend.Data (Backend (BackendCbor))
 import SafeRm.Backend.Data qualified as Backend
@@ -32,6 +34,7 @@ import SafeRm.Backend.Default.BackendArgs
   )
 import SafeRm.Backend.Default.Trash qualified as Trash
 import SafeRm.Backend.Fdo.PathData qualified as Fdo.PathData
+import SafeRm.Backend.Json.BackendArgs qualified as Json.BackendArgs
 import SafeRm.Backend.Json.PathData qualified as Json.PathData
 import SafeRm.Data.PathData qualified as PathData
 import SafeRm.Data.PathType (PathType (PathTypeFile))
@@ -54,27 +57,8 @@ tests =
     ]
   where
     backendCbor :: BackendArgs PathDataT Cbor.PathData.PathData
-    backendCbor =
-      MkBackendArgs
-        { backend = BackendCbor,
-          toPd = Cbor.PathData.toPathData,
-          toCorePathData = \_ pd ->
-            pure
-              $ PathData.UnsafePathData
-                { PathData.pathType = PathTypeFile,
-                  PathData.fileName = pd ^. #fileName,
-                  PathData.originalPath = pd ^. #originalPath,
-                  PathData.created = pd ^. #created,
-                  PathData.size = afromInteger 5
-                },
-          fromCorePathData = \pd ->
-            pure
-              $ Cbor.PathData.UnsafePathData
-                { Cbor.PathData.fileName = pd ^. #fileName,
-                  Cbor.PathData.originalPath = pd ^. #originalPath,
-                  Cbor.PathData.created = pd ^. #created
-                }
-        }
+    backendCbor = Cbor.BackendArgs.backendArgs
+
     backendFdo :: BackendArgs PathDataT Fdo.PathData.PathData
     backendFdo =
       MkBackendArgs
@@ -99,27 +83,7 @@ tests =
         }
 
     backendJson :: BackendArgs PathDataT Json.PathData.PathData
-    backendJson =
-      MkBackendArgs
-        { backend = BackendCbor,
-          toPd = Json.PathData.toPathData,
-          toCorePathData = \_ pd ->
-            pure
-              $ PathData.UnsafePathData
-                { PathData.pathType = PathTypeFile,
-                  PathData.fileName = pd ^. #fileName,
-                  PathData.originalPath = pd ^. #originalPath,
-                  PathData.created = pd ^. #created,
-                  PathData.size = afromInteger 5
-                },
-          fromCorePathData = \pd ->
-            pure
-              $ Json.PathData.UnsafePathData
-                { Json.PathData.fileName = pd ^. #fileName,
-                  Json.PathData.originalPath = pd ^. #originalPath,
-                  Json.PathData.created = pd ^. #created
-                }
-        }
+    backendJson = Json.BackendArgs.backendArgs
 
 data TestEnv = MkTestEnv
   { renameResult :: IORef Text,
@@ -137,9 +101,12 @@ newtype PathDataT a = MkPathDataT (ReaderT TestEnv IO a)
     ( Applicative,
       Functor,
       Monad,
+      MonadAsync,
       MonadCatch,
       MonadIORef,
+      MonadPosixCompat,
       MonadReader TestEnv,
+      MonadThread,
       MonadThrow,
       MonadTime
     )
@@ -239,6 +206,10 @@ instance MonadPathReader PathDataT where
         [ [osp|home|] </> [osp|path|] </> [osp|to|] </> [osp|foo|],
           [osp|home|] </> [osp| |]
         ]
+
+  pathIsSymbolicLink _ = pure False
+  doesDirectoryExist _ = pure False
+  getFileSize _ = pure 0
 
 -- No real IO!!!
 instance MonadFileWriter PathDataT where

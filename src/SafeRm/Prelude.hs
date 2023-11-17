@@ -155,6 +155,7 @@ import Effects.FileSystem.PathReader as X
         getHomeDirectory,
         listDirectory
       ),
+    doesSymbolicLinkExist,
     getXdgConfig,
   )
 import Effects.FileSystem.PathWriter as X
