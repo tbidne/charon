@@ -494,6 +494,8 @@ mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
 
 deleteFileName ::
   ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m,
     MonadPathWriter m
   ) =>
   PathI TrashHome ->

@@ -6,7 +6,7 @@ module Functional.Commands.Merge
   )
 where
 
-import Effects.FileSystem.PathWriter (PathExistsException)
+import Effects.FileSystem.PathWriter (PathFoundException)
 import Functional.Prelude
 import SafeRm.Data.Metadata
   ( Metadata
@@ -255,7 +255,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
 
     local (set' #trashDir pathSrc) $ do
       mergeArgs <- withSrArgsPathsM ["merge", "-d"] [trashDirDest]
-      runSafeRmException @PathExistsException mergeArgs
+      runSafeRmException @PathFoundException mergeArgs
 
       -- verify src unchanged
       assertPathsDoNotExist (pathsToDeleteSrc ++ pathsToDeleteDest)

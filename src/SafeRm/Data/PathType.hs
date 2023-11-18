@@ -92,6 +92,8 @@ renameFn PathTypeSymlink = PW.renamePath
 
 deleteFn ::
   ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m,
     MonadPathWriter m
   ) =>
   PathType ->
@@ -99,8 +101,7 @@ deleteFn ::
   m ()
 deleteFn PathTypeFile = removeFile
 deleteFn PathTypeDirectory = removeDirectoryRecursive
--- FIXME: distinguish between file/dir links for windows
-deleteFn PathTypeSymlink = PW.removeDirectoryLink
+deleteFn PathTypeSymlink = PW.removeSymbolicLink
 
 copyPath ::
   ( HasCallStack,
