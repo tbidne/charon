@@ -45,9 +45,9 @@ readIndex ::
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadFileReader m,
+    MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadThrow m,
     Serial pd
   ) =>
   BackendArgs m pd ->
@@ -107,13 +107,14 @@ getTrashEntryPath ::
   ( HasCallStack,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    MonadPathReader m,
-    MonadThrow m
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadPathReader m
   ) =>
   PathI TrashHome ->
   pd ->
   m (PathI TrashEntryPath)
-getTrashEntryPath trashHome pd = do
+getTrashEntryPath trashHome pd = addNamespace "getTrashEntryPath" $ do
   lookupTrashPath trashHome pd >>= \case
     Just trashPath -> pure trashPath
     Nothing ->
@@ -128,13 +129,17 @@ lookupTrashPath ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     HasCallStack,
+    MonadCatch m,
     MonadPathReader m
   ) =>
   PathI TrashHome ->
   pd ->
   m (Maybe (PathI TrashEntryPath))
 lookupTrashPath trashHome pd = do
-  exists <- doesPathExist trashPath'
+  -- Unfortunately we don't know the path type, as we could be dealing with
+  -- a backend that does not have it on its PathData (e.g. fdo). Thus we
+  -- have to check symlinks first, then doesPathExist for files/dirs.
+  exists <- doesAnyPathExist trashPath'
   pure
     $ if exists
       then Just trashPath

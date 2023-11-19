@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Tests for d command.
 module Functional.Commands.Delete
   ( tests,
@@ -57,12 +59,6 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     -- file assertions
     assertPathsDoNotExist [f1]
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f1"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
 
@@ -83,28 +79,27 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
   usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-    argList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
+    argList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
     -- setup
     -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
     -- test w/ a file in dir
     createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
     assertPathsExist (filesToDelete ++ dirsToDelete)
+    assertSymlinksExist linksToDelete
 
     liftIO $ runSafeRm argList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f1", "f2", "f3", "dir*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
-    assertMatches expectedLookup lookupResult
+    assertSymlinksDoNotExist linksToDelete
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -115,7 +110,10 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
           ("f2", PathTypeFile, 5),
           ("f3", PathTypeFile, 5),
           ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15)
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymlink, 5),
+          ("file-link", PathTypeSymlink, 5)
         ]
 
     assertSetEq expectedIdxSet idxSet
@@ -123,10 +121,10 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
   where
     expectedMetadata =
       MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
+        { numEntries = 8,
+          numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 35
+          size = afromInteger 55
         }
 
 deleteUnknownError :: IO TestEnv -> TestTree
@@ -184,12 +182,6 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     -- file assertions
     assertPathsDoNotExist [file]
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f1 (1)", "f1"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupFileOpath [("f1", "f1"), ("f1 (1)", "f1")] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
 
@@ -227,12 +219,6 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
 
     assertMatch expectedEx ex
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1", "f2", "f5"] []
-    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM

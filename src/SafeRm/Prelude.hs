@@ -20,6 +20,7 @@ module SafeRm.Prelude
     pathSafeRm,
 
     -- * Misc
+    doesAnyPathExist,
     usingReaderT,
   )
 where
@@ -153,7 +154,8 @@ import Effects.FileSystem.PathReader as X
         doesPathExist,
         getFileSize,
         getHomeDirectory,
-        listDirectory
+        listDirectory,
+        makeAbsolute
       ),
     doesSymbolicLinkExist,
     getXdgConfig,
@@ -304,3 +306,16 @@ pathSafeRm = [osp|safe-rm|]
 
 pathDotTrash :: OsPath
 pathDotTrash = [osp|.trash|]
+
+doesAnyPathExist ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m
+  ) =>
+  OsPath ->
+  m Bool
+doesAnyPathExist p = do
+  symlinkExists <- doesSymbolicLinkExist p
+  if symlinkExists
+    then pure True
+    else doesPathExist p

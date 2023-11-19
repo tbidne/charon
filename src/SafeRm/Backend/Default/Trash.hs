@@ -351,17 +351,18 @@ findOnePathData ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasBackend env,
     HasCallStack,
+    MonadCatch m,
     MonadFileReader m,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m,
     Serial pd
   ) =>
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   BackendArgs m pd ->
   m PathData
-findOnePathData trashHome pathName backendArgs = do
+findOnePathData trashHome pathName backendArgs = addNamespace "findOnePathData" $ do
   backend <- asks getBackend
   let trashInfoPath@(MkPathI trashInfoPath') =
         getTrashInfoPath backend trashHome pathName
@@ -388,17 +389,17 @@ findManyPathData ::
     HasCallStack,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadThrow m,
     Serial pd
   ) =>
   BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (NESeq PathData)
-findManyPathData backendArgs trashHome pathName = do
+findManyPathData backendArgs trashHome pathName = addNamespace "findManyPathData" $ do
   index <- fmap (view _1) . view #unIndex <$> Default.Index.readIndex backendArgs trashHome
 
   pathNameText <- T.pack <$> decodeOsToFpThrowM (pathName ^. #unPathI)
@@ -419,11 +420,11 @@ findPathData ::
     HasCallStack,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m,
     Serial pd
   ) =>
   BackendArgs m pd ->
@@ -509,12 +510,13 @@ deleteFileName trashHome pd = PathType.deleteFn (pd ^. #pathType) trashPath'
 -- that exists in 'TrashHome'.
 trashPathExists ::
   ( HasCallStack,
+    MonadCatch m,
     MonadPathReader m
   ) =>
   PathI TrashHome ->
   PathData ->
   m Bool
-trashPathExists th pd = doesPathExist trashPath'
+trashPathExists th pd = doesAnyPathExist trashPath'
   where
     -- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing
     -- the path type. See Note [PathData PathType conditions].

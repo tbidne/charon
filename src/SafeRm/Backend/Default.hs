@@ -177,11 +177,11 @@ getIndex ::
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadThrow m,
     Serial pd
   ) =>
   BackendArgs m pd ->
@@ -417,11 +417,11 @@ lookupTrashName ::
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
     MonadLoggerNS m,
     MonadFileReader m,
     MonadPathReader m,
     MonadReader env m,
-    MonadThrow m,
     Serial pd
   ) =>
   BackendArgs m pd ->

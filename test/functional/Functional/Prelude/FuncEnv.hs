@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -170,10 +171,12 @@ instance
   doesPathExist = liftIO . PR.doesPathExist
   listDirectory = liftIO . PR.listDirectory
   canonicalizePath = liftIO . PR.canonicalizePath
+  makeAbsolute = liftIO . PR.makeAbsolute
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
   getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
   getFileSize _ = pure 5
+  getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
   -- the real state (~/.local/state/safe-rm) and instead use our testing
@@ -188,9 +191,12 @@ instance MonadPathWriter (FuncIO env) where
   createDirectoryIfMissing b = liftIO . PW.createDirectoryIfMissing b
   renameDirectory x = liftIO . PW.renameDirectory x
   renameFile x = liftIO . PW.renameFile x
+  renamePath x = liftIO . PW.renamePath x
   removeDirectory = liftIO . PW.removeDirectory
   removeDirectoryRecursive = liftIO . PW.removeDirectoryRecursive
   copyFileWithMetadata src = liftIO . PW.copyFileWithMetadata src
+  createDirectoryLink src = liftIO . PW.createDirectoryLink src
+  removeDirectoryLink = liftIO . PW.removeDirectoryLink
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
@@ -420,6 +426,8 @@ mkPathDataSetM paths = do
   testDir <- getTestDir
   mkPathDataSetTestDirM testDir paths
 
+{- ORMOLU_DISABLE -}
+
 -- | Like 'mkPathDataSetM', except uses the given path as the test directory,
 -- rather than having it determined by the TestEnv.
 mkPathDataSetTestDirM ::
@@ -436,15 +444,30 @@ mkPathDataSetTestDirM testDir pathData = do
   pure
     $ HSet.fromList
     $ pathData
-    <&> \(p, pathType, sizeNat) ->
+    <&> \(p, pathType, _sizeNat) ->
       let p' = unsafeEncodeFpToOs p
+      -- NOTE: Unlike files, the symlinks sizes are not mocked. While our
+      -- expected value of 5 seems to work for posix, on windows they
+      -- apparently have size 0. We could try to mock these instead, however
+      -- that is difficult as the relevant MonadPosixCompat function
+      -- (getFileStatus) involves foreign pointers.
+      --
+      -- Thus we do the easy thing here and match the actual value. If this
+      -- fails, the next step would be to zero the actual results as well.
+#if WINDOWS
+          size = afromInteger 0
+#else
+          size = afromInteger _sizeNat
+#endif
        in UnsafePathData
             { fileName = MkPathI p',
               originalPath = MkPathI (testDir' </> p'),
               created = fixedTimestamp,
               pathType = pathType,
-              size = afromInteger sizeNat
+              size
             }
+
+{- ORMOLU_ENABLE -}
 
 -- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
 -- originalPath differ i.e. for each @(p, q)@

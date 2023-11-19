@@ -207,7 +207,6 @@ test-suite integration
     Integration.Utils
 
   build-depends:
-    , algebra-simple
     , base
     , effects-fs
     , effects-logger-ns
@@ -218,7 +217,6 @@ test-suite integration
     , hashable
     , hedgehog
     , mtl
-    , nonempty-containers
     , safe-rm
     , tagged                ^>=0.8.6
     , tasty

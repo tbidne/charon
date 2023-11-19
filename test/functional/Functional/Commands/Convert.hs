@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Tests for convert command.
 module Functional.Commands.Convert
   ( tests,
@@ -37,32 +39,30 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
   usingReaderT testEnv $ appendTestDirM testDirPath $ do
     testDir <- getTestDir
-    relativeTestDir <- asks (view #testDir)
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
     -- setup
     clearDirectory testDir
     -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
     -- test w/ a file in dir
     createFiles ([testDir </>! "dir2/dir3/foo"] <> filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
     assertPathsExist (filesToDelete ++ dirsToDelete)
+    assertSymlinksExist linksToDelete
 
     runSafeRm delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f1", "f2", "f3", "dir*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
-    assertMatches expectedLookup lookupResult
+    assertSymlinksDoNotExist linksToDelete
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -71,7 +71,10 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
           ("f2", PathTypeFile, 5),
           ("f3", PathTypeFile, 5),
           ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15)
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymlink, 5),
+          ("file-link", PathTypeSymlink, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -114,16 +117,6 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-      -- lookup assertions
-      lookupArgs2 <- withSrArgsTestDirM testDir ["lookup", "f1", "f2", "f3", "dir*"]
-      lookupResult2 <- liftIO $ captureSafeRm lookupArgs2
-      expectedLookup2 <-
-        mkLookupFullPath
-          relativeTestDir
-          [("f1", "f1"), ("f2", "f2"), ("f3", "f3")]
-          [("dir1", Nothing), ("dir2", Just "15.00B")]
-      assertMatches expectedLookup2 lookupResult2
-
       -- trash structure assertions
       convertExpectedIdxSet <-
         -- See Note [Test dir and backend changes].
@@ -133,7 +126,10 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
             ("f2", PathTypeFile, 5),
             ("f3", PathTypeFile, 5),
             ("dir1", PathTypeDirectory, 5),
-            ("dir2", PathTypeDirectory, 15)
+            ("dir2", PathTypeDirectory, 15),
+            ("dir4", PathTypeDirectory, 10),
+            ("dir-link", PathTypeSymlink, 5),
+            ("file-link", PathTypeSymlink, 5)
           ]
 
       -- See Note [Test dir and backend changes].
@@ -145,8 +141,8 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
 
     delExpectedMetadata =
       MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
+        { numEntries = 8,
+          numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 35
+          size = afromInteger 55
         }

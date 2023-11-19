@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wunused-top-binds #-}
 
 -- | Tests for x command.
@@ -61,12 +62,6 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     -- file assertions
     assertPathsDoNotExist [f1]
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "f1"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     (delIdxSet, delMetadata) <- runIndexMetadataM
 
@@ -105,28 +100,26 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
   usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
     testDir <- getTestDir
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
     -- SETUP
     -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
     -- test w/ a file in dir
     createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
     assertPathsExist (filesToDelete ++ dirsToDelete)
+    assertSymlinksExist linksToDelete
 
     liftIO $ runSafeRm delArgList
 
     -- file assertions
-    assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
-    assertMatches expectedLookup lookupResult
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
 
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -134,7 +127,10 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
           ("f2", PathTypeFile, 5),
           ("f3", PathTypeFile, 5),
           ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15)
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymlink, 5),
+          ("file-link", PathTypeSymlink, 5)
         ]
 
     -- trash structure assertions
@@ -145,16 +141,16 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     -- PERMANENT DELETE
 
     -- leave f2 alone
-    permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "file-link", "-f"]
     liftIO $ runSafeRm permDelArgList
 
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <- mkLookupSimple ["f2"] []
-    assertMatches expectedLookup2 lookupResult2
-
     -- trash structure assertions
-    permDelExpectedIdxSet <- mkPathDataSetM [("f2", PathTypeFile, 5)]
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("f2", PathTypeFile, 5),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymlink, 5)
+        ]
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
@@ -162,18 +158,18 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
   where
     delExpectedMetadata =
       MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
+        { numEntries = 8,
+          numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 35
+          size = afromInteger 55
         }
 
     permDelExpectedMetadata =
       MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
+        { numEntries = 3,
+          numFiles = 3,
           logSize = afromInteger 0,
-          size = afromInteger 5
+          size = afromInteger 20
         }
 
 deleteUnknownError :: IO TestEnv -> TestTree
@@ -201,12 +197,6 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     -- file assertions
     assertPathsDoNotExist [f1]
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
 
@@ -220,10 +210,6 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- assert exception
     assertMatch expectedEx ex
-
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <- mkLookupSimple ["f1"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
@@ -266,12 +252,6 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
 
     -- file assertions
     assertPathsDoNotExist realFiles
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1", "f2", "f5"] []
-    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -335,12 +315,6 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     -- file assertions
     assertPathsDoNotExist fileDeletePaths
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["1", "2", "3", "4", "5"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -359,13 +333,6 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 
     permDelArgList <- withSrArgsM ("perm-delete" : fileDeleteNames)
     runSafeRm permDelArgList
-
-    -- lookup assertions
-    -- Our mock FuncIO alternates returning 'n' and 'y' to getChar, so without
-    -- the force option we should delete 2,4 and leave 1,3,5.
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <- mkLookupSimple ["1", "3", "5"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -413,13 +380,6 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ otherFiles)
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupSimple ["1f", "1g", "2f", "2g", "3f", "3g", "f1", "f2", "f3", "g1", "g2", "g3"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -446,12 +406,6 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     -- leave g alone
     permDelArgList <- withSrArgsM ["perm-delete", "*f*", "-f"]
     runSafeRm permDelArgList
-
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <-
-      mkLookupSimple ["1g", "2g", "3g", "g1", "g2", "g3"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -502,13 +456,6 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- file assertions
     assertPathsDoNotExist testFiles
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupSimple ["1g", "2g", "3g", "fooBadbar", "foobar", "fooXbar", "g1", "g2", "g3"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -537,12 +484,6 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- file assertions
     -- 1. Everything still gone from original location
     assertPathsDoNotExist testFiles
-    -- 2. Only fooBadBar should be left in trash
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <-
-      mkLookupSimple ["fooBadbar"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     permDelExpectedIdxSet <- mkPathDataSetM [("fooBadbar", PathTypeFile, 5)]
@@ -595,12 +536,6 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     -- file assertions
     assertPathsDoNotExist (testWcLiteral : testFiles)
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["*", "1f", "2f", "3f", "f1", "f2", "f3"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -622,11 +557,6 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     -- leave f alone
     permDelArgList <- withSrArgsM ["perm-delete", "\\*", "-f"]
     runSafeRm permDelArgList
-
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <- mkLookupSimple ["1f", "2f", "3f", "f1", "f2", "f3"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -679,13 +609,6 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- file assertions
     assertPathsDoNotExist (testWcLiterals <> testFiles)
 
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupSimple ["xxbar", "xxbaz", "xxfoo", "y*xxbar", "y*xxbaz", "y*xxfoo"] []
-    assertMatches expectedLookup lookupResult
-
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
@@ -706,12 +629,6 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- leave f alone
     permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "-f"]
     runSafeRm permDelArgList
-
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup2 <-
-      mkLookupSimple ["xxbar", "xxbaz", "xxfoo"] []
-    assertMatches expectedLookup2 lookupResult2
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -764,12 +681,6 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
 
     -- file assertions
     assertPathsDoNotExist [f1]
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <- mkLookupSimple ["f1"] []
-    assertMatches expectedLookup lookupResult
 
     -- trash structure assertions
     delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]

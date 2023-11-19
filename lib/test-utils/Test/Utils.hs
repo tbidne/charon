@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Provides utils for file system actions.
 module Test.Utils
@@ -8,6 +9,11 @@ module Test.Utils
     createFileContents,
     createDirectories,
     clearDirectory,
+
+    -- ** Symlinks
+    Symlink (..),
+    createSymlinks,
+    createSymlinksTarget,
 
     -- * Text
     TextMatch (..),
@@ -28,6 +34,7 @@ import Data.Char qualified as Ch
 import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Data.Text qualified as T
+import Effects.FileSystem.PathWriter (createDirectoryLink, createFileLink)
 import Effects.FileSystem.Utils qualified as FsUtils
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
@@ -82,6 +89,37 @@ createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
 createDirectories paths = liftIO
   $ for_ paths
   $ \p -> createDirectoryIfMissing True p
+
+data Symlink
+  = F OsPath
+  | D OsPath
+
+createSymlinks ::
+  ( Foldable f,
+    Functor f,
+    HasCallStack,
+    MonadIO m
+  ) =>
+  f Symlink ->
+  m ()
+createSymlinks = createSymlinks' . fmap (,Nothing)
+
+createSymlinksTarget ::
+  ( Foldable f,
+    Functor f,
+    HasCallStack,
+    MonadIO m
+  ) =>
+  f (Symlink, OsPath) ->
+  m ()
+createSymlinksTarget = createSymlinks' . fmap (over' _2 Just)
+
+createSymlinks' :: (Foldable f, HasCallStack, MonadIO m) => f (Symlink, Maybe OsPath) -> m ()
+createSymlinks' paths = liftIO
+  $ for_ paths
+  $ \(p, mtarget) -> case p of
+    F src -> createFileLink (fromMaybe [osp|dummy|] mtarget) src
+    D src -> createDirectoryLink (fromMaybe [osp|dummy|] mtarget) src
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
 clearDirectory :: (HasCallStack, MonadIO m) => OsPath -> m ()

@@ -88,9 +88,12 @@ getPathInfo trashHome origPath = do
   -- not what we want!
   throwIfIllegal origPath
 
-  originalPath <- Paths.liftPathIF' canonicalizePath origPath
+  -- NOTE: Previously we used canonicalizePath instead of makeAbsolute.
+  -- This had the problem of turning symlinks into their targets, which
+  -- is not what we want. makeAbsolute seems to do what we want.
+  originalPath <- Paths.liftPathIF' PR.makeAbsolute origPath
 
-  $(logDebug) $ "Canonicalized: '" <> Paths.toText originalPath <> "'"
+  $(logDebug) $ "Absolute: '" <> Paths.toText originalPath <> "'"
 
   -- NOTE: need to get the file name here because fp could refer to an
   -- absolute path. In this case, </> returns the 2nd arg which is absolutely

@@ -12,7 +12,6 @@ module SafeRm
     restore,
 
     -- * Information
-    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -33,7 +32,6 @@ import SafeRm.Backend.Fdo qualified as Fdo
 import SafeRm.Backend.Json qualified as Json
 import SafeRm.Data.Index (Index)
 import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
@@ -336,27 +334,3 @@ merge dest =
       BackendCbor -> addNamespace "cbor" $ Cbor.merge dest
       BackendFdo -> addNamespace "fdo" $ Fdo.merge dest
       BackendJson -> addNamespace "json" $ Json.merge dest
-
-lookupTrashName ::
-  ( HasBackend env,
-    HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadFileReader m,
-    MonadIORef m,
-    MonadLoggerNS m,
-    MonadPathReader m,
-    MonadPosixCompat m,
-    MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
-  ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
-  m (NESeq PathData)
-lookupTrashName name =
-  asks getBackend
-    >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.lookupTrashName name
-      BackendFdo -> addNamespace "fdo" $ Fdo.lookupTrashName name
-      BackendJson -> addNamespace "json" $ Json.lookupTrashName name

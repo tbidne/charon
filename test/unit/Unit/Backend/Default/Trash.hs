@@ -173,6 +173,7 @@ instance MonadPathWriter PathDataT where
 
 instance MonadPathReader PathDataT where
   canonicalizePath = pure . ([osp|home|] </>)
+  makeAbsolute = pure . ([osp|home|] </>)
 
   doesPathExist p
     | pName `L.elem` nexists = pure False

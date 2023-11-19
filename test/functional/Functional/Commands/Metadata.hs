@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Tests for m command.
 module Functional.Commands.Metadata
   ( tests,
@@ -32,28 +34,27 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     testDir <- getTestDir
 
     let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2"]
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete)
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
     -- setup
     clearDirectory testDir
     -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3"])
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
     -- test w/ a file in dir
     createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     runSafeRm delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
-
-    -- lookup assertions
-    lookupArgs <- withSrArgsM ["lookup", "*"]
-    lookupResult <- liftIO $ captureSafeRm lookupArgs
-    expectedLookup <-
-      mkLookupDirSize ["f1", "f2", "f3"] [("dir1", Nothing), ("dir2", Just "15.00B")]
-    assertMatches expectedLookup lookupResult
+    assertSymlinksDoNotExist linksToDelete
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -62,7 +63,10 @@ metadata getTestEnv = testCase "Prints metadata" $ do
           ("f2", PathTypeFile, 5),
           ("f3", PathTypeFile, 5),
           ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15)
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymlink, 5),
+          ("file-link", PathTypeSymlink, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -77,10 +81,6 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     -- assert nothing changed
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
 
-    -- lookup assertions
-    lookupResult2 <- liftIO $ captureSafeRm lookupArgs
-    assertMatches expectedLookup lookupResult2
-
     assertMatches expectedMetadata metadataResult
 
     -- trash structure assertions
@@ -90,18 +90,18 @@ metadata getTestEnv = testCase "Prints metadata" $ do
   where
     delExpectedMetadata =
       MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
+        { numEntries = 8,
+          numFiles = 7,
           logSize = afromInteger 0,
-          size = afromInteger 35
+          size = afromInteger 55
         }
 
     expectedMetadata =
       Exact
-        <$> [ "Entries:      5",
-              "Total Files:  4",
+        <$> [ "Entries:      8",
+              "Total Files:  7",
               "Log size:     0.00B",
-              "Size:         35.00B",
+              "Size:         55.00B",
               ""
             ]
 
