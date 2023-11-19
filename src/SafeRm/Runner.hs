@@ -84,7 +84,6 @@ runSafeRm ::
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadTerminal m,
-    MonadThread m,
     MonadTime m
   ) =>
   m ()
@@ -112,7 +111,6 @@ runCmd ::
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m,
     MonadTime m
   ) =>
   CommandP2 ->
@@ -222,13 +220,11 @@ printIndex ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   PathDataFormat ->
   Sort ->
@@ -246,13 +242,11 @@ printMetadata ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m ()
 printMetadata = SafeRm.getMetadata >>= prettyDel
@@ -328,7 +322,7 @@ handleLogSize logFile msizeMode = do
     sizeWarning warnSize fp fileSize =
       mconcat
         [ "Warning: log dir ",
-          decodeOsToFpShowText fp,
+          decodeOsToFpDisplayExT fp,
           " has size: ",
           formatBytes fileSize,
           ", but specified threshold is: ",

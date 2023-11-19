@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Prelude for functional test suite.
@@ -40,6 +41,7 @@ module Functional.Prelude
     FuncEnv.mkPathDataSetM,
     FuncEnv.mkPathDataSetM2,
     FuncEnv.mkPathDataSetTestDirM,
+    mkMetadata,
     appendTestDir,
     appendTestDirM,
     FuncEnv.getTestDir,
@@ -62,6 +64,7 @@ import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Backend.Data qualified as Backend
+import SafeRm.Data.Metadata (Metadata (MkMetadata, logSize, numEntries, numFiles, size))
 import SafeRm.Data.PathType as X
   ( PathType
       ( PathTypeDirectory,
@@ -194,3 +197,22 @@ foldFilePathsAcc = foldl' cfp
 
 cfp :: FilePath -> FilePath -> FilePath
 cfp = FsUtils.combineFilePaths
+
+{- ORMOLU_DISABLE -}
+
+-- See NOTE: [Windows getFileSize]
+mkMetadata :: Natural -> Natural -> Integer -> Integer -> Metadata
+mkMetadata numEntries numFiles _logSize _size =
+  MkMetadata
+    { numEntries,
+      numFiles,
+#if WINDOWS
+      logSize = afromInteger 0,
+      size = afromInteger 0
+#else
+      logSize = afromInteger _logSize,
+      size = afromInteger _size
+#endif
+    }
+
+{- ORMOLU_ENABLE -}

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Tests for m command.
@@ -7,15 +8,6 @@ module Functional.Commands.Metadata
 where
 
 import Functional.Prelude
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -88,22 +80,23 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     assertSetEq delExpectedIdxSet metadataIdxSet
     delExpectedMetadata @=? metadatMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
+    delExpectedMetadata = mkMetadata 8 7 0 55
+
+{- ORMOLU_DISABLE -}
 
     expectedMetadata =
       Exact
         <$> [ "Entries:      8",
               "Total Files:  7",
               "Log size:     0.00B",
+#if WINDOWS
+              "Size:         0.00B",
+#else
               "Size:         55.00B",
+#endif
               ""
             ]
+{- ORMOLU_ENABLE -}
 
 empty :: IO TestEnv -> TestTree
 empty getTestEnv = testCase "Prints empty metadata" $ do

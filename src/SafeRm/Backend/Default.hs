@@ -111,7 +111,7 @@ delete backendArgs paths = addNamespace "delete" $ do
         putStrLn
           $ mconcat
             [ "Error deleting path '",
-              decodeOsToFpShow $ fp ^. #unPathI,
+              decodeOsToFpDisplayEx $ fp ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -159,7 +159,7 @@ permDelete backendArgs force paths = addNamespace "permDelete" $ do
         putStrLn
           $ mconcat
             [ "Error permanently deleting path '",
-              decodeOsToFpShow $ p ^. #unPathI,
+              decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -308,7 +308,7 @@ restore backendArgs paths = addNamespace "restore" $ do
         putStrLn
           $ mconcat
             [ "Error restoring path '",
-              decodeOsToFpShow $ p ^. #unPathI,
+              decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
@@ -395,9 +395,9 @@ merge dest = addNamespace "merge" $ do
       let msg =
             mconcat
               [ "Source path ",
-                decodeOsToFpShow $ src' ^. #unPathI,
+                decodeOsToFpDisplayEx $ src' ^. #unPathI,
                 " is the same as dest path ",
-                decodeOsToFpShow $ dest' ^. #unPathI,
+                decodeOsToFpDisplayEx $ dest' ^. #unPathI,
                 ". Nothing to do."
               ]
       $(logDebug) $ T.pack msg

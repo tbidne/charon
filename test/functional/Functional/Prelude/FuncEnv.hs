@@ -33,6 +33,9 @@ module Functional.Prelude.FuncEnv
     mkPathDataSetM2,
     mkPathDataSetTestDirM,
     getTestDir,
+
+    -- * Re-exports
+    PathType (..),
   )
 where
 
@@ -71,6 +74,13 @@ import SafeRm.Data.PathData
       ),
   )
 import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.PathType as X
+  ( PathType
+      ( PathTypeDirectory,
+        PathTypeFile,
+        PathTypeSymlink
+      ),
+  )
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Env (HasBackend, HasTrashHome)
@@ -153,13 +163,15 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIORef,
       MonadMask,
       MonadPosixCompat,
-      MonadThread,
       MonadThrow,
       MonadReader env
     )
     via (ReaderT env IO)
 
 -- Overriding this for getXdgDirectory
+
+{- ORMOLU_DISABLE -}
+
 instance
   ( Is k A_Getter,
     LabelOptic' "trashHome" k env (PathI TrashHome)
@@ -175,7 +187,16 @@ instance
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
   getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
+#if WINDOWS
+  -- Default to zero because windows symlinks are differently sized.
+  -- This causes all sorts of annoyances, so it's easier just to set
+  -- everything to zero for now.
+  --
+  -- See NOTE: [Windows getFileSize]
+  getFileSize _ = pure 0
+#else
   getFileSize _ = pure 5
+#endif
   getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
@@ -185,6 +206,8 @@ instance
     MkPathI th <- asks (view #trashHome)
     pure th
   getXdgDirectory xdg p = liftIO $ PR.getXdgDirectory xdg p
+
+{- ORMOLU_ENABLE -}
 
 instance MonadPathWriter (FuncIO env) where
   createDirectory = liftIO . PW.createDirectory
@@ -196,6 +219,7 @@ instance MonadPathWriter (FuncIO env) where
   removeDirectoryRecursive = liftIO . PW.removeDirectoryRecursive
   copyFileWithMetadata src = liftIO . PW.copyFileWithMetadata src
   createDirectoryLink src = liftIO . PW.createDirectoryLink src
+  createFileLink src = liftIO . PW.createFileLink src
   removeDirectoryLink = liftIO . PW.removeDirectoryLink
 
   removeFile x
@@ -446,14 +470,15 @@ mkPathDataSetTestDirM testDir pathData = do
     $ pathData
     <&> \(p, pathType, _sizeNat) ->
       let p' = unsafeEncodeFpToOs p
-      -- NOTE: Unlike files, the symlinks sizes are not mocked. While our
+      -- NOTE: [Windows getFileSize]
+      --
+      -- Unlike files, the symlinks sizes are not mocked. While our
       -- expected value of 5 seems to work for posix, on windows they
       -- apparently have size 0. We could try to mock these instead, however
       -- that is difficult as the relevant MonadPosixCompat function
       -- (getFileStatus) involves foreign pointers.
       --
-      -- Thus we do the easy thing here and match the actual value. If this
-      -- fails, the next step would be to zero the actual results as well.
+      -- Thus we do the easy thing here and zero everything out.
 #if WINDOWS
           size = afromInteger 0
 #else
@@ -466,8 +491,6 @@ mkPathDataSetTestDirM testDir pathData = do
               pathType = pathType,
               size
             }
-
-{- ORMOLU_ENABLE -}
 
 -- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
 -- originalPath differ i.e. for each @(p, q)@
@@ -493,16 +516,24 @@ mkPathDataSetM2 pathData = do
   pure
     $ HSet.fromList
     $ pathData
-    <&> \(fn, opath, pathType, sizeNat) ->
+    <&> \(fn, opath, pathType, _sizeNat) ->
+      -- See NOTE: [Windows getFileSize]
       let fn' = unsafeEncodeFpToOs fn
           opath' = unsafeEncodeFpToOs opath
+#if WINDOWS
+          size = afromInteger 0
+#else
+          size = afromInteger _sizeNat
+#endif
        in UnsafePathData
             { fileName = MkPathI fn',
               originalPath = MkPathI (testDir' </> opath'),
               created = fixedTimestamp,
               pathType,
-              size = afromInteger sizeNat
+              size
             }
+
+{- ORMOLU_ENABLE -}
 
 -- | Returns the full test dir for the given environment i.e.
 --

@@ -100,7 +100,6 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
       MonadMask,
       MonadPathReader,
       MonadPosixCompat,
-      MonadThread,
       MonadThrow,
       MonadReader env
     )

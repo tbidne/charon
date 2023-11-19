@@ -5,7 +5,6 @@ module SafeRm.Backend.Default.Exception
   )
 where
 
-import Effects.FileSystem.Utils qualified as FsUtils
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -23,7 +22,7 @@ instance Exception TrashDirFilesNotFoundE where
   displayException (MkTrashDirFilesNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash files directory was not found at '",
-        FsUtils.osToFp files,
+        decodeOsToFpDisplayEx files,
         "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]
@@ -38,7 +37,7 @@ instance Exception TrashDirInfoNotFoundE where
   displayException (MkTrashDirInfoNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash info directory was not found at '",
-        FsUtils.osToFp info,
+        decodeOsToFpDisplayEx info,
         "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. safe-rm empty -f)."
       ]

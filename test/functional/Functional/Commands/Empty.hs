@@ -9,15 +9,6 @@ where
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 import SafeRm.Data.Metadata qualified as Metadata
 
 -- NOTE: These tests currently rely on internal details for the trash
@@ -95,13 +86,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     assertSetEq emptyExpectedIdxSet emptyIdxSet
     emptyExpectedMetadata @=? emptyMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
+    delExpectedMetadata = mkMetadata 8 7 0 55
 
     emptyExpectedIdxSet = HashSet.empty
     emptyExpectedMetadata = Metadata.empty
@@ -158,13 +143,7 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     assertSetEq delExpectedIdxSet emptyIdxSet
     delExpectedMetadata @=? emptyMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 5,
-          logSize = afromInteger 0,
-          size = afromInteger 25
-        }
+    delExpectedMetadata = mkMetadata 5 5 0 25
 
 missingInfoForcesDelete :: IO TestEnv -> TestTree
 missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad directory (no info.)" $ do
@@ -217,13 +196,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     assertSetEq emptyExpectedIdxSet emptyIdxSet
     emptyExpectedMetadata @=? emptyMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
+    delExpectedMetadata = mkMetadata 5 4 0 35
 
     emptyExpectedIdxSet = HashSet.empty
     emptyExpectedMetadata = Metadata.empty
@@ -282,13 +255,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     assertSetEq emptyExpectedIdxSet emptyIdxSet
     emptyExpectedMetadata @=? emptyMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
+    delExpectedMetadata = mkMetadata 5 4 0 35
 
     emptyExpectedIdxSet = HashSet.empty
     emptyExpectedMetadata = Metadata.empty

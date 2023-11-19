@@ -9,15 +9,6 @@ where
 import Functional.Prelude
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -139,10 +130,4 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
   where
     destDesc = Backend.Data.backendName dest
 
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
+    delExpectedMetadata = mkMetadata 8 7 0 55

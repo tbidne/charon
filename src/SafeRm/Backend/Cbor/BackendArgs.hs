@@ -19,12 +19,10 @@ import SafeRm.Prelude
 backendArgs ::
   ( MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   BackendArgs m Cbor.PathData.PathData
 backendArgs =

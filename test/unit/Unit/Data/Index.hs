@@ -116,7 +116,6 @@ newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
       MonadIORef,
       MonadPosixCompat,
       MonadReader TestEnv,
-      MonadThread,
       MonadThrow
     )
     via ReaderT TestEnv IO

@@ -106,7 +106,6 @@ newtype PathDataT a = MkPathDataT (ReaderT TestEnv IO a)
       MonadIORef,
       MonadPosixCompat,
       MonadReader TestEnv,
-      MonadThread,
       MonadThrow,
       MonadTime
     )

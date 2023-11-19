@@ -55,8 +55,8 @@ readIndex ::
   m Index
 readIndex backendArgs trashHome = addNamespace "readIndex" $ do
   paths <- listDirectory trashInfoDir'
-  $(logDebug) ("Trash info: " <> decodeOsToFpShowText trashInfoDir')
-  $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpShowText <$> paths))
+  $(logDebug) ("Trash info: " <> decodeOsToFpDisplayExT trashInfoDir')
+  $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpDisplayExT <$> paths))
 
   -- TODO: Maybe this shouldn't report errors eagerly
 
@@ -71,7 +71,7 @@ readIndex backendArgs trashHome = addNamespace "readIndex" $ do
           $ MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
 
         let path = trashInfoDir' </> p
-        $(logDebug) ("Path: " <> decodeOsToFpShowText path)
+        $(logDebug) ("Path: " <> decodeOsToFpDisplayExT path)
 
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
@@ -89,7 +89,7 @@ readIndex backendArgs trashHome = addNamespace "readIndex" $ do
 
   -- NOTE: Check that all files in /files exist in the index.
   allTrashPaths <- listDirectory trashPathsDir'
-  $(logDebug) ("Paths: " <> T.intercalate ", " (decodeOsToFpShowText <$> allTrashPaths))
+  $(logDebug) ("Paths: " <> T.intercalate ", " (decodeOsToFpDisplayExT <$> allTrashPaths))
   for_ allTrashPaths $ \p -> do
     let pName = MkPathI $ FP.takeFileName p
     unless (pName `HSet.member` pathSet)

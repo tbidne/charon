@@ -10,15 +10,6 @@ import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (FileNotFoundE)
 
@@ -65,13 +56,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
   where
-    expectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    expectedMetadata = mkMetadata 1 1 0 5
 
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv = testCase "Deletes many paths" $ do
@@ -119,13 +104,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
   where
-    expectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
+    expectedMetadata = mkMetadata 8 7 0 55
 
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
@@ -153,7 +132,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
       Outfixes
         "File not found: "
         [combineFps ["deleteUnknownError"]]
-        "bad file"
+        "bad file'"
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -194,13 +173,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     assertSetEq expectedIdxSet idxSet
     expectedMetadata @=? metadata
   where
-    expectedMetadata =
-      MkMetadata
-        { numEntries = 2,
-          numFiles = 2,
-          logSize = afromInteger 0,
-          size = afromInteger 10
-        }
+    expectedMetadata = mkMetadata 2 2 0 10
 
 deletesSome :: IO TestEnv -> TestTree
 deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
@@ -237,14 +210,8 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
       Outfixes
         "File not found: "
         [combineFps ["deletesSome"]]
-        "/f4"
-    expectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
+        "/f4'"
+    expectedMetadata = mkMetadata 3 3 0 15
 
 combineFps :: [FilePath] -> Text
 combineFps =

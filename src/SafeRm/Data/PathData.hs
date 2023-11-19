@@ -12,6 +12,7 @@ module SafeRm.Data.PathData
   )
 where
 
+import Data.Text qualified as T
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathType)
@@ -50,12 +51,14 @@ instance Pretty PathData where
     where
       strs = zipWith (flip ($)) headerNames labelFn
       labelFn =
-        [ \x -> x <> ":     " <+> pretty (decodeOsToFpShowText $ pd ^. #fileName % #unPathI),
-          \x -> x <> ": " <+> pretty (decodeOsToFpShowText $ pd ^. #originalPath % #unPathI),
+        [ \x -> x <> ":     " <+> pretty (displayPath $ pd ^. #fileName % #unPathI),
+          \x -> x <> ": " <+> pretty (displayPath $ pd ^. #originalPath % #unPathI),
           \x -> x <> ":     " <+> pretty (pd ^. #pathType),
           \x -> x <> ":     " <+> pretty (U.normalizedFormat $ pd ^. #size),
           \x -> x <> ":  " <+> pretty (pd ^. #created)
         ]
+
+      displayPath = T.pack . decodeOsToFpDisplayEx
 
 -- | Header names.
 headerNames :: (IsList a, IsString (Exts.Item a)) => a

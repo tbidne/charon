@@ -11,15 +11,6 @@ import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 
@@ -81,13 +72,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
 
     restoreExpectedIdxSet = HashSet.empty
     restoreExpectedMetadata = Metadata.empty
@@ -157,20 +142,8 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
-    restoreExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 20
-        }
+    delExpectedMetadata = mkMetadata 8 7 0 55
+    restoreExpectedMetadata = mkMetadata 3 3 0 20
 
 restoreUnknownError :: IO TestEnv -> TestTree
 restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
@@ -220,13 +193,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
           "bad file"
         ]
         ""
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
 
 restoreCollisionError :: IO TestEnv -> TestTree
 restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ do
@@ -267,13 +234,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
         "Cannot restore the trash file 'f1' as one exists at the original location: '"
         [combineFps ["restoreCollisionError"]]
         "/f1'"
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
 
 restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
 restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
@@ -329,20 +290,8 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
         "Cannot restore the trash file 'f1 (1)' as one exists at the original location: '"
         [combineFps ["restoreSimultaneousCollisionError"]]
         "/f1'"
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 4,
-          numFiles = 4,
-          logSize = afromInteger 0,
-          size = afromInteger 20
-        }
-    restoreExpectedMetadata =
-      MkMetadata
-        { numEntries = 2,
-          numFiles = 2,
-          logSize = afromInteger 0,
-          size = afromInteger 10
-        }
+    delExpectedMetadata = mkMetadata 4 4 0 20
+    restoreExpectedMetadata = mkMetadata 2 2 0 10
 
 restoresSome :: IO TestEnv -> TestTree
 restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
@@ -398,13 +347,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
           "f4."
         ]
         ""
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
+    delExpectedMetadata = mkMetadata 3 3 0 15
 
     restoreExpectedIdxSet = HashSet.empty
     restoreExpectedMetadata = Metadata.empty
@@ -468,20 +411,8 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 12,
-          numFiles = 12,
-          logSize = afromInteger 0,
-          size = afromInteger 60
-        }
-    restoreExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
+    delExpectedMetadata = mkMetadata 12 12 0 60
+    restoreExpectedMetadata = mkMetadata 6 6 0 30
 
 restoresSomeWildcards :: IO TestEnv -> TestTree
 restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" $ do
@@ -540,20 +471,8 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 9,
-          numFiles = 9,
-          logSize = afromInteger 0,
-          size = afromInteger 45
-        }
-    restoreExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 9 9 0 45
+    restoreExpectedMetadata = mkMetadata 1 1 0 5
 
 -- Wildcard literals are not valid in windows paths
 
@@ -619,20 +538,8 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 7,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
-    restoreExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
+    delExpectedMetadata = mkMetadata 7 7 0 35
+    restoreExpectedMetadata = mkMetadata 6 6 0 30
 
 restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
 restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
@@ -688,21 +595,9 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
   where
     desc = "Restores filename w/ literal * and wildcard"
 
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
+    delExpectedMetadata = mkMetadata 6 6 0 30
+    restoreArgListExpectedMetadata = mkMetadata 3 3 0 15
 
-    restoreArgListExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
 wildcardLiteralTests = const []

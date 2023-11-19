@@ -31,7 +31,6 @@ newtype SafeRmT env m a = MkSafeRmT (ReaderT env m a)
       MonadPosixCompat,
       MonadReader env,
       MonadTerminal,
-      MonadThread,
       MonadThrow,
       MonadTime
     )

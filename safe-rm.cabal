@@ -104,7 +104,6 @@ library
     , effects-logger-ns     ^>=0.1
     , effects-optparse      ^>=0.1
     , effects-terminal      ^>=0.1
-    , effects-thread        ^>=0.1
     , effects-time          ^>=0.1
     , effects-unix-compat   ^>=0.1
     , filepath              ^>=1.4.2.1

@@ -152,9 +152,9 @@ minTableWidth =
 formatTabularRow :: Natural -> Natural -> PathData -> Text
 formatTabularRow nameLen origLen pd =
   mconcat
-    [ fixLen' nameLen (decodeOsToFpShow $ pd ^. #fileName % #unPathI),
+    [ fixLen' nameLen (decodeOsToFpDisplayEx $ pd ^. #fileName % #unPathI),
       sep,
-      fixLen' origLen (decodeOsToFpShow $ pd ^. #originalPath % #unPathI),
+      fixLen' origLen (decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI),
       sep,
       paddedType (pd ^. #pathType),
       sep,

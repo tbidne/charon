@@ -76,7 +76,6 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       MonadPathWriter,
       MonadPosixCompat,
       MonadReader IntEnv,
-      MonadThread,
       MonadThrow,
       MonadTime
     )

@@ -22,8 +22,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     monad-effects = {
-      # TODO: Move off branch
-      url = "github:tbidne/monad-effects/symlink";
+      url = "github:tbidne/monad-effects";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";

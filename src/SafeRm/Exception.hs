@@ -29,7 +29,6 @@ module SafeRm.Exception
   )
 where
 
-import Effects.FileSystem.Utils qualified as FsUtils
 import GHC.Exts (IsList (toList))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -53,8 +52,9 @@ newtype FileNotFoundE = MkFileNotFoundE OsPath
 instance Exception FileNotFoundE where
   displayException (MkFileNotFoundE f) =
     mconcat
-      [ "File not found: ",
-        FsUtils.osToFp f
+      [ "File not found: '",
+        decodeOsToFpDisplayEx f,
+        "'"
       ]
 
 -- | Could not rename file due to duplicate names.
@@ -64,8 +64,9 @@ newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashEntryPath)
 instance Exception RenameDuplicateE where
   displayException (MkRenameDuplicateE n) =
     mconcat
-      [ "Failed renaming duplicate file: ",
-        FsUtils.osToFp $ n ^. #unPathI
+      [ "Failed renaming duplicate file: '",
+        decodeOsToFpDisplayEx $ n ^. #unPathI,
+        "'"
       ]
 
 -- | Trash path not found error. Distinct from 'TrashEntryFileNotFoundE' in that
@@ -82,9 +83,9 @@ instance Exception TrashEntryNotFoundE where
   displayException (MkTrashEntryNotFoundE name path) =
     mconcat
       [ "No entry for '",
-        FsUtils.osToFp $ name ^. #unPathI,
+        decodeOsToFpDisplayEx $ name ^. #unPathI,
         "'; did not find index file '",
-        FsUtils.osToFp $ path ^. #unPathI,
+        decodeOsToFpDisplayEx $ path ^. #unPathI,
         "'"
       ]
 
@@ -97,7 +98,7 @@ instance Exception TrashEntryWildcardNotFoundE where
   displayException (MkTrashEntryWildcardNotFoundE name) =
     mconcat
       [ "No entries found for wildcard search '",
-        FsUtils.osToFp $ name ^. #unPathI,
+        decodeOsToFpDisplayEx $ name ^. #unPathI,
         "'"
       ]
 
@@ -112,9 +113,9 @@ instance Exception TrashEntryFileNotFoundE where
   displayException (MkTrashEntryFileNotFoundE (MkPathI thome) name) =
     mconcat
       [ "The file '",
-        FsUtils.osToFp $ name ^. #unPathI,
+        decodeOsToFpDisplayEx $ name ^. #unPathI,
         "' was not found in the trash '",
-        FsUtils.osToFp thome,
+        decodeOsToFpDisplayEx thome,
         "' despite being listed in the index. This can be ",
         "fixed by manually deleting the info file or deleting everything ",
         "(i.e. safe-rm empty -f)."
@@ -131,9 +132,9 @@ instance Exception TrashEntryInfoNotFoundE where
   displayException (MkTrashEntryInfoNotFoundE (MkPathI thome) (MkPathI name)) =
     mconcat
       [ "The file '",
-        FsUtils.osToFp nameExt,
+        decodeOsToFpDisplayEx nameExt,
         "' was not found in the trash '",
-        FsUtils.osToFp thome,
+        decodeOsToFpDisplayEx thome,
         "' index despite existing in the trash itself. This can be fixed by ",
         "manually deleting the entry or deleting everything ",
         "(i.e. safe-rm empty -f)."
@@ -157,11 +158,11 @@ instance Exception TrashEntryInfoBadExtE where
   displayException (MkTrashEntryInfoBadExtE name actualExt expectedExt) =
     mconcat
       [ "The trash index file '",
-        FsUtils.osToFp $ name ^. #unPathI,
+        decodeOsToFpDisplayEx $ name ^. #unPathI,
         "' has an unexpected file extension: '",
-        FsUtils.osToFp actualExt,
+        decodeOsToFpDisplayEx actualExt,
         "'. Expected '",
-        FsUtils.osToFp expectedExt,
+        decodeOsToFpDisplayEx expectedExt,
         "'"
       ]
 
@@ -176,9 +177,9 @@ instance Exception RestoreCollisionE where
   displayException (MkRestoreCollisionE n o) =
     mconcat
       [ "Cannot restore the trash file '",
-        FsUtils.osToFp $ n ^. #unPathI,
+        decodeOsToFpDisplayEx $ n ^. #unPathI,
         "' as one exists at the original location: '",
-        FsUtils.osToFp $ o ^. #unPathI,
+        decodeOsToFpDisplayEx $ o ^. #unPathI,
         "'"
       ]
 
@@ -204,7 +205,7 @@ instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
       [ "Could not decode file '",
-        FsUtils.osToFp $ path ^. #unPathI,
+        decodeOsToFpDisplayEx $ path ^. #unPathI,
         "' with contents:\n",
         bsToStrLenient bs,
         "\nError: ",
@@ -219,7 +220,7 @@ instance Exception PathNotFileDirE where
   displayException (MkPathNotFileDirE p) =
     mconcat
       [ "Path exists but is not a file, directory, or symlink: '",
-        FsUtils.osToFp p,
+        decodeOsToFpDisplayEx p,
         "'"
       ]
 

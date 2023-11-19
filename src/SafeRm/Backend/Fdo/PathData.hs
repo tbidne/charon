@@ -110,12 +110,10 @@ toCorePathData ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   PathI TrashHome ->
   PathData ->

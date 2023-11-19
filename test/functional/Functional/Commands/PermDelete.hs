@@ -12,15 +12,6 @@ import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.Exception (StringException)
 import Functional.Prelude
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 import SafeRm.Data.Metadata qualified as Metadata
 import SafeRm.Exception (TrashEntryNotFoundE)
 
@@ -83,13 +74,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
 
     permDelExpectedIdxSet = HashSet.empty
     permDelExpectedMetadata = Metadata.empty
@@ -156,21 +141,9 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 8,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 55
-        }
+    delExpectedMetadata = mkMetadata 8 7 0 55
 
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 20
-        }
+    permDelExpectedMetadata = mkMetadata 3 3 0 20
 
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
@@ -224,13 +197,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
         ]
         ""
 
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
 
 deletesSome :: IO TestEnv -> TestTree
 deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
@@ -285,13 +252,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
           "f4"
         ]
         "'"
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
+    delExpectedMetadata = mkMetadata 3 3 0 15
 
     permDelExpectedIdxSet = HashSet.empty
     permDelExpectedMetadata = Metadata.empty
@@ -346,20 +307,9 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     liftIO $ permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 5,
-          logSize = afromInteger 0,
-          size = afromInteger 25
-        }
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
+    delExpectedMetadata = mkMetadata 5 5 0 25
+
+    permDelExpectedMetadata = mkMetadata 3 3 0 15
 
 deletesWildcards :: IO TestEnv -> TestTree
 deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wildcards" $ do
@@ -421,21 +371,9 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 12,
-          numFiles = 12,
-          logSize = afromInteger 0,
-          size = afromInteger 60
-        }
+    delExpectedMetadata = mkMetadata 12 12 0 60
 
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
+    permDelExpectedMetadata = mkMetadata 6 6 0 30
 
 deletesSomeWildcards :: IO TestEnv -> TestTree
 deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ do
@@ -491,20 +429,8 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 9,
-          numFiles = 9,
-          logSize = afromInteger 0,
-          size = afromInteger 45
-        }
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 9 9 0 45
+    permDelExpectedMetadata = mkMetadata 1 1 0 5
 
 -- Wildcard literals are not valid in windows paths
 
@@ -573,20 +499,8 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 7,
-          numFiles = 7,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
+    delExpectedMetadata = mkMetadata 7 7 0 35
+    permDelExpectedMetadata = mkMetadata 6 6 0 30
 
 deletesCombinedWildcardLiteral :: IO TestEnv -> TestTree
 deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
@@ -643,24 +557,15 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
   where
     desc = "Permanently deletes filename w/ literal * and wildcard"
 
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 6,
-          numFiles = 6,
-          logSize = afromInteger 0,
-          size = afromInteger 30
-        }
-    permDelExpectedMetadata =
-      MkMetadata
-        { numEntries = 3,
-          numFiles = 3,
-          logSize = afromInteger 0,
-          size = afromInteger 15
-        }
+    delExpectedMetadata = mkMetadata 6 6 0 30
+    permDelExpectedMetadata = mkMetadata 3 3 0 15
+
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
 wildcardLiteralTests = const []
 #endif
+
+{- ORMOLU_DISABLE -}
 
 displaysAllData :: IO TestEnv -> TestTree
 displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
@@ -707,7 +612,11 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
           [combineFps ["displaysAllData"]]
           "/f1",
         Exact "Type:      File",
+#if WINDOWS
+        Exact "Size:      0.00B",
+#else
         Exact "Size:      5.00B",
+#endif
         Exact "Created:   2020-05-31 12:00:00",
         Exact "",
         -- Leaving off the "(y/n)?" suffix as the windows tests replaces all
@@ -716,13 +625,9 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         Exact ""
       ]
 
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 1,
-          numFiles = 1,
-          logSize = afromInteger 0,
-          size = afromInteger 5
-        }
+    delExpectedMetadata = mkMetadata 1 1 0 5
+
+{- ORMOLU_ENABLE -}
 
 combineFps :: [FilePath] -> Text
 combineFps =

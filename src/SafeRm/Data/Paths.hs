@@ -193,10 +193,9 @@ isRoot' p = do
 showPaths :: [PathI a] -> String
 showPaths = L.intercalate ", " . fmap (show . view #unPathI)
 
--- | 'PathI' to 'String'. Attempts decoding for nicer display, but falls back
--- to Show if that fails.
+-- | 'PathI' to 'String'. Attempts decoding for nicer display.
 toString :: PathI i -> String
-toString (MkPathI p) = decodeOsToFpShow p
+toString (MkPathI p) = decodeOsToFpDisplayEx p
 
 -- | 'PathI' to 'Text' via 'toString'.
 toText :: PathI i -> Text

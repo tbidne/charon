@@ -68,7 +68,6 @@ delete ::
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m,
     MonadTime m
   ) =>
   UniqueSeq (PathI TrashEntryOriginalPath) ->
@@ -91,8 +90,7 @@ permDelete ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
@@ -107,14 +105,12 @@ getIndex ::
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m,
     MonadReader env m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
@@ -136,13 +132,11 @@ getMetadata ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m Metadata
 getMetadata = Default.getMetadata backendArgs
@@ -163,8 +157,7 @@ restore ::
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
@@ -179,14 +172,12 @@ emptyTrash ::
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   Bool ->
   m ()
@@ -216,14 +207,12 @@ lookupTrashName ::
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadFileReader m,
     MonadPathReader m,
     MonadReader env m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m (NESeq PathData)
@@ -236,12 +225,10 @@ toRosetta ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadFileReader m,
-    MonadIORef m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m Rosetta
 toRosetta = addNamespace "toRosetta" $ do

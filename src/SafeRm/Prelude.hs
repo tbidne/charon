@@ -10,6 +10,7 @@ module SafeRm.Prelude
     bsToStrLenient,
     showt,
     displayExceptiont,
+    decodeOsToFpDisplayExT,
 
     -- * Optics
     packed,
@@ -102,7 +103,6 @@ import Data.Type.Equality as X (type (~))
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
 import Effects.Concurrent.Async as X (MonadAsync)
-import Effects.Concurrent.Thread as X (MonadThread)
 import Effects.Exception as X
   ( Exception (displayException),
     ExceptionCS (MkExceptionCS),
@@ -172,12 +172,13 @@ import Effects.FileSystem.PathWriter as X
 import Effects.FileSystem.Utils as X
   ( OsPath,
     decodeOsToFp,
-    decodeOsToFpShow,
-    decodeOsToFpShowText,
+    decodeOsToFpDisplayEx,
     decodeOsToFpThrowM,
     encodeFpToOs,
     encodeFpToOsThrowM,
     osp,
+    osstr,
+    (<.>),
     (</>),
   )
 import Effects.IORef as X
@@ -273,7 +274,6 @@ import System.IO as X
     IO,
     IOMode (AppendMode),
   )
-import System.OsPath as X ((<.>))
 import Text.Show as X (Show (show))
 
 showt :: (Show a) => a -> Text
@@ -319,3 +319,6 @@ doesAnyPathExist p = do
   if symlinkExists
     then pure True
     else doesPathExist p
+
+decodeOsToFpDisplayExT :: OsPath -> Text
+decodeOsToFpDisplayExT = T.pack . decodeOsToFpDisplayEx

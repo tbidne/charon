@@ -8,15 +8,6 @@ where
 
 import Effects.FileSystem.PathWriter (PathFoundException)
 import Functional.Prelude
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -122,21 +113,9 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       assertSetEq mergeExpectedIdxSet mergeIdxSetDest
       mergeExpectedMetadata @=? mergeMetadataDest
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
+    delExpectedMetadata = mkMetadata 5 4 0 35
 
-    mergeExpectedMetadata =
-      MkMetadata
-        { numEntries = 10,
-          numFiles = 8,
-          logSize = afromInteger 0,
-          size = afromInteger 70
-        }
+    mergeExpectedMetadata = mkMetadata 10 8 0 70
 
 mergeCollisionFails :: IO TestEnv -> TestTree
 mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
@@ -226,13 +205,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       assertSetEq delExpectedIdxSetDest mergeIdxSetDest
       delExpectedMetadata @=? mergeMetadataDest
   where
-    delExpectedMetadata =
-      MkMetadata
-        { numEntries = 5,
-          numFiles = 4,
-          logSize = afromInteger 0,
-          size = afromInteger 35
-        }
+    delExpectedMetadata = mkMetadata 5 4 0 35
 
 pathSrc :: OsPath
 pathSrc = [osp|src|]

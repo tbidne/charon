@@ -64,7 +64,6 @@ delete ::
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m,
     MonadTime m
   ) =>
   UniqueSeq (PathI TrashEntryOriginalPath) ->
@@ -92,8 +91,7 @@ permDelete ::
     MonadPosixCompat m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
@@ -115,13 +113,11 @@ getIndex ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m Index
 getIndex =
@@ -140,13 +136,11 @@ getMetadata ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   m Metadata
 getMetadata =
@@ -172,8 +166,7 @@ restore ::
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
@@ -194,14 +187,12 @@ emptyTrash ::
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   Bool ->
   m ()
@@ -227,7 +218,6 @@ convert ::
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
-    MonadThread m,
     MonadTime m
   ) =>
   Backend ->

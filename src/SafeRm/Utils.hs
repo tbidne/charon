@@ -266,12 +266,10 @@ getPathSize ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixCompat m,
-    MonadTerminal m,
-    MonadThread m
+    MonadTerminal m
   ) =>
   OsPath ->
   m (Bytes B Natural)
