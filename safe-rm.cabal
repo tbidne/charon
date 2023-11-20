@@ -212,7 +212,6 @@ test-suite integration
     , effects-terminal
     , effects-time
     , env-guard             ^>=0.2
-    , filepath
     , hashable
     , hedgehog
     , mtl

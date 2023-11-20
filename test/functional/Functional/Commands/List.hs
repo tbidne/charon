@@ -108,7 +108,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     -- SETUP
 
     -- clearDirectory testDir
-    createFileContents [(missing, "")]
+    createFilesContents [(missing, "")]
 
     delArgList <- withSrArgsPathsM ["delete"] [missing]
     runSafeRm delArgList

@@ -6,14 +6,18 @@ module Test.Utils
   ( -- * File System Operations
     createFiles,
     createFilesMap,
+    createFilesContents,
     createFileContents,
     createDirectories,
+    createDirectory,
     clearDirectory,
 
     -- ** Symlinks
     Symlink (..),
     createSymlinks,
+    createSymlink,
     createSymlinksTarget,
+    createSymlinkTarget,
 
     -- * Text
     TextMatch (..),
@@ -54,41 +58,47 @@ createFilesMap ::
   ) ->
   f OsPath ->
   m ()
-createFilesMap mapper = createFileContents . mapper (,"")
+createFilesMap mapper = createFilesContents . mapper (,"")
 
--- | Creates files at the specified paths.
-createFileContents ::
+createFilesContents ::
   (Foldable f, HasCallStack, MonadIO m) =>
   f (OsPath, ByteString) ->
   m ()
-createFileContents paths = liftIO
-  $ for_ paths
-  $ \(p, c) ->
-    writeBinaryFile p c
-      `catchAnyCS` \ex -> do
-        putStrLn
-          $ mconcat
-            [ "[Test.Utils.createFileContents] Encountered an exception\n",
-              "OsPath: '",
-              show p,
-              "'\n",
-              "Decoded: '",
-              FsUtils.decodeOsToFpShow p,
-              "'\n",
-              "Contents: '",
-              bsToStr c,
-              "'\n",
-              "Exception: '",
-              displayException ex,
-              "'"
-            ]
-        throwCS ex
+createFilesContents = traverse_ createFileContents
+
+-- | Creates files at the specified paths.
+createFileContents ::
+  (HasCallStack, MonadIO m) =>
+  (OsPath, ByteString) ->
+  m ()
+createFileContents (p, c) =
+  liftIO
+    $ writeBinaryFile p c
+    `catchAnyCS` \ex -> do
+      putStrLn
+        $ mconcat
+          [ "[Test.Utils.createFileContents] Encountered an exception\n",
+            "OsPath: '",
+            show p,
+            "'\n",
+            "Decoded: '",
+            FsUtils.decodeOsToFpShow p,
+            "'\n",
+            "Contents: '",
+            bsToStr c,
+            "'\n",
+            "Exception: '",
+            displayException ex,
+            "'"
+          ]
+      throwCS ex
 
 -- | Creates empty files at the specified paths.
 createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
-createDirectories paths = liftIO
-  $ for_ paths
-  $ \p -> createDirectoryIfMissing True p
+createDirectories = traverse_ createDirectory
+
+createDirectory :: (HasCallStack, MonadIO m) => OsPath -> m ()
+createDirectory = liftIO . createDirectoryIfMissing True
 
 data Symlink
   = F OsPath
@@ -96,30 +106,42 @@ data Symlink
 
 createSymlinks ::
   ( Foldable f,
-    Functor f,
     HasCallStack,
     MonadIO m
   ) =>
   f Symlink ->
   m ()
-createSymlinks = createSymlinks' . fmap (,Nothing)
+createSymlinks = traverse_ createSymlink
+
+createSymlink ::
+  ( HasCallStack,
+    MonadIO m
+  ) =>
+  Symlink ->
+  m ()
+createSymlink = createSymlink' . (,Nothing)
 
 createSymlinksTarget ::
   ( Foldable f,
-    Functor f,
     HasCallStack,
     MonadIO m
   ) =>
   f (Symlink, OsPath) ->
   m ()
-createSymlinksTarget = createSymlinks' . fmap (over' _2 Just)
+createSymlinksTarget = traverse_ createSymlinkTarget
 
-createSymlinks' :: (Foldable f, HasCallStack, MonadIO m) => f (Symlink, Maybe OsPath) -> m ()
-createSymlinks' paths = liftIO
-  $ for_ paths
-  $ \(p, mtarget) -> case p of
-    F src -> createFileLink (fromMaybe [osp|dummy|] mtarget) src
-    D src -> createDirectoryLink (fromMaybe [osp|dummy|] mtarget) src
+createSymlinkTarget ::
+  ( HasCallStack,
+    MonadIO m
+  ) =>
+  (Symlink, OsPath) ->
+  m ()
+createSymlinkTarget = createSymlink' . (over' _2 Just)
+
+createSymlink' :: (HasCallStack, MonadIO m) => (Symlink, Maybe OsPath) -> m ()
+createSymlink' (p, mtarget) = liftIO $ case p of
+  F src -> createFileLink (fromMaybe [osp|dummy|] mtarget) src
+  D src -> createDirectoryLink (fromMaybe [osp|dummy|] mtarget) src
 
 -- | Clears a directory by deleting it if it exists and then recreating it.
 clearDirectory :: (HasCallStack, MonadIO m) => OsPath -> m ()

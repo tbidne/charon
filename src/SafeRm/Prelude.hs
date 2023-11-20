@@ -22,6 +22,7 @@ module SafeRm.Prelude
 
     -- * Misc
     doesAnyPathExist,
+    doesAnyPathNotExist,
     usingReaderT,
   )
 where
@@ -71,6 +72,7 @@ import Data.Foldable as X
     for_,
     null,
     sequenceA_,
+    traverse_,
   )
 import Data.Function as X (const, flip, id, ($), (.))
 import Data.Functor as X (Functor (fmap), ($>), (<$>), (<&>))
@@ -319,6 +321,15 @@ doesAnyPathExist p = do
   if symlinkExists
     then pure True
     else doesPathExist p
+
+doesAnyPathNotExist ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m
+  ) =>
+  OsPath ->
+  m Bool
+doesAnyPathNotExist = fmap not . doesAnyPathExist
 
 decodeOsToFpDisplayExT :: OsPath -> Text
 decodeOsToFpDisplayExT = T.pack . decodeOsToFpDisplayEx

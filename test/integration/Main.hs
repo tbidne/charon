@@ -39,7 +39,7 @@ setup = do
     (\p -> p </> [osp|safe-rm|] </> [osp|integration|])
       <$> Dir.getTemporaryDirectory
 
-  createDirectoryIfMissing True tmpDir
+  clearDirectory tmpDir
   pure tmpDir
 
 teardown :: OsPath -> IO ()

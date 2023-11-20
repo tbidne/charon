@@ -1,56 +1,55 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 -- | Prelude for integration test suite.
 module Integration.Utils
-  ( GPaths,
+  ( -- * Types
+    GPaths,
+    PathWithType (..),
+    unPathWithType,
+
+    -- * Gen
     genFileNameSet,
     gen2FileNameSets,
     gen3FileNameSets,
   )
 where
 
-import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.Bifunctor (Bifunctor (first))
-import Data.Char qualified as Ch
-import Data.HashSet qualified as HSet
 import Data.Hashable (Hashable (hash))
 import Data.List (unzip)
-import Data.List qualified as L
-import Data.Text qualified as T
 import Effects.FileSystem.Utils qualified as FsUtils
-import Effects.LoggerNS (Namespace, defaultLogFormatter)
-import Effects.LoggerNS qualified as Logger
-import GHC.Exts (IsList (Item, fromList))
-import Hedgehog (GenT, PropertyT)
 import Hedgehog.Gen qualified as Gen
-import Hedgehog.Internal.Property (forAllT)
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
-import Integration.AsciiOnly (AsciiOnly)
 import Integration.Prelude
-import SafeRm qualified
-import SafeRm.Backend.Data (Backend)
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.Paths (PathI (MkPathI))
+import SafeRm.Data.PathType
+  ( PathType
+      ( PathTypeDirectory,
+        PathTypeFile,
+        PathTypeSymlink
+      ),
+  )
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
-import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
-import SafeRm.Env qualified as Env
-import SafeRm.Exception (FileNotFoundE, TrashEntryNotFoundE)
-import SafeRm.Runner.Env
-  ( Env,
-    LogEnv (MkLogEnv),
-  )
-import SafeRm.Runner.SafeRmT (SafeRmT)
-import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
-import System.OsPath qualified as OsPath
 import Test.Utils qualified as TestUtils
+
+-- | Generated path name along with the type to create.
+newtype PathWithType = MkPathWithType (OsPath, PathType)
+  deriving stock (Show)
+
+unPathWithType :: PathWithType -> OsPath
+unPathWithType (MkPathWithType (p, _)) = p
+
+instance Eq PathWithType where
+  MkPathWithType (p1, _) == MkPathWithType (p2, _) = p1 == p2
+
+instance Ord PathWithType where
+  MkPathWithType (p1, _) <= MkPathWithType (p2, _) = p1 <= p2
+
+instance Hashable PathWithType where
+  hashWithSalt i (MkPathWithType (p1, _)) = hashWithSalt i p1
+  hash (MkPathWithType (p1, _)) = hash p1
 
 -- | Type of generated paths. Includes the original paths before encoding for
 -- easier debugging.
-type GPaths = (UniqueSeq OsPath, UniqueSeq FilePath)
+type GPaths = (UniqueSeq PathWithType, UniqueSeq FilePath)
 
 genFileNameSet :: (MonadGen m) => Bool -> m GPaths
 genFileNameSet asciiOnly =
@@ -68,7 +67,7 @@ gen3FileNameSets asciiOnly = do
   (\r -> (α, β, splitPaths r))
     <$> Gen.list seqRange (genFileNameNoDupes asciiOnly (αFps `USeq.union` βFps))
 
-splitPaths :: [(OsPath, FilePath)] -> GPaths
+splitPaths :: [(PathWithType, FilePath)] -> GPaths
 splitPaths = bimap fromFoldable fromFoldable . unzip
 
 seqRange :: Range Int
@@ -77,16 +76,18 @@ seqRange = Range.linear 1 100
 genFileName ::
   (MonadGen m) =>
   Bool ->
-  m (OsPath, FilePath)
+  m (PathWithType, FilePath)
 genFileName asciiOnly = genFileNameNoDupes asciiOnly USeq.empty
 
 genFileNameNoDupes ::
   (MonadGen m) =>
   Bool ->
   UniqueSeq FilePath ->
-  m (OsPath, FilePath)
-genFileNameNoDupes asciiOnly paths =
-  (\fp -> (FsUtils.unsafeEncodeFpToValidOs fp, fp))
+  m (PathWithType, FilePath)
+genFileNameNoDupes asciiOnly paths = do
+  pathType <- Gen.element [PathTypeFile, PathTypeDirectory, PathTypeSymlink]
+
+  (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fp))
     <$> Gen.filterT
       (\fp -> not (USeq.member fp paths))
       (Gen.string range (TestUtils.genPathChar asciiOnly))

@@ -55,17 +55,17 @@ import Test.Utils as X
 assertPathsExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ doesFileExist p
-    annotate $ "Expected file to exist: " <> show p
+    exists <- liftIO $ doesAnyPathExist p
+    annotate $ "Expected path to exist: " <> show p
     assert exists
 
 -- | Asserts that files do not exist.
 assertPathsDoNotExist :: (Foldable f, MonadIO m, MonadTest m) => f OsPath -> m ()
 assertPathsDoNotExist paths =
   for_ paths $ \p -> do
-    exists <- liftIO $ doesFileExist p
-    annotate $ "Expected file not to exist: " <> show p
-    assert (not exists)
+    notExists <- liftIO $ doesAnyPathNotExist p
+    annotate $ "Expected path not to exist: " <> show p
+    assert notExists
 
 -- | Environment for running pure integration tests.
 data IntPureEnv = MkIntPureEnv

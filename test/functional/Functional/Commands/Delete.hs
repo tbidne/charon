@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Tests for d command.
@@ -22,12 +23,13 @@ tests :: IO TestEnv -> TestTree
 tests testEnv =
   testGroup
     "Delete Command"
-    [ deletesOne testEnv',
-      deletesMany testEnv',
-      deleteUnknownError testEnv',
-      deleteDuplicateFile testEnv',
-      deletesSome testEnv'
-    ]
+    $ [ deletesOne testEnv',
+        deletesMany testEnv',
+        deleteUnknownError testEnv',
+        deleteDuplicateFile testEnv',
+        deletesSome testEnv'
+      ]
+    ++ (pathologicalTests testEnv')
   where
     testEnv' = appendTestDir "delete" <$> testEnv
 
@@ -212,6 +214,85 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
         [combineFps ["deletesSome"]]
         "/f4'"
     expectedMetadata = mkMetadata 3 3 0 15
+
+pathologicalTests :: IO TestEnv -> [TestTree]
+
+#if OSX
+
+pathologicalTests _ = []
+
+#else
+
+pathologicalTests testEnv = [deletesPathological testEnv]
+
+deletesPathological :: IO TestEnv -> TestTree
+deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesPathological" $ do
+    testDir <- getTestDir
+
+    -- FIXME: The following paths were generated in the int tests and caused
+    -- a failure on OSX. For some reason, OSX believes the below two paths are
+    -- the same! That is, we first delete ώ (8061) and then attempt to delete
+    -- ώ (974), yet SafeRm.Backend.Default.Utils.mkUniqPath believes this path
+    -- already exists. Thus it creates
+    --
+    --   ώ (1)
+    --
+    -- The tests do not expect this, and it fails.
+    --
+    -- More info on why this occurs: According to the stackoverflow answer
+    --
+    --     https://stackoverflow.com/questions/38484369/why-does-the-c-runtime-on-mac-os-allow-both-precomposed-and-decomposed-utf-8
+    --
+    -- OSX "normalizes" paths per UTF-8 standards. In particular, two unique
+    -- encodings that "represent" the same thing (e.g. characters with accents)
+    -- can end up identical.
+    --
+    -- In our case, because these two glyphs look identical, they likely
+    -- share the same normalization, hence the OSX failure.
+    --
+    -- OSX is arguably doing the right thing here, so maybe we should too.
+    --
+    -- The way to fix this would be to normalize paths ourselves (probably do
+    -- this on initial CLI parsing), and then normalize paths when we generate
+    -- them in the tests.
+    --
+    -- See the text-icu package:
+    --
+    -- https://hackage.haskell.org/package/text-icu-0.8.0.4/docs/Data-Text-ICU-Normalize.html#v:normalize
+    let files =
+          (testDir </>!)
+            <$> [ "\8061", -- ώ, These two are __not__ the same (compare /=)
+                  "\974" -- ώ
+                ]
+
+    argList <- withSrArgsPathsM ["delete"] files
+
+    -- setup
+    createFiles files
+    assertPathsExist files
+
+    liftIO $ runSafeRm argList
+
+    -- file assertions
+    assertPathsDoNotExist files
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    expectedIdxSet <-
+      mkPathDataSetM
+        [ ("ώ", PathTypeFile, 5),
+          ("ώ", PathTypeFile, 5)
+        ]
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
+    expectedMetadata = mkMetadata 2 2 0 10
+
+#endif
 
 combineFps :: [FilePath] -> Text
 combineFps =
