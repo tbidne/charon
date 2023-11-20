@@ -261,6 +261,8 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
     -- See the text-icu package:
     --
     -- https://hackage.haskell.org/package/text-icu-0.8.0.4/docs/Data-Text-ICU-Normalize.html#v:normalize
+    --
+    -- And also unicode-transforms.
     let files =
           (testDir </>!)
             <$> [ "\8061", -- ώ, These two are __not__ the same (compare /=)
