@@ -29,7 +29,7 @@ tests testEnv =
         deleteDuplicateFile testEnv',
         deletesSome testEnv'
       ]
-    ++ (pathologicalTests testEnv')
+    ++ pathologicalTests testEnv'
   where
     testEnv' = appendTestDir "delete" <$> testEnv
 

@@ -136,7 +136,7 @@ createSymlinkTarget ::
   ) =>
   (Symlink, OsPath) ->
   m ()
-createSymlinkTarget = createSymlink' . (over' _2 Just)
+createSymlinkTarget = createSymlink' . over' _2 Just
 
 createSymlink' :: (HasCallStack, MonadIO m) => (Symlink, Maybe OsPath) -> m ()
 createSymlink' (p, mtarget) = liftIO $ case p of

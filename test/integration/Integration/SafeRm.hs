@@ -287,7 +287,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
           (βNames, _, _) = mkPaths testDir β
           (_, γTest, γTestPaths) = mkPaths testDir γ
 
-          toDelete = (αTestPaths `USeq.union` γTestPaths)
+          toDelete = αTestPaths `USeq.union` γTestPaths
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
 
