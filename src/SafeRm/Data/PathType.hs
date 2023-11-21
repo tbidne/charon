@@ -1,6 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 -- | Provides types.
 module SafeRm.Data.PathType
-  ( PathType (..),
+  ( PathTypeW (..),
     deleteFn,
     existsFn,
     renameFn,
@@ -23,45 +26,47 @@ import Effects.FileSystem.PathWriter qualified as PW
 -- import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Prelude
 
--- | Path type.
-data PathType
-  = -- | File type
-    PathTypeFile
-  | -- | Directory type
-    PathTypeDirectory
-  | -- | Symbolic link
-    PathTypeSymlink
+-- | Wrapper for PathType, so that we can give a Hashable instance.
+newtype PathTypeW = MkPathTypeW {unPathTypeW :: PathType}
   deriving stock (Eq, Generic, Show)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (NFData)
 
-instance Pretty PathType where
-  pretty PathTypeFile = "File"
-  pretty PathTypeDirectory = "Directory"
-  pretty PathTypeSymlink = "Symlink"
+makeFieldLabelsNoPrefix ''PathTypeW
 
-instance ToJSON PathType where
-  toJSON PathTypeFile = "f"
-  toJSON PathTypeDirectory = "d"
-  toJSON PathTypeSymlink = "s"
+-- TODO: Is this legit?
+instance Hashable PathTypeW where
+  hashWithSalt int (MkPathTypeW PathTypeFile) = hashWithSalt @Int int 1
+  hashWithSalt int (MkPathTypeW PathTypeDirectory) = hashWithSalt @Int int 2
+  hashWithSalt int (MkPathTypeW PathTypeSymbolicLink) = hashWithSalt @Int int 3
 
-instance FromJSON PathType where
+instance Pretty PathTypeW where
+  pretty (MkPathTypeW PathTypeFile) = "File"
+  pretty (MkPathTypeW PathTypeDirectory) = "Directory"
+  pretty (MkPathTypeW PathTypeSymbolicLink) = "Symlink"
+
+instance ToJSON PathTypeW where
+  toJSON (MkPathTypeW PathTypeFile) = "f"
+  toJSON (MkPathTypeW PathTypeDirectory) = "d"
+  toJSON (MkPathTypeW PathTypeSymbolicLink) = "s"
+
+instance FromJSON PathTypeW where
   parseJSON = Asn.withText "PathType" $ \case
-    "f" -> pure PathTypeFile
-    "d" -> pure PathTypeDirectory
-    "s" -> pure PathTypeSymlink
+    "f" -> pure $ MkPathTypeW PathTypeFile
+    "d" -> pure $ MkPathTypeW PathTypeDirectory
+    "s" -> pure $ MkPathTypeW PathTypeSymbolicLink
     other -> fail $ "Expected one of (f|d|s), received: " <> T.unpack other
 
-instance Serialise PathType where
-  encode PathTypeFile = Serialise.encode @Char 'f'
-  encode PathTypeDirectory = Serialise.encode @Char 'd'
-  encode PathTypeSymlink = Serialise.encode @Char 's'
+instance Serialise PathTypeW where
+  encode (MkPathTypeW PathTypeFile) = Serialise.encode @Char 'f'
+  encode (MkPathTypeW PathTypeDirectory) = Serialise.encode @Char 'd'
+  encode (MkPathTypeW PathTypeSymbolicLink) = Serialise.encode @Char 's'
 
   decode = do
     c <- Serialise.decode @Char
     case c of
-      'f' -> pure PathTypeFile
-      'd' -> pure PathTypeDirectory
-      's' -> pure PathTypeSymlink
+      'f' -> pure $ MkPathTypeW PathTypeFile
+      'd' -> pure $ MkPathTypeW PathTypeDirectory
+      's' -> pure $ MkPathTypeW PathTypeSymbolicLink
       other -> fail $ "Expected (f|d|s), received: " ++ [other]
 
 -- | This function tests both existence __and__ that the the path is of the
@@ -71,24 +76,24 @@ existsFn ::
     MonadCatch m,
     MonadPathReader m
   ) =>
-  PathType ->
+  PathTypeW ->
   OsPath ->
   m Bool
-existsFn PathTypeFile = doesFileExist
-existsFn PathTypeDirectory = doesDirectoryExist
-existsFn PathTypeSymlink = doesSymbolicLinkExist
+existsFn (MkPathTypeW PathTypeFile) = doesFileExist
+existsFn (MkPathTypeW PathTypeDirectory) = doesDirectoryExist
+existsFn (MkPathTypeW PathTypeSymbolicLink) = doesSymbolicLinkExist
 
 renameFn ::
   ( HasCallStack,
     MonadPathWriter m
   ) =>
-  PathType ->
+  PathTypeW ->
   OsPath ->
   OsPath ->
   m ()
-renameFn PathTypeFile = renameFile
-renameFn PathTypeDirectory = renameDirectory
-renameFn PathTypeSymlink = PW.renamePath
+renameFn (MkPathTypeW PathTypeFile) = renameFile
+renameFn (MkPathTypeW PathTypeDirectory) = renameDirectory
+renameFn (MkPathTypeW PathTypeSymbolicLink) = PW.renamePath
 
 deleteFn ::
   ( HasCallStack,
@@ -96,12 +101,12 @@ deleteFn ::
     MonadPathReader m,
     MonadPathWriter m
   ) =>
-  PathType ->
+  PathTypeW ->
   OsPath ->
   m ()
-deleteFn PathTypeFile = removeFile
-deleteFn PathTypeDirectory = removeDirectoryRecursive
-deleteFn PathTypeSymlink = PW.removeSymbolicLink
+deleteFn (MkPathTypeW PathTypeFile) = removeFile
+deleteFn (MkPathTypeW PathTypeDirectory) = removeDirectoryRecursive
+deleteFn (MkPathTypeW PathTypeSymbolicLink) = PW.removeSymbolicLink
 
 copyPath ::
   ( HasCallStack,
@@ -110,7 +115,7 @@ copyPath ::
     MonadPathReader m,
     MonadPathWriter m
   ) =>
-  PathType ->
+  PathTypeW ->
   -- | Old path to copy.
   OsPath ->
   -- | Fully qualified name for file copy.
@@ -118,9 +123,9 @@ copyPath ::
   -- | The directory in which to copy, for a dir copy.
   OsPath ->
   m ()
-copyPath PathTypeFile old newName _ = PW.copyFileWithMetadata old newName
-copyPath PathTypeSymlink old newName _ = PW.copySymbolicLink old newName
-copyPath PathTypeDirectory old _ newDir =
+copyPath (MkPathTypeW PathTypeFile) old newName _ = PW.copyFileWithMetadata old newName
+copyPath (MkPathTypeW PathTypeSymbolicLink) old newName _ = PW.copySymbolicLink old newName
+copyPath (MkPathTypeW PathTypeDirectory) old _ newDir =
   PW.copyDirectoryRecursiveConfig copyConfig old newDir
   where
     copyConfig =

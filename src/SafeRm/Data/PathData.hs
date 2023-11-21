@@ -15,7 +15,7 @@ where
 import Data.Text qualified as T
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
-import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
   ( PathI,
@@ -31,7 +31,7 @@ import SafeRm.Utils qualified as U
 -- the root nor is it empty.
 data PathData = UnsafePathData
   { -- | The type of the path.
-    pathType :: PathType,
+    pathType :: PathTypeW,
     -- | The path to be used in the trash directory.
     fileName :: PathI TrashEntryFileName,
     -- | The original path on the file system.

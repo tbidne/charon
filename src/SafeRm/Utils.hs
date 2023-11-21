@@ -54,6 +54,7 @@ import Data.Text.Internal (Text (Text))
 import Data.Text.Internal qualified as TI
 import Data.Text.Internal.Search qualified as TIS
 import Effects.FileSystem.HandleWriter qualified as HW
+import Effects.FileSystem.PathReader qualified as PR
 import PathSize
   ( PathSizeResult
       ( PathSizeFailure,
@@ -62,7 +63,6 @@ import PathSize
       ),
   )
 import PathSize qualified
-import SafeRm.Exception (FileNotFoundE (MkFileNotFoundE))
 import SafeRm.Prelude
 import System.IO qualified as IO
 import Text.Printf (PrintfArg)
@@ -302,15 +302,10 @@ getAllFiles ::
   OsPath ->
   m [OsPath]
 getAllFiles fp =
-  doesSymbolicLinkExist fp >>= \case
-    True -> pure [fp]
-    False ->
-      doesFileExist fp >>= \case
-        True -> pure [fp]
-        False ->
-          doesDirectoryExist fp >>= \case
-            True ->
-              listDirectory fp
-                >>= fmap join
-                . traverse (getAllFiles . (fp </>))
-            False -> throwCS $ MkFileNotFoundE fp
+  PR.getPathType fp >>= \case
+    PR.PathTypeSymbolicLink -> pure [fp]
+    PR.PathTypeFile -> pure [fp]
+    PR.PathTypeDirectory ->
+      listDirectory fp
+        >>= fmap join
+        . traverse (getAllFiles . (fp </>))

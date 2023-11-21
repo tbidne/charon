@@ -23,7 +23,7 @@ import Data.ByteString.Lazy qualified as BSL
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -40,7 +40,7 @@ import SafeRm.Utils qualified as Utils
 -- the root nor is it empty.
 data PathData = UnsafePathData
   { -- | The path type.
-    pathType :: PathType,
+    pathType :: PathTypeW,
     -- | The path to be used in the trash directory.
     fileName :: PathI TrashEntryFileName,
     -- | The original path on the file system.
@@ -72,7 +72,7 @@ toPathData ::
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
+  m (PathData, PathTypeW)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   (fileName', originalPath', pathType) <- Default.Utils.getPathInfo trashHome origPath
   size <- Utils.getPathSize (origPath ^. #unPathI)
@@ -88,7 +88,7 @@ toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
       pathType
     )
 
-newtype PathDataJSON = MkPathDataJSON (PathType, FilePath, Timestamp, Natural)
+newtype PathDataJSON = MkPathDataJSON (PathTypeW, FilePath, Timestamp, Natural)
 
 instance ToJSON PathDataJSON where
   toJSON (MkPathDataJSON (pathType, opathStr, ts, size)) =

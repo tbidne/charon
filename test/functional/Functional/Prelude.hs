@@ -64,14 +64,16 @@ import Functional.Prelude.FuncEnv (TestEnv, TestM)
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Data.Metadata (Metadata (MkMetadata, logSize, numEntries, numFiles, size))
-import SafeRm.Data.PathType as X
-  ( PathType
-      ( PathTypeDirectory,
-        PathTypeFile,
-        PathTypeSymlink
+import SafeRm.Data.Metadata
+  ( Metadata
+      ( MkMetadata,
+        logSize,
+        numEntries,
+        numFiles,
+        size
       ),
   )
+import SafeRm.Data.PathType as X (PathTypeW (MkPathTypeW))
 import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X

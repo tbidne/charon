@@ -27,7 +27,7 @@ import SafeRm.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatMultiline, FormatTabular),
   )
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile))
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasTrashHome (getTrashHome))
@@ -198,8 +198,18 @@ testFormatTabularAutoApprox b = testGoldenFormat b desc fileName mkIdx formatTab
     mkIdx = do
       ts <- fromText "2020-05-31T12:00:00"
       pure
-        [ UnsafePathData PathTypeFile (MkPathI [osp|foo|]) (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f') (afromInteger 70) ts,
-          UnsafePathData PathTypeFile (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b') (MkPathI [osp|bar|]) (afromInteger 10) ts
+        [ UnsafePathData
+            (MkPathTypeW PathTypeFile)
+            (MkPathI [osp|foo|])
+            (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f')
+            (afromInteger 70)
+            ts,
+          UnsafePathData
+            (MkPathTypeW PathTypeFile)
+            (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b')
+            (MkPathI [osp|bar|])
+            (afromInteger 10)
+            ts
         ]
 
 testFormatTabularAutoEmpty :: Backend -> TestTree
@@ -323,12 +333,42 @@ mkIndex :: (MonadFail f) => f (Seq PathData)
 mkIndex = do
   ts <- ts'
   pure
-    [ UnsafePathData PathTypeFile (MkPathI [osp|foo|]) (MkPathI [osp|/path/foo|]) (afromInteger 70) ts,
-      UnsafePathData PathTypeFile (MkPathI [osp|bazzz|]) (MkPathI [osp|/path/bar/bazzz|]) (afromInteger 5_000) ts,
-      UnsafePathData PathTypeDirectory (MkPathI [osp|dir|]) (MkPathI [osp|/some/really/really/long/dir|]) (afromInteger 20_230) ts,
-      UnsafePathData PathTypeFile (MkPathI [osp|f|]) (MkPathI [osp|/foo/path/f|]) (afromInteger 13_070_000) ts,
-      UnsafePathData PathTypeDirectory (MkPathI [osp|d|]) (MkPathI [osp|/d|]) (afromInteger 5_000_000_000_000_000_000_000_000_000) ts,
-      UnsafePathData PathTypeFile (MkPathI [osp|z|]) (MkPathI [osp|/z|]) (afromInteger 200_120) ts
+    [ UnsafePathData
+        (MkPathTypeW PathTypeFile)
+        (MkPathI [osp|foo|])
+        (MkPathI [osp|/path/foo|])
+        (afromInteger 70)
+        ts,
+      UnsafePathData
+        (MkPathTypeW PathTypeFile)
+        (MkPathI [osp|bazzz|])
+        (MkPathI [osp|/path/bar/bazzz|])
+        (afromInteger 5_000)
+        ts,
+      UnsafePathData
+        (MkPathTypeW PathTypeDirectory)
+        (MkPathI [osp|dir|])
+        (MkPathI [osp|/some/really/really/long/dir|])
+        (afromInteger 20_230)
+        ts,
+      UnsafePathData
+        (MkPathTypeW PathTypeFile)
+        (MkPathI [osp|f|])
+        (MkPathI [osp|/foo/path/f|])
+        (afromInteger 13_070_000)
+        ts,
+      UnsafePathData
+        (MkPathTypeW PathTypeDirectory)
+        (MkPathI [osp|d|])
+        (MkPathI [osp|/d|])
+        (afromInteger 5_000_000_000_000_000_000_000_000_000)
+        ts,
+      UnsafePathData
+        (MkPathTypeW PathTypeFile)
+        (MkPathI [osp|z|])
+        (MkPathI [osp|/z|])
+        (afromInteger 200_120)
+        ts
     ]
   where
     -- 5,000 Y

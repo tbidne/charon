@@ -28,19 +28,13 @@ import SafeRm qualified
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Backend.Data qualified as Backend.Data
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathType
-  ( PathType
-      ( PathTypeDirectory,
-        PathTypeFile,
-        PathTypeSymlink
-      ),
-  )
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Data.UniqueSeq qualified as USeq
 import SafeRm.Env (HasBackend, HasTrashHome (getTrashHome))
 import SafeRm.Env qualified as Env
-import SafeRm.Exception (FileNotFoundE, TrashEntryNotFoundE)
+import SafeRm.Exception (TrashEntryNotFoundE)
 import SafeRm.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
@@ -214,7 +208,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTestPaths `USeq.union` βTestPaths
 
       caughtEx <-
-        tryCS @_ @FileNotFoundE
+        tryCS @_ @IOException
           $ usingIntIONoCatch env (SafeRm.delete (USeq.map MkPathI toDelete))
 
       ex <-
@@ -560,10 +554,10 @@ setupDir dir paths = do
   let action = do
         clearDirectory dir
 
-        for_ paths $ \(MkPathWithType (p, ty)) -> case ty of
+        for_ paths $ \(MkPathWithType (p, MkPathTypeW ty)) -> case ty of
           PathTypeFile -> createFileContents (p, "")
           PathTypeDirectory -> createDirectory p
-          PathTypeSymlink -> createSymlink (F p)
+          PathTypeSymbolicLink -> createSymlink (F p)
         assertPathsExist (fmap unPathWithType paths')
 
   action `catchAny` \ex -> do
@@ -596,9 +590,9 @@ mkPaths testDir paths =
 countFiles :: UniqueSeq PathWithType -> Int
 countFiles = length . filter f . toList
   where
-    f (MkPathWithType (_, PathTypeFile)) = True
-    f (MkPathWithType (_, PathTypeSymlink)) = True
-    f _ = False
+    f (MkPathWithType (_, MkPathTypeW PathTypeFile)) = True
+    f (MkPathWithType (_, MkPathTypeW PathTypeSymbolicLink)) = True
+    f (MkPathWithType (_, MkPathTypeW PathTypeDirectory)) = False
 
 getIndex :: IntEnv -> PropertyT IO (Seq PathData)
 getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env SafeRm.getIndex

@@ -8,11 +8,9 @@ module Functional.Commands.Delete
 where
 
 import Data.HashSet qualified as HashSet
-import Data.Text qualified as T
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata qualified as Metadata
-import SafeRm.Exception (FileNotFoundE)
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
@@ -99,8 +97,8 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
           ("dir1", PathTypeDirectory, 5),
           ("dir2", PathTypeDirectory, 15),
           ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymlink, 5),
-          ("file-link", PathTypeSymlink, 5)
+          ("dir-link", PathTypeSymbolicLink, 5),
+          ("file-link", PathTypeSymbolicLink, 5)
         ]
 
     assertSetEq expectedIdxSet idxSet
@@ -120,7 +118,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @IOException argList
 
     assertMatch expectedEx ex
 
@@ -131,10 +129,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     liftIO $ expectedMetadata @=? metadata
   where
     expectedEx =
-      Outfixes
-        "File not found: "
-        [combineFps ["deleteUnknownError"]]
-        "bad file'"
+      Suffix "deleteUnknownError/bad file: getPathType: does not exist (path does not exist)"
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -191,7 +186,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @FileNotFoundE argList
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @IOException argList
 
     assertMatch expectedEx ex
 
@@ -209,10 +204,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     liftIO $ expectedMetadata @=? metadata
   where
     expectedEx =
-      Outfixes
-        "File not found: "
-        [combineFps ["deletesSome"]]
-        "/f4'"
+      Suffix "deletesSome/f4: getPathType: does not exist (path does not exist)"
     expectedMetadata = mkMetadata 3 3 0 15
 
 pathologicalTests :: IO TestEnv -> [TestTree]
@@ -295,8 +287,3 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
     expectedMetadata = mkMetadata 2 2 0 10
 
 #endif
-
-combineFps :: [FilePath] -> Text
-combineFps =
-  T.pack
-    . foldFilePathsAcc "delete"

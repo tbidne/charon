@@ -64,8 +64,8 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
           ("dir1", PathTypeDirectory, 5),
           ("dir2", PathTypeDirectory, 15),
           ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymlink, 5),
-          ("file-link", PathTypeSymlink, 5)
+          ("dir-link", PathTypeSymbolicLink, 5),
+          ("file-link", PathTypeSymbolicLink, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
@@ -119,8 +119,8 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
             ("dir1", PathTypeDirectory, 5),
             ("dir2", PathTypeDirectory, 15),
             ("dir4", PathTypeDirectory, 10),
-            ("dir-link", PathTypeSymlink, 5),
-            ("file-link", PathTypeSymlink, 5)
+            ("dir-link", PathTypeSymbolicLink, 5),
+            ("file-link", PathTypeSymbolicLink, 5)
           ]
 
       -- See Note [Test dir and backend changes].

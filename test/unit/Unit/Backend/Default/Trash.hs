@@ -38,8 +38,11 @@ import SafeRm.Backend.Json.BackendArgs qualified as Json.BackendArgs
 import SafeRm.Backend.Json.PathData qualified as Json.PathData
 import SafeRm.Class.Serial (Serial)
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathType (PathTypeFile))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome))
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
+  )
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)
 import SafeRm.Exception (EmptyPathE, RootE)
@@ -67,7 +70,7 @@ tests =
           toCorePathData = \_ pd ->
             pure
               $ PathData.UnsafePathData
-                { PathData.pathType = PathTypeFile,
+                { PathData.pathType = MkPathTypeW PathTypeFile,
                   PathData.fileName = pd ^. #fileName,
                   PathData.originalPath = pd ^. #originalPath,
                   PathData.created = pd ^. #created,

@@ -109,6 +109,7 @@ import Effects.Exception as X
   ( Exception (displayException),
     ExceptionCS (MkExceptionCS),
     ExitCode (ExitFailure, ExitSuccess),
+    IOException,
     MonadCatch,
     MonadMask,
     MonadThrow,
@@ -159,6 +160,7 @@ import Effects.FileSystem.PathReader as X
         listDirectory,
         makeAbsolute
       ),
+    PathType (PathTypeDirectory, PathTypeFile, PathTypeSymbolicLink),
     doesSymbolicLinkExist,
     getXdgConfig,
   )

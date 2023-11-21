@@ -57,8 +57,8 @@ metadata getTestEnv = testCase "Prints metadata" $ do
           ("dir1", PathTypeDirectory, 5),
           ("dir2", PathTypeDirectory, 15),
           ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymlink, 5),
-          ("file-link", PathTypeSymlink, 5)
+          ("dir-link", PathTypeSymbolicLink, 5),
+          ("file-link", PathTypeSymbolicLink, 5)
         ]
 
     (delIdxSet, delMetadata) <- runIndexMetadataM

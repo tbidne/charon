@@ -17,7 +17,7 @@ import Numeric.Algebra (AMonoid (zero))
 import SafeRm.Backend.Cbor.PathData (PathData (UnsafePathData))
 import SafeRm.Backend.Cbor.PathData qualified as Cbor
 import SafeRm.Class.Serial (Serial (decode), encodeThrowM)
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.Paths (PathI (MkPathI))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Data.Timestamp qualified as Timestamp
@@ -64,7 +64,7 @@ serializeRoundtripSpecs params = testCase desc $ do
 
     mkPd name opath ts =
       UnsafePathData
-        { pathType = PathTypeFile,
+        { pathType = MkPathTypeW PathTypeFile,
           fileName = MkPathI name,
           originalPath = MkPathI opath,
           created = ts,
@@ -107,7 +107,13 @@ genPathData =
     <*> genTimestamp
     <*> genSize
   where
-    genPathType = Gen.element [PathTypeFile, PathTypeDirectory, PathTypeSymlink]
+    genPathType =
+      MkPathTypeW
+        <$> Gen.element
+          [ PathTypeFile,
+            PathTypeDirectory,
+            PathTypeSymbolicLink
+          ]
     genFileName = toPathI <$> Gen.string (Range.exponential 1 100) genPathChar
     genOriginalPath = toPathI <$> Gen.string (Range.linear 1 100) genPathChar
     genSize = MkBytes <$> Gen.integral (Range.exponential 1 1_000_000)

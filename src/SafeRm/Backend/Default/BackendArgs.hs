@@ -8,7 +8,7 @@ where
 
 import SafeRm.Backend.Data (Backend)
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.Paths (PathI, PathIndex (TrashEntryOriginalPath, TrashHome))
 import SafeRm.Data.Timestamp (Timestamp)
 import SafeRm.Prelude
@@ -19,7 +19,7 @@ data BackendArgs m pd = MkBackendArgs
       Timestamp ->
       PathI TrashHome ->
       PathI TrashEntryOriginalPath ->
-      m (pd, PathType),
+      m (pd, PathTypeW),
     toCorePathData :: PathI TrashHome -> pd -> m PathData,
     fromCorePathData :: PathData -> m pd
   }

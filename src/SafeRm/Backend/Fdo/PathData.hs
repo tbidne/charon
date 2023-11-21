@@ -18,7 +18,7 @@ import SafeRm.Backend.Default.Trash qualified as Trash
 import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Class.Serial (Serial (..), decodeUnit)
 import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathType)
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -61,7 +61,7 @@ toPathData ::
   Timestamp ->
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathData, PathType)
+  m (PathData, PathTypeW)
 toPathData currTime trashHome origPath = addNamespace "toPathData" $ do
   (fileName', originalPath', pathType) <- Default.Utils.getPathInfo trashHome origPath
 

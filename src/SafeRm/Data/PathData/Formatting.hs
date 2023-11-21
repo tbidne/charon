@@ -25,7 +25,6 @@ where
 import Data.Char qualified as Ch
 import Data.Text qualified as T
 import SafeRm.Data.PathData (PathData)
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
 import SafeRm.Data.Timestamp qualified as Timestamp
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -156,7 +155,7 @@ formatTabularRow nameLen origLen pd =
       sep,
       fixLen' origLen (decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI),
       sep,
-      paddedType (pd ^. #pathType),
+      paddedType (pd ^. (#pathType % #unPathTypeW)),
       sep,
       fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
       sep,
@@ -165,7 +164,7 @@ formatTabularRow nameLen origLen pd =
   where
     paddedType PathTypeFile = "F   "
     paddedType PathTypeDirectory = "D   "
-    paddedType PathTypeSymlink = "S   "
+    paddedType PathTypeSymbolicLink = "S   "
 
 sep :: Text
 sep = " | "

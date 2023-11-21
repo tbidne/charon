@@ -19,19 +19,13 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
 import Integration.Prelude
-import SafeRm.Data.PathType
-  ( PathType
-      ( PathTypeDirectory,
-        PathTypeFile,
-        PathTypeSymlink
-      ),
-  )
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import SafeRm.Data.UniqueSeq qualified as USeq
 import Test.Utils qualified as TestUtils
 
 -- | Generated path name along with the type to create.
-newtype PathWithType = MkPathWithType (OsPath, PathType)
+newtype PathWithType = MkPathWithType (OsPath, PathTypeW)
   deriving stock (Show)
 
 unPathWithType :: PathWithType -> OsPath
@@ -85,7 +79,13 @@ genFileNameNoDupes ::
   UniqueSeq FilePath ->
   m (PathWithType, FilePath)
 genFileNameNoDupes asciiOnly paths = do
-  pathType <- Gen.element [PathTypeFile, PathTypeDirectory, PathTypeSymlink]
+  pathType <-
+    MkPathTypeW
+      <$> Gen.element
+        [ PathTypeFile,
+          PathTypeDirectory,
+          PathTypeSymbolicLink
+        ]
 
   (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fp))
     <$> Gen.filterT

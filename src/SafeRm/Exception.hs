@@ -2,10 +2,7 @@
 
 -- | Provides exceptions used by SafeRm.
 module SafeRm.Exception
-  ( -- * General
-    FileNotFoundE (..),
-
-    -- * Trash
+  ( -- * Trash
 
     -- ** Entries
 
@@ -24,7 +21,6 @@ module SafeRm.Exception
     RootE (..),
     EmptyPathE (..),
     InfoDecodeE (..),
-    PathNotFileDirE (..),
     EmptySearchResults (..),
   )
 where
@@ -45,17 +41,12 @@ import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Prelude
 import System.OsPath (encodeUtf)
 
--- | Path is not found.
-newtype FileNotFoundE = MkFileNotFoundE OsPath
-  deriving stock (Show)
-
-instance Exception FileNotFoundE where
-  displayException (MkFileNotFoundE f) =
-    mconcat
-      [ "File not found: '",
-        decodeOsToFpDisplayEx f,
-        "'"
-      ]
+-- REVIEW: Consider making some (all?) of these IOException. This would be
+-- less structured, but it would match most of the exceptions thrown by our
+-- deps (e.g. directory).
+--
+-- If we did this, we would have to make sure tests check the type/message
+-- to ensure we're throwing the correct one.
 
 -- | Could not rename file due to duplicate names.
 newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashEntryPath)
@@ -210,18 +201,6 @@ instance Exception InfoDecodeE where
         bsToStrLenient bs,
         "\nError: ",
         err
-      ]
-
--- | Bad file.
-newtype PathNotFileDirE = MkPathNotFileDirE OsPath
-  deriving stock (Show)
-
-instance Exception PathNotFileDirE where
-  displayException (MkPathNotFileDirE p) =
-    mconcat
-      [ "Path exists but is not a file, directory, or symlink: '",
-        decodeOsToFpDisplayEx p,
-        "'"
       ]
 
 -- | No search results.

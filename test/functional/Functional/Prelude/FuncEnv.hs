@@ -73,14 +73,7 @@ import SafeRm.Data.PathData
         size
       ),
   )
-import SafeRm.Data.PathType (PathType)
-import SafeRm.Data.PathType as X
-  ( PathType
-      ( PathTypeDirectory,
-        PathTypeFile,
-        PathTypeSymlink
-      ),
-  )
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
 import SafeRm.Env (HasBackend, HasTrashHome)
@@ -488,7 +481,7 @@ mkPathDataSetTestDirM testDir pathData = do
             { fileName = MkPathI p',
               originalPath = MkPathI (testDir' </> p'),
               created = fixedTimestamp,
-              pathType = pathType,
+              pathType = MkPathTypeW pathType,
               size
             }
 
@@ -529,7 +522,7 @@ mkPathDataSetM2 pathData = do
             { fileName = MkPathI fn',
               originalPath = MkPathI (testDir' </> opath'),
               created = fixedTimestamp,
-              pathType,
+              pathType = MkPathTypeW pathType,
               size
             }
 

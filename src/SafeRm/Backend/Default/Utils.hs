@@ -24,7 +24,7 @@ import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.Utils qualified as FsUtils
-import SafeRm.Data.PathType (PathType (PathTypeDirectory, PathTypeFile, PathTypeSymlink))
+import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -40,8 +40,6 @@ import SafeRm.Data.Paths
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Exception
   ( EmptyPathE (MkEmptyPathE),
-    FileNotFoundE (MkFileNotFoundE),
-    PathNotFileDirE (MkPathNotFileDirE),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
   )
@@ -76,7 +74,7 @@ getPathInfo ::
   ) =>
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
-  m (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathType)
+  m (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathTypeW)
 getPathInfo trashHome origPath = do
   $(logDebug) $ "Retrieving path data: '" <> Paths.toText origPath <> "'"
 
@@ -107,31 +105,17 @@ getPathInfo trashHome origPath = do
 
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
-  -- NOTE: This has to be first as does(File/Directory)Exist traverses
-  -- symlinks.
-  isSymlink <- Paths.applyPathI PR.doesSymbolicLinkExist originalPath
-  if isSymlink
-    then pure (uniqName, originalPath, PathTypeSymlink)
-    else do
-      isFile <- Paths.applyPathI doesFileExist originalPath
-      if isFile
-        then pure (uniqName, originalPath, PathTypeFile)
-        else do
-          isDir <- Paths.applyPathI doesDirectoryExist originalPath
-          if isDir
-            then
-              pure
-                ( -- NOTE: ensure paths do not have trailing slashes so that we can
-                  -- ensure later lookups succeed (requires string equality)
-                  Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
-                  Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
-                  PathTypeDirectory
-                )
-            else do
-              pathExists <- Paths.applyPathI doesPathExist originalPath
-              if pathExists
-                then throwCS $ MkPathNotFileDirE (originalPath ^. #unPathI)
-                else throwCS $ MkFileNotFoundE (originalPath ^. #unPathI)
+  Paths.applyPathI PR.getPathType originalPath >>= \case
+    PathTypeSymbolicLink -> pure (uniqName, originalPath, MkPathTypeW PathTypeSymbolicLink)
+    PathTypeFile -> pure (uniqName, originalPath, MkPathTypeW PathTypeFile)
+    PathTypeDirectory ->
+      pure
+        ( -- NOTE: ensure paths do not have trailing slashes so that we can
+          -- ensure later lookups succeed (requires string equality)
+          Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
+          Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
+          MkPathTypeW PathTypeDirectory
+        )
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
@@ -244,25 +228,8 @@ pathDataToType ::
   ) =>
   PathI TrashHome ->
   a ->
-  m PathType
-pathDataToType trashHome pd = do
-  symlinkExists <- doesSymbolicLinkExist path
-  if symlinkExists
-    then pure PathTypeSymlink
-    else do
-      fileExists <- doesFileExist path
-      if fileExists
-        then pure PathTypeFile
-        else do
-          dirExists <- doesDirectoryExist path
-          if dirExists
-            then pure PathTypeDirectory
-            else do
-              -- for a better error message
-              pathExists <- doesPathExist path
-              if pathExists
-                then throwCS $ MkPathNotFileDirE path
-                else throwCS $ MkFileNotFoundE path
+  m PathTypeW
+pathDataToType trashHome pd = MkPathTypeW <$> PR.getPathType path
   where
     MkPathI path = getTrashPath trashHome (pd ^. #fileName)
 
