@@ -16,13 +16,14 @@ import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Text qualified as T
+import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
 import GHC.IsList (IsList (toList))
 import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
-import Integration.Utils (PathWithType (MkPathWithType), unPathWithType)
+import Integration.Utils (PathWithType (MkPathWithType))
 import Integration.Utils qualified as IntUtils
 import SafeRm qualified
 import SafeRm.Backend.Data (Backend)
@@ -558,7 +559,7 @@ setupDir dir paths = do
           PathTypeFile -> createFileContents (p, "")
           PathTypeDirectory -> createDirectory p
           PathTypeSymbolicLink -> createSymlink (F p)
-        assertPathsExist (fmap unPathWithType paths')
+        assertPathsExist (fmap (view (#unPathWithType % _1)) paths')
 
   action `catchAny` \ex -> do
     annotate $ displayException ex
@@ -580,19 +581,18 @@ mkPaths ::
     UniqueSeq OsPath
   )
 mkPaths testDir paths =
-  ( USeq.map unPathWithType paths,
+  ( USeq.map (view (#unPathWithType % _1)) paths,
     prefixed,
-    USeq.map unPathWithType prefixed
+    USeq.map (view (#unPathWithType % _1)) prefixed
   )
   where
     prefixed = USeq.map (\(MkPathWithType (p, t)) -> MkPathWithType (testDir </> p, t)) paths
 
 countFiles :: UniqueSeq PathWithType -> Int
-countFiles = length . filter f . toList
+countFiles = length . filter isNotDir . toList
   where
-    f (MkPathWithType (_, MkPathTypeW PathTypeFile)) = True
-    f (MkPathWithType (_, MkPathTypeW PathTypeSymbolicLink)) = True
-    f (MkPathWithType (_, MkPathTypeW PathTypeDirectory)) = False
+    isNotDir :: PathWithType -> Bool
+    isNotDir = not . is (#unPathWithType % _2 % #unPathTypeW % _PathTypeDirectory)
 
 getIndex :: IntEnv -> PropertyT IO (Seq PathData)
 getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env SafeRm.getIndex

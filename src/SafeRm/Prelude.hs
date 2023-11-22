@@ -254,6 +254,7 @@ import Optics.Core as X
     _4,
     _Just,
   )
+import Optics.Core.Extras as X (is)
 import Optics.TH as X
   ( generateUpdateableOptics,
     makeFieldLabelsNoPrefix,

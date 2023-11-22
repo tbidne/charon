@@ -1,9 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 -- | Prelude for integration test suite.
 module Integration.Utils
   ( -- * Types
     GPaths,
     PathWithType (..),
-    unPathWithType,
 
     -- * Gen
     genFileNameSet,
@@ -25,11 +27,10 @@ import SafeRm.Data.UniqueSeq qualified as USeq
 import Test.Utils qualified as TestUtils
 
 -- | Generated path name along with the type to create.
-newtype PathWithType = MkPathWithType (OsPath, PathTypeW)
+newtype PathWithType = MkPathWithType {unPathWithType :: (OsPath, PathTypeW)}
   deriving stock (Show)
 
-unPathWithType :: PathWithType -> OsPath
-unPathWithType (MkPathWithType (p, _)) = p
+makeFieldLabelsNoPrefix ''PathWithType
 
 instance Eq PathWithType where
   MkPathWithType (p1, _) == MkPathWithType (p2, _) = p1 == p2

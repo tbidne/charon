@@ -33,9 +33,6 @@ module Functional.Prelude.FuncEnv
     mkPathDataSetM2,
     mkPathDataSetTestDirM,
     getTestDir,
-
-    -- * Re-exports
-    PathType (..),
   )
 where
 
