@@ -181,7 +181,6 @@ import Effects.FileSystem.Utils as X
     encodeFpToOs,
     encodeFpToOsThrowM,
     osp,
-    osstr,
     (<.>),
     (</>),
   )

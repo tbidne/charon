@@ -302,6 +302,14 @@ getAllFiles ::
   OsPath ->
   m [OsPath]
 getAllFiles fp =
+  -- NOTE: [getPathType]
+  --
+  -- It would be nice to switch this from PathReader's getPathType to
+  -- PosixCompact's, as the latter is faster (fewer IO calls). Alas, the latter
+  -- is also much harder to mock, which we unfortunately rely on in some tests.
+  --
+  -- If we figure out how to mock it (or make the tests realer), we can then
+  -- swap it.
   PR.getPathType fp >>= \case
     PR.PathTypeSymbolicLink -> pure [fp]
     PR.PathTypeFile -> pure [fp]

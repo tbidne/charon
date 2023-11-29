@@ -114,6 +114,7 @@ getPathInfo trashHome origPath = do
   let uniqName = Paths.liftPathI (FP.takeFileName . FP.dropTrailingPathSeparator) uniqPath
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
+  -- see NOTE: [getPathType]
   Paths.applyPathI PR.getPathType originalPath' >>= \case
     PathTypeSymbolicLink -> pure (uniqName, originalPath', MkPathTypeW PathTypeSymbolicLink)
     PathTypeFile -> pure (uniqName, originalPath', MkPathTypeW PathTypeFile)
@@ -238,6 +239,7 @@ pathDataToType ::
   m PathTypeW
 pathDataToType trashHome pd = MkPathTypeW <$> PR.getPathType path
   where
+    -- see NOTE: [getPathType]
     MkPathI path = getTrashPath trashHome (pd ^. #fileName)
 
 pathFiles :: OsPath
