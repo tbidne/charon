@@ -21,6 +21,8 @@ module SafeRm.Exception
     RootE (..),
     EmptyPathE (..),
     DotsPathE (..),
+    FileNameEmptyE (..),
+    UniquePathNotPrefixE (..),
     InfoDecodeE (..),
     EmptySearchResults (..),
   )
@@ -199,6 +201,36 @@ instance Exception DotsPathE where
       [ "Attempted to delete the special path '",
         decodeOsToFpDisplayEx $ p ^. #unPathI,
         "'! This is not allowed."
+      ]
+
+-- | Exception for deriving an empty file name.
+newtype FileNameEmptyE = MkFileNameEmptyE (PathI TrashEntryOriginalPath)
+  deriving stock (Show)
+
+instance Exception FileNameEmptyE where
+  displayException (MkFileNameEmptyE p) =
+    mconcat
+      [ "Derived empty file name from the path '",
+        decodeOsToFpDisplayEx $ p ^. #unPathI,
+        "'"
+      ]
+
+-- | Exception for when the original name is not a prefix of the derived
+-- unique name.
+data UniquePathNotPrefixE
+  = MkUniquePathNotPrefixE
+      (PathI TrashEntryFileName)
+      (PathI TrashEntryFileName)
+  deriving stock (Show)
+
+instance Exception UniquePathNotPrefixE where
+  displayException (MkUniquePathNotPrefixE origName newName) =
+    mconcat
+      [ "Original path name '",
+        decodeOsToFpDisplayEx $ origName ^. #unPathI,
+        "' is not a prefix of the new unique name '",
+        decodeOsToFpDisplayEx $ newName ^. #unPathI,
+        "'"
       ]
 
 -- | Exception for decoding.

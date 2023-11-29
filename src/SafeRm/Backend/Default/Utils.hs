@@ -22,6 +22,7 @@ where
 import Data.ByteString.Char8 qualified as C8
 import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
+import Data.List qualified as L
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.Utils qualified as FsUtils
 import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
@@ -41,8 +42,10 @@ import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Exception
   ( DotsPathE (MkDotsPathE),
     EmptyPathE (MkEmptyPathE),
+    FileNameEmptyE (MkFileNameEmptyE),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
+    UniquePathNotPrefixE (MkUniquePathNotPrefixE),
   )
 import SafeRm.Prelude
 import SafeRm.Utils qualified as U
@@ -76,10 +79,10 @@ getPathInfo ::
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
   m (PathI TrashEntryFileName, PathI TrashEntryOriginalPath, PathTypeW)
-getPathInfo trashHome origPath = do
+getPathInfo trashHome origPath = addNamespace "getPathInfo" $ do
   $(logDebug) $ "Retrieving path data: '" <> Paths.toText origPath <> "'"
 
-  -- NOTE: It is VERY important that this check is first i.e. we perform it
+  -- It is VERY important that this check is first i.e. we perform it
   -- on the original given path, before any processing. As an example of
   -- what can go wrong, if someone attempts to delete a blank path
   -- (i.e. safe-rm d ""), then canonicalizePath will turn this into the current
@@ -87,50 +90,85 @@ getPathInfo trashHome origPath = do
   -- not what we want!
   throwIfIllegal origPath
 
-  -- NOTE: Previously we used canonicalizePath instead of makeAbsolute.
+  (origAbsolute, fileName) <- mkAbsoluteAndGetName origPath
+
+  uniqName <- mkUniqName trashHome fileName
+
+  -- see NOTE: [getPathType]
+  Paths.applyPathI PR.getPathType origAbsolute >>= \case
+    PathTypeSymbolicLink -> pure (uniqName, origAbsolute, MkPathTypeW PathTypeSymbolicLink)
+    PathTypeFile -> pure (uniqName, origAbsolute, MkPathTypeW PathTypeFile)
+    PathTypeDirectory ->
+      pure
+        ( uniqName,
+          origAbsolute,
+          MkPathTypeW PathTypeDirectory
+        )
+
+mkAbsoluteAndGetName ::
+  ( HasCallStack,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashEntryOriginalPath ->
+  m (PathI TrashEntryOriginalPath, PathI TrashEntryFileName)
+mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
+  -- Previously we used canonicalizePath instead of makeAbsolute.
   -- This had the problem of turning symlinks into their targets, which
   -- is not what we want. makeAbsolute seems to do what we want.
   --
   -- Note that we now have to manually call dropTrailingPathSeparator.
   -- Previously this was part of canonicalizePath.
-  originalPath <- Paths.liftPathIF' PR.makeAbsolute origPath
+  origAbsolute <- Paths.liftPathIF' PR.makeAbsolute origPath
+  $(logDebug) $ "Absolute: '" <> Paths.toText origAbsolute <> "'"
 
-  $(logDebug) $ "Absolute: '" <> Paths.toText originalPath <> "'"
-
-  -- NOTE: Have to dropTrailingPathSeparator here because a trailing slash will
+  -- Have to dropTrailingPathSeparator here because a trailing slash will
   -- make takeFileName give us the wrong path. We also need this so that
   -- later lookups succeed (requires string equality)
-  let originalPath' = Paths.liftPathI' FP.dropTrailingPathSeparator originalPath
+  let origAbsoluteNoSlash = Paths.liftPathI' FP.dropTrailingPathSeparator origAbsolute
 
-  -- NOTE: need to get the file name here because fp could refer to an
+  -- Need to get the file name here because fp could refer to an
   -- absolute path. In this case, </> returns the 2nd arg which is absolutely
   -- not what we want.
-  let fileName = Paths.liftPathI' FP.takeFileName originalPath'
+  let fileName :: PathI TrashEntryFileName
+      fileName = Paths.liftPathI FP.takeFileName origAbsoluteNoSlash
   $(logDebug) $ "File name: '" <> Paths.toText fileName <> "'"
 
-  uniqPath <- mkUniqPath (getTrashPath trashHome (Paths.reindex fileName))
+  -- Paranoia check for previous bug: check that derived name is not empty.
+  isEmpty <- Paths.applyPathI (fmap null . decodeOsToFpThrowM) fileName
+  when isEmpty $ throwCS $ MkFileNameEmptyE origPath
+
+  pure (origAbsoluteNoSlash, fileName)
+
+mkUniqName ::
+  ( HasCallStack,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  PathI TrashEntryFileName ->
+  m (PathI TrashEntryFileName)
+mkUniqName trashHome fileName = addNamespace "getUniqueName" $ do
+  uniqPath <- mkUniqPath (getTrashPath trashHome fileName)
   $(logDebug) $ "Unique path: '" <> Paths.toText uniqPath <> "'"
 
   let uniqName = Paths.liftPathI (FP.takeFileName . FP.dropTrailingPathSeparator) uniqPath
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
-  -- see NOTE: [getPathType]
-  Paths.applyPathI PR.getPathType originalPath' >>= \case
-    PathTypeSymbolicLink -> pure (uniqName, originalPath', MkPathTypeW PathTypeSymbolicLink)
-    PathTypeFile -> pure (uniqName, originalPath', MkPathTypeW PathTypeFile)
-    PathTypeDirectory ->
-      pure
-        ( uniqName,
-          originalPath',
-          MkPathTypeW PathTypeDirectory
-        )
+  -- Paranoia check for previous bug: check that derived unique name is suffix
+  -- of the original name (e.g. foo -> foo (1)).
+  throwIfNotPrefix fileName uniqName
+
+  pure uniqName
 
 -- | Ensures the filepath @p@ is unique. If @p@ collides with another path,
 -- we iteratively try appending numbers, stopping once we find a unique path.
 -- For example, for duplicate "file", we will try
 --
 -- @
--- "file1", "file2", "file3", ...
+-- "file (1)", "file (2)", "file (3)", ...
 -- @
 mkUniqPath ::
   forall m.
@@ -158,6 +196,21 @@ mkUniqPath fp = do
             then go (counter + 1)
             else pure fp'
     mkSuffix i = FsUtils.encodeFpToOsThrowM $ " (" <> show i <> ")"
+
+throwIfNotPrefix ::
+  ( HasCallStack,
+    MonadThrow m
+  ) =>
+  PathI TrashEntryFileName ->
+  PathI TrashEntryFileName ->
+  m ()
+throwIfNotPrefix origName newName = do
+  origNameStr <- Paths.applyPathI decodeOsToFpThrowM origName
+  newNameStr <- Paths.applyPathI decodeOsToFpThrowM newName
+
+  unless
+    (origNameStr `L.isPrefixOf` newNameStr)
+    (throwCS $ MkUniquePathNotPrefixE origName newName)
 
 throwIfIllegal ::
   ( HasCallStack,
