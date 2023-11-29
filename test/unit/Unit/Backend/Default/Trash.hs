@@ -45,7 +45,7 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Timestamp (Timestamp, fromText)
 import SafeRm.Env (HasBackend)
-import SafeRm.Exception (EmptyPathE, RootE)
+import SafeRm.Exception (DotsPathE, EmptyPathE, RootE)
 import System.OsPath (encodeUtf)
 import System.OsPath qualified as FP
 import Unit.Prelude
@@ -237,7 +237,10 @@ backendTests b =
     [ mvTrash b,
       mvTrashWhitespace b,
       mvTrashRootError b,
-      mvTrashEmptyError b
+      mvTrashEmptyError b,
+      mvTrashDotError b,
+      mvTrashDotsError b,
+      mvTrashDotsEndError b
     ]
 
 mvTrash ::
@@ -317,6 +320,69 @@ mvTrashEmptyError backendArgs = testCase desc $ do
     Left ex -> "Attempted to delete the empty path! This is not allowed." @=? displayException ex
   where
     desc = "mvOriginalToTrash throws exception for empty original path"
+
+mvTrashDotError ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+mvTrashDotError backendArgs = testCase desc $ do
+  eformatted <-
+    tryCS @_ @DotsPathE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete the special path '.'! This is not allowed." @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for dot original path"
+    dotDir = MkPathI [osp|.|]
+
+mvTrashDotsError ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+mvTrashDotsError backendArgs = testCase desc $ do
+  eformatted <-
+    tryCS @_ @DotsPathE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete the special path '..'! This is not allowed." @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for dots original path"
+    dotDir = MkPathI [osp|..|]
+
+mvTrashDotsEndError ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+mvTrashDotsEndError backendArgs = testCase desc $ do
+  eformatted <-
+    tryCS @_ @DotsPathE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete the special path '/path/with/dots/...'! This is not allowed." @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for dots original path"
+    dotDir = MkPathI [osp|/path/with/dots/...|]
 
 trashHome :: PathI TrashHome
 trashHome = MkPathI $ [osp|test|] </> [osp|unit|] </> pathDotTrash

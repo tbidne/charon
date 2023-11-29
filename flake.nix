@@ -80,12 +80,12 @@
           ghc-version = "ghc962";
           compiler = pkgs.haskell.packages."${ghc-version}".override {
             overrides = final: prev: {
-              file-io = final.callHackage "file-io" "0.1.0.1" { };
-              hedgehog = prev.hedgehog_1_3;
+              hedgehog = prev.hedgehog_1_4;
               hlint = prev.hlint_3_6_1;
               # because test depends on hedgehog < 1.3
               nonempty-containers = hlib.dontCheck prev.nonempty-containers;
-              ormolu = prev.ormolu_0_7_1_0;
+              ormolu = prev.ormolu_0_7_2_0;
+              tasty-hedgehog = prev.tasty-hedgehog_1_4_0_2;
             } // nix-hs-utils.mkLibs inputs final [
               "algebra-simple"
               "bounds"

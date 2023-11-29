@@ -15,6 +15,7 @@ module SafeRm.Data.Paths
     isEmpty,
     isRoot,
     isRoot',
+    isDots,
     toString,
     toText,
 
@@ -38,6 +39,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import SafeRm.Class.Serial (Serial (DecodeExtra, decode, encode))
 import SafeRm.Prelude
+import System.OsPath qualified as FP
 
 -- | Types of filepaths used in SafeRm.
 data PathIndex
@@ -185,6 +187,16 @@ isRoot' p = do
   fp <- decodeOsToFpThrowM p
   pure $ (== "/") . T.strip . T.pack $ fp
 #endif
+
+-- | Returns true if the path __ends__ in nothing but dots e.g.
+-- @/path/to/dots/..@.
+isDots :: (MonadThrow m) => PathI i -> m Bool
+isDots (MkPathI p) = do
+  let p' = FP.takeFileName p
+  fp <- decodeOsToFpThrowM p'
+  pure $ isDots' . T.unpack . T.strip . T.pack $ fp
+  where
+    isDots' fp = L.all (== '.') fp && not (null fp)
 
 -- | Pretty-print a list of paths.
 --

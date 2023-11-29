@@ -11,6 +11,7 @@ import Data.HashSet qualified as HashSet
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
 import SafeRm.Data.Metadata qualified as Metadata
+import SafeRm.Exception (DotsPathE, EmptyPathE)
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
@@ -25,7 +26,9 @@ tests testEnv =
         deletesMany testEnv',
         deleteUnknownError testEnv',
         deleteDuplicateFile testEnv',
-        deletesSome testEnv'
+        deletesSome testEnv',
+        deleteEmptyError testEnv',
+        deleteDotsError testEnv'
       ]
     ++ pathologicalTests testEnv'
   where
@@ -206,6 +209,63 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     expectedEx =
       Suffix "deletesSome/f4: getPathType: does not exist (path does not exist)"
     expectedMetadata = mkMetadata 3 3 0 15
+
+deleteEmptyError :: IO TestEnv -> TestTree
+deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteEmptyError" $ do
+    testDir <- getTestDir
+
+    argList <- withSrArgsM ["delete", ""]
+
+    -- setup
+    clearDirectory testDir
+
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @EmptyPathE argList
+
+    assertMatch expectedEx ex
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
+    expectedEx = Exact "Attempted to delete the empty path! This is not allowed."
+
+    expectedIdxSet = HashSet.fromList []
+    expectedMetadata = Metadata.empty
+
+deleteDotsError :: IO TestEnv -> TestTree
+deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteDotsError" $ do
+    testDir <- getTestDir
+    let dots = [[osp|.|], [osp|..|], [osp|...|]]
+        files = (testDir </>) <$> dots
+
+    argList <- withSrArgsM $ "delete" : (unsafeDecodeOsToFp <$> files)
+
+    -- setup
+    clearDirectory testDir
+
+    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @DotsPathE argList
+
+    assertMatch expectedEx ex
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+  where
+    expectedEx =
+      Outfix
+        "Attempted to delete the special path '"
+        "deleteDotsError/...'! This is not allowed."
+
+    expectedIdxSet = HashSet.fromList []
+    expectedMetadata = Metadata.empty
 
 pathologicalTests :: IO TestEnv -> [TestTree]
 

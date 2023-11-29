@@ -22,8 +22,6 @@ source-repository head
 
 common common-lang
   default-extensions:
-    NoFieldSelectors
-    NoImplicitPrelude
     DataKinds
     DefaultSignatures
     DeriveAnyClass
@@ -32,6 +30,8 @@ common common-lang
     DuplicateRecordFields
     LambdaCase
     MultiWayIf
+    NoFieldSelectors
+    NoImplicitPrelude
     OverloadedLabels
     OverloadedStrings
     PatternSynonyms
@@ -162,6 +162,7 @@ test-suite unit
   other-modules:
     Unit.Backend.Cbor.PathData
     Unit.Backend.Default.Trash
+    Unit.Backend.Default.Utils
     Unit.Backend.Fdo.PathData
     Unit.Backend.Json.PathData
     Unit.Data.Index

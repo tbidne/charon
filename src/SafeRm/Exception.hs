@@ -20,6 +20,7 @@ module SafeRm.Exception
     RestoreCollisionE (..),
     RootE (..),
     EmptyPathE (..),
+    DotsPathE (..),
     InfoDecodeE (..),
     EmptySearchResults (..),
   )
@@ -187,6 +188,18 @@ data EmptyPathE = MkEmptyPathE
 
 instance Exception EmptyPathE where
   displayException _ = "Attempted to delete the empty path! This is not allowed."
+
+-- | Exception for deleting the special dots paths.
+newtype DotsPathE = MkDotsPathE (PathI TrashEntryOriginalPath)
+  deriving stock (Show)
+
+instance Exception DotsPathE where
+  displayException (MkDotsPathE p) =
+    mconcat
+      [ "Attempted to delete the special path '",
+        decodeOsToFpDisplayEx $ p ^. #unPathI,
+        "'! This is not allowed."
+      ]
 
 -- | Exception for decoding.
 data InfoDecodeE = MkInfoDecodeE (PathI TrashEntryInfo) ByteString String

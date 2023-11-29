@@ -39,7 +39,8 @@ import SafeRm.Data.Paths
   )
 import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Exception
-  ( EmptyPathE (MkEmptyPathE),
+  ( DotsPathE (MkDotsPathE),
+    EmptyPathE (MkEmptyPathE),
     RenameDuplicateE (MkRenameDuplicateE),
     RootE (MkRootE),
   )
@@ -89,31 +90,37 @@ getPathInfo trashHome origPath = do
   -- NOTE: Previously we used canonicalizePath instead of makeAbsolute.
   -- This had the problem of turning symlinks into their targets, which
   -- is not what we want. makeAbsolute seems to do what we want.
+  --
+  -- Note that we now have to manually call dropTrailingPathSeparator.
+  -- Previously this was part of canonicalizePath.
   originalPath <- Paths.liftPathIF' PR.makeAbsolute origPath
 
   $(logDebug) $ "Absolute: '" <> Paths.toText originalPath <> "'"
 
+  -- NOTE: Have to dropTrailingPathSeparator here because a trailing slash will
+  -- make takeFileName give us the wrong path. We also need this so that
+  -- later lookups succeed (requires string equality)
+  let originalPath' = Paths.liftPathI' FP.dropTrailingPathSeparator originalPath
+
   -- NOTE: need to get the file name here because fp could refer to an
   -- absolute path. In this case, </> returns the 2nd arg which is absolutely
   -- not what we want.
-  --
-  -- This works for directories too because canonicalizePath drops the
-  -- trailing slashes.
-  let fileName = Paths.liftPathI' FP.takeFileName originalPath
-  uniqPath <- mkUniqPath (getTrashPath trashHome (Paths.reindex fileName))
-  let uniqName = Paths.liftPathI FP.takeFileName uniqPath
+  let fileName = Paths.liftPathI' FP.takeFileName originalPath'
+  $(logDebug) $ "File name: '" <> Paths.toText fileName <> "'"
 
+  uniqPath <- mkUniqPath (getTrashPath trashHome (Paths.reindex fileName))
+  $(logDebug) $ "Unique path: '" <> Paths.toText uniqPath <> "'"
+
+  let uniqName = Paths.liftPathI (FP.takeFileName . FP.dropTrailingPathSeparator) uniqPath
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
-  Paths.applyPathI PR.getPathType originalPath >>= \case
-    PathTypeSymbolicLink -> pure (uniqName, originalPath, MkPathTypeW PathTypeSymbolicLink)
-    PathTypeFile -> pure (uniqName, originalPath, MkPathTypeW PathTypeFile)
+  Paths.applyPathI PR.getPathType originalPath' >>= \case
+    PathTypeSymbolicLink -> pure (uniqName, originalPath', MkPathTypeW PathTypeSymbolicLink)
+    PathTypeFile -> pure (uniqName, originalPath', MkPathTypeW PathTypeFile)
     PathTypeDirectory ->
       pure
-        ( -- NOTE: ensure paths do not have trailing slashes so that we can
-          -- ensure later lookups succeed (requires string equality)
-          Paths.liftPathI' FP.dropTrailingPathSeparator uniqName,
-          Paths.liftPathI' FP.dropTrailingPathSeparator originalPath,
+        ( uniqName,
+          originalPath',
           MkPathTypeW PathTypeDirectory
         )
 
@@ -156,12 +163,12 @@ throwIfIllegal ::
     MonadLoggerNS m,
     MonadThrow m
   ) =>
-  PathI i ->
+  PathI TrashEntryOriginalPath ->
   m ()
 throwIfIllegal p = addNamespace "throwIfIllegal" $ do
   U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwCS MkRootE
-
   U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwCS MkEmptyPathE
+  U.whenM (Paths.isDots p) $ $(logError) "Path is dots!" *> throwCS (MkDotsPathE p)
 
 -- | Parses a ByteString like:
 --
