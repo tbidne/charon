@@ -77,7 +77,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       perSystem = { pkgs, ... }:
         let
-          ghc-version = "ghc962";
+          ghc-version = "ghc963";
           compiler = pkgs.haskell.packages."${ghc-version}".override {
             overrides = final: prev: {
               hedgehog = prev.hedgehog_1_4;
