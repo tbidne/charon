@@ -7,13 +7,16 @@ module Unit.Backend.Default.Utils (tests) where
 import Data.List qualified as L
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.Utils qualified as FS.Utils
-import GHC.Clock (getMonotonicTimeNSec)
 import GHC.Real (Integral (mod))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import SafeRm.Backend.Default.Utils qualified as Utils
-import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryOriginalPath, TrashHome))
+import SafeRm.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex (TrashEntryOriginalPath, TrashHome),
+  )
+import System.FilePath qualified as FP
+import System.Random qualified as R
 import Unit.Prelude
 
 tests :: TestTree
@@ -41,27 +44,56 @@ getPathInfoTests =
 
 testPathSlash :: TestTree
 testPathSlash = testCase "Retrieves name from path ending in a /" $ do
-  result <- runTestIO $ Utils.getPathInfo trashHome slashPath
-  expected @=? result
+  (resultFileName, resultOrigPath, resultPathType) <-
+    runTestIO $ Utils.getPathInfo trashHome slashPath
+
+  MkPathI [osp|path|] @=? resultFileName
+  PathTypeDirectory @=? resultPathType ^. #unPathTypeW
+
+  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+
+  let errMsg =
+        mconcat
+          [ "Expected '",
+            expectedOrigPathStr,
+            "' to be a suffix of '",
+            resultOrigPathStr,
+            ","
+          ]
+
+  -- CI adds prefixes like the drive letter on window
+  -- (e.g. /some/path -> D:\\some\\path), hence we need to check the weaker
+  -- suffix check rather than equality.
+  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI [osp|/some/path/|]
-    expected =
-      ( MkPathI [osp|path|],
-        MkPathI [osp|/some/path|],
-        MkPathTypeW PathTypeDirectory
-      )
+    slashPath = MkPathI $ pathSeparator </> [osp|some|] </> [osp|path|] <> pathSeparator
+    expectedOrigPath = pathSeparator </> [osp|some|] </> [osp|path|]
 
 testDuplicate :: TestTree
 testDuplicate = testCase "Renames duplicate" $ do
-  result <- runTestIO $ Utils.getPathInfo trashHome slashPath
-  expected @=? result
+  (resultFileName, resultOrigPath, resultPathType) <-
+    runTestIO $ Utils.getPathInfo trashHome slashPath
+
+  MkPathI [osp|duplicate (1)|] @=? resultFileName
+  PathTypeFile @=? resultPathType ^. #unPathTypeW
+
+  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+
+  let errMsg =
+        mconcat
+          [ "Expected '",
+            expectedOrigPathStr,
+            "' to be a suffix of '",
+            resultOrigPathStr,
+            ","
+          ]
+
+  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI [osp|/a/duplicate|]
-    expected =
-      ( MkPathI [osp|duplicate (1)|],
-        MkPathI [osp|/a/duplicate|],
-        MkPathTypeW PathTypeFile
-      )
+    slashPath = MkPathI $ pathSeparator </> [osp|a|] </> [osp|duplicate|]
+    expectedOrigPath = pathSeparator </> [osp|a|] </> [osp|duplicate|]
 
 newtype TestIO a = MkTestIO (IO a)
   deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
@@ -75,25 +107,51 @@ instance MonadLoggerNS TestIO where
 
 instance MonadPathReader TestIO where
   makeAbsolute = liftIO . makeAbsolute
-  doesPathExist p
-    | p == [osp|/home/trash/files/duplicate|] = pure True
-    | otherwise = liftIO $ doesPathExist p
+  doesPathExist path = do
+    pathStr <- decodeOsToFpThrowM path
+    e1Str <- decodeOsToFpThrowM expected
 
-  doesDirectoryExist p
-    | p == [osp|/some/path|] = pure True
-    | otherwise = liftIO $ doesDirectoryExist p
+    pure $ e1Str `L.isSuffixOf` pathStr
+    where
+      expected =
+        pathSeparator
+          </> [osp|home|]
+          </> [osp|trash|]
+          </> [osp|files|]
+          </> [osp|duplicate|]
 
-  doesFileExist p
-    | p == [osp|/a/duplicate|] = pure True
-    | otherwise = liftIO $ doesFileExist p
+  doesDirectoryExist path = do
+    pathStr <- decodeOsToFpThrowM path
+    expectedStr <- decodeOsToFpThrowM expected
+
+    pure $ expectedStr `L.isSuffixOf` pathStr
+    where
+      expected =
+        pathSeparator
+          </> [osp|some|]
+          </> [osp|path|]
+
+  doesFileExist path = do
+    pathStr <- decodeOsToFpThrowM path
+    expectedStr <- decodeOsToFpThrowM expected
+
+    pure $ expectedStr `L.isSuffixOf` pathStr
+    where
+      expected =
+        pathSeparator
+          </> [osp|a|]
+          </> [osp|duplicate|]
 
   pathIsSymbolicLink = liftIO . pathIsSymbolicLink
+
+pathSeparator :: OsPath
+pathSeparator = FS.Utils.unsafeEncodeFpToValidOs [FP.pathSeparator]
 
 runTestIO :: TestIO a -> IO a
 runTestIO (MkTestIO io) = io
 
 trashHome :: PathI TrashHome
-trashHome = MkPathI [osp|/home/trash|]
+trashHome = MkPathI $ pathSeparator </> [osp|home|] </> [osp|trash|]
 
 props :: TestTree
 props =
@@ -138,18 +196,20 @@ instance MonadPathReader RandIO where
   doesPathExist _ = liftIO getR2
 
 getR2 :: IO Bool
-getR2 = even <$> getMonotonicTimeNSec
+getR2 = do
+  x <- R.randomRIO @Int (1, 2)
+  pure $ even x
 
 getR3 :: IO Bool
-getR3 = (== 0) . (`mod` 3) <$> getMonotonicTimeNSec
+getR3 = do
+  x <- R.randomRIO @Int (1, 3)
+  pure $ x == 0 `mod` 3
 
 genPath :: Gen (PathI TrashEntryOriginalPath)
 genPath = MkPathI . FS.Utils.unsafeEncodeFpToOs <$> genString
 
 genString :: Gen String
 genString = Gen.string (Range.linear 1 100) genPathChar
-
--- FIXME: Need to exclude all illegal paths here, per throwIfIllegal
 
 genPathChar :: Gen Char
 genPathChar = Gen.filter goodChar Gen.unicode

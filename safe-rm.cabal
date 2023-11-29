@@ -181,6 +181,7 @@ test-suite unit
     , filepath
     , hedgehog              >=1.0.2    && <1.5
     , pretty-simple         >=4.0.0.0  && <4.2
+    , random                ^>=1.2.1.1
     , safe-rm
     , tasty                 >=1.1.0.3  && <1.5
     , tasty-golden          ^>=2.3.1.1
