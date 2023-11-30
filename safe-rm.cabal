@@ -3,7 +3,7 @@ name:               safe-rm
 version:            0.1
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC ==9.4.6 || ==9.6.2
+tested-with:        GHC ==9.4.7 || ==9.6.3
 copyright:          2022-2023 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com

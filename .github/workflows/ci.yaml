@@ -17,8 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         ghc:
-          - "9.4.6"
-          - "9.6.2"
+          - "9.4.7"
+          - "9.6.3"
         platform:
           - os: "macos-latest"
             set-env: "export"
