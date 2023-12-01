@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Provides internal utility functions
@@ -35,7 +36,10 @@ module SafeRm.Utils
     setRefIfJust,
     noBuffering,
     getPathSize,
+    getPathSizeIgnoreDirSize,
     getAllFiles,
+    localTimeToMillis,
+    getRandomTmpFile,
   )
 where
 
@@ -53,8 +57,12 @@ import Data.Text qualified as T
 import Data.Text.Internal (Text (Text))
 import Data.Text.Internal qualified as TI
 import Data.Text.Internal.Search qualified as TIS
+import Data.Time (LocalTime, UTCTime)
+import Data.Time qualified as Time
+import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
+import Effects.Time (MonadTime (getMonotonicTime))
 import PathSize
   ( PathSizeResult
       ( PathSizeFailure,
@@ -63,6 +71,7 @@ import PathSize
       ),
   )
 import PathSize qualified
+import PathSize.Data.Config qualified as PathSize.Config
 import SafeRm.Prelude
 import System.IO qualified as IO
 import Text.Printf (PrintfArg)
@@ -273,9 +282,38 @@ getPathSize ::
   ) =>
   OsPath ->
   m (Bytes B Natural)
-getPathSize path = do
+getPathSize = getPathSizeConfig PathSize.Config.defaultConfig
+
+getPathSizeIgnoreDirSize ::
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadTerminal m
+  ) =>
+  OsPath ->
+  m (Bytes B Natural)
+getPathSizeIgnoreDirSize = getPathSizeConfig config
+  where
+    config = set' #ignoreDirIntrinsicSize True PathSize.Config.defaultConfig
+
+getPathSizeConfig ::
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadTerminal m
+  ) =>
+  PathSize.Config ->
+  OsPath ->
+  m (Bytes B Natural)
+getPathSizeConfig config path = do
   fmap (MkBytes @B)
-    $ PathSize.pathSizeRecursive path
+    $ PathSize.pathSizeRecursiveConfig config path
     >>= \case
       PathSizeSuccess n -> pure n
       PathSizePartial errs n -> do
@@ -317,3 +355,36 @@ getAllFiles fp =
       listDirectory fp
         >>= fmap join
         . traverse (getAllFiles . (fp </>))
+
+localTimeToMillis :: LocalTime -> Integer
+localTimeToMillis = utcTimeToMillis . Time.localTimeToUTC Time.utc
+
+utcTimeToMillis :: UTCTime -> Integer
+utcTimeToMillis = (`div` 1_000) . utcTimeToMicros
+
+utcTimeToMicros :: UTCTime -> Integer
+utcTimeToMicros utc =
+  Time.diffTimeToPicoseconds (realToFrac diffTime) `div` 1_000_000
+  where
+    diffTime = Time.diffUTCTime utc epoch
+
+epoch :: UTCTime
+epoch = Time.Posix.posixSecondsToUTCTime 0
+
+getRandomTmpFile ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m,
+    MonadTime m
+  ) =>
+  OsPath ->
+  m OsPath
+getRandomTmpFile prefix = do
+  -- NOTE: [File name collisions]
+  --
+  -- Is getMonotonicTimeNSec less likely to have collisions than
+  -- getMonotonicTime? If so, consider switching. We can also add a random
+  -- number if we are feeling paranoid.
+  timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
+  tmpDir <- PR.getTemporaryDirectory
+  pure $ tmpDir </> prefix <> [osp|_|] <> timeStr

@@ -1,8 +1,14 @@
 -- | Provides the 'Serial' class.
 module SafeRm.Class.Serial
-  ( Serial (..),
+  ( -- * Class
+    Serial (..),
+
+    -- * Encoding
     encodeThrowM,
+
+    -- * Decoding
     decodeUnit,
+    decodeUnitThrowM,
   )
 where
 
@@ -31,11 +37,35 @@ class Serial a where
   decode :: DecodeExtra a -> ByteString -> Either String a
 
 -- | Encodes the value, throwing an exception for any failures.
-encodeThrowM :: (MonadThrow m, Serial a) => a -> m ByteString
+encodeThrowM :: (HasCallStack, MonadThrow m, Serial a) => a -> m ByteString
 encodeThrowM x = case encode x of
+  Left s -> throwString s
+  Right y -> pure y
+
+-- | Decodes the value, throwing an exception for any failures.
+decodeThrowM ::
+  ( HasCallStack,
+    Serial a,
+    MonadThrow m
+  ) =>
+  DecodeExtra a ->
+  ByteString ->
+  m a
+decodeThrowM extra bs = case decode extra bs of
   Left s -> throwString s
   Right y -> pure y
 
 -- | Convenience function for when decoding takes no extra data.
 decodeUnit :: (DecodeExtra a ~ (), Serial a) => ByteString -> Either String a
 decodeUnit = decode ()
+
+-- | Convenience function for when 'decodeThrowM' takes no extra data.
+decodeUnitThrowM ::
+  ( DecodeExtra a ~ (),
+    HasCallStack,
+    MonadThrow m,
+    Serial a
+  ) =>
+  ByteString ->
+  m a
+decodeUnitThrowM = decodeThrowM ()

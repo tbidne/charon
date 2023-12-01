@@ -77,12 +77,11 @@ tests =
                   PathData.size = afromInteger 5
                 },
           fromCorePathData = \pd ->
-            pure
-              $ Fdo.PathData.UnsafePathData
-                { Fdo.PathData.fileName = pd ^. #fileName,
-                  Fdo.PathData.originalPath = pd ^. #originalPath,
-                  Fdo.PathData.created = pd ^. #created
-                }
+            Fdo.PathData.UnsafePathData
+              { Fdo.PathData.fileName = pd ^. #fileName,
+                Fdo.PathData.originalPath = pd ^. #originalPath,
+                Fdo.PathData.created = pd ^. #created
+              }
         }
 
     backendJson :: BackendArgs PathDataT Json.PathData.PathData

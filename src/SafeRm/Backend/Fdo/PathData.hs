@@ -135,14 +135,11 @@ toCorePathData trashHome pd = do
     MkPathI path = Trash.getTrashPath trashHome (pd ^. #fileName)
 
 fromCorePathData ::
-  ( Monad m
-  ) =>
   PathData.PathData ->
-  m PathData
+  PathData
 fromCorePathData pd =
-  pure
-    $ UnsafePathData
-      { fileName = pd ^. #fileName,
-        originalPath = pd ^. #originalPath,
-        created = pd ^. #created
-      }
+  UnsafePathData
+    { fileName = pd ^. #fileName,
+      originalPath = pd ^. #originalPath,
+      created = pd ^. #created
+    }

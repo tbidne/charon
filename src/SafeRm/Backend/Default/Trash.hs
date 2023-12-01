@@ -10,6 +10,7 @@ module SafeRm.Backend.Default.Trash
 
     -- * Main actions
     mvOriginalToTrash,
+    mvOriginalToTrash_,
     restoreTrashToOriginal,
     permDeleteFromTrash,
 
@@ -46,6 +47,7 @@ import SafeRm.Backend.Default.Utils qualified as Default.Utils
 import SafeRm.Class.Serial (Serial (DecodeExtra, decode), encodeThrowM)
 import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData.Core
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.PathType qualified as PathType
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
@@ -144,7 +146,7 @@ doesTrashExist = do
             $ MkTrashDirFilesNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
-mvOriginalToTrash ::
+mvOriginalToTrash_ ::
   ( HasBackend env,
     HasCallStack,
     Is k A_Getter,
@@ -163,6 +165,30 @@ mvOriginalToTrash ::
   Timestamp ->
   PathI TrashEntryOriginalPath ->
   m ()
+mvOriginalToTrash_ backendArgs th ts =
+  void . mvOriginalToTrash backendArgs th ts
+
+-- | Moves the 'PathData'\'s @originalPath@ to the trash. Returns the
+-- created pd.
+mvOriginalToTrash ::
+  ( HasBackend env,
+    HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    MonadCatch m,
+    MonadFileWriter m,
+    MonadLoggerNS m,
+    MonadPathWriter m,
+    MonadReader env m,
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs m pd ->
+  PathI TrashHome ->
+  Timestamp ->
+  PathI TrashEntryOriginalPath ->
+  m (pd, PathTypeW)
 mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
   backend <- asks getBackend
   (pd, pathType) <- (backendArgs ^. #toPd) currTime trashHome path
@@ -191,10 +217,13 @@ mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginal
 
   $(logDebug) ("Moved to trash: " <> showt pd)
 
+  pure (pd, pathType)
+
 -- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
 -- In this case, the error has already been reported, so this is purely for
 -- signaling (i.e. should we exit with an error).
 permDeleteFromTrash ::
+  forall m env pd k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasBackend env,
     HasCallStack,
@@ -213,16 +242,18 @@ permDeleteFromTrash ::
     Serial pd
   ) =>
   BackendArgs m pd ->
+  (PathData -> m ()) ->
   Bool ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (Maybe SomeException)
-permDeleteFromTrash backendArgs force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
+permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   pathDatas <- findPathData backendArgs trashHome pathName
   backend <- asks getBackend
 
   anyExRef <- newIORef Nothing
-  let deleteFn pathData = do
+  let deleteFn :: PathData -> m ()
+      deleteFn pathData = do
         $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
         if force
           then -- NOTE: Technically don't need the pathdata if force is on, since we have
@@ -250,19 +281,24 @@ permDeleteFromTrash backendArgs force trashHome pathName = addNamespace "permDel
               | c == 'n' -> putStrLn "\n"
               | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
+      handleEx pathData ex = do
+        writeIORef anyExRef (Just ex)
+        $(logWarn) (T.pack $ displayNoCS ex)
+        putStrLn
+          $ mconcat
+            [ "Error deleting path ",
+              show $ pathData ^. (#fileName % #unPathI),
+              ": ",
+              displayNoCS ex
+            ]
+
   -- Need our own error handling here since if we are deleting multiple
   -- wildcard matches we want success/failure to be independent.
   for_ pathDatas $ \pathData ->
-    deleteFn pathData `catchAnyCS` \ex -> do
-      writeIORef anyExRef (Just ex)
-      $(logWarn) (T.pack $ displayNoCS ex)
-      putStrLn
-        $ mconcat
-          [ "Error deleting path ",
-            show $ pathData ^. (#fileName % #unPathI),
-            ": ",
-            displayNoCS ex
-          ]
+    tryAnyCS (deleteFn pathData) >>= \case
+      Left ex -> handleEx pathData ex
+      Right _ -> postHook pathData
+
   readIORef anyExRef
   where
     deleteFn' b pd = do
@@ -293,10 +329,11 @@ restoreTrashToOriginal ::
     Serial pd
   ) =>
   BackendArgs m pd ->
+  (PathData -> m ()) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   m (Maybe SomeException)
-restoreTrashToOriginal backendArgs trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
+restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
   pathDatas <- findPathData backendArgs trashHome pathName
   backend <- asks getBackend
@@ -317,19 +354,24 @@ restoreTrashToOriginal backendArgs trashHome pathName = addNamespace "restoreTra
         let pathType = pd ^. #pathType
         restoreFn' backend pathType pd
 
+      handleEx pathData ex = do
+        writeIORef someExRef (Just ex)
+        $(logWarn) (T.pack $ displayNoCS ex)
+        putStrLn
+          $ mconcat
+            [ "Error restoring path ",
+              show $ pathData ^. (#fileName % #unPathI),
+              ": ",
+              displayNoCS ex
+            ]
+
   -- Need our own error handling here since if we are restoring multiple
   -- wildcard matches we want success/failure to be independent.
-  for_ pathDatas $ \pd ->
-    restoreFn pd `catchAnyCS` \ex -> do
-      writeIORef someExRef (Just ex)
-      $(logWarn) (T.pack $ displayNoCS ex)
-      putStrLn
-        $ mconcat
-          [ "Error restoring path ",
-            show $ pd ^. (#fileName % #unPathI),
-            ": ",
-            displayNoCS ex
-          ]
+  for_ pathDatas $ \pathData ->
+    tryAnyCS (restoreFn pathData) >>= \case
+      Left ex -> handleEx pathData ex
+      Right _ -> postHook pathData
+
   readIORef someExRef
   where
     restoreFn' b pt pd = do
@@ -482,8 +524,6 @@ mergeTrashDirs ::
   PathI TrashHome ->
   m ()
 mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
-  -- FIXME: This should perform a backend check to make sure
-  -- they are the same.
   WDir.copyDirectoryRecursiveConfig config src dest
   $(logDebug) "Merge successful"
   where

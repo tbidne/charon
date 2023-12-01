@@ -62,6 +62,7 @@ library
     SafeRm.Backend.Default.Utils
     SafeRm.Backend.Fdo
     SafeRm.Backend.Fdo.BackendArgs
+    SafeRm.Backend.Fdo.DirectorySizes
     SafeRm.Backend.Fdo.PathData
     SafeRm.Backend.Json
     SafeRm.Backend.Json.BackendArgs

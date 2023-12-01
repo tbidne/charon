@@ -22,9 +22,7 @@ module SafeRm
 where
 
 import Data.Text qualified as T
-import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter qualified as PW
-import Effects.Time (MonadTime (getMonotonicTime))
 import SafeRm.Backend.Cbor qualified as Cbor
 import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo, BackendJson))
 import SafeRm.Backend.Data qualified as Backend.Data
@@ -40,8 +38,12 @@ import SafeRm.Data.Paths qualified as Paths
 import SafeRm.Data.UniqueSeq (UniqueSeq)
 import SafeRm.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import SafeRm.Prelude
+import SafeRm.Utils qualified as Utils
 
 -- TODO: We should really make it detect the backend, if not given.
+-- Probably need functions like
+--   - isCbor, isFdo, isJson...
+--   - getBackend :: PathI TrashHome -> m Backend (used in merge)
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -56,6 +58,7 @@ delete ::
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
+    MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
     MonadLoggerNS m,
@@ -84,6 +87,7 @@ permDelete ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
+    MonadFileWriter m,
     MonadHandleWriter m,
     MonadIORef m,
     MonadPathReader m,
@@ -91,7 +95,8 @@ permDelete ::
     MonadPosixCompat m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadTime m
   ) =>
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
@@ -160,13 +165,15 @@ restore ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
+    MonadFileWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixCompat m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadTime m
   ) =>
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
@@ -247,15 +254,9 @@ convert dest = addNamespace "convert" $ do
 
       $(logDebug) ("Rosetta: " <> showt rosetta)
 
-      -- If we are really paranoid we could either add a random string or
-      -- detect duplicates.
-      timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
+      newTrashTmpRaw <- Utils.getRandomTmpFile [osp|tmp_trash_new|]
 
-      -- 2. Make new tmp trash
-      tmpDir <- PR.getTemporaryDirectory
-      let newTrashTmpRaw = tmpDir </> [osp|tmp_trash_new_|] <> timeStr
-
-          newTrashTmp :: PathI TrashHome
+      let newTrashTmp :: PathI TrashHome
           newTrashTmp = MkPathI newTrashTmpRaw
 
       fromRosettaFn newTrashTmp rosetta
@@ -265,7 +266,7 @@ convert dest = addNamespace "convert" $ do
           throwM ex
 
       -- 3. Back up old trash
-      let oldTrashTmpRaw = tmpDir </> [osp|tmp_trash_old_|] <> timeStr
+      oldTrashTmpRaw <- Utils.getRandomTmpFile [osp|tmp_trash_old|]
 
       renameDirectory trashHome' oldTrashTmpRaw
         `catchAny` \ex -> do
@@ -308,19 +309,46 @@ merge ::
     HasCallStack,
     HasTrashHome env,
     MonadFileReader m,
+    MonadFileWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadTime m
   ) =>
   PathI TrashHome ->
   m ()
-merge dest =
-  asks getBackend
-    >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.merge dest
-      BackendFdo -> addNamespace "fdo" $ Fdo.merge dest
-      BackendJson -> addNamespace "json" $ Json.merge dest
+merge dest = do
+  src <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> Paths.toText src)
+
+  src' <- Paths.liftPathIF' canonicalizePath src
+  dest' <- Paths.liftPathIF' canonicalizePath dest
+
+  $(logDebug) ("Merging into: " <> Paths.toText dest')
+
+  if src' == dest'
+    then do
+      let msg =
+            mconcat
+              [ "Source path ",
+                decodeOsToFpDisplayEx $ src' ^. #unPathI,
+                " is the same as dest path ",
+                decodeOsToFpDisplayEx $ dest' ^. #unPathI,
+                ". Nothing to do."
+              ]
+      $(logDebug) $ T.pack msg
+      putStrLn msg
+    else do
+      $(logDebug) $ "Dest path: " <> Paths.toText dest
+      backend <- asks getBackend
+
+      -- FIXME: This should perform a backend check to make sure
+      -- they are the same.
+      case backend of
+        BackendCbor -> addNamespace "cbor" $ Cbor.merge src' dest'
+        BackendFdo -> addNamespace "fdo" $ Fdo.merge src' dest'
+        BackendJson -> addNamespace "json" $ Json.merge src' dest'

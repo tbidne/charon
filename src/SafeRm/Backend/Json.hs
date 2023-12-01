@@ -185,16 +185,14 @@ emptyTrash = Default.emptyTrash backendArgs
 
 merge ::
   ( HasCallStack,
-    HasTrashHome env,
     MonadFileReader m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadMask m,
     MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+    MonadPathWriter m
   ) =>
+  PathI TrashHome ->
   PathI TrashHome ->
   m ()
 merge = Default.merge

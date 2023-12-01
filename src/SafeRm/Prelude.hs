@@ -211,7 +211,7 @@ import GHC.Generics as X (Generic)
 import GHC.Integer as X (Integer)
 import GHC.Natural as X (Natural)
 import GHC.Num as X (Num ((*), (+), (-)))
-import GHC.Real as X (even, fromIntegral)
+import GHC.Real as X (Integral (div), even, fromIntegral, realToFrac)
 import GHC.Stack as X
   ( CallStack,
     HasCallStack,

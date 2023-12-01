@@ -12,11 +12,14 @@
 module SafeRm.Backend.Default
   ( -- * Delete
     delete,
+    deletePostHook,
     permDelete,
+    permDeletePostHook,
     emptyTrash,
 
     -- * Restore
     restore,
+    restorePostHook,
 
     -- * Information
     lookupTrashName,
@@ -35,7 +38,6 @@ import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
-import GHC.Real (Integral)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
 import Numeric.Algebra.Additive.ASemigroup (ASemigroup ((.+.)))
 import Numeric.Literal.Rational (FromRational (afromRational))
@@ -48,7 +50,9 @@ import SafeRm.Data.Index (Index)
 import SafeRm.Data.Index qualified as Index
 import SafeRm.Data.Metadata (Metadata (MkMetadata))
 import SafeRm.Data.Metadata qualified as Metadata
+import SafeRm.Data.PathData (PathData)
 import SafeRm.Data.PathData qualified as PathData.Core
+import SafeRm.Data.PathType (PathTypeW)
 import SafeRm.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -94,7 +98,34 @@ delete ::
   BackendArgs m pd ->
   UniqueSeq (PathI TrashEntryOriginalPath) ->
   m ()
-delete backendArgs paths = addNamespace "delete" $ do
+delete backendArgs = deletePostHook backendArgs (const $ pure ())
+
+-- | 'delete' that takes a callback that runs on the created path data, assuming
+-- the delete succeeded.
+deletePostHook ::
+  forall m env pd k.
+  ( HasBackend env,
+    HasCallStack,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    HasTrashHome env,
+    MonadCatch m,
+    MonadFileWriter m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadPathWriter m,
+    MonadReader env m,
+    MonadTerminal m,
+    MonadTime m,
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs m pd ->
+  ((pd, PathTypeW) -> m ()) ->
+  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  m ()
+deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
@@ -103,19 +134,24 @@ delete backendArgs paths = addNamespace "delete" $ do
   someExRef <- newIORef Nothing
   currTime <- MkTimestamp <$> getSystemTime
 
-  -- move paths to trash
-  addNamespace "deleting" $ for_ paths $ \fp ->
-    Trash.mvOriginalToTrash backendArgs trashHome currTime fp
-      `catchAnyCS` \ex -> do
+  let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
+
+      handleEx p ex = do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn
           $ mconcat
             [ "Error deleting path '",
-              decodeOsToFpDisplayEx $ fp ^. #unPathI,
+              decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
               displayNoCS ex
             ]
         writeIORef someExRef (Just ex)
+
+  -- move paths to trash
+  for_ paths $ \p -> do
+    tryAnyCS (deleteAction p) >>= \case
+      Left ex -> handleEx p ex
+      Right pd -> postHook pd
 
   Utils.throwIfEx someExRef
 
@@ -144,7 +180,35 @@ permDelete ::
   Bool ->
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
-permDelete backendArgs force paths = addNamespace "permDelete" $ do
+permDelete backendArgs = permDeletePostHook backendArgs (const $ pure ())
+
+-- | Permanently deletes the paths from the trash.
+permDeletePostHook ::
+  forall m env pd k.
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
+    HasCallStack,
+    HasTrashHome env,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadAsync m,
+    MonadCatch m,
+    MonadFileReader m,
+    MonadHandleWriter m,
+    MonadIORef m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadLoggerNS m,
+    MonadReader env m,
+    MonadTerminal m,
+    Serial pd
+  ) =>
+  BackendArgs m pd ->
+  (PathData -> m ()) ->
+  Bool ->
+  UniqueSeq (PathI TrashEntryFileName) ->
+  m ()
+permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePostHook" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
@@ -153,7 +217,7 @@ permDelete backendArgs force paths = addNamespace "permDelete" $ do
   -- permanently delete paths
   addNamespace "deleting" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.permDeleteFromTrash backendArgs force trashHome p >>= Utils.setRefIfJust someExRef)
+    (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn
@@ -293,7 +357,33 @@ restore ::
   BackendArgs m pd ->
   UniqueSeq (PathI TrashEntryFileName) ->
   m ()
-restore backendArgs paths = addNamespace "restore" $ do
+restore backendArgs = restorePostHook backendArgs (const $ pure ())
+
+-- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
+-- location.
+restorePostHook ::
+  forall m env pd k.
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasBackend env,
+    HasCallStack,
+    HasTrashHome env,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadCatch m,
+    MonadFileReader m,
+    MonadIORef m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadReader env m,
+    MonadTerminal m,
+    Serial pd
+  ) =>
+  BackendArgs m pd ->
+  (PathData -> m ()) ->
+  UniqueSeq (PathI TrashEntryFileName) ->
+  m ()
+restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
   trashHome <- asks getTrashHome
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
@@ -302,7 +392,7 @@ restore backendArgs paths = addNamespace "restore" $ do
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.restoreTrashToOriginal backendArgs trashHome p >>= Utils.setRefIfJust someExRef)
+    (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
         $(logWarn) (T.pack $ displayNoCS ex)
         putStrLn
@@ -371,40 +461,17 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
 
 merge ::
   ( HasCallStack,
-    HasTrashHome env,
     MonadFileReader m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadMask m,
     MonadPathReader m,
-    MonadPathWriter m,
-    MonadReader env m,
-    MonadTerminal m
+    MonadPathWriter m
   ) =>
   PathI TrashHome ->
+  PathI TrashHome ->
   m ()
-merge dest = addNamespace "merge" $ do
-  src <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText src)
-
-  src' <- Paths.liftPathIF' canonicalizePath src
-  dest' <- Paths.liftPathIF' canonicalizePath dest
-
-  if src' == dest'
-    then do
-      let msg =
-            mconcat
-              [ "Source path ",
-                decodeOsToFpDisplayEx $ src' ^. #unPathI,
-                " is the same as dest path ",
-                decodeOsToFpDisplayEx $ dest' ^. #unPathI,
-                ". Nothing to do."
-              ]
-      $(logDebug) $ T.pack msg
-      putStrLn msg
-    else do
-      $(logDebug) $ "Dest path: " <> Paths.toText dest
-      Trash.mergeTrashDirs src dest
+merge src dest = addNamespace "merge" $ Trash.mergeTrashDirs src dest
 
 type PathDataCore = PathData.Core.PathData
 

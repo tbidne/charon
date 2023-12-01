@@ -21,7 +21,7 @@ data BackendArgs m pd = MkBackendArgs
       PathI TrashEntryOriginalPath ->
       m (pd, PathTypeW),
     toCorePathData :: PathI TrashHome -> pd -> m PathData,
-    fromCorePathData :: PathData -> m pd
+    fromCorePathData :: PathData -> pd
   }
 
 makeFieldLabelsNoPrefix ''BackendArgs

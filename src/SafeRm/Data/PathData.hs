@@ -9,10 +9,12 @@ module SafeRm.Data.PathData
     PathData (..),
     headerNames,
     originalPathExists,
+    isDirectory,
   )
 where
 
 import Data.Text qualified as T
+import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 import SafeRm.Data.PathType (PathTypeW)
@@ -75,3 +77,6 @@ originalPathExists ::
   m Bool
 originalPathExists pd =
   PathType.existsFn (pd ^. #pathType) (pd ^. (#originalPath % #unPathI))
+
+isDirectory :: PathData -> Bool
+isDirectory = is (#pathType % #unPathTypeW % _PathTypeDirectory)

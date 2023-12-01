@@ -30,5 +30,5 @@ backendArgs =
     { backend = BackendJson,
       toPd = Json.PathData.toPathData,
       toCorePathData = const (pure . Json.PathData.toCorePathData),
-      fromCorePathData = pure . Json.PathData.fromCorePathData
+      fromCorePathData = Json.PathData.fromCorePathData
     }
