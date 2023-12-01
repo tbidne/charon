@@ -8,6 +8,33 @@ module Unit.Backend.Default.Trash
   )
 where
 
+import Charon.Backend.Cbor.BackendArgs qualified as Cbor.BackendArgs
+import Charon.Backend.Cbor.PathData qualified as Cbor.PathData
+import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Backend.Data qualified as Backend
+import Charon.Backend.Default.BackendArgs
+  ( BackendArgs
+      ( MkBackendArgs,
+        backend,
+        fromCorePathData,
+        toCorePathData,
+        toPd
+      ),
+  )
+import Charon.Backend.Default.Trash qualified as Trash
+import Charon.Backend.Fdo.PathData qualified as Fdo.PathData
+import Charon.Backend.Json.BackendArgs qualified as Json.BackendArgs
+import Charon.Backend.Json.PathData qualified as Json.PathData
+import Charon.Class.Serial (Serial)
+import Charon.Data.PathData qualified as PathData
+import Charon.Data.PathType (PathTypeW (MkPathTypeW))
+import Charon.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
+  )
+import Charon.Data.Timestamp (Timestamp, fromText)
+import Charon.Env (HasBackend)
+import Charon.Exception (DotsPathE, EmptyPathE, RootE)
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
@@ -19,33 +46,6 @@ import Effects.LoggerNS
   )
 import Effects.LoggerNS qualified as Logger
 import Numeric.Literal.Integer (FromInteger (afromInteger))
-import SafeRm.Backend.Cbor.BackendArgs qualified as Cbor.BackendArgs
-import SafeRm.Backend.Cbor.PathData qualified as Cbor.PathData
-import SafeRm.Backend.Data (Backend (BackendCbor))
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Backend.Default.BackendArgs
-  ( BackendArgs
-      ( MkBackendArgs,
-        backend,
-        fromCorePathData,
-        toCorePathData,
-        toPd
-      ),
-  )
-import SafeRm.Backend.Default.Trash qualified as Trash
-import SafeRm.Backend.Fdo.PathData qualified as Fdo.PathData
-import SafeRm.Backend.Json.BackendArgs qualified as Json.BackendArgs
-import SafeRm.Backend.Json.PathData qualified as Json.PathData
-import SafeRm.Class.Serial (Serial)
-import SafeRm.Data.PathData qualified as PathData
-import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
-import SafeRm.Data.Paths
-  ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
-  )
-import SafeRm.Data.Timestamp (Timestamp, fromText)
-import SafeRm.Env (HasBackend)
-import SafeRm.Exception (DotsPathE, EmptyPathE, RootE)
 import System.OsPath (encodeUtf)
 import System.OsPath qualified as FP
 import Unit.Prelude

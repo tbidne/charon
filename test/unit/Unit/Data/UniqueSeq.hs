@@ -4,14 +4,14 @@ module Unit.Data.UniqueSeq
   )
 where
 
+import Charon.Data.UniqueSeq (UniqueSeq (MkUniqueSeq))
+import Charon.Data.UniqueSeq qualified as USeq
 import Data.HashSet qualified as HSet
 import Data.Sequence (Seq (Empty))
 import GHC.Exts (IsList (fromList, toList))
 import Hedgehog (PropertyT)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Data.UniqueSeq (UniqueSeq (MkUniqueSeq))
-import SafeRm.Data.UniqueSeq qualified as USeq
 import Unit.Prelude
 
 tests :: TestTree

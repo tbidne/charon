@@ -4,7 +4,7 @@ module Benchmarks.Prelude
   )
 where
 
-import SafeRm.Prelude as X
+import Charon.Prelude as X
 import Test.Tasty.Bench as X
   ( Benchmark,
     bench,

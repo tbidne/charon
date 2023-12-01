@@ -6,10 +6,10 @@ module Functional.Commands.Empty
   )
 where
 
+import Charon.Backend.Default.Utils qualified as Default.Utils
+import Charon.Data.Metadata qualified as Metadata
 import Data.HashSet qualified as HashSet
 import Functional.Prelude
-import SafeRm.Backend.Default.Utils qualified as Default.Utils
-import SafeRm.Data.Metadata qualified as Metadata
 
 -- NOTE: These tests currently rely on internal details for the trash
 -- structure (see the usage of Default.Utils). If we ever get a non-compliant
@@ -51,7 +51,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     assertPathsExist (filesToDelete ++ dirsToDelete)
     assertSymlinksExist linksToDelete
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -78,7 +78,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     -- EMPTY
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
-    runSafeRm emptyArgList
+    runCharon emptyArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -100,8 +100,8 @@ emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "emptyTrashTwice" $ do
     emptyArgs <- withSrArgsM ["empty", "-f"]
-    runSafeRm emptyArgs
-    runSafeRm emptyArgs
+    runCharon emptyArgs
+    runCharon emptyArgs
 
 emptyNoForce :: IO TestEnv -> TestTree
 emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
@@ -118,7 +118,7 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     createFiles fileDeletePaths
     assertPathsExist fileDeletePaths
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist fileDeletePaths
@@ -140,7 +140,7 @@ emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
     -- EMPTY
 
     emptyArgList <- withSrArgsM ["empty"]
-    runSafeRm emptyArgList
+    runCharon emptyArgList
 
     -- trash structure assertions
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
@@ -168,7 +168,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     -- delete files
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -191,7 +191,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     clearDirectory (trashDir </> Default.Utils.pathInfo)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
-    runSafeRm emptyArgList
+    runCharon emptyArgList
 
     assertPathsExist $ fmap (trashDir </>) [Default.Utils.pathInfo, Default.Utils.pathFiles]
 
@@ -225,7 +225,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
     -- delete files
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -248,7 +248,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     clearDirectory (trashDir </> Default.Utils.pathFiles)
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
-    runSafeRm emptyArgList
+    runCharon emptyArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)

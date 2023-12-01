@@ -1,6 +1,6 @@
 packages: .
 
-package safe-rm
+package charon
   ghc-options:
     -Wall -Wcompat -Werror
     -Widentities

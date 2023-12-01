@@ -42,7 +42,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
     assertPathsExist (filesToDelete ++ dirsToDelete)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -69,7 +69,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     -- METADATA
 
     metaArgList <- withSrArgsM ["metadata"]
-    (metadataResult, _) <- captureSafeRmLogs metaArgList
+    (metadataResult, _) <- captureCharonLogs metaArgList
 
     -- assert nothing changed
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -112,7 +112,7 @@ empty getTestEnv = testCase "Prints empty metadata" $ do
     createFiles [trashDir </>! "log"]
 
     metaArgList <- withSrArgsM ["metadata"]
-    (result, _) <- captureSafeRmLogs metaArgList
+    (result, _) <- captureCharonLogs metaArgList
 
     assertMatches expectedTerminal result
   where

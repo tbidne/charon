@@ -9,6 +9,19 @@ module Unit.Data.Index
   )
 where
 
+import Charon.Backend.Data (Backend)
+import Charon.Backend.Data qualified as Backend
+import Charon.Data.Index (Index (MkIndex), Sort (Name, Size))
+import Charon.Data.Index qualified as Index
+import Charon.Data.PathData (PathData (UnsafePathData))
+import Charon.Data.PathData.Formatting
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    PathDataFormat (FormatMultiline, FormatTabular),
+  )
+import Charon.Data.PathType (PathTypeW (MkPathTypeW))
+import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import Charon.Data.Timestamp (Timestamp, fromText)
+import Charon.Env (HasTrashHome (getTrashHome))
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
@@ -18,19 +31,6 @@ import Effects.System.Terminal
     Window (Window, height, width),
   )
 import Numeric.Literal.Integer (FromInteger (afromInteger))
-import SafeRm.Backend.Data (Backend)
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Data.Index (Index (MkIndex), Sort (Name, Size))
-import SafeRm.Data.Index qualified as Index
-import SafeRm.Data.PathData (PathData (UnsafePathData))
-import SafeRm.Data.PathData.Formatting
-  ( ColFormat (ColFormatFixed, ColFormatMax),
-    PathDataFormat (FormatMultiline, FormatTabular),
-  )
-import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import SafeRm.Data.Timestamp (Timestamp, fromText)
-import SafeRm.Env (HasTrashHome (getTrashHome))
 import System.OsPath qualified as FP
 import Unit.Prelude
 

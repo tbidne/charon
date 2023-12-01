@@ -6,11 +6,11 @@ module Integration.Commands.Delete
   )
 where
 
+import Charon.Backend.Data (Backend)
+import Charon.Backend.Data qualified as Backend
+import Charon.Exception (RootE)
 import Data.Text qualified as T
 import Integration.Prelude
-import SafeRm.Backend.Data (Backend)
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Exception (RootE)
 
 tests :: TestTree
 tests =
@@ -39,7 +39,7 @@ testRoot b =
 
 deletesRootError :: Backend -> String -> TestTree
 deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
-  (ex, terminal, deletedPaths) <- captureSafeRmIntExceptionPure @RootE argList
+  (ex, terminal, deletedPaths) <- captureCharonIntExceptionPure @RootE argList
 
   "Attempted to delete root! This is not allowed." @=? ex
   assertMatch expected (T.strip terminal)

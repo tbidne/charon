@@ -15,21 +15,21 @@ module Functional.Prelude.FuncEnv
     -- * HUnit
     (@=?),
 
-    -- * Running SafeRm
+    -- * Running Charon
     TestM,
     TestEnv (..),
 
     -- ** Runners
-    runSafeRm,
-    runSafeRmException,
+    runCharon,
+    runCharonException,
     runIndexMetadataM,
     runIndexMetadataTestDirM,
 
     -- *** Data capture
-    captureSafeRm,
-    captureSafeRmLogs,
-    captureSafeRmException,
-    captureSafeRmExceptionLogs,
+    captureCharon,
+    captureCharonLogs,
+    captureCharonException,
+    captureCharonExceptionLogs,
 
     -- * Misc
     mkPathDataSetM,
@@ -42,6 +42,30 @@ module Functional.Prelude.FuncEnv
   )
 where
 
+import Charon qualified
+import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
+import Charon.Backend.Data qualified as Backend
+import Charon.Backend.Fdo.DirectorySizes (DirectorySizes (MkDirectorySizes))
+import Charon.Backend.Fdo.DirectorySizes qualified as DirectorySizes
+import Charon.Data.Metadata (Metadata)
+import Charon.Data.PathData
+  ( PathData
+      ( UnsafePathData,
+        created,
+        fileName,
+        originalPath,
+        pathType,
+        size
+      ),
+  )
+import Charon.Data.PathType (PathTypeW (MkPathTypeW))
+import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import Charon.Data.Timestamp (Timestamp (MkTimestamp))
+import Charon.Env (HasBackend, HasTrashHome)
+import Charon.Prelude
+import Charon.Runner qualified as Runner
+import Charon.Runner.Toml (TomlConfig)
+import Charon.Utils qualified as Utils
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Text qualified as T
@@ -64,30 +88,6 @@ import Effects.Time
   )
 import GHC.Exts (IsList (toList))
 import Numeric.Literal.Integer (FromInteger (afromInteger))
-import SafeRm qualified
-import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo))
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Backend.Fdo.DirectorySizes (DirectorySizes (MkDirectorySizes))
-import SafeRm.Backend.Fdo.DirectorySizes qualified as DirectorySizes
-import SafeRm.Data.Metadata (Metadata)
-import SafeRm.Data.PathData
-  ( PathData
-      ( UnsafePathData,
-        created,
-        fileName,
-        originalPath,
-        pathType,
-        size
-      ),
-  )
-import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
-import SafeRm.Env (HasBackend, HasTrashHome)
-import SafeRm.Prelude
-import SafeRm.Runner qualified as Runner
-import SafeRm.Runner.Toml (TomlConfig)
-import SafeRm.Utils qualified as Utils
 import System.Environment qualified as SysEnv
 import System.Exit (die)
 import Test.Tasty.HUnit (assertBool)
@@ -203,7 +203,7 @@ instance
   getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
-  -- the real state (~/.local/state/safe-rm) and instead use our testing
+  -- the real state (~/.local/state/charon) and instead use our testing
   -- trash dir
   getXdgDirectory XdgState _ = do
     MkPathI th <- asks (view #trashHome)
@@ -304,21 +304,21 @@ mkFuncEnv toml logsRef terminalRef = do
       Nothing -> die "Setup error, no trash home on config"
       Just th -> pure th
 
--- | Runs safe-rm.
-runSafeRm :: (MonadIO m) => [String] -> m ()
-runSafeRm = void . captureSafeRm
+-- | Runs charon.
+runCharon :: (MonadIO m) => [String] -> m ()
+runCharon = void . captureCharon
 
--- | Runs safe-rm and captures terminal output.
-captureSafeRm :: (MonadIO m) => [String] -> m [Text]
-captureSafeRm = fmap (view _1) . captureSafeRmLogs
+-- | Runs charon and captures terminal output.
+captureCharon :: (MonadIO m) => [String] -> m [Text]
+captureCharon = fmap (view _1) . captureCharonLogs
 
--- | Runs safe-rm and captures (terminal output, logs).
-captureSafeRmLogs ::
+-- | Runs charon and captures (terminal output, logs).
+captureCharonLogs ::
   (MonadIO m) =>
   -- Args.
   [String] ->
   m ([Text], [Text])
-captureSafeRmLogs argList = liftIO $ do
+captureCharonLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -342,27 +342,27 @@ captureSafeRmLogs argList = liftIO $ do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
--- | Runs SafeRm, catching the expected exception.
-runSafeRmException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
-runSafeRmException = void . captureSafeRmExceptionLogs @e
+-- | Runs Charon, catching the expected exception.
+runCharonException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
+runCharonException = void . captureCharonExceptionLogs @e
 
--- | Runs safe-rm and captures a thrown exception and logs.
-captureSafeRmException ::
+-- | Runs charon and captures a thrown exception and logs.
+captureCharonException ::
   forall e m.
   (Exception e, MonadIO m) =>
   -- Args.
   [String] ->
   m Text
-captureSafeRmException = fmap (view _1) . captureSafeRmExceptionLogs @e
+captureCharonException = fmap (view _1) . captureCharonExceptionLogs @e
 
--- | Runs safe-rm and captures a thrown exception and logs.
-captureSafeRmExceptionLogs ::
+-- | Runs charon and captures a thrown exception and logs.
+captureCharonExceptionLogs ::
   forall e m.
   (Exception e, MonadIO m) =>
   -- Args.
   [String] ->
   m (Text, [Text])
-captureSafeRmExceptionLogs argList = liftIO $ do
+captureCharonExceptionLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -375,7 +375,7 @@ captureSafeRmExceptionLogs argList = liftIO $ do
         case result of
           Right _ ->
             error
-              "captureSafeRmExceptionLogs: Expected exception, received none"
+              "captureCharonExceptionLogs: Expected exception, received none"
           Left ex -> do
             logs <- T.lines <$> readIORef logsRef
             pure (T.pack (displayException ex), logs)
@@ -393,14 +393,14 @@ captureSafeRmExceptionLogs argList = liftIO $ do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
--- | Runs SafeRm's Index and Metadata commands, using the TestEnv to determine
+-- | Runs Charon's Index and Metadata commands, using the TestEnv to determine
 -- the test directory.
 runIndexMetadataM :: TestM (HashSet PathData, Metadata)
 runIndexMetadataM = do
   testDir <- getTestDir
   runIndexMetadataTestDirM testDir
 
--- | Runs SafeRm's Index and Metadata commands with the given test directory.
+-- | Runs Charon's Index and Metadata commands with the given test directory.
 runIndexMetadataTestDirM :: OsPath -> TestM (HashSet PathData, Metadata)
 runIndexMetadataTestDirM testDir = do
   env <- ask
@@ -423,8 +423,8 @@ runIndexMetadataTestDirM testDir = do
   -- Need to canonicalize due to windows aliases
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
 
-  idx <- liftIO $ fmap (view _1) . view #unIndex <$> runFuncIO SafeRm.getIndex funcEnv
-  mdata <- liftIO $ runFuncIO SafeRm.getMetadata funcEnv
+  idx <- liftIO $ fmap (view _1) . view #unIndex <$> runFuncIO Charon.getIndex funcEnv
+  mdata <- liftIO $ runFuncIO Charon.getMetadata funcEnv
 
   pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
   where
@@ -547,7 +547,7 @@ mkPathDataSetM2 pathData = do
 --
 -- e.g.
 --
--- /tmp/safe-rm/functional/delete/deleteOne-fdo
+-- /tmp/charon/functional/delete/deleteOne-fdo
 getTestDir :: TestM OsPath
 getTestDir = do
   env <- ask

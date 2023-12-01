@@ -1,4 +1,4 @@
-# Revision history for safe-rm
+# Revision history for charon
 
 ## 0.1 -- YYYY-mm-dd
 

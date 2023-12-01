@@ -6,9 +6,9 @@ module Main (main) where
 import Effects.FileSystem.PathReader qualified as Dir
 import GHC.Conc (setUncaughtExceptionHandler)
 import Integration.AsciiOnly (AsciiOnly)
+import Integration.Charon qualified as Charon
 import Integration.Commands.Delete qualified as Delete
 import Integration.Prelude
-import Integration.SafeRm qualified as SafeRm
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as T
 import Test.Tasty.Options (OptionDescription (Option))
@@ -23,7 +23,7 @@ main = do
     $ \args ->
       testGroup
         "Integration Tests"
-        [ SafeRm.tests args,
+        [ Charon.tests args,
           testGroup
             "Root Tests"
             [ Delete.tests
@@ -36,7 +36,7 @@ main = do
 setup :: IO OsPath
 setup = do
   tmpDir <-
-    (\p -> p </> [osp|safe-rm|] </> [osp|integration|])
+    (\p -> p </> [osp|charon|] </> [osp|integration|])
       <$> Dir.getTemporaryDirectory
 
   clearDirectory tmpDir

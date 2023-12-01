@@ -1,5 +1,5 @@
 # Path to the trash home. Overridden by the CLI -t option. Defaults to
-# XDG data ~/.local/share/safe-rm
+# XDG data ~/.local/share/charon
 trash-home = "./tmp"
 
 # File log level. Can be one of none, error, warn, info, or debug.
@@ -12,6 +12,6 @@ log-level = "info"
 log-size-mode = "warn 10 mb"
 
 # Uses the FreeDesktop.org backend i.e. changes how the trash data is
-# represented to match the FDO spec. This can be used to integrate safe-rm
+# represented to match the FDO spec. This can be used to integrate charon
 # with an FDO-compliant trash implementation.
 backend = "fdo"

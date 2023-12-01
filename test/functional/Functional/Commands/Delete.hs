@@ -7,11 +7,11 @@ module Functional.Commands.Delete
   )
 where
 
+import Charon.Data.Metadata qualified as Metadata
+import Charon.Exception (DotsPathE, EmptyPathE)
 import Data.HashSet qualified as HashSet
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
-import SafeRm.Data.Metadata qualified as Metadata
-import SafeRm.Exception (DotsPathE, EmptyPathE)
 
 -- TODO: It would be nice if we could verify that the original location
 -- is correct. Recently a bug was fixed as directories were using relative
@@ -48,7 +48,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     assertPathsExist [f1]
     argList <- withSrArgsM ["delete", unsafeDecodeOsToFp f1]
 
-    liftIO $ runSafeRm argList
+    liftIO $ runCharon argList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -85,7 +85,7 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
     assertPathsExist (filesToDelete ++ dirsToDelete)
     assertSymlinksExist linksToDelete
 
-    liftIO $ runSafeRm argList
+    liftIO $ runCharon argList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -125,7 +125,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @IOException argList
+    (ex, _) <- liftIO $ captureCharonExceptionLogs @IOException argList
 
     assertMatch expectedEx ex
 
@@ -157,11 +157,11 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     -- create and delete twice
     createFiles [file]
     assertPathsExist [file]
-    runSafeRm argList
+    runCharon argList
 
     createFiles [file]
     assertPathsExist [file]
-    runSafeRm argList
+    runCharon argList
 
     -- file assertions
     assertPathsDoNotExist [file]
@@ -195,7 +195,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @IOException argList
+    (ex, _) <- liftIO $ captureCharonExceptionLogs @IOException argList
 
     assertMatch expectedEx ex
 
@@ -228,7 +228,7 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @EmptyPathE argList
+    (ex, _) <- liftIO $ captureCharonExceptionLogs @EmptyPathE argList
 
     assertMatch expectedEx ex
 
@@ -257,7 +257,7 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @DotsPathE argList
+    (ex, _) <- liftIO $ captureCharonExceptionLogs @DotsPathE argList
 
     assertMatch expectedEx ex
 
@@ -295,7 +295,7 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
     -- FIXME: The following paths were generated in the int tests and caused
     -- a failure on OSX. For some reason, OSX believes the below two paths are
     -- the same! That is, we first delete ώ (8061) and then attempt to delete
-    -- ώ (974), yet SafeRm.Backend.Default.Utils.mkUniqPath believes this path
+    -- ώ (974), yet Charon.Backend.Default.Utils.mkUniqPath believes this path
     -- already exists. Thus it creates
     --
     --   ώ (1)
@@ -336,7 +336,7 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
     createFiles files
     assertPathsExist files
 
-    liftIO $ runSafeRm argList
+    liftIO $ runCharon argList
 
     -- file assertions
     assertPathsDoNotExist files

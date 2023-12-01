@@ -8,16 +8,16 @@ module Benchmarks.ReadIndex
 where
 
 import Benchmarks.Prelude
-import Effects.FileSystem.Utils ((</>!))
-import SafeRm qualified
-import SafeRm.Backend.Data (Backend (BackendCbor))
-import SafeRm.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import SafeRm.Data.UniqueSeq qualified as UniqueSeq
-import SafeRm.Runner.Env
+import Charon qualified
+import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import Charon.Data.UniqueSeq qualified as UniqueSeq
+import Charon.Runner.CharonT (runCharonT)
+import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
   )
-import SafeRm.Runner.SafeRmT (runSafeRmT)
+import Effects.FileSystem.Utils ((</>!))
 
 -- | Index reading benchmarks.
 benchmarks :: OsPath -> Benchmark
@@ -54,7 +54,7 @@ setup testDir = do
 
       uniqueSeq <- readIORef uniqueSeqRef
       env <- mkEnv $ MkPathI trashDir
-      runSafeRmT (SafeRm.delete uniqueSeq) env
+      runCharonT (Charon.delete uniqueSeq) env
       where
         trashDir = dir </> [osp|.trash/|]
 
@@ -62,7 +62,7 @@ readIndex :: String -> PathI TrashHome -> Benchmark
 readIndex desc =
   bench desc
     . nfIO
-    . (runSafeRmT SafeRm.getIndex <=< mkEnv)
+    . (runCharonT Charon.getIndex <=< mkEnv)
 
 mkEnv :: PathI TrashHome -> IO (Env IO)
 mkEnv trashHome = do

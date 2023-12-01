@@ -10,6 +10,7 @@ module Unit.Prelude
   )
 where
 
+import Charon.Prelude as X
 import Hedgehog as X
   ( Gen,
     MonadGen,
@@ -25,7 +26,6 @@ import Hedgehog as X
     withTests,
     (===),
   )
-import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, askOption, testGroup)
 import Test.Tasty.Golden as X (goldenVsFile)
 import Test.Tasty.HUnit as X

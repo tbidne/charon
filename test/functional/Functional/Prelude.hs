@@ -9,23 +9,23 @@ module Functional.Prelude
     -- * Lifted HUnit
     (@=?),
 
-    -- * Running SafeRm
+    -- * Running Charon
 
     -- ** Test Environment
     TestM,
     TestEnv (..),
 
     -- ** Runners
-    FuncEnv.runSafeRm,
-    FuncEnv.runSafeRmException,
+    FuncEnv.runCharon,
+    FuncEnv.runCharonException,
     FuncEnv.runIndexMetadataM,
     FuncEnv.runIndexMetadataTestDirM,
 
     -- ** Data capture
-    FuncEnv.captureSafeRm,
-    FuncEnv.captureSafeRmLogs,
-    FuncEnv.captureSafeRmException,
-    FuncEnv.captureSafeRmExceptionLogs,
+    FuncEnv.captureCharon,
+    FuncEnv.captureCharonLogs,
+    FuncEnv.captureCharonException,
+    FuncEnv.captureCharonExceptionLogs,
 
     -- * Assertions
     assertPathsExist,
@@ -55,6 +55,18 @@ module Functional.Prelude
   )
 where
 
+import Charon.Backend.Data qualified as Backend
+import Charon.Data.Metadata
+  ( Metadata
+      ( MkMetadata,
+        logSize,
+        numEntries,
+        numFiles,
+        size
+      ),
+  )
+import Charon.Data.PathType as X (PathTypeW (MkPathTypeW))
+import Charon.Prelude as X
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
 import Effects.FileSystem.Utils
@@ -66,18 +78,6 @@ import Effects.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv, TestM, (@=?))
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
-import SafeRm.Backend.Data qualified as Backend
-import SafeRm.Data.Metadata
-  ( Metadata
-      ( MkMetadata,
-        logSize,
-        numEntries,
-        numFiles,
-        size
-      ),
-  )
-import SafeRm.Data.PathType as X (PathTypeW (MkPathTypeW))
-import SafeRm.Prelude as X
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
   ( assertBool,

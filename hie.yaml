@@ -1,28 +1,28 @@
 cradle:
   cabal:
     - path: "./src"
-      component: "lib:safe-rm"
+      component: "lib:charon"
 
     - path: "./lib/file-utils"
-      component: "safe-rm:lib:file-utils"
+      component: "charon:lib:file-utils"
 
     - path: "./app/Main.hs"
-      component: "safe-rm:exe:safe-rm"
+      component: "charon:exe:charon"
 
     - path: "./test/unit"
-      component: "safe-rm:test:unit"
+      component: "charon:test:unit"
 
     - path: "./test/integration"
-      component: "safe-rm:test:integration"
+      component: "charon:test:integration"
 
     - path: "./test/functional"
-      component: "safe-rm:test:functional"
+      component: "charon:test:functional"
 
     - path: "./benchmarks/Main.hs"
-      component: "safe-rm:bench:benchmarks"
+      component: "charon:bench:benchmarks"
 
     - path: "./benchmarks/Benchmarks/Prelude.hs"
-      component: "safe-rm:bench:benchmarks"
+      component: "charon:bench:benchmarks"
 
     - path: "./benchmarks/Benchmarks/ReadIndex.hs"
-      component: "safe-rm:bench:benchmarks"
+      component: "charon:bench:benchmarks"

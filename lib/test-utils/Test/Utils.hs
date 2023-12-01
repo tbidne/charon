@@ -34,6 +34,7 @@ module Test.Utils
   )
 where
 
+import Charon.Prelude
 import Data.Char qualified as Ch
 import Data.HashSet qualified as Set
 import Data.List qualified as L
@@ -42,7 +43,6 @@ import Effects.FileSystem.PathWriter (createDirectoryLink, createFileLink)
 import Effects.FileSystem.Utils qualified as FsUtils
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
-import SafeRm.Prelude
 import Test.Tasty.HUnit (assertFailure)
 
 -- | Creates empty files at the specified paths.

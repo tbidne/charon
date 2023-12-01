@@ -7,15 +7,15 @@ module Unit.Runner
   )
 where
 
-import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo))
-import SafeRm.Data.Index (Sort (Name))
-import SafeRm.Data.PathData.Formatting
+import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
+import Charon.Data.Index (Sort (Name))
+import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     PathDataFormat (FormatTabular),
   )
-import SafeRm.Data.Paths (PathI (MkPathI))
-import SafeRm.Runner (getConfiguration)
-import SafeRm.Runner.Command
+import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Runner (getConfiguration)
+import Charon.Runner.Command
   ( _Delete,
     _Empty,
     _List,
@@ -23,8 +23,8 @@ import SafeRm.Runner.Command
     _PermDelete,
     _Restore,
   )
-import SafeRm.Runner.Command.List (ListCmd (MkListCmd, format, revSort, sort))
-import SafeRm.Runner.FileSizeMode
+import Charon.Runner.Command.List (ListCmd (MkListCmd, format, revSort, sort))
+import Charon.Runner.FileSizeMode
   ( FileSizeMode
       ( FileSizeModeDelete,
         FileSizeModeWarn

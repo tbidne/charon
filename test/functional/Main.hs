@@ -3,6 +3,8 @@
 -- | Entrypoint for functional tests.
 module Main (main) where
 
+import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Backend.Data qualified as Backend
 import Data.Char qualified as Ch
 import Effects.FileSystem.PathReader qualified as Dir
 import Functional.Commands.Convert qualified as Convert
@@ -15,8 +17,6 @@ import Functional.Commands.PermDelete qualified as PermDelete
 import Functional.Commands.Restore qualified as Restore
 import Functional.Prelude
 import GHC.Conc (setUncaughtExceptionHandler)
-import SafeRm.Backend.Data (Backend (BackendCbor))
-import SafeRm.Backend.Data qualified as Backend
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
@@ -59,7 +59,7 @@ main = do
 
 setup :: IO TestEnv
 setup = do
-  tmpDir <- (\tmp -> tmp </> pathSafeRm </> [osp|functional|]) <$> Dir.getTemporaryDirectory
+  tmpDir <- (\tmp -> tmp </> pathCharon </> [osp|functional|]) <$> Dir.getTemporaryDirectory
   createDirectoryIfMissing True tmpDir
   testDir <- encodeUtf ""
   pure

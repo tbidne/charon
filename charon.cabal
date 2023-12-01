@@ -1,0 +1,290 @@
+cabal-version:      2.4
+name:               charon
+version:            0.1
+license:            MIT
+license-file:       LICENSE
+tested-with:        GHC ==9.4.7 || ==9.6.3
+copyright:          2022-2023 Thomas Bidne
+author:             Thomas Bidne
+maintainer:         tbidne@protonmail.com
+homepage:           https://github.com/tbidne/charon/
+bug-reports:        https://github.com/tbidne/charon/issues
+synopsis:           Template
+description:        Template
+category:           Template
+extra-source-files:
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/tbidne/charon
+
+common common-lang
+  default-extensions:
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    LambdaCase
+    MultiWayIf
+    NoFieldSelectors
+    NoImplicitPrelude
+    OverloadedLabels
+    OverloadedStrings
+    PatternSynonyms
+    StrictData
+    TypeFamilies
+
+  if os(osx)
+    cpp-options: -DOSX
+
+  if os(windows)
+    cpp-options: -DWINDOWS
+
+library
+  import:           common-lang
+  other-modules:    Paths_charon
+  autogen-modules:  Paths_charon
+  exposed-modules:
+    Charon
+    Charon.Backend.Cbor
+    Charon.Backend.Cbor.BackendArgs
+    Charon.Backend.Cbor.PathData
+    Charon.Backend.Data
+    Charon.Backend.Default
+    Charon.Backend.Default.BackendArgs
+    Charon.Backend.Default.Exception
+    Charon.Backend.Default.Index
+    Charon.Backend.Default.Trash
+    Charon.Backend.Default.Utils
+    Charon.Backend.Fdo
+    Charon.Backend.Fdo.BackendArgs
+    Charon.Backend.Fdo.DirectorySizes
+    Charon.Backend.Fdo.PathData
+    Charon.Backend.Json
+    Charon.Backend.Json.BackendArgs
+    Charon.Backend.Json.PathData
+    Charon.Backend.Rosetta
+    Charon.Class.Serial
+    Charon.Data.Index
+    Charon.Data.Metadata
+    Charon.Data.PathData
+    Charon.Data.PathData.Formatting
+    Charon.Data.Paths
+    Charon.Data.PathType
+    Charon.Data.Timestamp
+    Charon.Data.UniqueSeq
+    Charon.Env
+    Charon.Exception
+    Charon.Prelude
+    Charon.Runner
+    Charon.Runner.Args
+    Charon.Runner.CharonT
+    Charon.Runner.Command
+    Charon.Runner.Command.List
+    Charon.Runner.Env
+    Charon.Runner.FileSizeMode
+    Charon.Runner.Phase
+    Charon.Runner.Toml
+    Charon.Utils
+
+  build-depends:
+    , aeson                 >=2.0       && <2.3
+    , algebra-simple        ^>=0.1
+    , base                  >=4.17.0.0  && <4.19
+    , bytestring            >=0.11.1.0  && <0.13
+    , containers            ^>=0.6.3.1
+    , deepseq               >=1.4.6.0   && <1.6
+    , effects-async         ^>=0.1
+    , effects-exceptions    ^>=0.1
+    , effects-fs            ^>=0.1
+    , effects-ioref         ^>=0.1
+    , effects-logger-ns     ^>=0.1
+    , effects-optparse      ^>=0.1
+    , effects-terminal      ^>=0.1
+    , effects-time          ^>=0.1
+    , effects-unix-compat   ^>=0.1
+    , filepath              ^>=1.4.2.1
+    , hashable              ^>=1.4.0.2
+    , monad-logger          ^>=0.3.30
+    , mtl                   >=2.2.1     && <2.4
+    , nonempty-containers   >=0.3.4.2   && <0.4
+    , optics-core           ^>=0.4
+    , optics-th             ^>=0.4
+    , optparse-applicative  >=0.15      && <0.19
+    , path-size             ^>=0.1
+    , prettyprinter         ^>=1.7.1
+    , serialise             ^>=0.2.6.0
+    , si-bytes              ^>=0.1
+    , text                  >=1.2.4.0   && <2.1
+    , time                  >=1.9.3     && <1.14
+    , toml-reader           >=0.2.0.0   && <0.3
+    , unordered-containers  ^>=0.2.14.0
+    , uri-bytestring        ^>=0.3.3.1
+    , vector                >=0.12.3.0  && <0.14
+
+  hs-source-dirs:   src
+  default-language: GHC2021
+
+library test-utils
+  import:           common-lang
+  exposed-modules:  Test.Utils
+  build-depends:
+    , base
+    , charon
+    , effects-fs
+    , hedgehog
+    , tasty-hunit
+    , text
+    , unordered-containers
+
+  hs-source-dirs:   lib/test-utils
+  default-language: GHC2021
+
+executable charon
+  import:             common-lang
+  default-extensions: ImplicitPrelude
+  main-is:            Main.hs
+  build-depends:
+    , base
+    , charon
+
+  hs-source-dirs:     app
+  ghc-options:        -threaded -with-rtsopts=-N
+  default-language:   GHC2021
+
+test-suite unit
+  import:           common-lang
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    Unit.Backend.Cbor.PathData
+    Unit.Backend.Default.Trash
+    Unit.Backend.Default.Utils
+    Unit.Backend.Fdo.PathData
+    Unit.Backend.Json.PathData
+    Unit.Data.Index
+    Unit.Data.UniqueSeq
+    Unit.Prelude
+    Unit.Runner
+    Unit.Utils
+
+  build-depends:
+    , algebra-simple
+    , base
+    , charon
+    , containers
+    , effects-fs
+    , effects-logger-ns
+    , effects-terminal
+    , filepath
+    , hedgehog              >=1.0.2    && <1.5
+    , pretty-simple         >=4.0.0.0  && <4.2
+    , random                ^>=1.2.1.1
+    , tasty                 >=1.1.0.3  && <1.5
+    , tasty-golden          ^>=2.3.1.1
+    , tasty-hedgehog        >=1.2.0.0  && <1.5
+    , tasty-hunit           >=0.9      && <0.11
+    , test-utils
+    , text
+    , time
+    , unordered-containers
+
+  hs-source-dirs:   test/unit
+  ghc-options:      -threaded -with-rtsopts=-N
+  default-language: GHC2021
+
+test-suite integration
+  import:           common-lang
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    Integration.AsciiOnly
+    Integration.Charon
+    Integration.Commands.Delete
+    Integration.Prelude
+    Integration.Utils
+
+  build-depends:
+    , base
+    , charon
+    , effects-fs
+    , effects-logger-ns
+    , effects-terminal
+    , effects-time
+    , env-guard             ^>=0.2
+    , hashable
+    , hedgehog
+    , mtl
+    , tagged                ^>=0.8.6
+    , tasty
+    , tasty-hedgehog
+    , tasty-hunit
+    , test-utils
+    , text
+    , time
+    , unordered-containers
+
+  hs-source-dirs:   test/integration
+  default-language: GHC2021
+
+test-suite functional
+  import:           common-lang
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    Functional.Commands.Convert
+    Functional.Commands.Delete
+    Functional.Commands.Empty
+    Functional.Commands.List
+    Functional.Commands.Merge
+    Functional.Commands.Metadata
+    Functional.Commands.PermDelete
+    Functional.Commands.Restore
+    Functional.Prelude
+    Functional.Prelude.FuncEnv
+
+  build-depends:
+    , algebra-simple
+    , base
+    , charon
+    , effects-exceptions
+    , effects-fs
+    , effects-logger-ns
+    , effects-terminal
+    , effects-time
+    , env-guard             ^>=0.2
+    , filepath
+    , pretty-simple
+    , tasty
+    , tasty-hunit
+    , test-utils
+    , text
+    , time
+    , unordered-containers
+
+  hs-source-dirs:   test/functional
+  default-language: GHC2021
+
+benchmark benchmarks
+  import:           common-lang
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    Benchmarks.Prelude
+    Benchmarks.ReadIndex
+
+  build-depends:
+    , base
+    , charon
+    , effects-fs
+    , env-guard
+    , tasty-bench  ^>=0.3
+    , test-utils
+
+  ghc-options:      -Wno-unused-packages
+  hs-source-dirs:   benchmarks
+  default-language: GHC2021

@@ -35,7 +35,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       createFiles ((testDir </>! "sdir2/sdir3/foo") : filesToDelete)
       assertPathsExist (filesToDelete ++ dirsToDelete)
 
-      runSafeRm delArgList
+      runCharon delArgList
 
       -- file assertions
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -66,7 +66,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       createFiles ((testDir </>! "ddir2/ddir3/foo") : filesToDelete)
       assertPathsExist (filesToDelete ++ dirsToDelete)
 
-      runSafeRm delArgList
+      runCharon delArgList
 
       -- file assertions
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -90,7 +90,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
     local (set' #trashDir pathSrc) $ do
       let dest = testDir </> pathDest
       mergeArgs <- withSrArgsPathsM ["merge", "-d"] [dest]
-      runSafeRm mergeArgs
+      runCharon mergeArgs
 
     -- VERIFY DEST
     local (set' #trashDir pathDest) $ do
@@ -138,7 +138,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       createDirectories ((testDir </>!) <$> ["sdir1", "dir2", "dir2/sdir3"])
       createFiles ((testDir </>! "dir2/sdir3/foo") : filesToDelete)
 
-      runSafeRm delArgList
+      runCharon delArgList
 
       -- file assertions
       assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -172,7 +172,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         createDirectories ((testDir </>!) <$> ["ddir1", "dir2", "dir2/sdir3"])
         createFiles ((testDir </>! "dir2/sdir3/foo") : filesToDelete)
 
-        runSafeRm delArgList
+        runCharon delArgList
 
         -- file assertions
         assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -198,7 +198,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
 
     local (set' #trashDir pathSrc) $ do
       mergeArgs <- withSrArgsPathsM ["merge", "-d"] [trashDirDest]
-      runSafeRmException @IOException mergeArgs
+      runCharonException @IOException mergeArgs
 
       -- verify src unchanged
       assertPathsDoNotExist (pathsToDeleteSrc ++ pathsToDeleteDest)

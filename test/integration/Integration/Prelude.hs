@@ -12,11 +12,17 @@ module Integration.Prelude
     assertPathsExist,
     assertPathsDoNotExist,
 
-    -- * Running SafeRm
-    captureSafeRmIntExceptionPure,
+    -- * Running Charon
+    captureCharonIntExceptionPure,
   )
 where
 
+import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Data.Paths (PathI, PathIndex (TrashHome))
+import Charon.Env (HasBackend, HasTrashHome)
+import Charon.Prelude as X
+import Charon.Runner qualified as Runner
+import Charon.Runner.Toml (TomlConfig)
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
@@ -39,12 +45,6 @@ import Hedgehog as X
     withTests,
     (===),
   )
-import SafeRm.Backend.Data (Backend (BackendCbor))
-import SafeRm.Data.Paths (PathI, PathIndex (TrashHome))
-import SafeRm.Env (HasBackend, HasTrashHome)
-import SafeRm.Prelude as X
-import SafeRm.Runner qualified as Runner
-import SafeRm.Runner.Toml (TomlConfig)
 import System.Environment qualified as SysEnv
 import Test.Tasty as X (TestTree, askOption, testGroup)
 import Test.Tasty.HUnit as X (testCase, (@=?))
@@ -153,15 +153,15 @@ instance MonadPathWriter (IntPure IntPureEnv) where
 runIntPure :: (IntPure env) a -> env -> IO a
 runIntPure (MkIntPure rdr) = runReaderT rdr
 
--- | Runs safe-rm and captures a thrown exception, terminal, and
+-- | Runs charon and captures a thrown exception, terminal, and
 -- deleted paths.
-captureSafeRmIntExceptionPure ::
+captureCharonIntExceptionPure ::
   forall e.
   (Exception e) =>
   -- Args.
   [String] ->
   IO (Text, Text, Text)
-captureSafeRmIntExceptionPure argList = do
+captureCharonIntExceptionPure argList = do
   terminalRef <- newIORef ""
   deletedPathsRef <- newIORef []
 
@@ -173,7 +173,7 @@ captureSafeRmIntExceptionPure argList = do
   case result of
     Right _ ->
       error
-        "captureSafeRmExceptionLogs: Expected exception, received none"
+        "captureCharonExceptionLogs: Expected exception, received none"
     Left ex -> do
       terminal <- readIORef terminalRef
       deletedPaths <- readIORef deletedPathsRef

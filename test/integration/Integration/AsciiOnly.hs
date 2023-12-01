@@ -3,8 +3,8 @@ module Integration.AsciiOnly
   )
 where
 
+import Charon.Prelude
 import Data.Tagged (Tagged (Tagged))
-import SafeRm.Prelude
 import Test.Tasty.Options
   ( IsOption
       ( defaultValue,

@@ -14,6 +14,9 @@ module Integration.Utils
   )
 where
 
+import Charon.Data.PathType (PathTypeW (MkPathTypeW))
+import Charon.Data.UniqueSeq (UniqueSeq, fromFoldable)
+import Charon.Data.UniqueSeq qualified as USeq
 import Data.Hashable (Hashable (hash))
 import Data.List (unzip)
 import Effects.FileSystem.Utils qualified as FsUtils
@@ -21,9 +24,6 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
 import Integration.Prelude
-import SafeRm.Data.PathType (PathTypeW (MkPathTypeW))
-import SafeRm.Data.UniqueSeq (UniqueSeq, fromFoldable)
-import SafeRm.Data.UniqueSeq qualified as USeq
 import Test.Utils qualified as TestUtils
 
 -- | Generated path name along with the type to create.

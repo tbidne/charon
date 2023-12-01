@@ -8,12 +8,12 @@ module Functional.Commands.PermDelete
   )
 where
 
+import Charon.Data.Metadata qualified as Metadata
+import Charon.Exception (TrashEntryNotFoundE)
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.Exception (StringException)
 import Functional.Prelude
-import SafeRm.Data.Metadata qualified as Metadata
-import SafeRm.Exception (TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -48,7 +48,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     assertPathsExist [f1]
 
     -- delete to trash first
-    liftIO $ runSafeRm delArgList
+    liftIO $ runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -64,7 +64,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     -- PERMANENT DELETE
 
     permDelArgList <- withSrArgsM ["perm-delete", "f1", "-f"]
-    liftIO $ runSafeRm permDelArgList
+    liftIO $ runCharon permDelArgList
 
     -- file assertions
     assertPathsExist [trashDir]
@@ -102,7 +102,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     assertPathsExist (filesToDelete ++ dirsToDelete)
     assertSymlinksExist linksToDelete
 
-    liftIO $ runSafeRm delArgList
+    liftIO $ runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
@@ -129,7 +129,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
 
     -- leave f2 alone
     permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "file-link", "-f"]
-    liftIO $ runSafeRm permDelArgList
+    liftIO $ runCharon permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -162,13 +162,13 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- technically we do not need to have anything in the trash to attempt
     -- a permanent delete, but this way we can ensure the trash itself is set
-    -- up (i.e. dir exists w/ index), so that we can test the perm safe-rm
+    -- up (i.e. dir exists w/ index), so that we can test the perm charon
     -- failure only.
     createFiles [f1]
     assertPathsExist [f1]
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -182,7 +182,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- PERMANENT DELETE
     permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
-    (ex, _) <- liftIO $ captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
+    (ex, _) <- liftIO $ captureCharonExceptionLogs @TrashEntryNotFoundE permDelArgList
 
     -- assert exception
     assertMatch expectedEx ex
@@ -219,7 +219,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     assertPathsExist realFiles
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist realFiles
@@ -241,7 +241,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelArgList <-
       withSrArgsM
         ("perm-delete" : filesTryPermDelete ++ ["-f"])
-    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE permDelArgList
+    (ex, _) <- captureCharonExceptionLogs @TrashEntryNotFoundE permDelArgList
 
     assertMatch expectedEx ex
 
@@ -277,7 +277,7 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     createFiles fileDeletePaths
     assertPathsExist fileDeletePaths
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist fileDeletePaths
@@ -300,7 +300,7 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
     -- PERMANENT DELETE
 
     permDelArgList <- withSrArgsM ("perm-delete" : fileDeleteNames)
-    runSafeRm permDelArgList
+    runCharon permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -333,7 +333,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     createFiles (filesToDelete <> otherFiles)
     assertPathsExist (filesToDelete ++ otherFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ otherFiles)
@@ -364,7 +364,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
 
     -- leave g alone
     permDelArgList <- withSrArgsM ["perm-delete", "*f*", "-f"]
-    runSafeRm permDelArgList
+    runCharon permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -399,7 +399,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     createFiles testFiles
     assertPathsExist testFiles
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist testFiles
@@ -428,7 +428,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
     -- delete will fail. This is how this test works.
     permDelArgList <- withSrArgsM ["perm-delete", "foo**bar", "*g*", "-f"]
-    runSafeRmException @StringException permDelArgList
+    runCharonException @StringException permDelArgList
 
     -- file assertions
     -- 1. Everything still gone from original location
@@ -469,7 +469,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     createFiles (testWcLiteral : testFiles)
     assertPathsExist (testWcLiteral : testFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (testWcLiteral : testFiles)
@@ -495,7 +495,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
 
     -- leave f alone
     permDelArgList <- withSrArgsM ["perm-delete", "\\*", "-f"]
-    runSafeRm permDelArgList
+    runCharon permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -532,7 +532,7 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     createFiles (testWcLiterals <> testFiles)
     assertPathsExist (testWcLiterals <> testFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (testWcLiterals <> testFiles)
@@ -557,7 +557,7 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
 
     -- leave f alone
     permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "-f"]
-    runSafeRm permDelArgList
+    runCharon permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -598,7 +598,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
     assertPathsExist [f1]
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -617,7 +617,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
     -- (see altAnswers in FuncEnv), but it doesn't matter as this test is only
     -- concerned with grabbing the terminal data for an unforced delete.
     permDelArgList <- withSrArgsM ["perm-delete", "f1"]
-    (terminalResult, _) <- captureSafeRmLogs permDelArgList
+    (terminalResult, _) <- captureCharonLogs permDelArgList
 
     -- assert terminal displays all data for f1
     assertMatches expectedTerminal terminalResult

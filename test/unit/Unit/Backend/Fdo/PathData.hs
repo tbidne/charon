@@ -6,6 +6,12 @@ module Unit.Backend.Fdo.PathData
   )
 where
 
+import Charon.Backend.Fdo.PathData (PathData (UnsafePathData))
+import Charon.Backend.Fdo.PathData qualified as Fdo
+import Charon.Class.Serial (Serial (decode), encodeThrowM)
+import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Data.Timestamp (Timestamp (MkTimestamp))
+import Charon.Data.Timestamp qualified as Timestamp
 import Data.Fixed (Fixed (MkFixed))
 import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), TimeOfDay (TimeOfDay))
@@ -13,12 +19,6 @@ import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Backend.Fdo.PathData (PathData (UnsafePathData))
-import SafeRm.Backend.Fdo.PathData qualified as Fdo
-import SafeRm.Class.Serial (Serial (decode), encodeThrowM)
-import SafeRm.Data.Paths (PathI (MkPathI))
-import SafeRm.Data.Timestamp (Timestamp (MkTimestamp))
-import SafeRm.Data.Timestamp qualified as Timestamp
 import Test.Utils qualified as TestUtils
 import Text.Pretty.Simple qualified as Pretty
 import Unit.Prelude

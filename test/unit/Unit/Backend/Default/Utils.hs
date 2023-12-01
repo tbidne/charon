@@ -4,17 +4,17 @@
 
 module Unit.Backend.Default.Utils (tests) where
 
+import Charon.Backend.Default.Utils qualified as Utils
+import Charon.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex (TrashEntryOriginalPath, TrashHome),
+  )
 import Data.List qualified as L
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.Utils qualified as FS.Utils
 import GHC.Real (Integral (mod))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Backend.Default.Utils qualified as Utils
-import SafeRm.Data.Paths
-  ( PathI (MkPathI),
-    PathIndex (TrashEntryOriginalPath, TrashHome),
-  )
 import System.FilePath qualified as FP
 import System.Random qualified as R
 import Unit.Prelude

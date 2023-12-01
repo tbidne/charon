@@ -6,18 +6,18 @@ module Functional.Commands.List
   )
 where
 
-import Data.Text qualified as T
-import Effects.FileSystem.PathWriter qualified as PW
-import Functional.Prelude
-import SafeRm.Backend.Default.Exception
+import Charon.Backend.Default.Exception
   ( TrashDirFilesNotFoundE,
     TrashDirInfoNotFoundE,
   )
-import SafeRm.Backend.Default.Utils qualified as Default.Utils
-import SafeRm.Exception
+import Charon.Backend.Default.Utils qualified as Default.Utils
+import Charon.Exception
   ( TrashEntryFileNotFoundE,
     TrashEntryInfoNotFoundE,
   )
+import Data.Text qualified as T
+import Effects.FileSystem.PathWriter qualified as PW
+import Functional.Prelude
 
 -- NOTE: These tests currently rely on internal details for the trash
 -- structure (see the usage of Default.Utils). If we ever get a non-compliant
@@ -42,7 +42,7 @@ emptySucceeds getTestEnv = testCase "List on empty directory succeeds" $ do
   usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
     argList <- withSrArgsM ["list", "--format", "m"]
 
-    result <- captureSafeRm argList
+    result <- captureCharon argList
 
     assertMatches expectedTerminal result
   where
@@ -64,14 +64,14 @@ noPathsError getTestEnv = testCase "No Paths Error" $ do
     clearDirectory trashDir
     clearDirectory (trashDir </> Default.Utils.pathInfo)
 
-    ex <- captureSafeRmException @TrashDirFilesNotFoundE argList
+    ex <- captureCharonException @TrashDirFilesNotFoundE argList
 
     assertMatch expectedErr ex
   where
     expectedErr =
       Outfix
         "The trash files directory was not found at '"
-        (trashFiles <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f).")
+        (trashFiles <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty -f).")
 
 noInfoError :: IO TestEnv -> TestTree
 noInfoError getTestEnv = testCase "No Info Error" $ do
@@ -87,14 +87,14 @@ noInfoError getTestEnv = testCase "No Info Error" $ do
     clearDirectory trashDir
     clearDirectory (trashDir </> Default.Utils.pathFiles)
 
-    ex <- captureSafeRmException @TrashDirInfoNotFoundE argList
+    ex <- captureCharonException @TrashDirInfoNotFoundE argList
 
     assertMatch expectedErr ex
   where
     expectedErr =
       Outfix
         "The trash info directory was not found at '"
-        (trashInfo <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. safe-rm empty -f).")
+        (trashInfo <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty -f).")
 
 missingPathError :: IO TestEnv -> TestTree
 missingPathError getTestEnv = testCase "Entry Missing Path" $ do
@@ -111,7 +111,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     createFilesContents [(missing, "")]
 
     delArgList <- withSrArgsPathsM ["delete"] [missing]
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- delete file from trash for expected error
     PW.removeFile (trashDir </> Default.Utils.pathFiles </> [osp|missing|])
@@ -121,7 +121,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
     createFiles [trashDir </> Default.Utils.pathFiles </> [osp|blah|]]
 
     listArgList <- withSrArgsM ["list", "--format", "m"]
-    ex <- captureSafeRmException @TrashEntryFileNotFoundE listArgList
+    ex <- captureCharonException @TrashEntryFileNotFoundE listArgList
 
     assertMatch expectedErr ex
   where
@@ -130,7 +130,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
         "The file 'missing' was not found in the trash '"
         ( mconcat
             [ "' despite being listed in the index. This can be fixed by manually ",
-              "deleting the info file or deleting everything (i.e. safe-rm empty -f)."
+              "deleting the info file or deleting everything (i.e. charon empty -f)."
             ]
         )
 
@@ -150,7 +150,7 @@ missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
     clearDirectory (trashDir </> Default.Utils.pathInfo)
     createFiles [trashDir </> Default.Utils.pathFiles </> [osp|bar|]]
 
-    ex <- captureSafeRmException @TrashEntryInfoNotFoundE argList
+    ex <- captureCharonException @TrashEntryInfoNotFoundE argList
 
     assertMatch expectedErr ex
   where
@@ -159,7 +159,7 @@ missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
         "The file 'bar.<ext>' was not found in the trash '"
         ( mconcat
             [ "/.trash' index despite existing in the trash itself. This can ",
-              "be fixed by manually deleting the entry or deleting everything (i.e. safe-rm empty -f)."
+              "be fixed by manually deleting the entry or deleting everything (i.e. charon empty -f)."
             ]
         )
 

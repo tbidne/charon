@@ -1,13 +1,13 @@
--- | Unit tests for SafeRm.Utils
+-- | Unit tests for Charon.Utils
 module Unit.Utils
   ( tests,
   )
 where
 
+import Charon.Utils qualified as Utils
 import Data.Text qualified as T
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import SafeRm.Utils qualified as Utils
 import Unit.Prelude
 
 tests :: TestTree

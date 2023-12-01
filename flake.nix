@@ -111,7 +111,7 @@
           mkPkg = returnShellEnv:
             nix-hs-utils.mkHaskellPkg {
               inherit compiler pkgs returnShellEnv;
-              name = "safe-rm";
+              name = "charon";
               root = ./.;
             };
           hsDirs = "app benchmarks lib src test";

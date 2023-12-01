@@ -7,12 +7,12 @@ module Functional.Commands.Restore
   )
 where
 
+import Charon.Data.Metadata qualified as Metadata
+import Charon.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
-import SafeRm.Data.Metadata qualified as Metadata
-import SafeRm.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -48,7 +48,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     assertPathsExist [f1]
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -63,7 +63,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     -- RESTORE
 
     restoreArgList <- withSrArgsM ["restore", "f1"]
-    runSafeRm restoreArgList
+    runCharon restoreArgList
 
     -- file assertions
     assertPathsExist [trashDir, f1]
@@ -104,7 +104,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
     assertSymlinksExist linksToDelete
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
@@ -131,7 +131,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
 
     -- do not restore f2
     restoreArgList <- withSrArgsM ["restore", "f1", "f3", "dir1", "dir2", "file-link"]
-    runSafeRm restoreArgList
+    runCharon restoreArgList
 
     -- trash structure assertions
     restoreExpectedIdxSet <-
@@ -168,7 +168,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     createFiles [f1]
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist [f1]
@@ -182,7 +182,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "bad file"]
-    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
+    (ex, _) <- captureCharonExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     assertMatch expectedEx ex
 
@@ -215,7 +215,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     createFiles [f1]
 
     -- delete to trash first and recreate
-    runSafeRm delArgList
+    runCharon delArgList
     createFiles [f1]
 
     -- trash structure assertions
@@ -227,7 +227,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1"]
-    (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
+    (ex, _) <- captureCharonExceptionLogs @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
 
@@ -260,9 +260,9 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     createFiles [f1, f2, f3]
 
     -- delete twice
-    runSafeRm (delArgList <> (unsafeDecodeOsToFp <$> [f2, f3]))
+    runCharon (delArgList <> (unsafeDecodeOsToFp <$> [f2, f3]))
     createFiles [f1]
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- trash structure assertions
     delExpectedIdxSet <-
@@ -279,7 +279,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
-    (ex, _) <- captureSafeRmExceptionLogs @RestoreCollisionE restoreArgList
+    (ex, _) <- captureCharonExceptionLogs @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
 
@@ -319,7 +319,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     assertPathsExist realFiles
 
     -- delete to trash first
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist realFiles
@@ -338,7 +338,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
-    (ex, _) <- captureSafeRmExceptionLogs @TrashEntryNotFoundE restoreArgList
+    (ex, _) <- captureCharonExceptionLogs @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
     assertPathsDoNotExist ((testDir </>!) <$> ["f3", "f4"])
@@ -378,7 +378,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     createFiles (filesToRestore <> otherFiles)
     assertPathsExist (filesToRestore ++ otherFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToRestore ++ otherFiles)
@@ -408,7 +408,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
 
     -- leave g alone
     restoreArgList <- withSrArgsM ["restore", "*f*"]
-    runSafeRm restoreArgList
+    runCharon restoreArgList
 
     -- trash structure assertions
     restoreExpectedIdxSet <-
@@ -443,7 +443,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     createFiles testFiles
     assertPathsExist testFiles
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist testFiles
@@ -473,7 +473,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     createFiles [testDir </>! "fooBadbar"]
 
     restoreArgList <- withSrArgsM ["restore", "foo**bar", "*g*"]
-    runSafeRmException @RestoreCollisionE restoreArgList
+    runCharonException @RestoreCollisionE restoreArgList
 
     -- file assertions
     -- 1. Everything restored but fooBarBar but that is because it already exists
@@ -514,7 +514,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     createFiles (testWcLiteral : testFiles)
     assertPathsExist (testWcLiteral : testFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (testWcLiteral : testFiles)
@@ -539,7 +539,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
 
     -- leave f alone
     restoreArgList <- withSrArgsM ["restore", "\\*"]
-    runSafeRm restoreArgList
+    runCharon restoreArgList
 
     -- trash structure assertions
     restoreExpectedIdxSet <-
@@ -575,7 +575,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     createFiles (testWcLiterals <> testFiles)
     assertPathsExist (testWcLiterals <> testFiles)
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (testWcLiterals <> testFiles)
@@ -597,7 +597,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- RESTORE
 
     restoreArgList <- withSrArgsM ["restore", "y\\*xx*"]
-    runSafeRm restoreArgList
+    runCharon restoreArgList
 
     -- file assertions
     assertPathsExist testWcLiterals

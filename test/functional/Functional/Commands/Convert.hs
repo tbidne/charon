@@ -6,9 +6,9 @@ module Functional.Commands.Convert
   )
 where
 
+import Charon.Backend.Data (Backend)
+import Charon.Backend.Data qualified as Backend.Data
 import Functional.Prelude
-import SafeRm.Backend.Data (Backend)
-import SafeRm.Backend.Data qualified as Backend.Data
 
 tests :: IO TestEnv -> TestTree
 tests testEnv =
@@ -49,7 +49,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     assertPathsExist (filesToDelete ++ dirsToDelete)
     assertSymlinksExist linksToDelete
 
-    runSafeRm delArgList
+    runCharon delArgList
 
     -- file assertions
     assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
@@ -75,7 +75,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     -- CONVERT
 
     convertArgList <- withSrArgsM ["convert", "-d", Backend.Data.backendName dest]
-    runSafeRm convertArgList
+    runCharon convertArgList
 
     -- we changed the backend, so have to update our env here
     local (set' #backend dest) $ do
@@ -96,11 +96,11 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       -- it isn't, as it will calculate a new (wrong) trash directory.
       -- For instance testDir above may be
       --
-      --    /tmp/safe-rm/functional/convert/convertsBackend-(dest=cbor)-cbor
+      --    /tmp/charon/functional/convert/convertsBackend-(dest=cbor)-cbor
       --
       -- but after this backend change, it will be
       --
-      -- /tmp/safe-rm/functional/convert/convertsBackend-(dest=cbor)-fdo
+      -- /tmp/charon/functional/convert/convertsBackend-(dest=cbor)-fdo
       --
       -- This is not what we want, as the test dir has not changed! Thus we
       -- resort to variants of the aforementioned that explicitly take in
