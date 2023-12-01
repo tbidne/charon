@@ -72,7 +72,8 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -121,7 +122,8 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     -- trash structure assertions
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
 
     -- PERMANENT DELETE
 
@@ -139,7 +141,8 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM ["dir4"]
   where
     delExpectedMetadata = mkMetadata 8 7 0 55
 
@@ -187,7 +190,8 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet permDelIdxSet
-    liftIO $ delExpectedMetadata @=? permDelMetadata
+    delExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfixes
@@ -230,7 +234,8 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- PERMANENT DELETE
     permDelArgList <-
@@ -243,7 +248,8 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfixes
@@ -288,7 +294,8 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
-    liftIO $ delExpectedMetadata @=? delMetadata
+    delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- PERMANENT DELETE
 
@@ -305,7 +312,8 @@ deletesNoForce getTestEnv = testCase "Permanently deletes several paths without 
 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
-    liftIO $ permDelExpectedMetadata @=? permDelMetadata
+    permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 5 5 0 25
 
@@ -350,6 +358,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- PERMANENT DELETE
 
@@ -370,6 +379,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 12 12 0 60
 
@@ -411,6 +421,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- PERMANENT DELETE
 
@@ -428,6 +439,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 9 9 0 45
     permDelExpectedMetadata = mkMetadata 1 1 0 5
@@ -477,6 +489,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM [ ]
 
     -- PERMANENT DELETE
 
@@ -498,6 +511,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM [ ]
   where
     delExpectedMetadata = mkMetadata 7 7 0 35
     permDelExpectedMetadata = mkMetadata 6 6 0 30
@@ -537,6 +551,7 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM [ ]
 
     -- PERMANENT DELETE
 
@@ -554,6 +569,7 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM [ ]
   where
     desc = "Permanently deletes filename w/ literal * and wildcard"
 
@@ -593,6 +609,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM [ ]
 
     -- PERMANENT DELETE
 
@@ -604,6 +621,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
 
     -- assert terminal displays all data for f1
     assertMatches expectedTerminal terminalResult
+    assertFdoDirectorySizesM [ ]
   where
     expectedTerminal =
       [ Exact "Name:      f1",

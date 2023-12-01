@@ -284,7 +284,7 @@ merge src dest = addNamespace "merge" $ do
   -- have no clashes. Thus it is safe to combine the directorysizes
   let mergedDirectorySizes = srcDirectorySizes <> destDirectorySizes
 
-  DirectorySizes.writeDirectorySizes mergedDirectorySizes
+  DirectorySizes.writeDirectorySizesTrashHome dest mergedDirectorySizes
 
   $(logDebug) "Merge successful"
   where

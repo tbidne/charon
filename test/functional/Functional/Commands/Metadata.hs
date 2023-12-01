@@ -64,6 +64,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
 
     -- METADATA
 
@@ -79,6 +80,7 @@ metadata getTestEnv = testCase "Prints metadata" $ do
     (metadataIdxSet, metadatMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet metadataIdxSet
     delExpectedMetadata @=? metadatMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
   where
     delExpectedMetadata = mkMetadata 8 7 0 55
 

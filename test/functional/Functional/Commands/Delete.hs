@@ -58,6 +58,8 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+
+    assertFdoDirectorySizesM []
   where
     expectedMetadata = mkMetadata 1 1 0 5
 
@@ -106,6 +108,8 @@ deletesMany getTestEnv = testCase "Deletes many paths" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
   where
     expectedMetadata = mkMetadata 8 7 0 55
 
@@ -130,6 +134,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Suffix "deleteUnknownError/bad file: getPathType: does not exist (path does not exist)"
@@ -172,6 +177,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
 
     assertSetEq expectedIdxSet idxSet
     expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedMetadata = mkMetadata 2 2 0 10
 
@@ -205,6 +211,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Suffix "deletesSome/f4: getPathType: does not exist (path does not exist)"
@@ -230,6 +237,7 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedEx = Exact "Attempted to delete the empty path! This is not allowed."
 
@@ -258,6 +266,7 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfix
@@ -343,6 +352,7 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
   where
     expectedMetadata = mkMetadata 2 2 0 10
 

@@ -12,6 +12,7 @@ module SafeRm.Backend.Fdo.DirectorySizes
     -- * Adding
     appendEntry,
     writeDirectorySizes,
+    writeDirectorySizesTrashHome,
 
     -- * Removing
     removeEntry,
@@ -147,8 +148,25 @@ writeDirectorySizes ::
   ) =>
   DirectorySizes ->
   m ()
-writeDirectorySizes directorySizes = addNamespace "writeDirectorySizes" $ do
-  directorySizesPath <- getDirectorySizesPath
+writeDirectorySizes directorySizes = do
+  trashHome <- asks getTrashHome
+  writeDirectorySizesTrashHome trashHome directorySizes
+
+-- | Writes entries to directorysizes.
+writeDirectorySizesTrashHome ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadFileWriter m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadTime m
+  ) =>
+  PathI TrashHome ->
+  DirectorySizes ->
+  m ()
+writeDirectorySizesTrashHome trashHome directorySizes = addNamespace "writeDirectorySizesTrashHome" $ do
+  let directorySizesPath = trashHomeToDirectorySizes trashHome
 
   encoded <- encodeThrowM directorySizes
 

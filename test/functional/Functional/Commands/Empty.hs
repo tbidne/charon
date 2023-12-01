@@ -73,6 +73,8 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
 
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
     -- EMPTY
 
     emptyArgList <- withSrArgsM ["empty", "-f"]
@@ -85,6 +87,8 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
     (emptyIdxSet, emptyMetadata) <- runIndexMetadataM
     assertSetEq emptyExpectedIdxSet emptyIdxSet
     emptyExpectedMetadata @=? emptyMetadata
+
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 8 7 0 55
 

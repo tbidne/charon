@@ -58,6 +58,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
 
@@ -71,6 +72,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -123,6 +125,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
 
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
 
     -- RESTORE
 
@@ -141,6 +144,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM ["dir4"]
   where
     delExpectedMetadata = mkMetadata 8 7 0 55
     restoreExpectedMetadata = mkMetadata 3 3 0 20
@@ -174,6 +178,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "bad file"]
@@ -185,6 +190,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet restoreIdxSet
     delExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfixes
@@ -217,6 +223,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1"]
@@ -228,6 +235,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet restoreIdxSet
     delExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfixes
@@ -267,6 +275,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
@@ -283,6 +292,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     desc = "Restore simultaneous collision prints error"
     expectedEx =
@@ -324,6 +334,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
     restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
@@ -339,6 +350,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     expectedEx =
       Outfixes
@@ -390,6 +402,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
 
@@ -410,6 +423,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 12 12 0 60
     restoreExpectedMetadata = mkMetadata 6 6 0 30
@@ -450,6 +464,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM []
 
     -- RESTORE
 
@@ -470,6 +485,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM []
   where
     delExpectedMetadata = mkMetadata 9 9 0 45
     restoreExpectedMetadata = mkMetadata 1 1 0 5
@@ -517,6 +533,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM [ ]
 
     -- RESTORE
 
@@ -537,6 +554,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM [ ]
   where
     delExpectedMetadata = mkMetadata 7 7 0 35
     restoreExpectedMetadata = mkMetadata 6 6 0 30
@@ -574,6 +592,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM [ ]
 
     -- RESTORE
 
@@ -592,6 +611,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreArgListExpectedMetadata @=? restoreMetadata
+    assertFdoDirectorySizesM [ ]
   where
     desc = "Restores filename w/ literal * and wildcard"
 

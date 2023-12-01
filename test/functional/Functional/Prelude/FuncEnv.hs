@@ -12,6 +12,9 @@ module Functional.Prelude.FuncEnv
     FuncEnv (..),
     mkFuncEnv,
 
+    -- * HUnit
+    (@=?),
+
     -- * Running SafeRm
     TestM,
     TestEnv (..),
@@ -33,10 +36,14 @@ module Functional.Prelude.FuncEnv
     mkPathDataSetM2,
     mkPathDataSetTestDirM,
     getTestDir,
+    assertFdoDirectorySizesM,
+    assertFdoDirectorySizesTestDirM,
+    assertFdoDirectorySizesArgsM,
   )
 where
 
 import Data.HashSet qualified as HSet
+import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
@@ -55,10 +62,13 @@ import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
+import GHC.Exts (IsList (toList))
 import Numeric.Literal.Integer (FromInteger (afromInteger))
 import SafeRm qualified
-import SafeRm.Backend.Data (Backend (BackendCbor))
+import SafeRm.Backend.Data (Backend (BackendCbor, BackendFdo))
 import SafeRm.Backend.Data qualified as Backend
+import SafeRm.Backend.Fdo.DirectorySizes (DirectorySizes (MkDirectorySizes))
+import SafeRm.Backend.Fdo.DirectorySizes qualified as DirectorySizes
 import SafeRm.Data.Metadata (Metadata)
 import SafeRm.Data.PathData
   ( PathData
@@ -77,8 +87,11 @@ import SafeRm.Env (HasBackend, HasTrashHome)
 import SafeRm.Prelude
 import SafeRm.Runner qualified as Runner
 import SafeRm.Runner.Toml (TomlConfig)
+import SafeRm.Utils qualified as Utils
 import System.Environment qualified as SysEnv
 import System.Exit (die)
+import Test.Tasty.HUnit (assertBool)
+import Test.Tasty.HUnit qualified as HUnit
 
 type TestM a = ReaderT TestEnv IO a
 
@@ -248,6 +261,9 @@ fixedTimestamp = MkTimestamp localTime
 
 localTime :: LocalTime
 localTime = LocalTime (toEnum 59_000) midday
+
+localTimeMillis :: Natural
+localTimeMillis = fromIntegral $ Utils.localTimeToMillis localTime
 
 instance MonadLogger (FuncIO FuncEnv) where
   monadLoggerLog loc _src lvl msg = do
@@ -546,3 +562,46 @@ getTestDir = do
   PW.createDirectoryIfMissing True testDir
 
   pure testDir
+
+assertFdoDirectorySizesM :: [ByteString] -> TestM ()
+assertFdoDirectorySizesM expectedFileNames = do
+  testDir <- getTestDir
+  assertFdoDirectorySizesTestDirM testDir expectedFileNames
+
+assertFdoDirectorySizesTestDirM :: OsPath -> [ByteString] -> TestM ()
+assertFdoDirectorySizesTestDirM testDir expectedFileNames = do
+  backend <- asks (view #backend)
+  assertFdoDirectorySizesArgsM backend testDir expectedFileNames
+
+assertFdoDirectorySizesArgsM :: Backend -> OsPath -> [ByteString] -> TestM ()
+assertFdoDirectorySizesArgsM backend testDir expectedFileNames = do
+  case backend of
+    BackendFdo -> do
+      trashDir <- asks (view #trashDir)
+
+      let directorySizesPath = testDir </> trashDir
+
+      MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome (MkPathI directorySizesPath)
+
+      let directorySizes' = toList directorySizes
+          errMsg =
+            mconcat
+              [ "Expected:\n",
+                show expectedFileNames,
+                "\n\n",
+                "Results:\n",
+                show directorySizes'
+              ]
+
+      liftIO $ assertBool errMsg (length expectedFileNames == length directorySizes')
+
+      for_ (L.zip expectedFileNames directorySizes') $ \(expectedFileName, result) -> do
+        localTimeMillis @=? result ^. #time
+        expectedFileName @=? result ^. #fileName
+    _ -> pure ()
+
+-- | Lifted (@=?).
+(@=?) :: (Eq a, HasCallStack, MonadIO m, Show a) => a -> a -> m ()
+x @=? y = liftIO $ x HUnit.@=? y
+
+infix 1 @=?

@@ -33,6 +33,9 @@ module Functional.Prelude
     assertPathsDoNotExist,
     assertSymlinksDoNotExist,
     assertSetEq,
+    FuncEnv.assertFdoDirectorySizesM,
+    FuncEnv.assertFdoDirectorySizesTestDirM,
+    FuncEnv.assertFdoDirectorySizesArgsM,
 
     -- * Misc
     withSrArgsM,
@@ -60,7 +63,7 @@ import Effects.FileSystem.Utils
     (</>!),
   )
 import Effects.FileSystem.Utils qualified as FsUtils
-import Functional.Prelude.FuncEnv (TestEnv, TestM)
+import Functional.Prelude.FuncEnv (TestEnv, TestM, (@=?))
 import Functional.Prelude.FuncEnv qualified as FuncEnv
 import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import SafeRm.Backend.Data qualified as Backend
@@ -82,15 +85,8 @@ import Test.Tasty.HUnit as X
     assertFailure,
     testCase,
   )
-import Test.Tasty.HUnit qualified as HUnit
 import Test.Utils as X
 import Text.Pretty.Simple qualified as Pretty
-
--- | Lifted (@=?).
-(@=?) :: (Eq a, HasCallStack, MonadIO m, Show a) => a -> a -> m ()
-x @=? y = liftIO $ x HUnit.@=? y
-
-infix 1 @=?
 
 -- | Assert paths exist.
 assertPathsExist :: (MonadIO m) => [OsPath] -> m ()

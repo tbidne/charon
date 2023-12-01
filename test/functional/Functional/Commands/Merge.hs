@@ -53,6 +53,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       (delIdxSet, delMetadata) <- runIndexMetadataM
       assertSetEq delExpectedIdxSet delIdxSet
       delExpectedMetadata @=? delMetadata
+      assertFdoDirectorySizesM ["sdir1", "sdir2"]
 
     -- SETUP DEST
 
@@ -83,6 +84,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
       (delIdxSet, delMetadata) <- runIndexMetadataM
       assertSetEq delExpectedIdxSet delIdxSet
       delExpectedMetadata @=? delMetadata
+      assertFdoDirectorySizesM ["ddir1", "ddir2"]
 
     -- MERGE FROM SRC TO DEST
     local (set' #trashDir pathSrc) $ do
@@ -111,6 +113,7 @@ mergeSucceeds getTestEnv = testCase "Merge succeeds" $ do
 
       assertSetEq mergeExpectedIdxSet mergeIdxSetDest
       mergeExpectedMetadata @=? mergeMetadataDest
+      assertFdoDirectorySizesTestDirM testDir ["sdir1", "sdir2", "ddir1", "ddir2"]
   where
     delExpectedMetadata = mkMetadata 5 4 0 35
 
@@ -153,6 +156,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       (delIdxSet, delMetadata) <- runIndexMetadataM
       assertSetEq delExpectedIdxSet delIdxSet
       delExpectedMetadata @=? delMetadata
+      assertFdoDirectorySizesM ["sdir1", "dir2"]
 
       pure (filesToDelete ++ dirsToDelete)
 
@@ -186,6 +190,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
         (delIdxSet, delMetadata) <- runIndexMetadataM
         assertSetEq delExpectedIdxSet delIdxSet
         delExpectedMetadata @=? delMetadata
+        assertFdoDirectorySizesM ["ddir1", "dir2"]
 
         pure (filesToDelete ++ dirsToDelete, delExpectedIdxSet)
 
@@ -203,6 +208,7 @@ mergeCollisionFails getTestEnv = testCase "Merge fails due to collision" $ do
       (mergeIdxSetDest, mergeMetadataDest) <- runIndexMetadataM
       assertSetEq delExpectedIdxSetDest mergeIdxSetDest
       delExpectedMetadata @=? mergeMetadataDest
+      assertFdoDirectorySizesM ["ddir1", "dir2"]
   where
     delExpectedMetadata = mkMetadata 5 4 0 35
 
