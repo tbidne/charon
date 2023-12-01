@@ -180,6 +180,8 @@ getIndex ::
 getIndex = addNamespace "getIndex" $ do
   trashHome <- asks getTrashHome
 
+  -- TODO: Use directorysizes in index calculation.
+
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   Default.Trash.doesTrashExist >>= \case

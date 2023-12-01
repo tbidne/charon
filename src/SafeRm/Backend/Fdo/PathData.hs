@@ -121,6 +121,20 @@ toCorePathData ::
 toCorePathData trashHome pd = do
   pathType <- Default.Utils.pathDataToType trashHome pd
 
+  -- TODO: Since we now have directorysizes, there is a potentially faster
+  -- solution. For files / symlinks, simply call getFileSize / symlink equiv.
+  -- For directories, read directorysizes and find the right entry, falling
+  -- back to getPathSize as a last resort.
+  --
+  -- We would want to modify this function to take in the DirectorySizes since
+  -- we do not want to calculate that on the fly all the time (and probably
+  -- store it in a set e.g. UniqueSeq).
+  --
+  -- The problem is toCorePathData is used in several places, and we may not
+  -- want to read directorysizes in all of them.
+  --
+  -- We should first consider if there is a nicer way to refactor the
+  -- backendArgs stuff.
   size <- Utils.getPathSize path
 
   pure
