@@ -164,7 +164,7 @@ formatTabularRow nameLen origLen pd =
   where
     paddedType PathTypeFile = "F   "
     paddedType PathTypeDirectory = "D   "
-    paddedType PathTypeSymbolicLink = "S   "
+    paddedType PathTypeSymbolicLink = "L   "
 
 sep :: Text
 sep = " | "

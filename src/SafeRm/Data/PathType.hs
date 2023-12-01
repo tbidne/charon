@@ -47,27 +47,27 @@ instance Pretty PathTypeW where
 instance ToJSON PathTypeW where
   toJSON (MkPathTypeW PathTypeFile) = "f"
   toJSON (MkPathTypeW PathTypeDirectory) = "d"
-  toJSON (MkPathTypeW PathTypeSymbolicLink) = "s"
+  toJSON (MkPathTypeW PathTypeSymbolicLink) = "l"
 
 instance FromJSON PathTypeW where
   parseJSON = Asn.withText "PathType" $ \case
     "f" -> pure $ MkPathTypeW PathTypeFile
     "d" -> pure $ MkPathTypeW PathTypeDirectory
-    "s" -> pure $ MkPathTypeW PathTypeSymbolicLink
-    other -> fail $ "Expected one of (f|d|s), received: " <> T.unpack other
+    "l" -> pure $ MkPathTypeW PathTypeSymbolicLink
+    other -> fail $ "Expected one of (f|d|l), received: " <> T.unpack other
 
 instance Serialise PathTypeW where
   encode (MkPathTypeW PathTypeFile) = Serialise.encode @Char 'f'
   encode (MkPathTypeW PathTypeDirectory) = Serialise.encode @Char 'd'
-  encode (MkPathTypeW PathTypeSymbolicLink) = Serialise.encode @Char 's'
+  encode (MkPathTypeW PathTypeSymbolicLink) = Serialise.encode @Char 'l'
 
   decode = do
     c <- Serialise.decode @Char
     case c of
       'f' -> pure $ MkPathTypeW PathTypeFile
       'd' -> pure $ MkPathTypeW PathTypeDirectory
-      's' -> pure $ MkPathTypeW PathTypeSymbolicLink
-      other -> fail $ "Expected (f|d|s), received: " ++ [other]
+      'l' -> pure $ MkPathTypeW PathTypeSymbolicLink
+      other -> fail $ "Expected (f|d|l), received: " ++ [other]
 
 -- | This function tests both existence __and__ that the the path is of the
 -- specified type.
