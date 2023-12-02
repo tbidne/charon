@@ -27,8 +27,6 @@ import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 
--- TODO: Should PathData have a field for current trash path?
-
 -- | Data for a path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
 data PathData = UnsafePathData

@@ -58,8 +58,6 @@ readIndex backendArgs trashHome = addNamespace "readIndex" $ do
   $(logDebug) ("Trash info: " <> decodeOsToFpDisplayExT trashInfoDir')
   $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpDisplayExT <$> paths))
 
-  -- TODO: Maybe this shouldn't report errors eagerly
-
   let seqify :: OsPath -> m Acc -> m Acc
       seqify p macc = do
         let actualExt = FP.takeExtension p
