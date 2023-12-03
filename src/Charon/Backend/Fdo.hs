@@ -22,13 +22,19 @@ module Charon.Backend.Fdo
     -- * Rosetta
     toRosetta,
     fromRosetta,
+
+    -- * Existence
+    isFdo,
   )
 where
 
+import Charon.Backend.Data (Backend (BackendFdo))
+import Charon.Backend.Data qualified as Backend
 import Charon.Backend.Default qualified as Default
 import Charon.Backend.Default.Index qualified as Default.Index
 import Charon.Backend.Default.Trash qualified as Default.Trash
 import Charon.Backend.Default.Trash qualified as Trash
+import Charon.Backend.Default.Utils qualified as Default.Utils
 import Charon.Backend.Fdo.BackendArgs (backendArgs)
 import Charon.Backend.Fdo.DirectorySizes
   ( DirectorySizes (MkDirectorySizes),
@@ -63,6 +69,7 @@ import Charon.Utils qualified as Utils
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Data.Traversable (for)
+import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig, overwrite, targetName),
     Overwrite (OverwriteDirectories),
@@ -71,6 +78,7 @@ import Effects.FileSystem.PathWriter
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.System.PosixCompat (_PathTypeDirectory)
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
+import System.OsPath qualified as OsP
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -442,3 +450,46 @@ percentEncodeFileName pd =
   where
     percentEncode = Utils.percentEncode . encodeUtf8 . T.pack
     MkPathI fileName = view #fileName pd
+
+-- | Determines if the backend is Fdo. The semantics are if the trash is
+-- a well-formed fdo backend __and__ it has at least one file with the
+-- fdo extension, then we return @Just True@ (definitely true).
+--
+-- If the trash does not exist or is not well-formed, we return @Just False@
+-- (definitely false).
+--
+-- If the trash __is__ a well-formed fdo backend but we do not have any files
+-- we return Nothing (maybe), because we cannot tell. It __could__ be any
+-- backend that shares the same trash structure, including fdo.
+isFdo ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m
+  ) =>
+  PathI TrashHome ->
+  m (Maybe Bool)
+isFdo trashHome@(MkPathI th) = do
+  exists <-
+    Default.Trash.doesTrashExistPath trashHome
+      `catchAnyCS` \_ -> pure False
+  if exists
+    then do
+      let directorysizesPath = th </> [osp|directorysizes|]
+
+      isDefinitelyFdo <- doesFileExist directorysizesPath
+      if isDefinitelyFdo
+        then -- Trash dir contains directorysizes (fdo): Definitely true.
+          pure (Just True)
+        else do
+          PR.listDirectory trashPath <&> \case
+            -- Trash dir is well-formed but contains no files: Maybe.
+            [] -> Nothing
+            -- Trash dir has at least one file: iff ext matches fdo.
+            (f : _) ->
+              let ext = OsP.takeExtension f
+               in Just $ Backend.backendExt BackendFdo == ext
+    else -- Trash does not exist or it is not a well-formed fdo backend: Definitely
+    -- false.
+      pure $ Just False
+  where
+    MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome

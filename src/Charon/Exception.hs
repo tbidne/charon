@@ -25,9 +25,12 @@ module Charon.Exception
     UniquePathNotPrefixE (..),
     InfoDecodeE (..),
     EmptySearchResults (..),
+    BackendDetectE (..),
   )
 where
 
+import Charon.Backend.Data (Backend)
+import Charon.Backend.Data qualified as Backend
 import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -158,6 +161,18 @@ instance Exception TrashEntryInfoBadExtE where
         "'. Expected '",
         decodeOsToFpDisplayEx expectedExt,
         "'"
+      ]
+
+-- | Unexpected backend error.
+newtype BackendDetectE = MkBackendDetectE Backend
+  deriving stock (Show)
+
+instance Exception BackendDetectE where
+  displayException (MkBackendDetectE wantedExt) =
+    mconcat
+      [ "Wanted backend '",
+        Backend.backendName wantedExt,
+        "', but detected something else"
       ]
 
 -- | Collision with existing file when attempting a restore.

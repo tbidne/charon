@@ -7,6 +7,7 @@ module Charon.Backend.Default.Trash
     createTrash,
     createTrashDir,
     doesTrashExist,
+    doesTrashExistPath,
 
     -- * Main actions
     mvOriginalToTrash,
@@ -119,8 +120,25 @@ doesTrashExist ::
     MonadThrow m
   ) =>
   m Bool
-doesTrashExist = do
-  trashHome <- asks getTrashHome
+doesTrashExist = asks getTrashHome >>= doesTrashExistPath
+
+-- | Returns 'False' if @\<trash-home\>@ does not exist. If @\<trash-home\>@
+-- /does/ exist but is "badly-formed" i.e. one of
+--
+-- * \<trash-home\>/files
+-- * \<trash-home\>/info
+--
+-- does not, throws 'TrashDirFilesNotFoundE' or 'TrashDirInfoNotFoundE'.
+--
+-- If all three dirs exist, returns 'True'.
+doesTrashExistPath ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  PathI TrashHome ->
+  m Bool
+doesTrashExistPath trashHome = do
   let MkPathI trashPathDir' = Default.Utils.getTrashPathDir trashHome
       MkPathI trashInfoDir' = Default.Utils.getTrashInfoDir trashHome
 

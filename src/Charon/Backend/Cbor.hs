@@ -22,14 +22,20 @@ module Charon.Backend.Cbor
     -- * Rosetta
     toRosetta,
     fromRosetta,
+
+    -- * Existence
+    isCbor,
   )
 where
 
 import Charon.Backend.Cbor.BackendArgs (backendArgs)
 import Charon.Backend.Cbor.PathData qualified as Cbor.PathData
+import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Backend.Data qualified as Backend
 import Charon.Backend.Default qualified as Default
 import Charon.Backend.Default.Index qualified as Default.Index
 import Charon.Backend.Default.Trash qualified as Default.Trash
+import Charon.Backend.Default.Utils qualified as Default.Utils
 import Charon.Backend.Rosetta (Rosetta (MkRosetta, index, size))
 import Charon.Class.Serial qualified as Serial
 import Charon.Data.Index (Index)
@@ -45,7 +51,9 @@ import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeq (UniqueSeq)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Prelude
+import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
+import System.OsPath qualified as OsP
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -281,3 +289,46 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
             <.> [osp|.cbor|]
 
     writeBinaryFile filePath encoded
+
+-- | Determines if the backend is Cbor. The semantics are if the trash is
+-- a well-formed cbor backend __and__ it has at least one file with the
+-- extension .cbor, then we return @Just True@ (definitely true).
+--
+-- If the trash does not exist or is not well-formed, we return @Just False@
+-- (definitely false).
+--
+-- If the trash __is__ a well-formed cbor backend but we do not have any files
+-- we return Nothing (maybe), because we cannot tell. It __could__ be any
+-- backend that shares the same trash structure, including cbor.
+isCbor ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m
+  ) =>
+  PathI TrashHome ->
+  m (Maybe Bool)
+isCbor trashHome@(MkPathI th) = do
+  exists <-
+    Default.Trash.doesTrashExistPath trashHome
+      `catchAnyCS` \_ -> pure False
+  if exists
+    then do
+      let directorysizesPath = th </> [osp|directorysizes|]
+
+      isDefinitelyFdo <- doesFileExist directorysizesPath
+      if isDefinitelyFdo
+        then -- Trash dir contains directorysizes (fdo): Definitely false.
+          pure (Just False)
+        else do
+          PR.listDirectory trashPath <&> \case
+            -- Trash dir is well-formed but contains no files: Maybe.
+            [] -> Nothing
+            -- Trash dir has at least one file: iff ext matches cbor.
+            (f : _) ->
+              let ext = OsP.takeExtension f
+               in Just $ Backend.backendExt BackendCbor == ext
+    else -- Trash does not exist or it is not a well-formed cbor backend: Definitely
+    -- false.
+      pure $ Just False
+  where
+    MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome

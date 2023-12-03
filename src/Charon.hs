@@ -35,15 +35,11 @@ import Charon.Data.Paths
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeq (UniqueSeq)
 import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
+import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter qualified as PW
-
--- TODO: We should really make it detect the backend, if not given.
--- Probably need functions like
---   - isCbor, isFdo, isJson...
---   - getBackend :: PathI TrashHome -> m Backend (used in merge)
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -346,9 +342,16 @@ merge dest = do
       $(logDebug) $ "Dest path: " <> Paths.toText dest
       backend <- asks getBackend
 
-      -- FIXME: This should perform a backend check to make sure
-      -- they are the same.
       case backend of
-        BackendCbor -> addNamespace "cbor" $ Cbor.merge src' dest'
-        BackendFdo -> addNamespace "fdo" $ Fdo.merge src' dest'
-        BackendJson -> addNamespace "json" $ Json.merge src' dest'
+        BackendCbor ->
+          Cbor.isCbor dest >>= \case
+            Just False -> throwCS $ MkBackendDetectE BackendCbor
+            _ -> addNamespace "cbor" $ Cbor.merge src' dest'
+        BackendFdo ->
+          Fdo.isFdo dest >>= \case
+            Just False -> throwCS $ MkBackendDetectE BackendFdo
+            _ -> addNamespace "fdo" $ Fdo.merge src' dest'
+        BackendJson ->
+          Json.isJson dest >>= \case
+            Just False -> throwCS $ MkBackendDetectE BackendJson
+            _ -> addNamespace "json" $ Json.merge src' dest'
