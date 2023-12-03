@@ -292,38 +292,17 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
   usingReaderT testEnv $ appendTestDirM "deletesPathological" $ do
     testDir <- getTestDir
 
-    -- FIXME: The following paths were generated in the int tests and caused
-    -- a failure on OSX. For some reason, OSX believes the below two paths are
-    -- the same! That is, we first delete ώ (8061) and then attempt to delete
-    -- ώ (974), yet Charon.Backend.Default.Utils.mkUniqPath believes this path
-    -- already exists. Thus it creates
+    -- See NOTE: [Unicode normalization]
     --
-    --   ώ (1)
+    -- This test was originally written as an example of the kind of test
+    -- that causes OSX integration tests to fail, and something we needed
+    -- to fix. That is, the idea is that we would eventually have this test
+    -- passing on OSX too.
     --
-    -- The tests do not expect this, and it fails.
-    --
-    -- More info on why this occurs: According to the stackoverflow answer
-    --
-    --     https://stackoverflow.com/questions/38484369/why-does-the-c-runtime-on-mac-os-allow-both-precomposed-and-decomposed-utf-8
-    --
-    -- OSX "normalizes" paths per UTF-8 standards. In particular, two unique
-    -- encodings that "represent" the same thing (e.g. characters with accents)
-    -- can end up identical.
-    --
-    -- In our case, because these two glyphs look identical, they likely
-    -- share the same normalization, hence the OSX failure.
-    --
-    -- OSX is arguably doing the right thing here, so maybe we should too.
-    --
-    -- The way to fix this would be to normalize paths ourselves (probably do
-    -- this on initial CLI parsing), and then normalize paths when we generate
-    -- them in the tests.
-    --
-    -- See the text-icu package:
-    --
-    -- https://hackage.haskell.org/package/text-icu-0.8.0.4/docs/Data-Text-ICU-Normalize.html#v:normalize
-    --
-    -- And also unicode-transforms.
+    --However, we came around to the opinion that this was merely a
+    -- test failure, not anything wrong with our behavior wrt OSX. Thus there
+    -- is not much need for this test anymore, though it does serve as
+    -- documentation, so we leave it for now.
     let files =
           (testDir </>!)
             <$> [ "\8061", -- ώ, These two are __not__ the same (compare /=)

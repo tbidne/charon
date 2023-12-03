@@ -226,6 +226,7 @@ test-suite integration
     , test-utils
     , text
     , time
+    , unicode-transforms    ^>=0.4.0
     , unordered-containers
 
   hs-source-dirs:   test/integration

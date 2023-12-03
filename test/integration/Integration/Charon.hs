@@ -167,7 +167,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      annotateShow $ show $ USeq.map (fmap Ch.isPrint) fps
+      annotateShow $ show $ USeq.map (fmap Ch.isPrint . IntUtils.normedFpToFp) fps
       setupDir testDir αTest
 
       -- delete files

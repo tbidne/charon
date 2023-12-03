@@ -22,7 +22,7 @@ jobs:
         platform:
           - os: "macos-latest"
             set-env: "export"
-            unit-trials: 1000
+            unit-trials: 10000
             int-trials: 1000
           - os: "ubuntu-latest"
             set-env: "export"
@@ -30,8 +30,8 @@ jobs:
             int-trials: 1000
           - os: "windows-latest"
             set-env: "set"
-            unit-trials: 100
-            int-trials: 100
+            unit-trials: 1000
+            int-trials: 1000
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v3
