@@ -31,7 +31,8 @@ import Charon.Backend.Default.Trash qualified as Default.Trash
 import Charon.Backend.Default.Trash qualified as Trash
 import Charon.Backend.Fdo.BackendArgs (backendArgs)
 import Charon.Backend.Fdo.DirectorySizes
-  ( DirectorySizesEntry
+  ( DirectorySizes (MkDirectorySizes),
+    DirectorySizesEntry
       ( MkDirectorySizesEntry,
         fileName,
         size,
@@ -59,7 +60,9 @@ import Charon.Data.UniqueSeq (UniqueSeq)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
+import Data.Sequence qualified as Seq
 import Data.Text qualified as T
+import Data.Traversable (for)
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig, overwrite, targetName),
     Overwrite (OverwriteDirectories),
@@ -350,7 +353,8 @@ fromRosetta ::
     MonadIORef m,
     MonadMask m,
     MonadPathReader m,
-    MonadPathWriter m
+    MonadPathWriter m,
+    MonadTime m
   ) =>
   PathI TrashHome ->
   Rosetta ->
@@ -362,7 +366,7 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
   (MkPathI trashPathDir, MkPathI trashInfoDir) <-
     Default.Trash.createTrashDir tmpDir
 
-  for_ (rosetta ^. (#index % #unIndex)) $ \(pd, MkPathI oldTrashPath) -> do
+  mdirectorySizes <- for (rosetta ^. (#index % #unIndex)) $ \(pd, MkPathI oldTrashPath) -> do
     -- transform core path data to fdo
     let fdoPathData = Fdo.PathData.fromCorePathData pd
         newTrashPath =
@@ -380,6 +384,31 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
             <.> [osp|.trashinfo|]
 
     writeBinaryFile filePath encoded
+
+    -- build directorysizes
+    if PathData.isDirectory pd
+      then do
+        entryFileName <- percentEncodeFileName pd
+        let time = Utils.localTimeToMillis $ pd ^. (#created % #unTimestamp)
+            entry =
+              MkDirectorySizesEntry
+                { size = pd ^. (#size % _MkBytes),
+                  time = fromIntegral time,
+                  fileName = entryFileName
+                }
+        DirectorySizes.appendEntryTrashHome tmpDir entry
+        pure $ Just entry
+      else pure Nothing
+
+  -- write directorysizes
+  let catMaybes acc Nothing = acc
+      catMaybes acc (Just x) = acc :|> x
+
+      directorySizes =
+        Seq.sortOn (\entry -> (entry ^. #time, entry ^. #fileName))
+          $ foldl' catMaybes Seq.empty mdirectorySizes
+
+  DirectorySizes.writeDirectorySizesTrashHome tmpDir (MkDirectorySizes directorySizes)
 
 removeDirectorySize ::
   ( HasCallStack,

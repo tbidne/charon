@@ -11,6 +11,7 @@ module Charon.Backend.Fdo.DirectorySizes
 
     -- * Adding
     appendEntry,
+    appendEntryTrashHome,
     writeDirectorySizes,
     writeDirectorySizesTrashHome,
 
@@ -129,10 +130,29 @@ appendEntry ::
   DirectorySizesEntry ->
   m ()
 appendEntry dirSizeEntry = do
-  MkDirectorySizes directorySizes <- readDirectorySizes
+  trashHome <- asks getTrashHome
+  appendEntryTrashHome trashHome dirSizeEntry
+
+-- | Appends an entry to directorysizes.
+appendEntryTrashHome ::
+  forall m.
+  ( HasCallStack,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadFileReader m,
+    MonadFileWriter m,
+    MonadPathReader m,
+    MonadPathWriter m,
+    MonadTime m
+  ) =>
+  PathI TrashHome ->
+  DirectorySizesEntry ->
+  m ()
+appendEntryTrashHome trashHome dirSizeEntry = do
+  MkDirectorySizes directorySizes <- readDirectorySizesTrashHome trashHome
   let directorySizes' = MkDirectorySizes (directorySizes :|> dirSizeEntry)
 
-  writeDirectorySizes directorySizes'
+  writeDirectorySizesTrashHome trashHome directorySizes'
 
 -- | Writes entries to directorysizes.
 writeDirectorySizes ::

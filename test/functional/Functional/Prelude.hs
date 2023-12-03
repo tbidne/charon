@@ -36,6 +36,7 @@ module Functional.Prelude
     FuncEnv.assertFdoDirectorySizesM,
     FuncEnv.assertFdoDirectorySizesTestDirM,
     FuncEnv.assertFdoDirectorySizesArgsM,
+    FuncEnv.assertFdoDirectorySizesArgsNoOrderM,
 
     -- * Misc
     withSrArgsM,

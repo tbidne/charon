@@ -71,6 +71,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
     (delIdxSet, delMetadata) <- runIndexMetadataM
     assertSetEq delExpectedIdxSet delIdxSet
     delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
 
     -- CONVERT
 
@@ -127,6 +128,7 @@ convertsBackend dest getTestEnv = testCase ("Converts backend to " ++ destDesc) 
       (convertIdxSet, convertMetadata) <- runIndexMetadataTestDirM testDir
       assertSetEq convertExpectedIdxSet convertIdxSet
       delExpectedMetadata @=? convertMetadata
+      assertFdoDirectorySizesArgsM dest testDir ["dir1", "dir2", "dir4"]
   where
     destDesc = Backend.Data.backendName dest
 

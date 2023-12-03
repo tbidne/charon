@@ -39,6 +39,7 @@ module Functional.Prelude.FuncEnv
     assertFdoDirectorySizesM,
     assertFdoDirectorySizesTestDirM,
     assertFdoDirectorySizesArgsM,
+    assertFdoDirectorySizesArgsNoOrderM,
   )
 where
 
@@ -596,6 +597,36 @@ assertFdoDirectorySizesArgsM backend testDir expectedFileNames = do
       liftIO $ assertBool errMsg (length expectedFileNames == length directorySizes')
 
       for_ (L.zip expectedFileNames directorySizes') $ \(expectedFileName, result) -> do
+        localTimeMillis @=? result ^. #time
+        expectedFileName @=? result ^. #fileName
+    _ -> pure ()
+
+assertFdoDirectorySizesArgsNoOrderM :: Backend -> OsPath -> [ByteString] -> TestM ()
+assertFdoDirectorySizesArgsNoOrderM backend testDir expectedFileNames = do
+  case backend of
+    BackendFdo -> do
+      trashDir <- asks (view #trashDir)
+
+      let directorySizesPath = testDir </> trashDir
+
+      MkDirectorySizes results <- DirectorySizes.readDirectorySizesTrashHome (MkPathI directorySizesPath)
+
+      let resultsSorted =
+            L.sortOn (view #fileName) $ toList results
+          errMsg =
+            mconcat
+              [ "Expected:\n",
+                show expectedFileNames,
+                "\n\n",
+                "Results:\n",
+                show resultsSorted
+              ]
+
+          expectedFileNamesSorted = L.sort expectedFileNames
+
+      liftIO $ assertBool errMsg (length expectedFileNames == length resultsSorted)
+
+      for_ (L.zip expectedFileNamesSorted resultsSorted) $ \(expectedFileName, result) -> do
         localTimeMillis @=? result ^. #time
         expectedFileName @=? result ^. #fileName
     _ -> pure ()
