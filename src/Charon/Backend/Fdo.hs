@@ -12,7 +12,6 @@ module Charon.Backend.Fdo
     restore,
 
     -- * Information
-    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -308,24 +307,6 @@ merge src dest = addNamespace "merge" $ do
         { overwrite = OverwriteDirectories,
           targetName = TargetNameDest
         }
-
--- | Looks up the trash entry file name, throwing an exception if none is
--- found.
-lookupTrashName ::
-  ( HasBackend env,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadLoggerNS m,
-    MonadFileReader m,
-    MonadPathReader m,
-    MonadReader env m,
-    MonadPosixCompat m,
-    MonadTerminal m
-  ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
-  m (NESeq PathData)
-lookupTrashName = Default.lookupTrashName backendArgs
 
 toRosetta ::
   ( HasTrashHome env,

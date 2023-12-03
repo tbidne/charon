@@ -22,7 +22,6 @@ module Charon.Backend.Default
     restorePostHook,
 
     -- * Information
-    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -41,7 +40,6 @@ import Charon.Data.Index qualified as Index
 import Charon.Data.Metadata (Metadata (MkMetadata))
 import Charon.Data.Metadata qualified as Metadata
 import Charon.Data.PathData (PathData)
-import Charon.Data.PathData qualified as PathData.Core
 import Charon.Data.PathType (PathTypeW)
 import Charon.Data.Paths
   ( PathI (MkPathI),
@@ -56,13 +54,10 @@ import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Data.UniqueSeq (UniqueSeq)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
-import Charon.Exception (EmptySearchResults (MkEmptySearchResults))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
-import Data.Sequence qualified as Seq
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
@@ -472,35 +467,3 @@ merge ::
   PathI TrashHome ->
   m ()
 merge src dest = addNamespace "merge" $ Trash.mergeTrashDirs src dest
-
-type PathDataCore = PathData.Core.PathData
-
--- | Looks up the trash entry file name, throwing an exception if none is
--- found.
-lookupTrashName ::
-  ( DecodeExtra pd ~ PathI TrashEntryFileName,
-    HasBackend env,
-    HasCallStack,
-    HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    MonadCatch m,
-    MonadLoggerNS m,
-    MonadFileReader m,
-    MonadPathReader m,
-    MonadReader env m,
-    Serial pd
-  ) =>
-  BackendArgs m pd ->
-  UniqueSeq (PathI TrashEntryFileName) ->
-  m (NESeq PathDataCore)
-lookupTrashName backendArgs pathNames = addNamespace "lookupTrashName" $ do
-  trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
-
-  results <- traverse (Trash.findPathData backendArgs trashHome) (pathNames ^. #seq)
-  case results of
-    -- TODO: This __should__ be impossible as the UniqueSeq is non-empty, though
-    -- it would be nice to have a better type for this (i.e. UniqueSeqNE).
-    Seq.Empty -> throwCS $ MkEmptySearchResults pathNames
-    (x :<|| xs) :<| ys -> pure $ x :<|| (xs <> (ys >>= NESeq.toSeq))

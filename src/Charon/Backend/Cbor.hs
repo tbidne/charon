@@ -12,7 +12,6 @@ module Charon.Backend.Cbor
     restore,
 
     -- * Information
-    lookupTrashName,
     getIndex,
     getMetadata,
 
@@ -41,7 +40,6 @@ import Charon.Class.Serial qualified as Serial
 import Charon.Data.Index (Index)
 import Charon.Data.Index qualified as Index
 import Charon.Data.Metadata (Metadata)
-import Charon.Data.PathData (PathData)
 import Charon.Data.PathType qualified as PathType
 import Charon.Data.Paths
   ( PathI (MkPathI),
@@ -204,25 +202,6 @@ merge ::
   PathI TrashHome ->
   m ()
 merge = Default.merge
-
--- | Looks up the trash entry file name, throwing an exception if none is
--- found.
-lookupTrashName ::
-  ( HasBackend env,
-    HasCallStack,
-    HasTrashHome env,
-    MonadAsync m,
-    MonadCatch m,
-    MonadLoggerNS m,
-    MonadFileReader m,
-    MonadPathReader m,
-    MonadReader env m,
-    MonadPosixCompat m,
-    MonadTerminal m
-  ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
-  m (NESeq PathData)
-lookupTrashName = Default.lookupTrashName backendArgs
 
 toRosetta ::
   ( HasCallStack,
