@@ -122,7 +122,19 @@ genFileName ::
   (MonadGen m) =>
   Bool ->
   m (PathWithType, NormedFp)
-genFileName asciiOnly = genFileNameNoDupes asciiOnly USeq.empty
+genFileName asciiOnly = do
+  pathType <-
+    MkPathTypeW
+      <$> Gen.element
+        [ PathTypeFile,
+          PathTypeDirectory,
+          PathTypeSymbolicLink
+        ]
+
+  (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fpToNormedFp fp))
+    <$> Gen.string range (TestUtils.genPathChar asciiOnly)
+  where
+    range = Range.linear 1 20
 
 genFileNameNoDupes ::
   (MonadGen m) =>
