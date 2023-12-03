@@ -33,7 +33,6 @@ newtype PathTypeW = MkPathTypeW {unPathTypeW :: PathType}
 
 makeFieldLabelsNoPrefix ''PathTypeW
 
--- TODO: Is this legit?
 instance Hashable PathTypeW where
   hashWithSalt int (MkPathTypeW PathTypeFile) = hashWithSalt @Int int 1
   hashWithSalt int (MkPathTypeW PathTypeDirectory) = hashWithSalt @Int int 2
