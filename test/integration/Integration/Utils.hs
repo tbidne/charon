@@ -21,7 +21,7 @@ import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.UniqueSeq (UniqueSeq, fromFoldable)
 import Charon.Data.UniqueSeq qualified as USeq
 import Data.Hashable (Hashable (hash))
-import Data.List (unzip)
+import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
 import Data.Text.Normalize (NormalizationMode (NFD))
 import Data.Text.Normalize qualified as TNormalize
@@ -98,22 +98,22 @@ normedFpToFp = T.unpack . view #unNormedFilePath
 
 genFileNameSet :: (MonadGen m) => Bool -> m GPaths
 genFileNameSet asciiOnly =
-  splitPaths <$> Gen.list seqRange (genFileName asciiOnly)
+  splitPaths <$> Gen.nonEmpty seqRange (genFileName asciiOnly)
 
 gen2FileNameSets :: (MonadGen m) => Bool -> m (GPaths, GPaths)
 gen2FileNameSets asciiOnly = do
   α@(_, αFps) <- genFileNameSet asciiOnly
   (\r -> (α, splitPaths r))
-    <$> Gen.list seqRange (genFileNameNoDupes asciiOnly αFps)
+    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly αFps)
 
 gen3FileNameSets :: (MonadGen m) => Bool -> m (GPaths, GPaths, GPaths)
 gen3FileNameSets asciiOnly = do
   (α@(_, αFps), β@(_, βFps)) <- gen2FileNameSets asciiOnly
   (\r -> (α, β, splitPaths r))
-    <$> Gen.list seqRange (genFileNameNoDupes asciiOnly (αFps `USeq.union` βFps))
+    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (αFps `USeq.union` βFps))
 
-splitPaths :: [(PathWithType, NormedFp)] -> GPaths
-splitPaths = bimap fromFoldable fromFoldable . unzip
+splitPaths :: NonEmpty (PathWithType, NormedFp) -> GPaths
+splitPaths = bimap fromFoldable fromFoldable . NE.unzip
 
 seqRange :: Range Int
 seqRange = Range.linear 1 100
