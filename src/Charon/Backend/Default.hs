@@ -46,6 +46,7 @@ import Charon.Data.Paths
     PathIndex
       ( TrashEntryFileName,
         TrashEntryOriginalPath,
+        TrashEntryPath,
         TrashHome
       ),
   )
@@ -117,7 +118,7 @@ deletePostHook ::
     Show pd
   ) =>
   BackendArgs m pd ->
-  ((pd, PathTypeW) -> m ()) ->
+  ((pd, PathTypeW, PathI TrashEntryPath) -> m ()) ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do

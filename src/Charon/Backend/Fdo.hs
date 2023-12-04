@@ -32,9 +32,8 @@ import Charon.Backend.Data qualified as Backend
 import Charon.Backend.Default qualified as Default
 import Charon.Backend.Default.Index qualified as Default.Index
 import Charon.Backend.Default.Trash qualified as Default.Trash
-import Charon.Backend.Default.Trash qualified as Trash
 import Charon.Backend.Default.Utils qualified as Default.Utils
-import Charon.Backend.Fdo.BackendArgs (backendArgs)
+import Charon.Backend.Fdo.BackendArgs qualified as BackendArgs
 import Charon.Backend.Fdo.DirectorySizes
   ( DirectorySizes (MkDirectorySizes),
     DirectorySizesEntry
@@ -46,6 +45,7 @@ import Charon.Backend.Fdo.DirectorySizes
   )
 import Charon.Backend.Fdo.DirectorySizes qualified as DirectorySizes
 import Charon.Backend.Fdo.PathData qualified as Fdo.PathData
+import Charon.Backend.Fdo.Utils qualified as Fdo.Utils
 import Charon.Backend.Rosetta (Rosetta (MkRosetta, index, size))
 import Charon.Class.Serial qualified as Serial
 import Charon.Data.Index (Index)
@@ -57,7 +57,7 @@ import Charon.Data.PathType (PathTypeW)
 import Charon.Data.PathType qualified as PathType
 import Charon.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
+    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashEntryPath, TrashHome),
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
@@ -65,8 +65,8 @@ import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
+import Data.HashMap.Strict qualified as HMap
 import Data.Sequence qualified as Seq
-import Data.Text qualified as T
 import Data.Traversable (for)
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter
@@ -76,7 +76,9 @@ import Effects.FileSystem.PathWriter
   )
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.System.PosixCompat (_PathTypeDirectory)
+import GHC.Exts (IsList (toList))
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
+import Numeric.Literal.Integer (FromInteger (afromInteger))
 import System.OsPath qualified as OsP
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
@@ -106,44 +108,39 @@ delete ::
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = do
-  trashHome <- asks getTrashHome
+  _trashHome <- asks getTrashHome
 
-  let appendDirectorySize :: (Fdo.PathData.PathData, PathTypeW) -> m ()
-      appendDirectorySize (pd, pathType) =
+  let appendDirectorySize :: (Fdo.PathData.PathData, PathTypeW, PathI TrashEntryPath) -> m ()
+      appendDirectorySize (pd, pathType, MkPathI newPath) =
         when (is (#unPathTypeW % _PathTypeDirectory) pathType) $ do
-          let MkPathI trashPath = Trash.getTrashPath trashHome (pd ^. #fileName)
-          -- We could instead use the backendArgs to transform our Fdo.MkPathData
-          -- into the core PathData and get its size. So why don't we? The core
-          -- PathData's dir size includes the directory itself i.e.
+          -- In FDO's directorysizes spec, the listed size does not include
+          -- the directory itself. That is, while getPathSize calculates
           --
-          -- size := size(dir) + size(dir contents)
+          --     size := size(dir) + size(dir contents)
           --
-          -- For example, a directory with a single 4 bytes file will usually
-          -- have the size 4096 (dir size) + 4 = 5000 bytes on Posix.
+          -- We actually want
           --
-          -- This is normally what we want e.g. calculating entire trash size
-          -- and listing each entry's size.
+          --     size := size(dir contents)
           --
-          -- But in FDO's directorysizes spec, the listed size does __not__
-          -- include the directory itself. Thus we instead use
-          -- 'getPathSizeIgnoreDirSize' here.
-          size <- view _MkBytes <$> Utils.getPathSizeIgnoreDirSize trashPath
+          -- Thus we remove the dir size after performing the calculation.
+          size <- Utils.getPathSize newPath
+          sizeWithoutDir <- sizeMinusDir size newPath
 
           let MkTimestamp localTime = pd ^. #created
               posixMillis = fromIntegral $ Utils.localTimeToMillis localTime
 
-          fileNameEncoded <- percentEncodeFileName pd
+          fileNameEncoded <- Fdo.Utils.percentEncodeFileName pd
 
           let entry =
                 MkDirectorySizesEntry
-                  { size,
+                  { size = sizeWithoutDir,
                     time = posixMillis,
                     fileName = fileNameEncoded
                   }
 
           DirectorySizes.appendEntry entry
 
-  Default.deletePostHook backendArgs appendDirectorySize paths
+  Default.deletePostHook BackendArgs.backendArgs appendDirectorySize paths
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -169,7 +166,7 @@ permDelete ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete =
-  Default.permDeletePostHook backendArgs removeDirectorySize
+  Default.permDeletePostHook BackendArgs.backendArgs removeDirectorySize
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -190,15 +187,17 @@ getIndex ::
 getIndex = addNamespace "getIndex" $ do
   trashHome <- asks getTrashHome
 
-  -- TODO: Use directorysizes in index calculation.
-
   $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   Default.Trash.doesTrashExist >>= \case
     False -> do
       $(logDebug) "Trash does not exist."
       pure Index.empty
-    True -> Default.Index.readIndex backendArgs trashHome
+    True -> do
+      MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome trashHome
+      let dirSizesMap = HMap.fromList $ fmap (\e -> (e ^. #fileName, e)) (toList directorySizes)
+          backendArgs' = BackendArgs.backendArgsDirectorySizes dirSizesMap
+      Default.Index.readIndex backendArgs' trashHome
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
@@ -215,7 +214,15 @@ getMetadata ::
     MonadTerminal m
   ) =>
   m Metadata
-getMetadata = Default.getMetadata backendArgs
+getMetadata = addNamespace "getMetadata" $ do
+  trashHome <- asks getTrashHome
+  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+
+  MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome trashHome
+  let dirSizesMap = HMap.fromList $ fmap (\e -> (e ^. #fileName, e)) (toList directorySizes)
+      backendArgs' = BackendArgs.backendArgsDirectorySizes dirSizesMap
+
+  Default.getMetadata backendArgs'
 
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
@@ -239,7 +246,7 @@ restore ::
   ) =>
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-restore = Default.restorePostHook backendArgs removeDirectorySize
+restore = Default.restorePostHook BackendArgs.backendArgs removeDirectorySize
 
 -- | Empties the trash.
 emptyTrash ::
@@ -259,7 +266,7 @@ emptyTrash ::
   ) =>
   Bool ->
   m ()
-emptyTrash = Default.emptyTrash backendArgs
+emptyTrash = Default.emptyTrash BackendArgs.backendArgs
 
 merge ::
   ( HasCallStack,
@@ -377,11 +384,14 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
     -- build directorysizes
     if PathData.isDirectory pd
       then do
-        entryFileName <- percentEncodeFileName pd
+        entryFileName <- Fdo.Utils.percentEncodeFileName pd
+
+        sizeWithoutDir <- sizeMinusDir (pd ^. #size) oldTrashPath
+
         let time = Utils.localTimeToMillis $ pd ^. (#created % #unTimestamp)
             entry =
               MkDirectorySizesEntry
-                { size = pd ^. (#size % _MkBytes),
+                { size = sizeWithoutDir,
                   time = fromIntegral time,
                   fileName = entryFileName
                 }
@@ -415,22 +425,7 @@ removeDirectorySize ::
   m ()
 removeDirectorySize pd = when (PathData.isDirectory pd) (removeEntry pd)
   where
-    removeEntry = percentEncodeFileName >=> DirectorySizes.removeEntry
-
-percentEncodeFileName ::
-  forall m pd k.
-  ( HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    MonadThrow m
-  ) =>
-  pd ->
-  m ByteString
-percentEncodeFileName pd =
-  percentEncode <$> decodeOsToFpThrowM fileName
-  where
-    percentEncode = Utils.percentEncode . encodeUtf8 . T.pack
-    MkPathI fileName = view #fileName pd
+    removeEntry = Fdo.Utils.percentEncodeFileName >=> DirectorySizes.removeEntry
 
 -- | Determines if the backend is Fdo. The semantics are if the trash is
 -- a well-formed fdo backend __and__ it has at least one file with the
@@ -474,3 +469,21 @@ isFdo trashHome@(MkPathI th) = do
       pure $ Just False
   where
     MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome
+
+sizeMinusDir ::
+  ( HasCallStack,
+    MonadPathReader m
+  ) =>
+  -- | The base size b
+  Bytes B Natural ->
+  -- | The directory path d
+  OsPath ->
+  -- | b - dir_size(d), clamped at 0.
+  m (Bytes B Natural)
+sizeMinusDir size path = do
+  dirIntrisicSize <- fromIntegral <$> PR.getFileSize path
+
+  pure
+    $ if size >= MkBytes dirIntrisicSize
+      then fmap (\s -> s - dirIntrisicSize) size
+      else afromInteger 0

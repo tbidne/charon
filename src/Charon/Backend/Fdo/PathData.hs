@@ -8,12 +8,15 @@ module Charon.Backend.Fdo.PathData
     PathData (..),
     toPathData,
     toCorePathData,
+    toCorePathDataDirectorySizes,
     fromCorePathData,
   )
 where
 
 import Charon.Backend.Default.Trash qualified as Trash
 import Charon.Backend.Default.Utils qualified as Default.Utils
+import Charon.Backend.Fdo.DirectorySizes (DirectorySizesEntry)
+import Charon.Backend.Fdo.Utils qualified as Fdo.Utils
 import Charon.Class.Serial (Serial (..), decodeUnit)
 import Charon.Data.PathData qualified as PathData
 import Charon.Data.PathType (PathTypeW)
@@ -30,7 +33,11 @@ import Charon.Prelude
 import Charon.Utils qualified as U
 import Charon.Utils qualified as Utils
 import Data.ByteString.Char8 qualified as C8
+import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as Set
+import Effects.FileSystem.PathReader qualified as PR
+import Numeric.Algebra (ASemigroup ((.+.)))
+import Numeric.Literal.Integer (FromInteger (afromInteger))
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -121,21 +128,47 @@ toCorePathData ::
 toCorePathData trashHome pd = do
   pathType <- Default.Utils.pathDataToType trashHome pd
 
-  -- TODO: Since we now have directorysizes, there is a potentially faster
-  -- solution. For files / symlinks, simply call getFileSize / symlink equiv.
-  -- For directories, read directorysizes and find the right entry, falling
-  -- back to getPathSize as a last resort.
-  --
-  -- We would want to modify this function to take in the DirectorySizes since
-  -- we do not want to calculate that on the fly all the time (and probably
-  -- store it in a set e.g. UniqueSeq).
-  --
-  -- The problem is toCorePathData is used in several places, and we may not
-  -- want to read directorysizes in all of them.
-  --
-  -- We should first consider if there is a nicer way to refactor the
-  -- backendArgs stuff.
   size <- Utils.getPathSize path
+
+  pure
+    $ PathData.UnsafePathData
+      { pathType,
+        fileName = pd ^. #fileName,
+        originalPath = pd ^. #originalPath,
+        size,
+        created = pd ^. #created
+      }
+  where
+    MkPathI path = Trash.getTrashPath trashHome (pd ^. #fileName)
+
+toCorePathDataDirectorySizes ::
+  ( HasCallStack,
+    MonadAsync m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadPathReader m,
+    MonadPosixCompat m,
+    MonadTerminal m
+  ) =>
+  HashMap ByteString DirectorySizesEntry ->
+  PathI TrashHome ->
+  PathData ->
+  m PathData.PathData
+toCorePathDataDirectorySizes dsizeMap trashHome pd = do
+  pathType <- Default.Utils.pathDataToType trashHome pd
+
+  size <- case pathType ^. #unPathTypeW of
+    PathTypeFile -> afromInteger <$> PR.getFileSize path
+    PathTypeDirectory -> do
+      name <- Fdo.Utils.percentEncodeFileName pd
+      case HMap.lookup name dsizeMap of
+        Just entry -> do
+          dirSize <- fromIntegral @_ @Natural <$> PR.getFileSize path
+          -- directorysizes does not include the directory itself, so we have
+          -- to add it back
+          pure $ MkBytes dirSize .+. entry ^. #size
+        Nothing -> Utils.getPathSize path
+    PathTypeSymbolicLink -> Utils.getSymLinkSize path
 
   pure
     $ PathData.UnsafePathData

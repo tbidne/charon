@@ -30,13 +30,16 @@ module Charon.Utils
     readLogLevel,
     logLevelStrings,
 
+    -- * PathSize
+    getPathSize,
+    getPathSizeIgnoreDirSize,
+    getSymLinkSize,
+
     -- * Misc
     filterSeqM,
     renderPretty,
     setRefIfJust,
     noBuffering,
-    getPathSize,
-    getPathSizeIgnoreDirSize,
     getAllFiles,
     localTimeToMillis,
     getRandomTmpFile,
@@ -47,6 +50,7 @@ import Charon.Prelude
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Lazy qualified as BSL
+import Data.Bytes (FromInteger (afromInteger))
 import Data.Bytes qualified as Bytes
 import Data.Bytes.Class.Wrapper (Unwrapper (Unwrapped))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
@@ -63,6 +67,7 @@ import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
+import Effects.System.PosixCompat qualified as Posix
 import Effects.Time (MonadTime (getMonotonicTime))
 import PathSize
   ( PathSizeResult
@@ -74,6 +79,7 @@ import PathSize
 import PathSize qualified
 import PathSize.Data.Config qualified as PathSize.Config
 import System.IO qualified as IO
+import System.PosixCompat.Files qualified as PFiles
 import Text.Printf (PrintfArg)
 import URI.ByteString qualified as URI
 
@@ -388,3 +394,15 @@ getRandomTmpFile prefix = do
   timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
   tmpDir <- PR.getTemporaryDirectory
   pure $ tmpDir </> prefix <> [osp|_|] <> timeStr
+
+getSymLinkSize ::
+  ( HasCallStack,
+    MonadPosixCompat m,
+    MonadThrow m
+  ) =>
+  OsPath ->
+  m (Bytes B Natural)
+getSymLinkSize =
+  fmap (afromInteger . fromIntegral . PFiles.fileSize)
+    . Posix.getSymbolicLinkStatus
+    <=< decodeOsToFpThrowM

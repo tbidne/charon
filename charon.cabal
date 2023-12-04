@@ -64,6 +64,7 @@ library
     Charon.Backend.Fdo.BackendArgs
     Charon.Backend.Fdo.DirectorySizes
     Charon.Backend.Fdo.PathData
+    Charon.Backend.Fdo.Utils
     Charon.Backend.Json
     Charon.Backend.Json.BackendArgs
     Charon.Backend.Json.PathData
@@ -124,6 +125,7 @@ library
     , text                  >=1.2.4.0   && <2.1
     , time                  >=1.9.3     && <1.14
     , toml-reader           >=0.2.0.0   && <0.3
+    , unix-compat           >=0.6       && <0.8
     , unordered-containers  ^>=0.2.14.0
     , uri-bytestring        ^>=0.3.3.1
     , vector                >=0.12.3.0  && <0.14

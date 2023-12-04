@@ -36,7 +36,10 @@ data PathData = UnsafePathData
     fileName :: PathI TrashEntryFileName,
     -- | The original path on the file system.
     originalPath :: PathI TrashEntryOriginalPath,
-    -- | The size of the file or directory.
+    -- | The size of the file or directory. This is the __total__ size,
+    -- i.e. in the case of a directory it is
+    --
+    --     size := size(dir) + size(dir contents)
     size :: Bytes B Natural,
     -- | Time this entry was created.
     created :: Timestamp

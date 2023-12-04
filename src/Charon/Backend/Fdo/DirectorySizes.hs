@@ -48,7 +48,7 @@ import Text.Read qualified as TR
 data DirectorySizesEntry = MkDirectorySizesEntry
   { -- | Directory size in bytes. This does __not__ include the size of the
     -- directory itself.
-    size :: Natural,
+    size :: Bytes B Natural,
     -- | The time this directory was deleted. The units are milliseconds since
     -- the unix epoch.
     time :: Natural,
@@ -66,12 +66,13 @@ instance Serial DirectorySizesEntry where
   encode entry = Right $ mconcat bsXs
     where
       bsXs =
-        [ toBs $ entry ^. #size,
+        [ toBs $ entry ^. (#size % _MkBytes),
           " ",
           toBs $ entry ^. #time,
           " ",
           entry ^. #fileName
         ]
+      toBs :: (Show a) => a -> ByteString
       toBs = encodeUtf8 . T.pack . show
 
   decode _ bs = do
@@ -79,7 +80,7 @@ instance Serial DirectorySizesEntry where
       [sizeBs, timeBs, fileNameBs] -> Right (sizeBs, timeBs, fileNameBs)
       other -> Left $ "Expected three space-separated sections, received:" <> show other
 
-    size <- fromBs sizeBs
+    size <- MkBytes <$> fromBs sizeBs
     time <- fromBs timeBs
 
     Right

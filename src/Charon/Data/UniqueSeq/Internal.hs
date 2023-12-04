@@ -23,8 +23,8 @@ where
 
 import Charon.Prelude
 import Data.HashSet qualified as HSet
-import GHC.Exts (IsList (Item, fromList, toList))
 import Data.Sequence qualified as Seq
+import GHC.Exts (IsList (Item, fromList, toList))
 
 -- | Like 'Seq' but with the guarantee that all elements are unique.
 data UniqueSeq a = UnsafeUniqueSeq

@@ -206,14 +206,14 @@ mvOriginalToTrash ::
   PathI TrashHome ->
   Timestamp ->
   PathI TrashEntryOriginalPath ->
-  m (pd, PathTypeW)
+  m (pd, PathTypeW, PathI TrashEntryPath)
 mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginalToTrash" $ do
   backend <- asks getBackend
   (pd, pathType) <- (backendArgs ^. #toPd) currTime trashHome path
   $(logDebug) ("Deleting: " <> showt pd)
 
   let fileName = pd ^. #fileName
-      MkPathI trashPath = getTrashPath trashHome fileName
+      trashPathI@(MkPathI trashPath) = getTrashPath trashHome fileName
       MkPathI trashInfoPath = getTrashInfoPath backend trashHome fileName
 
   -- 2. Write info file
@@ -235,7 +235,7 @@ mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginal
 
   $(logDebug) ("Moved to trash: " <> showt pd)
 
-  pure (pd, pathType)
+  pure (pd, pathType, trashPathI)
 
 -- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
 -- In this case, the error has already been reported, so this is purely for
