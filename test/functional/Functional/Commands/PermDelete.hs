@@ -193,13 +193,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     delExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Outfixes
-        "No entry for 'bad file'; did not find index file '"
-        [ combineFps ["deleteUnknownError"],
-          "bad file"
-        ]
-        ""
+    expectedEx = Suffix "No entry for 'bad file'"
 
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -251,13 +245,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Outfixes
-        "No entry for 'f4'; did not find index file '"
-        [ combineFps ["deletesSome"],
-          "f4"
-        ]
-        "'"
+    expectedEx = Suffix "No entry for 'f4'"
     delExpectedMetadata = mkMetadata 3 3 0 15
 
     permDelExpectedIdxSet = HashSet.empty

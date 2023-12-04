@@ -66,23 +66,18 @@ instance Exception RenameDuplicateE where
         "'"
       ]
 
--- | Trash path not found error. Distinct from 'TrashEntryFileNotFoundE' in that
--- the latter indicates that the entry exists in @trash\/info@ but not
+-- | Generic trash path not found error. Distinct from 'TrashEntryFileNotFoundE'
+-- in that the latter indicates that the entry exists in @trash\/info@ but not
 -- @trash\/files@, whereas this exception is less specific i.e. we found nothing
 -- in @trash\/info@ but did not look in @trash\/files@.
-data TrashEntryNotFoundE
-  = MkTrashEntryNotFoundE
-      (PathI TrashEntryFileName)
-      (PathI TrashEntryInfo)
+newtype TrashEntryNotFoundE = MkTrashEntryNotFoundE (PathI TrashEntryFileName)
   deriving stock (Show)
 
 instance Exception TrashEntryNotFoundE where
-  displayException (MkTrashEntryNotFoundE name path) =
+  displayException (MkTrashEntryNotFoundE name) =
     mconcat
       [ "No entry for '",
         decodeOsToFpDisplayEx $ name ^. #unPathI,
-        "'; did not find index file '",
-        decodeOsToFpDisplayEx $ path ^. #unPathI,
         "'"
       ]
 

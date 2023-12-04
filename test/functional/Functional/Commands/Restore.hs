@@ -192,13 +192,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     delExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Outfixes
-        "No entry for 'bad file'; did not find index file '"
-        [ combineFps ["restoreUnknownError"],
-          "bad file"
-        ]
-        ""
+    expectedEx = Suffix "No entry for 'bad file'"
     delExpectedMetadata = mkMetadata 1 1 0 5
 
 restoreCollisionError :: IO TestEnv -> TestTree
@@ -352,13 +346,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     restoreExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Outfixes
-        "No entry for 'f4'; did not find index file '"
-        [ "restore/restoresSome",
-          "f4."
-        ]
-        ""
+    expectedEx = Suffix "No entry for 'f4'"
     delExpectedMetadata = mkMetadata 3 3 0 15
 
     restoreExpectedIdxSet = HashSet.empty

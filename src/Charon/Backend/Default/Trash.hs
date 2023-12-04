@@ -19,6 +19,7 @@ module Charon.Backend.Default.Trash
     mergeTrashDirs,
 
     -- * Utils
+    PathDataSearchResult (..),
     findPathData,
     getTrashPath,
   )
@@ -65,7 +66,6 @@ import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
-import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig),
@@ -266,7 +266,12 @@ permDeleteFromTrash ::
   PathI TrashEntryFileName ->
   m (Maybe SomeException)
 permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
-  pathDatas <- findPathData backendArgs trashHome pathName
+  pathDatas <-
+    findPathData backendArgs trashHome pathName >>= \case
+      SearchSuccess pds -> pure pds
+      SearchSingleFailure path -> throwCS $ MkTrashEntryNotFoundE path
+      SearchWildcardFailure path -> throwCS $ MkTrashEntryWildcardNotFoundE path
+
   backend <- asks getBackend
 
   anyExRef <- newIORef Nothing
@@ -353,7 +358,12 @@ restoreTrashToOriginal ::
   m (Maybe SomeException)
 restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   -- 1. Get path info
-  pathDatas <- findPathData backendArgs trashHome pathName
+  pathDatas <-
+    findPathData backendArgs trashHome pathName >>= \case
+      SearchSuccess pds -> pure pds
+      SearchSingleFailure path -> throwCS $ MkTrashEntryNotFoundE path
+      SearchWildcardFailure path -> throwCS $ MkTrashEntryWildcardNotFoundE path
+
   backend <- asks getBackend
 
   someExRef <- newIORef Nothing
@@ -406,6 +416,8 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
       -- is bad, but there isn't anything we can do other than alert the user.
       PW.removeFile trashInfoPath'
 
+-- | Searches for a single result. Throws exceptions for decode errors or if
+-- the info file exists, yet the path itself does not.
 findOnePathData ::
   forall m env pd.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
@@ -421,29 +433,32 @@ findOnePathData ::
   PathI TrashHome ->
   PathI TrashEntryFileName ->
   BackendArgs m pd ->
-  m PathData
+  m (Maybe PathData)
 findOnePathData trashHome pathName backendArgs = addNamespace "findOnePathData" $ do
   backend <- asks getBackend
   let trashInfoPath@(MkPathI trashInfoPath') =
         getTrashInfoPath backend trashHome pathName
 
   pathInfoExists <- doesFileExist trashInfoPath'
-  unless pathInfoExists
-    $ throwCS
-    $ MkTrashEntryNotFoundE pathName trashInfoPath
+  if not pathInfoExists
+    then pure Nothing
+    else do
+      contents <- readBinaryFile trashInfoPath'
+      pathData <- case decode @pd pathName contents of
+        Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
+        Right pd -> (backendArgs ^. #toCorePathData) trashHome pd
 
-  contents <- readBinaryFile trashInfoPath'
-  pathData <- case decode @pd pathName contents of
-    Left err -> throwCS $ MkInfoDecodeE trashInfoPath contents err
-    Right pd -> (backendArgs ^. #toCorePathData) trashHome pd
+      -- if we get here then we know the trash path info exists, so the path
+      -- itself better exist.
+      pathExists <- trashPathExists trashHome pathData
+      unless pathExists
+        $ throwCS
+        $ MkTrashEntryFileNotFoundE trashHome pathName
 
-  pathExists <- trashPathExists trashHome pathData
-  unless pathExists
-    $ throwCS
-    $ MkTrashEntryFileNotFoundE trashHome pathName
+      pure $ Just pathData
 
-  pure pathData
-
+-- | Performs a wildcard search. Can throw exceptions if paths fail to decode,
+-- or if the index fails to read (i.e. anything malformed).
 findManyPathData ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
@@ -458,20 +473,24 @@ findManyPathData ::
   BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m (NESeq PathData)
+  m (Seq PathData)
 findManyPathData backendArgs trashHome pathName = addNamespace "findManyPathData" $ do
   index <- fmap (view _1) . view #unIndex <$> Default.Index.readIndex backendArgs trashHome
 
   pathNameText <- T.pack <$> decodeOsToFpThrowM (pathName ^. #unPathI)
 
-  matches <- Utils.filterSeqM (pdMatchesWildcard pathNameText) index
-  case matches of
-    Seq.Empty -> throwCS $ MkTrashEntryWildcardNotFoundE pathName
-    pd :<| pds -> pure $ pd :<|| pds
+  Utils.filterSeqM (pdMatchesWildcard pathNameText) index
   where
     pdMatchesWildcard pathNameText' pd = do
       fp <- decodeOsToFpThrowM (pd ^. (#fileName % #unPathI))
       pure $ Utils.matchesWildcards pathNameText' (T.pack fp)
+
+-- | The result of searching for a trash entry.
+data PathDataSearchResult
+  = SearchSuccess (NESeq PathData)
+  | SearchSingleFailure (PathI TrashEntryFileName)
+  | SearchWildcardFailure (PathI TrashEntryFileName)
+  deriving stock (Eq, Show)
 
 -- | Searches for the given trash name in the trash.
 findPathData ::
@@ -490,7 +509,7 @@ findPathData ::
   BackendArgs m pd ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m (NESeq PathData)
+  m PathDataSearchResult
 findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
   pathNameStr <- decodeOsToFpThrowM pathName'
   let pathNameTxt = T.pack pathNameStr
@@ -500,7 +519,9 @@ findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "
     -- where pathName also includes the sequence \\*).
     | hasWildcard pathNameStr -> do
         $(logDebug) $ "Performing wildcard search: '" <> pathNameTxt <> "'"
-        findManyPathData backendArgs trashHome pathName
+        findManyPathData backendArgs trashHome pathName <&> \case
+          Seq.Empty -> SearchWildcardFailure pathName
+          (x :<| xs) -> SearchSuccess (x :<|| xs)
     -- 2. Found the sequence \\*. As we have confirmed there are no unescaped
     -- wildcards by this point, we can simply findOne as normal, after removing
     -- the escape.
@@ -513,12 +534,16 @@ findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "
             ]
         let literal = T.replace "\\*" "*" pathNameTxt
         literalPath <- encodeFpToOsThrowM $ T.unpack literal
-        NESeq.singleton <$> findOnePathData trashHome (MkPathI literalPath) backendArgs
+        findOnePathData trashHome (MkPathI literalPath) backendArgs <&> \case
+          Nothing -> SearchSingleFailure pathName
+          Just pd -> SearchSuccess (pd :<|| Seq.empty)
 
     -- 3. No * at all; normal
     | otherwise -> do
         $(logDebug) $ "Normal search: '" <> pathNameTxt <> "'"
-        NESeq.singleton <$> findOnePathData trashHome pathName backendArgs
+        findOnePathData trashHome pathName backendArgs <&> \case
+          Nothing -> SearchSingleFailure pathName
+          Just pd -> SearchSuccess (pd :<|| Seq.empty)
   where
     hasWildcard [] = False
     -- escaped; ignore
