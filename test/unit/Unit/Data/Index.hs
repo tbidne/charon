@@ -34,7 +34,7 @@ tests :: TestTree
 tests =
   testGroup
     "Data.Index"
-    [ formattingTests ]
+    [formattingTests]
 
 formattingTests :: TestTree
 formattingTests =
@@ -130,7 +130,6 @@ testFormatSingleline1 =
 testFormatSingleline2 :: TestTree
 testFormatSingleline2 =
   testGoldenFormatParams
-
     "Singleline, name, desc"
     [osp|single-name-desc|]
     (FormatSingleline ColoringOff)
@@ -140,7 +139,6 @@ testFormatSingleline2 =
 testFormatSingleline3 :: TestTree
 testFormatSingleline3 =
   testGoldenFormatParams
-
     "Singleline, size, asc"
     [osp|single-size-asc|]
     (FormatSingleline ColoringOff)
@@ -150,7 +148,6 @@ testFormatSingleline3 =
 testFormatSingleline4 :: TestTree
 testFormatSingleline4 =
   testGoldenFormatParams
-
     "Singleline, size, desc"
     [osp|single-size-desc|]
     (FormatSingleline ColoringOff)
@@ -160,7 +157,6 @@ testFormatSingleline4 =
 testFormatSinglelineColor :: TestTree
 testFormatSinglelineColor =
   testGoldenFormatParams
-
     "Singleline, size, desc, color"
     [osp|single-size-desc-color|]
     (FormatSingleline ColoringOn)
@@ -170,7 +166,6 @@ testFormatSinglelineColor =
 testFormatTabularFixed1 :: TestTree
 testFormatTabularFixed1 =
   testGoldenFormatParams
-
     "Tabular, name, asc"
     [osp|tabular-name-asc|]
     fixedTabularFormat
@@ -180,7 +175,6 @@ testFormatTabularFixed1 =
 testFormatTabularFixed2 :: TestTree
 testFormatTabularFixed2 =
   testGoldenFormatParams
-
     "Tabular, name, desc"
     [osp|tabular-name-desc|]
     fixedTabularFormat
@@ -190,7 +184,6 @@ testFormatTabularFixed2 =
 testFormatTabularFixed3 :: TestTree
 testFormatTabularFixed3 =
   testGoldenFormatParams
-
     "Tabular, size, asc"
     [osp|tabular-size-asc|]
     fixedTabularFormat
@@ -200,7 +193,6 @@ testFormatTabularFixed3 =
 testFormatTabularFixed4 :: TestTree
 testFormatTabularFixed4 =
   testGoldenFormatParams
-
     "Tabular, size, desc"
     [osp|tabular-size-desc|]
     fixedTabularFormat
@@ -210,7 +202,6 @@ testFormatTabularFixed4 =
 testFormatTabularFixedColor :: TestTree
 testFormatTabularFixedColor =
   testGoldenFormatParams
-
     "Tabular, size, desc, color"
     [osp|tabular-size-desc-color|]
     (set' (_FormatTabular % _1) ColoringOn fixedTabularFormat)

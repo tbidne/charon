@@ -29,6 +29,7 @@ invariantTests =
     [ isListIsomorphism,
       isListOrder,
       fromFoldableOrder,
+      unionOrder,
       mapInvariant,
       insertInvariant
     ]
@@ -50,48 +51,7 @@ isListOrder =
       let useq = fromList @(UniqueSeq Int) origList
       annotateShow useq
 
-      let newList = toList useq
-      annotateShow newList
-
-      compareLists HSet.empty newList origList
-  where
-    -- For newList, origList, want to verify that the lists are the same,
-    -- modulo newList omitting duplicates. Note that this does not check
-    -- other invariants e.g. that newList does not contain duplicates.
-    compareLists :: HashSet Int -> [Int] -> [Int] -> PropertyT IO ()
-    -- Base case 1: both lists are empty -> equal
-    compareLists _ [] [] = pure ()
-    -- Base case 2: newList is non-empty but orig list is empty -> failure
-    compareLists _ new@(_ : _) [] = do
-      annotate "New list has more elements than original"
-      annotateShow new
-      failure
-    -- Base case 3: newList is empty but original is not -> okay as long
-    -- as every element left is a duplicate.
-    compareLists found [] orig =
-      for_ orig $ \i -> do
-        annotateShow orig
-        annotateShow found
-        annotateShow i
-        assert (HSet.member i found)
-    -- Inductive case
-    compareLists found (n : ns) (o : os)
-      -- n and o are equal -> okay
-      | n == o = compareLists found' ns os
-      -- Not equal -> y _should_ be a duplicate, so verify and skip all
-      -- other dupes before continuing.
-      | otherwise = do
-          if HSet.member o found
-            then -- Original value o is a duplicate -> okay. Try again on the
-            -- rest of the original list.
-              compareLists found (n : ns) os
-            else -- Original value o is not a duplicate -> failure.
-            do
-              annotate "Non-duplicate missing from new list"
-              annotateShow o
-              failure
-      where
-        found' = HSet.insert n found
+      assertSameOrder origList useq
 
 fromFoldableOrder :: TestTree
 fromFoldableOrder =
@@ -111,6 +71,29 @@ fromFoldableOrder =
     sameOrder (x : xs) (y :<| ys) = do
       x === y
       sameOrder xs ys
+
+unionOrder :: TestTree
+unionOrder =
+  testPropertyNamed "union preserves order" "unionOrder" $ do
+    property $ do
+      xs <- forAll genUniqueList
+      ys <- forAll genUniqueList
+      let xuseq = USeq.fromFoldable xs
+          yuseq = USeq.fromFoldable ys
+
+          uxy = USeq.union xuseq yuseq
+          uyx = USeq.union yuseq xuseq
+
+      annotateShow xuseq
+      annotateShow yuseq
+      annotateShow uxy
+      annotateShow uyx
+
+      assertSameOrder (xs ++ ys) uxy
+      assertSameOrder (ys ++ xs) uyx
+
+      uniqseqInvariants uxy
+      uniqseqInvariants uyx
 
 mapInvariant :: TestTree
 mapInvariant =
@@ -207,6 +190,50 @@ seqUnique foundRef (MkUniqueSeq seq _) = foldr go (pure ()) seq
         else do
           liftIO $ modifyIORef' foundRef (HSet.insert x)
           acc
+
+-- | Asserts that the UniqueSeq matches the expected order.
+assertSameOrder ::
+  -- | Expected order, duplicates allowed
+  [Int] ->
+  -- | Actual
+  UniqueSeq Int ->
+  PropertyT IO ()
+assertSameOrder expected (MkUniqueSeq seq _) = go HSet.empty expected (toList seq)
+  where
+    go :: HashSet Int -> [Int] -> [Int] -> PropertyT IO ()
+    -- Base case 1: both lists are empty -> equal
+    go _ [] [] = pure ()
+    -- Base case 2: actual is non-empty but expected is empty -> failure
+    go _ [] actual@(_ : _) = do
+      annotate "Actual has more elements than expected"
+      annotateShow actual
+      failure
+    -- Base case 3: actual is empty but expected is not -> okay as long
+    -- as every element left is a duplicate.
+    go found expected' [] =
+      for_ expected' $ \i -> do
+        annotateShow expected'
+        annotateShow found
+        annotateShow i
+        assert (HSet.member i found)
+    -- Inductive case
+    go found (e : es) (a : as)
+      -- a and e are equal -> okay
+      | e == a = go found' es as
+      -- Not equal -> e _should_ be a duplicate, so verify and skip all
+      -- other dupes before continuing.
+      | otherwise = do
+          if HSet.member e found
+            then -- Expected value e is a duplicate -> okay. Try again on the
+            -- rest of the expected list.
+              go found es (a : as)
+            else -- Original value e is not a duplicate -> failure.
+            do
+              annotate "Non-duplicate missing from new list"
+              annotateShow e
+              failure
+      where
+        found' = HSet.insert a found
 
 genUniqueSeq :: Gen (UniqueSeq Int)
 genUniqueSeq = fromList <$> genList
