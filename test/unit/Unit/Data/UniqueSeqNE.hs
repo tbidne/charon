@@ -41,10 +41,10 @@ isListIsomorphism =
   testPropertyNamed "fromList . toList === id" "isListIsomorphism" $ do
     property $ do
       useq <- forAll genUniqueSeq
-      let xs = useq ^. #seq
-      annotateShow xs
+      let ys@(x :<|| xs) = useq ^. #seq
+      annotateShow ys
 
-      useq === USeqNE.fromNonEmpty xs
+      useq === USeqNE.fromNonEmpty (x :| toList xs)
 
 isListOrder :: TestTree
 isListOrder =

@@ -219,7 +219,17 @@ instance MonadFileWriter PathDataT where
 
 -- No real IO!!!
 instance MonadTerminal PathDataT where
-  putStr = MkPathDataT . putStr
+  -- HACK: [MonadPosixCompat exception]
+  --
+  -- Some of our tests throw (and catch) a path exception in
+  -- Charon.Utils.getPathSizeConfig because the path does not actually exist.
+  -- The failure is because MonadPosixCompat is not mocked
+  -- (see NOTE: [getPathType]).
+  --
+  -- This does not effect the test as the exception is caught, but it clutters
+  -- the logs. It would be nice to fix this, but for now simply disable
+  -- terminal output.
+  putStr _ = pure ()
 
 backendTests ::
   ( Is k A_Getter,
@@ -252,6 +262,7 @@ mvTrash ::
   BackendArgs PathDataT pd ->
   TestTree
 mvTrash backendArgs = testCase "mvOriginalToTrash success" $ do
+  -- see HACK: [MonadPosixCompat exception]
   (result, _) <- runPathDataTLogs backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts fooPath)
   windowsify "renamed \"home/path/to/foo\" to \"test/unit/.trash/files/foo\"" @=? T.unpack result
   where
@@ -267,6 +278,7 @@ mvTrashWhitespace ::
   BackendArgs PathDataT pd ->
   TestTree
 mvTrashWhitespace backendArgs = testCase "mvOriginalToTrash whitespace success" $ do
+  -- see HACK: [MonadPosixCompat exception]
   (result, _) <- runPathDataTLogs backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts (MkPathI [osp| |]))
   windowsify "renamed \"home/ \" to \"test/unit/.trash/files/ \"" @=? T.unpack result
 
