@@ -84,7 +84,7 @@ append = flip (insertSeq (flip (:|>)))
 prepend :: (Hashable a) => a -> UniqueSeq a -> UniqueSeq a
 prepend = insertSeq (:<|)
 
-map :: (Hashable b) => (a1 -> b) -> UniqueSeq a1 -> UniqueSeq b
+map :: (Hashable b) => (a -> b) -> UniqueSeq a -> UniqueSeq b
 map f (UnsafeUniqueSeq seq _) = UnsafeUniqueSeq newSeq newSet
   where
     (newSeq, newSet) = foldr go (Seq.empty, HSet.empty) seq

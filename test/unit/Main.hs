@@ -10,6 +10,7 @@ import Unit.Backend.Fdo.PathData qualified as Backend.Fdo.PathData
 import Unit.Backend.Json.PathData qualified as Backend.Json.PathData
 import Unit.Data.Index qualified as Data.Index
 import Unit.Data.UniqueSeq qualified as Data.UniqueSeq
+import Unit.Data.UniqueSeqNE qualified as Data.UniqueSeqNE
 import Unit.Prelude
 import Unit.Runner qualified as Runner
 import Unit.Utils qualified as Utils
@@ -28,6 +29,7 @@ main =
         Backend.Default.Trash.tests,
         Data.Index.tests,
         Data.UniqueSeq.tests,
+        Data.UniqueSeqNE.tests,
         Runner.tests,
         Utils.tests
       ]

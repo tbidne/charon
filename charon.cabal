@@ -80,6 +80,7 @@ library
     Charon.Data.UniqueSeq
     Charon.Data.UniqueSeq.Internal
     Charon.Data.UniqueSeqNE
+    Charon.Data.UniqueSeqNE.Internal
     Charon.Env
     Charon.Exception
     Charon.Prelude
@@ -173,9 +174,11 @@ test-suite unit
     Unit.Backend.Json.PathData
     Unit.Data.Index
     Unit.Data.UniqueSeq
+    Unit.Data.UniqueSeqNE
     Unit.Prelude
     Unit.Runner
     Unit.Utils
+    Utils
 
   build-depends:
     , algebra-simple
@@ -187,6 +190,7 @@ test-suite unit
     , effects-terminal
     , filepath
     , hedgehog              >=1.0.2    && <1.5
+    , nonempty-containers
     , pretty-simple         >=4.0.0.0  && <4.2
     , random                ^>=1.2.1.1
     , tasty                 >=1.1.0.3  && <1.5
@@ -224,6 +228,7 @@ test-suite integration
     , hashable
     , hedgehog
     , mtl
+    , nonempty-containers
     , tagged                ^>=0.8.6
     , tasty
     , tasty-hedgehog

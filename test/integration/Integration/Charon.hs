@@ -31,6 +31,7 @@ import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
@@ -566,7 +567,7 @@ setupDir dir paths = do
     failure
   where
     paths' :: [PathWithType]
-    paths' = toList $ view #seq paths
+    paths' = toList $ NESeq.toSeq $ view #seq paths
 
 -- | Given a test dir and a set of names, forms the paths needed to run
 -- tests.
@@ -589,7 +590,7 @@ mkPaths testDir paths =
     prefixed = USeqNE.map (\(MkPathWithType (p, t)) -> MkPathWithType (testDir </> p, t)) paths
 
 countFiles :: UniqueSeqNE PathWithType -> Int
-countFiles = length . filter isNotDir . toList . view #seq
+countFiles = length . filter isNotDir . toList . NESeq.toSeq . view #seq
   where
     isNotDir :: PathWithType -> Bool
     isNotDir = not . is (#unPathWithType % _2 % #unPathTypeW % _PathTypeDirectory)

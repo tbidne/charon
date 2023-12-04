@@ -113,7 +113,7 @@ gen3FileNameSets asciiOnly = do
     <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (αFps `USeqNE.union` βFps))
 
 splitPaths :: NonEmpty (PathWithType, NormedFp) -> GPaths
-splitPaths = bimap USeqNE.fromNonEmpty USeqNE.fromNonEmpty . NE.unzip
+splitPaths = bimap USeqNE.fromFoldable1 USeqNE.fromFoldable1 . NE.unzip
 
 seqRange :: Range Int
 seqRange = Range.linear 1 100
