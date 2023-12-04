@@ -133,7 +133,6 @@ Transform Commands
   merge                    Merges src (implicit or -t) trash home into dest.
                            Collisions will throw an error.
 
-
 Version: 0.1
 ```
 
@@ -269,23 +268,25 @@ $ charon restore foo baz
 **Usage:**
 
 ```
-Usage: charon list [--format (t[abular] | m[ulti])] [-n|--name-len (max|NAT)]
-                    [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
-                    [-r|--reverse-sort]
+Usage: charon list [--format (m[ulti] | s[ingle] | t[abular])]
+                   [-n|--name-len (max|NAT)] [-o|--orig-len (max|NAT)]
+                   [-s|--sort (name|size)] [-r|--reverse-sort]
 
   Lists all trash contents.
 
 
 Available options:
-  --format (t[abular] | m[ulti])
-                           Determines the output format. The 'multi' option
-                           prints each entry across multiple lines. The default
-                           'tabular' option prints each trash entry on a single
-                           line, in a table. By default, tabular tries to
-                           intelligently size the table based on the available
+  --format (m[ulti] | s[ingle] | t[abular])
+                           Formatting options.
+
+                           - multi: Prints each entry across multiple lines.
+
+                           - single: Compact, prints each entry across a single
+                           lines
+
+                           - tabular: The default. Prints a table that tries to
+                           intelligently size the table based on available
                            terminal width and filename / original path lengths.
-                           The behavior can be overridden via --name-len and
-                           --orig-len. Note that this can lead to word-wrapping.
 
   -n,--name-len (max|NAT)  Sets the file name column length to either NAT
                            characters or longest file-name. Only affects the
@@ -295,9 +296,11 @@ Available options:
                            characters or longest path. Only affects the
                            'tabular' format.
 
-  -s,--sort (name|size)    How to sort the list. Defaults to name.
+  -s,--sort (name|size)    How to sort the list. Defaults to name. Does not
+                           affect 'single' style.
 
-  -r,--reverse-sort        Sorts in the reverse order.
+  -r,--reverse-sort        Sorts in the reverse order. Does not affect 'single'
+                           style.
 
   -h,--help                Show this help text
 ```

@@ -278,7 +278,7 @@ commandParser =
     listTxt = mkCmdDesc "Lists all trash contents."
     metadataTxt = mkCmdDesc "Prints trash metadata."
     convertTxt = mkCmdDesc "Converts the backend."
-    mergeTxt = mkCmdDesc "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
+    mergeTxt = mkCmdDescNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     delParser = Delete <$> pathsParser
     permDelParser = PermDelete <$> forceParser <*> pathsParser
@@ -304,7 +304,7 @@ listFormatStyleParser =
     $ OA.option (OA.str >>= parseListFormat)
     $ mconcat
       [ OA.long "format",
-        OA.metavar "(t[abular] | m[ulti] | s[ingle])",
+        OA.metavar "(m[ulti] | s[ingle] | t[abular])",
         OA.helpDoc helpTxt
       ]
   where
@@ -312,12 +312,15 @@ listFormatStyleParser =
       mconcat
         [ intro,
           Just Pretty.hardline,
-          tabular,
           multi,
-          single
+          Just Pretty.hardline,
+          single,
+          Just Pretty.hardline,
+          tabular,
+          Just Pretty.hardline
         ]
     intro = toMDoc "Formatting options."
-    tabular = Just Pretty.hardline <> toMDoc "- cbor: Prints a table that tries to intelligently size the table based on available terminal width and filename / original path lengths."
+    tabular = Just Pretty.hardline <> toMDoc "- tabular: The default. Prints a table that tries to intelligently size the table based on available terminal width and filename / original path lengths."
     multi = Just Pretty.hardline <> toMDoc "- multi: Prints each entry across multiple lines."
     single = Just Pretty.hardline <> toMDoc "- single: Compact, prints each entry across a single lines"
     toMDoc = Chunk.unChunk . Chunk.paragraph
@@ -507,5 +510,13 @@ mkCmdDesc :: String -> InfoMod a
 mkCmdDesc =
   OA.progDescDoc
     . fmap (<> Pretty.hardline)
+    . Chunk.unChunk
+    . Chunk.paragraph
+
+-- For the last command, so we do not append two lines (there is an automatic
+-- one at the end).
+mkCmdDescNoLine :: String -> InfoMod a
+mkCmdDescNoLine =
+  OA.progDescDoc
     . Chunk.unChunk
     . Chunk.paragraph
