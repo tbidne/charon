@@ -27,7 +27,7 @@ import Charon.Data.Paths
         TrashHome
       ),
   )
-import Charon.Data.UniqueSeq (UniqueSeq)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Prelude
 import Charon.Runner.Command.List (ListCmd)
 import Charon.Runner.Phase (AdvancePhase (..), Phase (..))
@@ -48,15 +48,15 @@ instance AdvancePhase (Command Phase1) where
 type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
-    Delete (UniqueSeq (PathI TrashEntryOriginalPath))
+    Delete (UniqueSeqNE (PathI TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
     PermDelete
       Bool
-      (UniqueSeq (PathI TrashEntryFileName))
+      (UniqueSeqNE (PathI TrashEntryFileName))
   | -- | Empties the trash.
     Empty Bool
   | -- | Restores a path.
-    Restore (UniqueSeq (PathI TrashEntryFileName))
+    Restore (UniqueSeqNE (PathI TrashEntryFileName))
   | -- | List all trash contents.
     List (ListCmd s)
   | -- | Prints trash metadata.

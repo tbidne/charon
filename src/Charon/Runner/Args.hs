@@ -15,7 +15,8 @@ import Charon.Data.Index (Sort, readSort)
 import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax))
 import Charon.Data.PathData.Formatting qualified as PathData
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import Charon.Data.UniqueSeq (UniqueSeq, fromFoldable)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Prelude
 import Charon.Runner.Command
   ( Command
@@ -449,7 +450,7 @@ logLevelParser =
             ]
       ]
 
-pathsParser :: Parser (UniqueSeq (PathI i))
+pathsParser :: Parser (UniqueSeqNE (PathI i))
 pathsParser =
   -- NOTE: _should_ be safe because OA.some only succeeds for non-zero input.
   -- We do this rather than using NonEmpty's some1 because otherwise the CLI
@@ -459,7 +460,7 @@ pathsParser =
   -- want path validation here. The reason is that we want to allow users to
   -- pass paths containing wildcards (*) for easier matching, but these are
   -- not valid windows paths, hence will fail any validation checks.
-  fromFoldable
+  UniqueSeqNE.fromNonEmpty
     . unsafeNE
     <$> OA.some (OA.argument (fmap MkPathI osPath) (OA.metavar "PATHS..."))
 

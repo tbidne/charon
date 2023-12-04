@@ -61,7 +61,7 @@ import Charon.Data.Paths
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
-import Charon.Data.UniqueSeq (UniqueSeq)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
@@ -103,7 +103,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = do
   trashHome <- asks getTrashHome
@@ -166,7 +166,7 @@ permDelete ::
     MonadTime m
   ) =>
   Bool ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete =
   Default.permDeletePostHook backendArgs removeDirectorySize
@@ -237,7 +237,7 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore = Default.restorePostHook backendArgs removeDirectorySize
 

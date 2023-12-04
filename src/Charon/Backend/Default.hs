@@ -51,7 +51,7 @@ import Charon.Data.Paths
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
-import Charon.Data.UniqueSeq (UniqueSeq)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
@@ -91,7 +91,7 @@ delete ::
     Show pd
   ) =>
   BackendArgs m pd ->
-  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete backendArgs = deletePostHook backendArgs (const $ pure ())
 
@@ -118,7 +118,7 @@ deletePostHook ::
   ) =>
   BackendArgs m pd ->
   ((pd, PathTypeW) -> m ()) ->
-  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
   trashHome <- asks getTrashHome
@@ -173,7 +173,7 @@ permDelete ::
   ) =>
   BackendArgs m pd ->
   Bool ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete backendArgs = permDeletePostHook backendArgs (const $ pure ())
 
@@ -201,7 +201,7 @@ permDeletePostHook ::
   BackendArgs m pd ->
   (PathData -> m ()) ->
   Bool ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePostHook" $ do
   trashHome <- asks getTrashHome
@@ -350,7 +350,7 @@ restore ::
     Serial pd
   ) =>
   BackendArgs m pd ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore backendArgs = restorePostHook backendArgs (const $ pure ())
 
@@ -376,7 +376,7 @@ restorePostHook ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
   trashHome <- asks getTrashHome

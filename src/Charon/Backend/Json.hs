@@ -46,7 +46,7 @@ import Charon.Data.Paths
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import Charon.Data.Paths qualified as Paths
-import Charon.Data.UniqueSeq (UniqueSeq)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Effects.FileSystem.PathReader qualified as PR
@@ -76,7 +76,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete = Default.delete backendArgs
 
@@ -99,7 +99,7 @@ permDelete ::
     MonadTerminal m
   ) =>
   Bool ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete = Default.permDelete backendArgs
 
@@ -165,7 +165,7 @@ restore ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore = Default.restore backendArgs
 

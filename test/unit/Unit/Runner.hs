@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Runner unit tests.
@@ -14,6 +13,7 @@ import Charon.Data.PathData.Formatting
     PathDataFormat (FormatTabular),
   )
 import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
   ( _Delete,
@@ -62,27 +62,36 @@ delete = testCase "Parses delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Delete
+  Just expectedUSeq @=? cmd ^? _Delete
   where
     argList = ["delete", "foo", "bar", "-c", "none"]
+    expectedUSeq =
+      UniqueSeqNE.map MkPathI
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (False, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
+  Just (False, expectedUSeq) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
+    expectedUSeq =
+      UniqueSeqNE.map MkPathI
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteForce :: TestTree
 permDeleteForce = testCase "Parses perm delete with force" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (True, [MkPathI [osp|foo|], MkPathI [osp|bar|]]) @=? cmd ^? _PermDelete
+  Just (True, expectedUSeq) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
+    expectedUSeq =
+      UniqueSeqNE.map MkPathI
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
@@ -107,9 +116,12 @@ restore = testCase "Parses restore" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just [MkPathI [osp|foo|], MkPathI [osp|bar|]] @=? cmd ^? _Restore
+  Just expectedUSeq @=? cmd ^? _Restore
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
+    expectedUSeq =
+      UniqueSeqNE.map MkPathI
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 list :: TestTree
 list = testCase "Parses list" $ do

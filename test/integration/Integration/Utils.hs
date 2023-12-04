@@ -18,8 +18,8 @@ module Integration.Utils
 where
 
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
-import Charon.Data.UniqueSeq (UniqueSeq, fromFoldable)
-import Charon.Data.UniqueSeq qualified as USeq
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Data.Hashable (Hashable (hash))
 import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
@@ -50,7 +50,7 @@ instance Hashable PathWithType where
 
 -- | Type of generated paths. Includes the original paths before encoding for
 -- easier debugging.
-type GPaths = (UniqueSeq PathWithType, UniqueSeq NormedFp)
+type GPaths = (UniqueSeqNE PathWithType, UniqueSeqNE NormedFp)
 
 -- NOTE: [Unicode normalization]
 --
@@ -110,10 +110,10 @@ gen3FileNameSets :: (MonadGen m) => Bool -> m (GPaths, GPaths, GPaths)
 gen3FileNameSets asciiOnly = do
   (α@(_, αFps), β@(_, βFps)) <- gen2FileNameSets asciiOnly
   (\r -> (α, β, splitPaths r))
-    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (αFps `USeq.union` βFps))
+    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (αFps `USeqNE.union` βFps))
 
 splitPaths :: NonEmpty (PathWithType, NormedFp) -> GPaths
-splitPaths = bimap fromFoldable fromFoldable . NE.unzip
+splitPaths = bimap USeqNE.fromNonEmpty USeqNE.fromNonEmpty . NE.unzip
 
 seqRange :: Range Int
 seqRange = Range.linear 1 100
@@ -139,7 +139,7 @@ genFileName asciiOnly = do
 genFileNameNoDupes ::
   (MonadGen m) =>
   Bool ->
-  UniqueSeq NormedFp ->
+  UniqueSeqNE NormedFp ->
   m (PathWithType, NormedFp)
 genFileNameNoDupes asciiOnly paths = do
   pathType <-
@@ -152,7 +152,7 @@ genFileNameNoDupes asciiOnly paths = do
 
   (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fpToNormedFp fp))
     <$> Gen.filterT
-      (\fp -> not (USeq.member (fpToNormedFp fp) paths))
+      (\fp -> not (USeqNE.member (fpToNormedFp fp) paths))
       (Gen.string range (TestUtils.genPathChar asciiOnly))
   where
     range = Range.linear 1 20

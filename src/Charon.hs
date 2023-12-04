@@ -33,7 +33,7 @@ import Charon.Data.Paths
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import Charon.Data.Paths qualified as Paths
-import Charon.Data.UniqueSeq (UniqueSeq)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
@@ -65,7 +65,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI TrashEntryOriginalPath) ->
+  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths =
   asks getBackend
@@ -95,7 +95,7 @@ permDelete ::
     MonadTime m
   ) =>
   Bool ->
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete force paths =
   asks getBackend
@@ -171,7 +171,7 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeq (PathI TrashEntryFileName) ->
+  UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore paths =
   asks getBackend

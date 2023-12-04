@@ -77,6 +77,8 @@ library
     Charon.Data.PathType
     Charon.Data.Timestamp
     Charon.Data.UniqueSeq
+    Charon.Data.UniqueSeq.Internal
+    Charon.Data.UniqueSeqNE
     Charon.Env
     Charon.Exception
     Charon.Prelude
