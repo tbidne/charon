@@ -488,7 +488,7 @@ pathsParser =
   -- want path validation here. The reason is that we want to allow users to
   -- pass paths containing wildcards (*) for easier matching, but these are
   -- not valid windows paths, hence will fail any validation checks.
-  UniqueSeqNE.fromFoldable1
+  UniqueSeqNE.fromNonEmpty
     . unsafeNE
     <$> OA.some (OA.argument (fmap MkPathI osPath) (OA.metavar "PATHS..."))
 

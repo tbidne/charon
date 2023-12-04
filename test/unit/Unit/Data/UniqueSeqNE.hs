@@ -30,7 +30,7 @@ invariantTests =
     "General Invariants"
     [ isListIsomorphism,
       isListOrder,
-      fromFoldable1Order,
+      fromNonEmptyOrder,
       unionOrder,
       mapInvariant,
       insertInvariant
@@ -44,24 +44,24 @@ isListIsomorphism =
       let xs = useq ^. #seq
       annotateShow xs
 
-      useq === USeqNE.fromFoldable1 xs
+      useq === USeqNE.fromNonEmpty xs
 
 isListOrder :: TestTree
 isListOrder =
   testPropertyNamed "toList . fromList preserves order" "isListOrder" $ do
     property $ do
       origList <- forAll genUniqueList
-      let useq = USeqNE.fromFoldable1 origList
+      let useq = USeqNE.fromNonEmpty origList
       annotateShow useq
 
       Utils.assertSameOrder (toList origList) (useqNeToList useq)
 
-fromFoldable1Order :: TestTree
-fromFoldable1Order =
-  testPropertyNamed "fromFoldable1 preserves order" "fromFoldable1Order" $ do
+fromNonEmptyOrder :: TestTree
+fromNonEmptyOrder =
+  testPropertyNamed "fromNonEmpty preserves order" "fromNonEmptyOrder" $ do
     property $ do
       xs <- forAll genUniqueList
-      let useq@(MkUniqueSeqNE seq _) = USeqNE.fromFoldable1 xs
+      let useq@(MkUniqueSeqNE seq _) = USeqNE.fromNonEmpty xs
 
       annotateShow seq
       sameOrder (toList xs) (NESeq.toSeq seq)
@@ -81,8 +81,8 @@ unionOrder =
     property $ do
       xs <- forAll genUniqueList
       ys <- forAll genUniqueList
-      let xuseq = USeqNE.fromFoldable1 xs
-          yuseq = USeqNE.fromFoldable1 ys
+      let xuseq = USeqNE.fromNonEmpty xs
+          yuseq = USeqNE.fromNonEmpty ys
 
           uxy = USeqNE.union xuseq yuseq
           uyx = USeqNE.union yuseq xuseq
@@ -192,7 +192,7 @@ seqUnique foundRef (MkUniqueSeqNE seq _) = foldr go (pure ()) seq
           acc
 
 genUniqueSeq :: Gen (UniqueSeqNE Int)
-genUniqueSeq = USeqNE.fromFoldable1 <$> genList
+genUniqueSeq = USeqNE.fromNonEmpty <$> genList
 
 genUniqueList :: Gen (NonEmpty Int)
 genUniqueList = do

@@ -77,7 +77,7 @@ delete = testCase "Parses delete" $ do
     argList = ["delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
       UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromFoldable1 ([osp|foo|] :| [[osp|bar|]])
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
@@ -89,7 +89,7 @@ permDelete = testCase "Parses perm delete" $ do
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
       UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromFoldable1 ([osp|foo|] :| [[osp|bar|]])
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteForce :: TestTree
 permDeleteForce = testCase "Parses perm delete with force" $ do
@@ -101,7 +101,7 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
     expectedUSeq =
       UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromFoldable1 ([osp|foo|] :| [[osp|bar|]])
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
@@ -131,7 +131,7 @@ restore = testCase "Parses restore" $ do
     argList = ["restore", "foo", "bar", "-c", "none"]
     expectedUSeq =
       UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromFoldable1 ([osp|foo|] :| [[osp|bar|]])
+        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 list :: TestTree
 list = testCase "Parses list" $ do

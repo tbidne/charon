@@ -6,7 +6,7 @@ module Charon.Data.UniqueSeqNE
 
     -- * Creation
     Internal.singleton,
-    Internal.fromFoldable1,
+    Internal.fromNonEmpty,
 
     -- * Lookup
     Internal.member,

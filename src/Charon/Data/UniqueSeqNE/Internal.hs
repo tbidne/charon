@@ -6,7 +6,7 @@ module Charon.Data.UniqueSeqNE.Internal
 
     -- * Creation
     singleton,
-    fromFoldable1,
+    fromNonEmpty,
     unsafefromUniqueSeq,
 
     -- * Elimination
@@ -25,8 +25,6 @@ where
 
 import Charon.Data.UniqueSeq.Internal (UniqueSeq (UnsafeUniqueSeq))
 import Charon.Prelude
-import Data.Foldable1 (Foldable1)
-import Data.Foldable1 qualified as F1
 import Data.HashSet qualified as HSet
 import Data.Sequence (Seq (Empty))
 import Data.Sequence qualified as Seq
@@ -122,12 +120,11 @@ map f (UnsafeUniqueSeqNE (x :<|| seq) _) = UnsafeUniqueSeqNE (f x :<|| newSeq) n
 -- consistent w/ UniqueSeq (i.e. laziness properties).
 
 -- see NOTE: [foldr vs. foldl']
-fromFoldable1 :: (Foldable1 f, Hashable a) => f a -> UniqueSeqNE a
-fromFoldable1 ys =
+fromNonEmpty :: (Hashable a) => NonEmpty a -> UniqueSeqNE a
+fromNonEmpty (x :| xs) =
   let (seq, set) = foldr f (Seq.empty, HSet.singleton x) xs
    in UnsafeUniqueSeqNE (x :<|| seq) set
   where
-    (x :| xs) = F1.toNonEmpty ys
     f = insertSeq' (:<|)
 
 insertSeq ::
