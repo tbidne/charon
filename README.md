@@ -268,7 +268,8 @@ $ charon restore foo baz
 **Usage:**
 
 ```
-Usage: charon list [--format (m[ulti] | s[ingle] | t[abular])]
+Usage: charon list [--color (t[rue] | f[alse] | d[etect])]
+                   [--format (m[ulti] | s[ingle] | t[abular])]
                    [-n|--name-len (max|NAT)] [-o|--orig-len (max|NAT)]
                    [-s|--sort (name|size)] [-r|--reverse-sort]
 
@@ -276,6 +277,10 @@ Usage: charon list [--format (m[ulti] | s[ingle] | t[abular])]
 
 
 Available options:
+  --color (t[rue] | f[alse] | d[etect])
+                           Determines if we should color output. Multiline is
+                           unaffected.
+
   --format (m[ulti] | s[ingle] | t[abular])
                            Formatting options.
 

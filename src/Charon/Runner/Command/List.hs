@@ -10,13 +10,16 @@ module Charon.Runner.Command.List
 
     -- * Phase 2
     ListCmd (..),
+    ListCmdP1,
+    ListCmdP2,
   )
 where
 
-import Charon.Data.Index (Sort (Name))
 import Charon.Data.PathData.Formatting
   ( ColFormat,
+    Coloring (ColoringDetect),
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
+    Sort (Name),
   )
 import Charon.Prelude
 import Charon.Runner.Phase
@@ -49,7 +52,8 @@ parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 -- | Holds all configuration data for list formatting i.e. style and
 -- truncation params.
 data ListFormatPhase1 = MkListFormatPhase1
-  { -- | Format style.
+  { coloring :: Maybe Coloring,
+    -- | Format style.
     style :: Maybe ListFormatStyle,
     -- | Name truncation.
     nameTrunc :: Maybe ColFormat,
@@ -75,15 +79,19 @@ instance AdvancePhase ListFormatPhase1 where
 
   advancePhase formatPhase1 = case formatPhase1 ^. #style of
     Just ListFormatStyleMultiline -> FormatMultiline
-    Just ListFormatStyleSingleline -> FormatSingleline
+    Just ListFormatStyleSingleline -> FormatSingleline coloring
     Just ListFormatStyleTabular ->
       FormatTabular
+        coloring
         (formatPhase1 ^. #nameTrunc)
         (formatPhase1 ^. #origTrunc)
     Nothing ->
       FormatTabular
+        coloring
         (formatPhase1 ^. #nameTrunc)
         (formatPhase1 ^. #origTrunc)
+    where
+      coloring = fromMaybe ColoringDetect (formatPhase1 ^. #coloring)
 
 -- | Arguments for the list command.
 type ListCmd :: Phase -> Type
@@ -105,6 +113,10 @@ deriving stock instance Show (ListCmd Phase1)
 deriving stock instance Eq (ListCmd Phase2)
 
 deriving stock instance Show (ListCmd Phase2)
+
+type ListCmdP1 = ListCmd Phase1
+
+type ListCmdP2 = ListCmd Phase2
 
 instance AdvancePhase (ListCmd Phase1) where
   type NextPhase (ListCmd Phase1) = ListCmd Phase2

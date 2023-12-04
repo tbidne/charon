@@ -108,8 +108,6 @@ delete ::
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = do
-  _trashHome <- asks getTrashHome
-
   let appendDirectorySize :: (Fdo.PathData.PathData, PathTypeW, PathI TrashEntryPath) -> m ()
       appendDirectorySize (pd, pathType, MkPathI newPath) =
         when (is (#unPathTypeW % _PathTypeDirectory) pathType) $ do

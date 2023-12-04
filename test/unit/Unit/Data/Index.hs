@@ -14,14 +14,12 @@ import Charon.Backend.Data qualified as Backend
 import Charon.Data.Index (Index (MkIndex), Sort (Name, Size))
 import Charon.Data.Index qualified as Index
 import Charon.Data.PathData (PathData (UnsafePathData))
-import Charon.Data.PathData.Formatting
-  ( ColFormat (ColFormatFixed, ColFormatMax),
-    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
-  )
+import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax), Coloring (ColoringOff, ColoringOn), PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular), _FormatTabular)
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.Timestamp (Timestamp, fromText)
 import Charon.Env (HasTrashHome (getTrashHome))
+import Charon.Runner.Command.List
 import Data.List qualified as L
 import Data.Text.Encoding qualified as TEnc
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
@@ -69,7 +67,8 @@ singlelineTests b =
     [ testFormatSingleline1 b,
       testFormatSingleline2 b,
       testFormatSingleline3 b,
-      testFormatSingleline4 b
+      testFormatSingleline4 b,
+      testFormatSinglelineColor b
     ]
 
 -- Tests w/ fixed format lengths, basically verifying the other args like
@@ -81,47 +80,156 @@ tabularFixedTests b =
     [ testFormatTabularFixed1 b,
       testFormatTabularFixed2 b,
       testFormatTabularFixed3 b,
-      testFormatTabularFixed4 b
+      testFormatTabularFixed4 b,
+      testFormatTabularFixedColor b
     ]
 
 testFormatMultiline1 :: Backend -> TestTree
-testFormatMultiline1 b = testGoldenFormatParams b "Multiline, name, asc" [osp|multi-name-asc|] FormatMultiline Name False
+testFormatMultiline1 b =
+  testGoldenFormatParams
+    b
+    "Multiline, name, asc"
+    [osp|multi-name-asc|]
+    FormatMultiline
+    Name
+    False
 
 testFormatMultiline2 :: Backend -> TestTree
-testFormatMultiline2 b = testGoldenFormatParams b "Multiline, name, desc" [osp|multi-name-desc|] FormatMultiline Name True
+testFormatMultiline2 b =
+  testGoldenFormatParams
+    b
+    "Multiline, name, desc"
+    [osp|multi-name-desc|]
+    FormatMultiline
+    Name
+    True
 
 testFormatMultiline3 :: Backend -> TestTree
-testFormatMultiline3 b = testGoldenFormatParams b "Multiline, size, asc" [osp|multi-size-asc|] FormatMultiline Size False
+testFormatMultiline3 b =
+  testGoldenFormatParams
+    b
+    "Multiline, size, asc"
+    [osp|multi-size-asc|]
+    FormatMultiline
+    Size
+    False
 
 testFormatMultiline4 :: Backend -> TestTree
-testFormatMultiline4 b = testGoldenFormatParams b "Multiline, size, desc" [osp|multi-size-desc|] FormatMultiline Size True
+testFormatMultiline4 b =
+  testGoldenFormatParams
+    b
+    "Multiline, size, desc"
+    [osp|multi-size-desc|]
+    FormatMultiline
+    Size
+    True
 
 testFormatSingleline1 :: Backend -> TestTree
-testFormatSingleline1 b = testGoldenFormatParams b "Singleline, name, asc" [osp|single-name-asc|] FormatSingleline Name False
+testFormatSingleline1 b =
+  testGoldenFormatParams
+    b
+    "Singleline, name, asc"
+    [osp|single-name-asc|]
+    (FormatSingleline ColoringOff)
+    Name
+    False
 
 testFormatSingleline2 :: Backend -> TestTree
-testFormatSingleline2 b = testGoldenFormatParams b "Singleline, name, desc" [osp|single-name-desc|] FormatSingleline Name True
+testFormatSingleline2 b =
+  testGoldenFormatParams
+    b
+    "Singleline, name, desc"
+    [osp|single-name-desc|]
+    (FormatSingleline ColoringOff)
+    Name
+    True
 
 testFormatSingleline3 :: Backend -> TestTree
-testFormatSingleline3 b = testGoldenFormatParams b "Singleline, size, asc" [osp|single-size-asc|] FormatSingleline Size False
+testFormatSingleline3 b =
+  testGoldenFormatParams
+    b
+    "Singleline, size, asc"
+    [osp|single-size-asc|]
+    (FormatSingleline ColoringOff)
+    Size
+    False
 
 testFormatSingleline4 :: Backend -> TestTree
-testFormatSingleline4 b = testGoldenFormatParams b "Singleline, size, desc" [osp|single-size-desc|] FormatSingleline Size True
+testFormatSingleline4 b =
+  testGoldenFormatParams
+    b
+    "Singleline, size, desc"
+    [osp|single-size-desc|]
+    (FormatSingleline ColoringOff)
+    Size
+    True
+
+testFormatSinglelineColor :: Backend -> TestTree
+testFormatSinglelineColor b =
+  testGoldenFormatParams
+    b
+    "Singleline, size, desc, color"
+    [osp|single-size-desc-color|]
+    (FormatSingleline ColoringOn)
+    Size
+    True
 
 testFormatTabularFixed1 :: Backend -> TestTree
-testFormatTabularFixed1 b = testGoldenFormatParams b "Tabular, name, asc" [osp|tabular-name-asc|] fixedTabularFormat Name False
+testFormatTabularFixed1 b =
+  testGoldenFormatParams
+    b
+    "Tabular, name, asc"
+    [osp|tabular-name-asc|]
+    fixedTabularFormat
+    Name
+    False
 
 testFormatTabularFixed2 :: Backend -> TestTree
-testFormatTabularFixed2 b = testGoldenFormatParams b "Tabular, name, desc" [osp|tabular-name-desc|] fixedTabularFormat Name True
+testFormatTabularFixed2 b =
+  testGoldenFormatParams
+    b
+    "Tabular, name, desc"
+    [osp|tabular-name-desc|]
+    fixedTabularFormat
+    Name
+    True
 
 testFormatTabularFixed3 :: Backend -> TestTree
-testFormatTabularFixed3 b = testGoldenFormatParams b "Tabular, size, asc" [osp|tabular-size-asc|] fixedTabularFormat Size False
+testFormatTabularFixed3 b =
+  testGoldenFormatParams
+    b
+    "Tabular, size, asc"
+    [osp|tabular-size-asc|]
+    fixedTabularFormat
+    Size
+    False
 
 testFormatTabularFixed4 :: Backend -> TestTree
-testFormatTabularFixed4 b = testGoldenFormatParams b "Tabular, size, desc" [osp|tabular-size-desc|] fixedTabularFormat Size True
+testFormatTabularFixed4 b =
+  testGoldenFormatParams
+    b
+    "Tabular, size, desc"
+    [osp|tabular-size-desc|]
+    fixedTabularFormat
+    Size
+    True
+
+testFormatTabularFixedColor :: Backend -> TestTree
+testFormatTabularFixedColor b =
+  testGoldenFormatParams
+    b
+    "Tabular, size, desc, color"
+    [osp|tabular-size-desc-color|]
+    (set' (_FormatTabular % _1) ColoringOn fixedTabularFormat)
+    Size
+    True
 
 fixedTabularFormat :: PathDataFormat
-fixedTabularFormat = FormatTabular (Just $ ColFormatFixed 10) (Just $ ColFormatFixed 22)
+fixedTabularFormat =
+  FormatTabular
+    ColoringOff
+    (Just $ ColFormatFixed 10)
+    (Just $ ColFormatFixed 22)
 
 data TestEnv = MkTestEnv Natural (PathI TrashHome)
 
@@ -248,7 +356,7 @@ formatTabularAutoFail = testCase desc $ do
   eformatted <-
     tryAnyCS
       $ runConfigIO
-        (Index.formatIndex formatTabularAuto Name False idx)
+        (Index.formatIndex (MkListCmd formatTabularAuto Name False) idx)
         53
   case eformatted of
     Right result ->
@@ -281,35 +389,35 @@ tabularMaxTests b =
 testFormatTabularMaxNameAutoOrig :: Backend -> TestTree
 testFormatTabularMaxNameAutoOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular (Just ColFormatMax) Nothing
+    fmt = FormatTabular ColoringOff (Just ColFormatMax) Nothing
     desc = "Tabular max file name, auto orig"
     fileName = [osp|tabular-max-name-auto-orig|]
 
 testFormatTabularMaxNameAutoOrigTrunc :: Backend -> TestTree
 testFormatTabularMaxNameAutoOrigTrunc b = testGoldenFormat b desc fileName mkIndex fmt 70
   where
-    fmt = FormatTabular (Just ColFormatMax) Nothing
+    fmt = FormatTabular ColoringOff (Just ColFormatMax) Nothing
     desc = "Tabular max file name, auto orig truncates orig"
     fileName = [osp|tabular-max-name-auto-orig-trunc|]
 
 testFormatTabularAutoNameMaxOrig :: Backend -> TestTree
 testFormatTabularAutoNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular Nothing (Just ColFormatMax)
+    fmt = FormatTabular ColoringOff Nothing (Just ColFormatMax)
     desc = "Tabular auto name, max original path"
     fileName = [osp|tabular-auto-name-max-orig|]
 
 testFormatTabularAutoNameMaxOrigTrunc :: Backend -> TestTree
 testFormatTabularAutoNameMaxOrigTrunc b = testGoldenFormat b desc fileName mkIndex fmt 70
   where
-    fmt = FormatTabular Nothing (Just ColFormatMax)
+    fmt = FormatTabular ColoringOff Nothing (Just ColFormatMax)
     desc = "Tabular auto name, max original path truncates name"
     fileName = [osp|tabular-auto-name-max-orig-trunc|]
 
 testFormatTabularMaxNameMaxOrig :: Backend -> TestTree
 testFormatTabularMaxNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular (Just ColFormatMax) (Just ColFormatMax)
+    fmt = FormatTabular ColoringOff (Just ColFormatMax) (Just ColFormatMax)
     desc = "Tabular max file name and max original path"
     fileName = [osp|tabular-max-name-max-orig|]
 
@@ -327,28 +435,28 @@ tabularMiscTests b =
 testFormatTabularFixedNameMaxOrig :: Backend -> TestTree
 testFormatTabularFixedNameMaxOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular (Just $ ColFormatFixed 50) (Just ColFormatMax)
+    fmt = FormatTabular ColoringOff (Just $ ColFormatFixed 50) (Just ColFormatMax)
     desc = "Tabular fixed file name and max original path"
     fileName = [osp|tabular-fix-name-max-orig|]
 
 testFormatTabularFixedNameAutoOrig :: Backend -> TestTree
 testFormatTabularFixedNameAutoOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular (Just $ ColFormatFixed 50) Nothing
+    fmt = FormatTabular ColoringOff (Just $ ColFormatFixed 50) Nothing
     desc = "Tabular fixed file name and auto original path"
     fileName = [osp|tabular-fix-name-auto-orig|]
 
 testFormatTabularMaxNameFixedOrig :: Backend -> TestTree
 testFormatTabularMaxNameFixedOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular (Just ColFormatMax) (Just $ ColFormatFixed 50)
+    fmt = FormatTabular ColoringOff (Just ColFormatMax) (Just $ ColFormatFixed 50)
     desc = "Tabular max file name and fixed original path"
     fileName = [osp|tabular-max-name-fix-orig|]
 
 testFormatTabularAutoNameFixedOrig :: Backend -> TestTree
 testFormatTabularAutoNameFixedOrig b = testGoldenFormat b desc fileName mkIndex fmt 100
   where
-    fmt = FormatTabular Nothing (Just $ ColFormatFixed 50)
+    fmt = FormatTabular ColoringOff Nothing (Just $ ColFormatFixed 50)
     desc = "Tabular auto file name and fixed original path"
     fileName = [osp|tabular-auto-name-fix-orig|]
 
@@ -402,7 +510,7 @@ toBS :: Text -> ByteString
 toBS = TEnc.encodeUtf8
 
 formatTabularAuto :: PathDataFormat
-formatTabularAuto = FormatTabular Nothing Nothing
+formatTabularAuto = FormatTabular ColoringOff Nothing Nothing
 
 -- | Golden tests for different combinations of PathDataFormat + Index +
 -- Sort + Reverse.
@@ -421,7 +529,9 @@ testGoldenFormatParams ::
   Bool ->
   TestTree
 testGoldenFormatParams backend desc fileName style sortCol rev =
-  testGolden backend desc fileName mkIndex style sortCol rev 61
+  testGolden backend desc fileName mkIndex style sortCol rev termWidth
+  where
+    termWidth = 61
 
 -- Golden tests for different combinations of PathDataFormat + Index +
 -- Terminal size.
@@ -473,7 +583,7 @@ testGolden
   rev
   termWidth = goldenVsFile desc (unsafeDecodeOsToFp gpath) (unsafeDecodeOsToFp apath) $ do
     idx <- mkIdx
-    let fmt = Index.formatIndex' style sortFn rev idx
+    let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
     formatted <- runConfigIO fmt termWidth
     writeBinaryFile apath (toBS formatted)
     where

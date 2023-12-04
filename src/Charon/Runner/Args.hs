@@ -12,7 +12,7 @@ where
 
 import Charon.Backend.Data (Backend, parseBackend)
 import Charon.Data.Index (Sort, readSort)
-import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax))
+import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax), Coloring (ColoringDetect, ColoringOff, ColoringOn))
 import Charon.Data.PathData.Formatting qualified as PathData
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
@@ -288,7 +288,8 @@ commandParser =
       fmap List
         $ MkListCmd
         <$> ( MkListFormatPhase1
-                <$> listFormatStyleParser
+                <$> coloringParser
+                <*> listFormatStyleParser
                 <*> nameTruncParser
                 <*> origTruncParser
             )
@@ -372,6 +373,29 @@ colParser minLen = A.optional . OA.option readCol
                   ". Received: ",
                   other
                 ]
+
+coloringParser :: Parser (Maybe Coloring)
+coloringParser =
+  A.optional
+    $ OA.option readColoring
+    $ mconcat
+      [ OA.long "color",
+        OA.metavar "(t[rue] | f[alse] | d[etect])",
+        mkHelp
+          $ mconcat
+            [ "Determines if we should color output. Multiline is unaffected."
+            ]
+      ]
+  where
+    readColoring =
+      OA.str >>= \case
+        "t" -> pure ColoringOn
+        "true" -> pure ColoringOn
+        "f" -> pure ColoringOff
+        "false" -> pure ColoringOff
+        "d" -> pure ColoringDetect
+        "detect" -> pure ColoringDetect
+        bad -> fail $ "Unexpected --coloring: " ++ bad
 
 sortParser :: Parser (Maybe Sort)
 sortParser =

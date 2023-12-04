@@ -14,9 +14,7 @@ where
 
 import Charon qualified
 import Charon.Backend.Data (Backend (BackendCbor))
-import Charon.Data.Index (Sort)
 import Charon.Data.Index qualified as Index
-import Charon.Data.PathData.Formatting (PathDataFormat)
 import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
@@ -46,6 +44,7 @@ import Charon.Runner.Command
       ),
     CommandP2,
   )
+import Charon.Runner.Command.List (ListCmdP2)
 import Charon.Runner.Env
   ( Env (MkEnv, backend, trashHome),
     LogEnv (MkLogEnv),
@@ -126,8 +125,7 @@ runCmd cmd =
       PermDelete force paths -> Charon.permDelete force paths
       Empty force -> Charon.emptyTrash force
       Restore paths -> Charon.restore paths
-      List listCmd ->
-        printIndex (listCmd ^. #format) (listCmd ^. #sort) (listCmd ^. #revSort)
+      List listCmd -> printIndex listCmd
       Metadata -> printMetadata
       Convert dest -> Charon.convert dest
       Merge dest -> Charon.merge dest
@@ -226,13 +224,11 @@ printIndex ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  PathDataFormat ->
-  Sort ->
-  Bool ->
+  ListCmdP2 ->
   m ()
-printIndex style sort revSort = do
+printIndex listCmd = do
   index <- Charon.getIndex
-  formatted <- Index.formatIndex style sort revSort index
+  formatted <- Index.formatIndex listCmd index
   putTextLn formatted
 
 printMetadata ::

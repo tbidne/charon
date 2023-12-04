@@ -2,13 +2,25 @@
 module Charon.Data.PathData.Formatting
   ( -- * Types
     PathDataFormat (..),
+    _FormatMultiline,
+    _FormatTabular,
+    _FormatSingleline,
     ColFormat (..),
+    Coloring (..),
+
+    -- ** Sort
+    Sort (..),
+    readSort,
+    sortFn,
 
     -- * Format functions
     formatTabularHeader,
+    formatTabularHeaderColor,
     formatTabularRow,
+    formatTabularRowColor,
     formatMultiline,
     formatSingleline,
+    formatSinglelineColor,
 
     -- * Sorting
     sortNameCreated,
@@ -29,6 +41,8 @@ import Charon.Prelude
 import Charon.Utils qualified as U
 import Data.Char qualified as Ch
 import Data.Text qualified as T
+import System.Console.Pretty (Color)
+import System.Console.Pretty qualified as CPretty
 
 data ColFormat
   = -- | Fixed length format.
@@ -57,15 +71,55 @@ _ColFormatMax =
     )
 {-# INLINE _ColFormatMax #-}
 
+-- | Whether we should color list command.
+data Coloring
+  = -- | Coloring on
+    ColoringOn
+  | -- | Coloring off
+    ColoringOff
+  | -- | Attempt to detect if the terminal support colors.
+    ColoringDetect
+  deriving stock (Eq, Show)
+
 -- | Determines how to format a textual 'PathData'.
 data PathDataFormat
   = -- | Formats each file on its own line.
     FormatMultiline
   | -- | Formats all fields on the same line.
-    FormatTabular (Maybe ColFormat) (Maybe ColFormat)
+    FormatTabular Coloring (Maybe ColFormat) (Maybe ColFormat)
   | -- | Formats each entry on a single line, no table.
-    FormatSingleline
+    FormatSingleline Coloring
   deriving stock (Eq, Show)
+
+_FormatMultiline :: Prism' PathDataFormat ()
+_FormatMultiline =
+  prism
+    (const FormatMultiline)
+    ( \x -> case x of
+        FormatMultiline -> Right ()
+        _ -> Left x
+    )
+{-# INLINE _FormatMultiline #-}
+
+_FormatTabular :: Prism' PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat)
+_FormatTabular =
+  prism
+    (\(a, b, c) -> FormatTabular a b c)
+    ( \x -> case x of
+        FormatTabular a b c -> Right (a, b, c)
+        _ -> Left x
+    )
+{-# INLINE _FormatTabular #-}
+
+_FormatSingleline :: Prism' PathDataFormat Coloring
+_FormatSingleline =
+  prism
+    FormatSingleline
+    ( \x -> case x of
+        FormatSingleline c -> Right c
+        _ -> Left x
+    )
+{-# INLINE _FormatSingleline #-}
 
 sortNameCreated :: PathData -> PathData -> Ordering
 sortNameCreated x y = case sortName x y of
@@ -109,29 +163,43 @@ formatMultiline :: PathData -> Text
 formatMultiline = U.renderPretty
 
 formatSingleline :: PathData -> Text
-formatSingleline pd =
-  mconcat
-    [ Timestamp.toTextSpace $ pd ^. #created,
-      " ",
-      T.pack $ decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI
-    ]
+formatSingleline = formatSingleline' id
+
+formatSinglelineColor :: Color -> PathData -> Text
+formatSinglelineColor = formatSingleline' . CPretty.color
+
+formatSingleline' :: (Text -> Text) -> PathData -> Text
+formatSingleline' f pd =
+  f
+    $ mconcat
+      [ Timestamp.toTextSpace $ pd ^. #created,
+        " ",
+        T.pack $ decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI
+      ]
 
 formatTabularHeader :: Natural -> Natural -> Text
-formatTabularHeader nameLen origLen =
-  mconcat
-    [ fixLen nameLen "Name",
-      sep,
-      fixLen origLen "Original",
-      sep,
-      fixLen formatTypeLen "Type",
-      sep,
-      fixLen formatSizeLen "Size",
-      sep,
-      -- No need to pad the length here as this is the last column
-      "Created",
-      "\n",
-      titleLen
-    ]
+formatTabularHeader = formatTabularHeader' id
+
+formatTabularHeaderColor :: Color -> Natural -> Natural -> Text
+formatTabularHeaderColor = formatTabularHeader' . CPretty.color
+
+formatTabularHeader' :: (Text -> Text) -> Natural -> Natural -> Text
+formatTabularHeader' f nameLen origLen =
+  f
+    $ mconcat
+      [ fixLen nameLen "Name",
+        sep,
+        fixLen origLen "Original",
+        sep,
+        fixLen formatTypeLen "Type",
+        sep,
+        fixLen formatSizeLen "Size",
+        sep,
+        -- No need to pad the length here as this is the last column
+        "Created",
+        "\n",
+        titleLen
+      ]
   where
     -- extra 12 is from the separators
     totalLen = nameLen + origLen + reservedLineLen
@@ -160,18 +228,25 @@ minTableWidth =
   reservedLineLen + formatFileNameLenMin + formatOriginalPathLenMin
 
 formatTabularRow :: Natural -> Natural -> PathData -> Text
-formatTabularRow nameLen origLen pd =
-  mconcat
-    [ fixLen' nameLen (decodeOsToFpDisplayEx $ pd ^. #fileName % #unPathI),
-      sep,
-      fixLen' origLen (decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI),
-      sep,
-      paddedType (pd ^. (#pathType % #unPathTypeW)),
-      sep,
-      fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
-      sep,
-      Timestamp.toTextSpace (pd ^. #created)
-    ]
+formatTabularRow = formatTabularRow' id
+
+formatTabularRowColor :: Color -> Natural -> Natural -> PathData -> Text
+formatTabularRowColor = formatTabularRow' . CPretty.color
+
+formatTabularRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
+formatTabularRow' f nameLen origLen pd =
+  f
+    $ mconcat
+      [ fixLen' nameLen (decodeOsToFpDisplayEx $ pd ^. #fileName % #unPathI),
+        sep,
+        fixLen' origLen (decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI),
+        sep,
+        paddedType (pd ^. (#pathType % #unPathTypeW)),
+        sep,
+        fixLen formatSizeLen (U.normalizedFormat $ pd ^. #size),
+        sep,
+        Timestamp.toTextSpace (pd ^. #created)
+      ]
   where
     paddedType PathTypeFile = "F   "
     paddedType PathTypeDirectory = "D   "
@@ -207,3 +282,25 @@ formatCreatedLen = 19
 
 formatSeparatorsLen :: Natural
 formatSeparatorsLen = 12
+
+-- | How to sort the index list.
+data Sort
+  = -- | Sort by name.
+    Name
+  | -- | Sort by size.
+    Size
+  deriving stock (Eq, Show)
+
+readSort :: (MonadFail m) => Text -> m Sort
+readSort "name" = pure Name
+readSort "size" = pure Size
+readSort other = fail $ "Unrecognized sort: " <> T.unpack other
+
+sortFn :: Bool -> Sort -> PathData -> PathData -> Ordering
+sortFn b = \case
+  Name -> rev sortNameCreated
+  Size -> rev sortSizeName
+  where
+    rev
+      | b = sortReverse
+      | otherwise = id

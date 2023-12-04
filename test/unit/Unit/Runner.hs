@@ -10,7 +10,8 @@ import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
 import Charon.Data.Index (Sort (Name))
 import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
-    PathDataFormat (FormatTabular),
+    Coloring (ColoringDetect, ColoringOff, ColoringOn),
+    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
 import Charon.Data.Paths (PathI (MkPathI))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
@@ -23,7 +24,14 @@ import Charon.Runner.Command
     _PermDelete,
     _Restore,
   )
-import Charon.Runner.Command.List (ListCmd (MkListCmd, format, revSort, sort))
+import Charon.Runner.Command.List
+  ( ListCmd
+      ( MkListCmd,
+        format,
+        revSort,
+        sort
+      ),
+  )
 import Charon.Runner.FileSizeMode
   ( FileSizeMode
       ( FileSizeModeDelete,
@@ -54,6 +62,8 @@ argsTests =
       list,
       listNonDefaults,
       listNonDefaultsNoFormat,
+      listMultiline,
+      listSingleline,
       metadata
     ]
 
@@ -133,7 +143,7 @@ list = testCase "Parses list" $ do
     argList = ["list", "-c", "none"]
     defList =
       MkListCmd
-        { format = FormatTabular Nothing Nothing,
+        { format = FormatTabular ColoringDetect Nothing Nothing,
           sort = Name,
           revSort = False
         }
@@ -154,11 +164,57 @@ listNonDefaults = testCase "List non-default args" $ do
         "--name-len",
         "80",
         "--orig-len",
-        "100"
+        "100",
+        "--color",
+        "true"
       ]
     defList =
       MkListCmd
-        { format = FormatTabular (Just $ ColFormatFixed 80) (Just $ ColFormatFixed 100),
+        { format = FormatTabular ColoringOn (Just $ ColFormatFixed 80) (Just $ ColFormatFixed 100),
+          sort = Name,
+          revSort = False
+        }
+
+listMultiline :: TestTree
+listMultiline = testCase "List multiline" $ do
+  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+
+  Nothing @=? cfg ^. #trashHome
+  Just defList @=? cmd ^? _List
+  where
+    argList =
+      [ "-c",
+        "none",
+        "list",
+        "--format",
+        "m"
+      ]
+    defList =
+      MkListCmd
+        { format = FormatMultiline,
+          sort = Name,
+          revSort = False
+        }
+
+listSingleline :: TestTree
+listSingleline = testCase "List singleline" $ do
+  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+
+  Nothing @=? cfg ^. #trashHome
+  Just defList @=? cmd ^? _List
+  where
+    argList =
+      [ "-c",
+        "none",
+        "list",
+        "--format",
+        "s",
+        "--color",
+        "false"
+      ]
+    defList =
+      MkListCmd
+        { format = FormatSingleline ColoringOff,
           sort = Name,
           revSort = False
         }
@@ -181,7 +237,7 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
       ]
     defList =
       MkListCmd
-        { format = FormatTabular (Just $ ColFormatFixed 80) (Just ColFormatMax),
+        { format = FormatTabular ColoringDetect (Just $ ColFormatFixed 80) (Just ColFormatMax),
           sort = Name,
           revSort = False
         }

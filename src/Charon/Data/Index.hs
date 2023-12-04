@@ -22,7 +22,10 @@ import Charon.Data.PathData (PathData)
 import Charon.Data.PathData qualified as PathDataCore
 import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
+    Coloring (ColoringDetect, ColoringOff, ColoringOn),
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
+    Sort (Name, Size),
+    readSort,
   )
 import Charon.Data.PathData.Formatting qualified as Formatting
 import Charon.Data.Paths
@@ -30,13 +33,17 @@ import Charon.Data.Paths
     PathIndex (TrashEntryFileName, TrashEntryPath),
   )
 import Charon.Prelude
+import Charon.Runner.Command.List (ListCmdP2)
 import Data.Foldable (toList)
 import Data.HashMap.Strict qualified as HMap
+import Data.List qualified as L
 import Data.Ord (Ord (max))
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
+import Effects.System.Terminal qualified as Term
 import GHC.Real (RealFrac (floor))
+import System.Console.Pretty (Color (Blue, Green, Magenta))
 
 type PathDataCore = PathDataCore.PathData
 
@@ -53,28 +60,6 @@ makeFieldLabelsNoPrefix ''Index
 empty :: Index
 empty = MkIndex mempty
 
--- | How to sort the index list.
-data Sort
-  = -- | Sort by name.
-    Name
-  | -- | Sort by size.
-    Size
-  deriving stock (Eq, Show)
-
-readSort :: (MonadFail m) => Text -> m Sort
-readSort "name" = pure Name
-readSort "size" = pure Size
-readSort other = fail $ "Unrecognized sort: " <> T.unpack other
-
-sortFn :: Bool -> Sort -> PathDataCore -> PathDataCore -> Ordering
-sortFn b = \case
-  Name -> rev Formatting.sortNameCreated
-  Size -> rev Formatting.sortSizeName
-  where
-    rev
-      | b = Formatting.sortReverse
-      | otherwise = id
-
 -- | Formats the 'Index' in a pretty way.
 formatIndex ::
   forall m.
@@ -84,17 +69,13 @@ formatIndex ::
     MonadLoggerNS m,
     MonadTerminal m
   ) =>
-  -- | Format to use
-  PathDataFormat ->
-  -- | How to sort
-  Sort ->
-  -- | If true, reverses the sortPathData
-  Bool ->
+  -- | List config
+  ListCmdP2 ->
   -- | The index to format
   Index ->
   m Text
-formatIndex style sort revSort idx =
-  formatIndex' style sort revSort (view _1 <$> view #unIndex idx)
+formatIndex listCmd idx =
+  formatIndex' listCmd (view _1 <$> view #unIndex idx)
 
 -- | Formats the 'Index' in a pretty way.
 formatIndex' ::
@@ -105,19 +86,20 @@ formatIndex' ::
     MonadLoggerNS m,
     MonadTerminal m
   ) =>
-  -- | Format to use
-  PathDataFormat ->
-  -- | How to sort
-  Sort ->
-  -- | If true, reverses the sortPathData
-  Bool ->
+  -- | List config
+  ListCmdP2 ->
   -- | The index to format
   Seq PathDataCore ->
   m Text
-formatIndex' style sort revSort idx = addNamespace "formatIndex" $ case style of
-  FormatMultiline -> pure $ multiline (sortFn revSort sort) idx
-  FormatSingleline -> pure $ singleline idx
-  FormatTabular nameFormat origFormat -> do
+formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format of
+  FormatMultiline ->
+    pure $ multiline (Formatting.sortFn (listCmd ^. #revSort) (listCmd ^. #sort)) idx
+  FormatSingleline color -> do
+    coloring <- getColoring color
+    pure $ singleline coloring idx
+  FormatTabular color nameFormat origFormat -> do
+    coloring <- getColoring color
+
     -- NOTE: We want to format the table such that we (concisely) display as
     -- much information as possible while trying to avoid ugly text wrapping
     -- (i.e. keep the table w/in the terminal width). This is complicated
@@ -198,7 +180,7 @@ formatIndex' style sort revSort idx = addNamespace "formatIndex" $ case style of
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 
-    pure $ tabular (sortFn revSort sort) nameLen origLen idx
+    pure $ tabular coloring (Formatting.sortFn revSort sort) nameLen origLen idx
     where
       -- Search the index; find the longest name and orig path
       foldMap :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
@@ -298,6 +280,9 @@ formatIndex' style sort revSort idx = addNamespace "formatIndex" $ case style of
                     ]
                 pure (Formatting.formatFileNameLenMin, oLen)
 
+      revSort = listCmd ^. #revSort
+      sort = listCmd ^. #sort
+
 getMaxLen :: (MonadCatch m, MonadLogger m, MonadTerminal m) => m Natural
 getMaxLen = do
   tryAny getTerminalWidth >>= \case
@@ -315,25 +300,47 @@ multiline sort =
     . toList
     . getElems sort
 
-singleline :: Seq PathDataCore -> Text
-singleline =
+singleline :: Bool -> Seq PathDataCore -> Text
+singleline coloring =
   T.intercalate "\n"
-    . fmap Formatting.formatSingleline
+    . foldr f []
+    . L.zip colorStream
     . toList
     . Seq.sortOn (view #originalPath)
+  where
+    f :: (Color, PathData) -> [Text] -> [Text]
+    f (c, pd) acc = colorFn c pd : acc
+
+    colorFn
+      | coloring = Formatting.formatSinglelineColor
+      | otherwise = const Formatting.formatSingleline
+
+colorStream :: [Color]
+colorStream = Blue : Magenta : colorStream
 
 tabular ::
+  Bool ->
   (PathDataCore -> PathDataCore -> Ordering) ->
   Natural ->
   Natural ->
   Seq PathDataCore ->
   Text
-tabular sort nameLen origLen =
-  ((Formatting.formatTabularHeader nameLen origLen <> "\n") <>)
+tabular coloring sort nameLen origLen =
+  ((headerFn headerColor nameLen origLen <> "\n") <>)
     . T.intercalate "\n"
-    . fmap (Formatting.formatTabularRow nameLen origLen)
+    . foldr f []
+    . L.zip colorStream
     . toList
     . getElems sort
+  where
+    headerColor = Green
+
+    f :: (Color, PathData) -> [Text] -> [Text]
+    f (c, pd) acc = rowFn c nameLen origLen pd : acc
+
+    (headerFn, rowFn)
+      | coloring = (Formatting.formatTabularHeaderColor, Formatting.formatTabularRowColor)
+      | otherwise = (const Formatting.formatTabularHeader, const Formatting.formatTabularRow)
 
 getElems ::
   (PathDataCore -> PathDataCore -> Ordering) ->
@@ -349,3 +356,8 @@ insert ::
   HashMap (PathI TrashEntryFileName) PathData ->
   HashMap (PathI TrashEntryFileName) PathData
 insert pd = HMap.insert (pd ^. #fileName) pd
+
+getColoring :: (HasCallStack, MonadTerminal m) => Coloring -> m Bool
+getColoring ColoringDetect = Term.supportsPretty
+getColoring ColoringOff = pure False
+getColoring ColoringOn = pure True
