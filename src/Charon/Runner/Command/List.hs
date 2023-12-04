@@ -16,7 +16,7 @@ where
 import Charon.Data.Index (Sort (Name))
 import Charon.Data.PathData.Formatting
   ( ColFormat,
-    PathDataFormat (FormatMultiline, FormatTabular),
+    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
 import Charon.Prelude
 import Charon.Runner.Phase
@@ -34,6 +34,7 @@ import Data.Text qualified as T
 data ListFormatStyle
   = ListFormatStyleMultiline
   | ListFormatStyleTabular
+  | ListFormatStyleSingleline
   deriving stock (Eq, Show)
 
 parseListFormat :: (MonadFail m) => Text -> m ListFormatStyle
@@ -41,6 +42,8 @@ parseListFormat "multi" = pure ListFormatStyleMultiline
 parseListFormat "m" = pure ListFormatStyleMultiline
 parseListFormat "tabular" = pure ListFormatStyleTabular
 parseListFormat "t" = pure ListFormatStyleTabular
+parseListFormat "single" = pure ListFormatStyleSingleline
+parseListFormat "s" = pure ListFormatStyleSingleline
 parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 
 -- | Holds all configuration data for list formatting i.e. style and
@@ -72,6 +75,7 @@ instance AdvancePhase ListFormatPhase1 where
 
   advancePhase formatPhase1 = case formatPhase1 ^. #style of
     Just ListFormatStyleMultiline -> FormatMultiline
+    Just ListFormatStyleSingleline -> FormatSingleline
     Just ListFormatStyleTabular ->
       FormatTabular
         (formatPhase1 ^. #nameTrunc)

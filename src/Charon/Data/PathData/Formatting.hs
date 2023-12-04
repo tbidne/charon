@@ -7,7 +7,8 @@ module Charon.Data.PathData.Formatting
     -- * Format functions
     formatTabularHeader,
     formatTabularRow,
-    formatMultiLine,
+    formatMultiline,
+    formatSingleline,
 
     -- * Sorting
     sortNameCreated,
@@ -62,6 +63,8 @@ data PathDataFormat
     FormatMultiline
   | -- | Formats all fields on the same line.
     FormatTabular (Maybe ColFormat) (Maybe ColFormat)
+  | -- | Formats each entry on a single line, no table.
+    FormatSingleline
   deriving stock (Eq, Show)
 
 sortNameCreated :: PathData -> PathData -> Ordering
@@ -102,8 +105,16 @@ sortSize = mapOrd (view #size)
 mapOrd :: (Ord b) => (a -> b) -> a -> a -> Ordering
 mapOrd f x y = f x `compare` f y
 
-formatMultiLine :: PathData -> Text
-formatMultiLine = U.renderPretty
+formatMultiline :: PathData -> Text
+formatMultiline = U.renderPretty
+
+formatSingleline :: PathData -> Text
+formatSingleline pd =
+  mconcat
+    [ Timestamp.toTextSpace $ pd ^. #created,
+      " ",
+      T.pack $ decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI
+    ]
 
 formatTabularHeader :: Natural -> Natural -> Text
 formatTabularHeader nameLen origLen =

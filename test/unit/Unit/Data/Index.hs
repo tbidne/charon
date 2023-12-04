@@ -16,7 +16,7 @@ import Charon.Data.Index qualified as Index
 import Charon.Data.PathData (PathData (UnsafePathData))
 import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
-    PathDataFormat (FormatMultiline, FormatTabular),
+    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
@@ -45,6 +45,7 @@ formattingTests b =
   testGroup
     ("Formatting " ++ Backend.backendTestDesc b)
     [ multilineTests b,
+      singlelineTests b,
       tabularFixedTests b,
       tabularAutoTests b,
       tabularMaxTests b,
@@ -59,6 +60,16 @@ multilineTests b =
       testFormatMultiline2 b,
       testFormatMultiline3 b,
       testFormatMultiline4 b
+    ]
+
+singlelineTests :: Backend -> TestTree
+singlelineTests b =
+  testGroup
+    "Singeline"
+    [ testFormatSingleline1 b,
+      testFormatSingleline2 b,
+      testFormatSingleline3 b,
+      testFormatSingleline4 b
     ]
 
 -- Tests w/ fixed format lengths, basically verifying the other args like
@@ -84,6 +95,18 @@ testFormatMultiline3 b = testGoldenFormatParams b "Multiline, size, asc" [osp|mu
 
 testFormatMultiline4 :: Backend -> TestTree
 testFormatMultiline4 b = testGoldenFormatParams b "Multiline, size, desc" [osp|multi-size-desc|] FormatMultiline Size True
+
+testFormatSingleline1 :: Backend -> TestTree
+testFormatSingleline1 b = testGoldenFormatParams b "Singleline, name, asc" [osp|single-name-asc|] FormatSingleline Name False
+
+testFormatSingleline2 :: Backend -> TestTree
+testFormatSingleline2 b = testGoldenFormatParams b "Singleline, name, desc" [osp|single-name-desc|] FormatSingleline Name True
+
+testFormatSingleline3 :: Backend -> TestTree
+testFormatSingleline3 b = testGoldenFormatParams b "Singleline, size, asc" [osp|single-size-asc|] FormatSingleline Size False
+
+testFormatSingleline4 :: Backend -> TestTree
+testFormatSingleline4 b = testGoldenFormatParams b "Singleline, size, desc" [osp|single-size-desc|] FormatSingleline Size True
 
 testFormatTabularFixed1 :: Backend -> TestTree
 testFormatTabularFixed1 b = testGoldenFormatParams b "Tabular, name, asc" [osp|tabular-name-asc|] fixedTabularFormat Name False

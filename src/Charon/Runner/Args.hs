@@ -169,9 +169,7 @@ backendParser =
         ]
 
     intro =
-      Chunk.unChunk
-        $ Chunk.paragraph
-          "Backend to use with charon. This option affects how path metadata is stored. Options are: "
+      toMDoc "Backend to use with charon. This option affects how path metadata is stored. Options are: "
     cbor = Just Pretty.hardline <> toMDoc "- cbor: Space efficient, not inspectable."
     fdo = Just Pretty.hardline <> toMDoc "- fdo: Compatible with FreeDesktop.org."
     js = Just Pretty.hardline <> toMDoc "- json: Inspectable."
@@ -306,20 +304,23 @@ listFormatStyleParser =
     $ OA.option (OA.str >>= parseListFormat)
     $ mconcat
       [ OA.long "format",
-        OA.metavar "(t[abular] | m[ulti])",
-        mkHelp helpTxt
+        OA.metavar "(t[abular] | m[ulti] | s[ingle])",
+        OA.helpDoc helpTxt
       ]
   where
     helpTxt =
       mconcat
-        [ "Determines the output format. The 'multi' option prints each ",
-          "entry across multiple lines. The default 'tabular' option prints ",
-          "each trash entry on a single line, in a table. By default, ",
-          "tabular tries to intelligently size the table based on the ",
-          "available terminal width and filename / original path lengths. ",
-          "The behavior can be overridden via --name-len and --orig-len. ",
-          "Note that this can lead to word-wrapping."
+        [ intro,
+          Just Pretty.hardline,
+          tabular,
+          multi,
+          single
         ]
+    intro = toMDoc "Formatting options."
+    tabular = Just Pretty.hardline <> toMDoc "- cbor: Prints a table that tries to intelligently size the table based on available terminal width and filename / original path lengths."
+    multi = Just Pretty.hardline <> toMDoc "- multi: Prints each entry across multiple lines."
+    single = Just Pretty.hardline <> toMDoc "- single: Compact, prints each entry across a single lines"
+    toMDoc = Chunk.unChunk . Chunk.paragraph
 
 nameTruncParser :: Parser (Maybe ColFormat)
 nameTruncParser = colParser PathData.formatFileNameLenMin fields
@@ -378,7 +379,7 @@ sortParser =
       [ OA.long "sort",
         OA.short 's',
         OA.metavar "(name|size)",
-        mkHelp "How to sort the list. Defaults to name."
+        mkHelp "How to sort the list. Defaults to name. Does not affect 'single' style."
       ]
 
 reverseSortParser :: Parser (Maybe Bool)
@@ -391,7 +392,7 @@ reverseSortParser =
         mkHelp helpTxt
       ]
   where
-    helpTxt = "Sorts in the reverse order."
+    helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
 
 forceParser :: Parser Bool
 forceParser =

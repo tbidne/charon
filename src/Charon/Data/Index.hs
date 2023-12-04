@@ -22,7 +22,7 @@ import Charon.Data.PathData (PathData)
 import Charon.Data.PathData qualified as PathDataCore
 import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
-    PathDataFormat (FormatMultiline, FormatTabular),
+    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
 import Charon.Data.PathData.Formatting qualified as Formatting
 import Charon.Data.Paths
@@ -116,6 +116,7 @@ formatIndex' ::
   m Text
 formatIndex' style sort revSort idx = addNamespace "formatIndex" $ case style of
   FormatMultiline -> pure $ multiline (sortFn revSort sort) idx
+  FormatSingleline -> pure $ singleline idx
   FormatTabular nameFormat origFormat -> do
     -- NOTE: We want to format the table such that we (concisely) display as
     -- much information as possible while trying to avoid ugly text wrapping
@@ -310,9 +311,16 @@ getMaxLen = do
 multiline :: (PathDataCore -> PathDataCore -> Ordering) -> Seq PathDataCore -> Text
 multiline sort =
   T.intercalate "\n\n"
-    . fmap Formatting.formatMultiLine
+    . fmap Formatting.formatMultiline
     . toList
     . getElems sort
+
+singleline :: Seq PathDataCore -> Text
+singleline =
+  T.intercalate "\n"
+    . fmap Formatting.formatSingleline
+    . toList
+    . Seq.sortOn (view #originalPath)
 
 tabular ::
   (PathDataCore -> PathDataCore -> Ordering) ->
