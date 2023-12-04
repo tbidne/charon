@@ -280,16 +280,19 @@ pathologicalTests :: IO TestEnv -> [TestTree]
 
 #if OSX
 
-pathologicalTests _ = []
+pathologicalTests testEnv = [deletesPathological2 testEnv]
 
 #else
 
-pathologicalTests testEnv = [deletesPathological testEnv]
+pathologicalTests testEnv =
+  [ deletesPathological1 testEnv,
+    deletesPathological2 testEnv
+  ]
 
-deletesPathological :: IO TestEnv -> TestTree
-deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
+deletesPathological1 :: IO TestEnv -> TestTree
+deletesPathological1 getTestEnv = testCase "Deletes pathological files 1" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesPathological" $ do
+  usingReaderT testEnv $ appendTestDirM "deletesPathological1" $ do
     testDir <- getTestDir
 
     -- See NOTE: [Unicode normalization]
@@ -336,3 +339,42 @@ deletesPathological getTestEnv = testCase "Deletes pathological files" $ do
     expectedMetadata = mkMetadata 2 2 0 10
 
 #endif
+
+deletesPathological2 :: IO TestEnv -> TestTree
+deletesPathological2 getTestEnv = testCase "Deletes pathological files 2" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesPathological2" $ do
+    testDir <- getTestDir
+    let files =
+          (testDir </>!)
+            <$> [ "\32244", -- 練
+                  "\4096", -- က
+                  "\13312" -- 㐀
+                ]
+
+    argList <- withSrArgsPathsM ["delete"] files
+
+    -- setup
+    createFiles files
+    assertPathsExist files
+
+    liftIO $ runCharon argList
+
+    -- file assertions
+    assertPathsDoNotExist files
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    expectedIdxSet <-
+      mkPathDataSetM
+        [ ("練", PathTypeFile, 5),
+          ("က", PathTypeFile, 5),
+          ("㐀", PathTypeFile, 5)
+        ]
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
+  where
+    expectedMetadata = mkMetadata 3 3 0 15
