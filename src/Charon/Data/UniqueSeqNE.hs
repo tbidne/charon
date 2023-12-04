@@ -10,6 +10,7 @@ module Charon.Data.UniqueSeqNE
 
     -- * Lookup
     member,
+    unsafefromUniqueSeq,
 
     -- * Operations
     prepend,
@@ -48,6 +49,12 @@ instance
 
 singleton :: (Hashable a) => a -> UniqueSeqNE a
 singleton = UnsafeUniqueSeqNE . UniqueSeq.singleton
+
+unsafefromUniqueSeq :: (HasCallStack) => UniqueSeq a -> UniqueSeqNE a
+unsafefromUniqueSeq useq =
+  if null useq
+    then error "Charon.Data.UniqueSeqNE.unsafefromUniqueSeq: empty UniqueSeq"
+    else UnsafeUniqueSeqNE useq
 
 union :: forall a. (Hashable a) => UniqueSeqNE a -> UniqueSeqNE a -> UniqueSeqNE a
 union (UnsafeUniqueSeqNE useq1) (UnsafeUniqueSeqNE useq2) =

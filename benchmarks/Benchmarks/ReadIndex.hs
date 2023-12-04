@@ -11,7 +11,8 @@ import Benchmarks.Prelude
 import Charon qualified
 import Charon.Backend.Data (Backend (BackendCbor))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import Charon.Data.UniqueSeq qualified as UniqueSeq
+import Charon.Data.UniqueSeq qualified as USeq
+import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Runner.CharonT (runCharonT)
 import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
@@ -45,16 +46,16 @@ setup testDir = do
       clearDirectory dir
       clearDirectory trashDir
 
-      uniqueSeqRef <- newIORef UniqueSeq.empty
+      uniqueSeqRef <- newIORef USeq.empty
 
       for_ files $ \filename -> do
         let filepath = dir </>! show filename
         writeBinaryFile filepath ""
-        modifyIORef' uniqueSeqRef (`UniqueSeq.append` MkPathI filepath)
+        modifyIORef' uniqueSeqRef (`USeq.append` MkPathI filepath)
 
       uniqueSeq <- readIORef uniqueSeqRef
       env <- mkEnv $ MkPathI trashDir
-      runCharonT (Charon.delete uniqueSeq) env
+      runCharonT (Charon.delete $ USeqNE.unsafefromUniqueSeq uniqueSeq) env
       where
         trashDir = dir </> [osp|.trash/|]
 
