@@ -31,7 +31,6 @@ import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
 
 -- | Like 'UniqueSeq' except carries the invariant that it is non-empty.
--- newtype UniqueSeqNE a = UnsafeUniqueSeqNE {unUniqueSeqNE :: UniqueSeq a}
 data UniqueSeqNE a = UnsafeUniqueSeqNE
   { seq :: NESeq a,
     set :: HashSet a
