@@ -100,7 +100,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
   FormatTabular color nameFormat origFormat -> do
     coloring <- getColoring color
 
-    -- NOTE: We want to format the table such that we (concisely) display as
+    -- We want to format the table such that we (concisely) display as
     -- much information as possible while trying to avoid ugly text wrapping
     -- (i.e. keep the table w/in the terminal width). This is complicated
     -- by the fact that fileNames / originalPath can be arbitrarily long,
@@ -168,9 +168,13 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
     (nameLen, origLen) <- case ( nameFmtToStrategy maxNameLen nameFormat,
                                  origFmtToStrategy maxOrigLen origFormat
                                ) of
+      -- Both set, use them.
       (Right nLen, Right oLen) -> pure (nLen, oLen)
+      -- nLen set -> derive oLen
       (Right nLen, Left mkOLen) -> mkOLen maxLenForDynCols maxOrigLen nLen
+      -- derive nLen <- oLen set
       (Left mkNLen, Right oLen) -> mkNLen maxLenForDynCols maxNameLen oLen
+      -- Neither set; Use both maxes if they fit, otherwise approx.
       (Left _, Left _) ->
         if maxNameLen + maxOrigLen <= maxLenForDynCols
           then pure (maxNameLen, maxOrigLen)
@@ -210,78 +214,87 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
       -- Given a fixed nameLen, derive a "good" origLen
       mkOrigLen maxLenForDynCols maxOrigLen nLen =
-        if nLen + maxOrigLen <= maxLenForDynCols
-          then -- 1. Requested nLen and maxOrigLen fits; use both
-            pure (nLen, maxOrigLen)
-          else do
-            -- 2. MaxOrigLen will not fit; use all remaining space to print
-            -- as much as we can. As we require at least
-            -- Formatting.formatOriginalPathLenMin, this could lead to wrapping.
-            if nLen < maxLenForDynCols
-              then do
-                $(logDebug)
-                  $ mconcat
-                    [ "Maximum original path (",
-                      showt maxOrigLen,
-                      ") does not fit with requested name length (",
-                      showt nLen,
-                      ") and calculated terminal space (",
-                      showt maxLenForDynCols,
-                      ")"
-                    ]
-                pure (nLen, max (maxLenForDynCols - nLen) Formatting.formatOriginalPathLenMin)
-              else -- 3. Requested nameLen > available space. We are going to wrap
-              -- regardless, so use it and the minimum orig.
-              do
-                $(logWarn)
-                  $ mconcat
-                    [ "Requested name length (",
-                      showt nLen,
-                      ") > calculated terminal space (",
-                      showt maxLenForDynCols,
-                      "). Falling back to minimum original path len: ",
-                      showt Formatting.formatOriginalPathLenMin
-                    ]
-                pure (nLen, Formatting.formatOriginalPathLenMin)
+        (nLen,) -- (nLen, derived oLen)
+          <$> mkDynamicLen
+            maxLenForDynCols
+            Formatting.formatOriginalPathLenMin
+            maxOrigLen
+            nLen
 
       -- Given a fixed origLen, derive a "good" nameLen
       mkNameLen maxLenForDynCols maxNameLen oLen =
-        if oLen + maxNameLen <= maxLenForDynCols
-          then -- 1. Requested oLen and maxNameLen fits; use both
-            pure (maxNameLen, oLen)
-          else do
-            -- 2. MaxNameLen will not fit; use all remaining space to print
-            -- as much as we can. As we require at least
-            -- Formatting.formatFileNameLenMin, this could lead to wrapping.
-            if oLen < maxLenForDynCols
-              then do
-                $(logDebug)
-                  $ mconcat
-                    [ "Maximum name (",
-                      showt maxNameLen,
-                      ") does not fit with requested original path length (",
-                      showt oLen,
-                      ") and calculated terminal space (",
-                      showt maxLenForDynCols,
-                      ")"
-                    ]
-                pure (max (maxLenForDynCols - oLen) Formatting.formatFileNameLenMin, oLen)
-              else -- 3. Requested origLen > available space. We are going to wrap
-              -- regardless, so use it and the minimum name.
-              do
-                $(logWarn)
-                  $ mconcat
-                    [ "Requested original path length (",
-                      showt oLen,
-                      ") > calculated terminal space (",
-                      showt maxLenForDynCols,
-                      "). Falling back to minimum name len: ",
-                      showt Formatting.formatFileNameLenMin
-                    ]
-                pure (Formatting.formatFileNameLenMin, oLen)
+        (,oLen) -- (derived nLen, oLen)
+          <$> mkDynamicLen
+            maxLenForDynCols
+            Formatting.formatFileNameLenMin
+            maxNameLen
+            oLen
 
       revSort = listCmd ^. #revSort
       sort = listCmd ^. #sort
+
+-- | Derives the column lengths for our one dynamic column @C@ when given
+-- exactly one fixed column length (@D_len@).
+--
+-- Given @mkDynamicLen T_max C_min C_max D_len@, we return @C_len@ based on
+-- the following logic:
+--
+-- 1. If @D_len + C_max <= T_max@:
+--        Return @C_max@.
+-- 2. Else if @D_len < T_max@:
+--        Return @(max (T_max - D_len) C_min)@.
+--        That is, use @D_len@ as requested and give all remaining space to @C@
+--        (falling back to @C_min@ if required).
+-- 3. Otherwise:
+--        Return @C_min@. We are going to wrap regardless since @D_len > T_max@,
+--        so just ust it and @C_min@.
+mkDynamicLen ::
+  (MonadLogger f) =>
+  -- | @T_max@: Max total len for our dynamic columns
+  Natural ->
+  -- | @C_min@: Min required len for our derived column
+  Natural ->
+  -- | @C_max@: Max len for the column (i.e. the smallest @l@ s.t. all entries fit
+  -- in this length)
+  Natural ->
+  -- | @D_len@: The fixed, requested length for the other column.
+  Natural ->
+  -- | Derived @C_len@
+  f Natural
+mkDynamicLen tMax cMin cMax dLen =
+  if dLen + cMax <= tMax
+    then -- 1. O and cMaxLen fits; use both
+      pure cMax
+    else do
+      -- 2. MaxLen will not fit; use all remaining space to print
+      -- as much as we can. As we require at least minimums, this could lead
+      -- to wrapping.
+      if dLen < tMax
+        then do
+          $(logDebug)
+            $ mconcat
+              [ "Maximum len (",
+                showt cMax,
+                ") does not fit with requested other length (",
+                showt dLen,
+                ") and calculated terminal space (",
+                showt tMax,
+                ")"
+              ]
+          pure (max (tMax - dLen) cMin)
+        else -- 3. Requested origLen > available space. We are going to wrap
+        -- regardless, so use it and the minimum name.
+        do
+          $(logWarn)
+            $ mconcat
+              [ "Requested other length (",
+                showt dLen,
+                ") > calculated terminal space (",
+                showt tMax,
+                "). Falling back to minimum len: ",
+                showt cMin
+              ]
+          pure cMin
 
 getMaxLen :: (MonadCatch m, MonadLogger m, MonadTerminal m) => m Natural
 getMaxLen = do
