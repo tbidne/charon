@@ -5,11 +5,16 @@ module Unit.Data.UniqueSeqNE
 where
 
 import Charon.Data.UniqueSeqNE qualified as USeqNE
-import Charon.Data.UniqueSeqNE.Internal (UniqueSeqNE (MkUniqueSeqNE))
+import Charon.Data.UniqueSeqNE.Internal
+  ( UniqueSeqNE
+      ( MkUniqueSeqNE,
+        UnsafeUniqueSeqNE,
+        seq,
+        set
+      ),
+  )
 import Data.HashSet qualified as HSet
-import Data.Sequence (Seq (Empty))
 import Data.Sequence.NonEmpty qualified as NESeq
-import GHC.Exts (IsList (toList))
 import Hedgehog (PropertyT)
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -21,66 +26,60 @@ tests =
   testGroup
     "Data.UniqueSeqNE"
     [ invariantTests,
-      lawsTests
+      lawsTests,
+      specs
     ]
 
 invariantTests :: TestTree
 invariantTests =
   testGroup
     "General Invariants"
-    [ isListIsomorphism,
-      isListOrder,
-      fromNonEmptyOrder,
+    [ toFromNEIsomorphism,
+      fromToNEIsomorphism,
+      fromToNEOrder,
       unionOrder,
       mapInvariant,
       insertInvariant
     ]
 
-isListIsomorphism :: TestTree
-isListIsomorphism =
-  testPropertyNamed "fromList . toList === id" "isListIsomorphism" $ do
+toFromNEIsomorphism :: TestTree
+toFromNEIsomorphism =
+  testPropertyNamed "fromNonEmpty . toNonEmpty === id" "toFromNEIsomorphism" $ do
     property $ do
       useq <- forAll genUniqueSeq
-      let ys@(x :<|| xs) = useq ^. #seq
-      annotateShow ys
+      let xs = USeqNE.toNonEmpty useq
+      annotateShow xs
 
-      useq === USeqNE.fromNonEmpty (x :| toList xs)
+      useq === USeqNE.fromNonEmpty xs
 
-isListOrder :: TestTree
-isListOrder =
-  testPropertyNamed "toList . fromList preserves order" "isListOrder" $ do
+fromToNEIsomorphism :: TestTree
+fromToNEIsomorphism =
+  testPropertyNamed "toNonEmpty . fromNonEmpty === id for unique NonEmpty" "fromToNEIsomorphism" $ do
     property $ do
-      origList <- forAll genUniqueList
+      xs <- forAll genUniqueNonEmpty
+      let useq = USeqNE.fromNonEmpty xs
+      annotateShow useq
+
+      xs === USeqNE.toNonEmpty useq
+      uniqseqInvariants useq
+
+fromToNEOrder :: TestTree
+fromToNEOrder =
+  testPropertyNamed "toNonEmpty . fromNonEmpty preserves order" "fromToNEOrder" $ do
+    property $ do
+      origList <- forAll genNonEmpty
       let useq = USeqNE.fromNonEmpty origList
       annotateShow useq
 
-      Utils.assertSameOrder (toList origList) (useqNeToList useq)
-
-fromNonEmptyOrder :: TestTree
-fromNonEmptyOrder =
-  testPropertyNamed "fromNonEmpty preserves order" "fromNonEmptyOrder" $ do
-    property $ do
-      xs <- forAll genUniqueList
-      let useq@(MkUniqueSeqNE seq _) = USeqNE.fromNonEmpty xs
-
-      annotateShow seq
-      sameOrder (toList xs) (NESeq.toSeq seq)
-
+      Utils.assertSameOrderNE origList (USeqNE.toNonEmpty useq)
       uniqseqInvariants useq
-  where
-    sameOrder [] Empty = pure ()
-    sameOrder (x : _) Empty = annotateShow x *> failure
-    sameOrder [] (y :<| _) = annotateShow y *> failure
-    sameOrder (x : xs) (y :<| ys) = do
-      x === y
-      sameOrder xs ys
 
 unionOrder :: TestTree
 unionOrder =
   testPropertyNamed "union preserves order" "unionOrder" $ do
     property $ do
-      xs <- forAll genUniqueList
-      ys <- forAll genUniqueList
+      xs <- forAll genUniqueNonEmpty
+      ys <- forAll genUniqueNonEmpty
       let xuseq = USeqNE.fromNonEmpty xs
           yuseq = USeqNE.fromNonEmpty ys
 
@@ -92,8 +91,8 @@ unionOrder =
       annotateShow uxy
       annotateShow uyx
 
-      Utils.assertSameOrder (toList $ xs <> ys) (useqNeToList uxy)
-      Utils.assertSameOrder (toList $ ys <> xs) (useqNeToList uyx)
+      Utils.assertSameOrderNE (xs <> ys) (USeqNE.toNonEmpty uxy)
+      Utils.assertSameOrderNE (ys <> xs) (USeqNE.toNonEmpty uyx)
 
       uniqseqInvariants uxy
       uniqseqInvariants uyx
@@ -110,7 +109,7 @@ insertInvariant :: TestTree
 insertInvariant =
   testPropertyNamed "insert invariants" "insertInvariant" $ do
     property $ do
-      xs <- forAll genList
+      xs <- forAll genNonEmpty
       useqNE <- forAll genUniqueSeq
       let useqPrepend = foldr USeqNE.prepend useqNE xs
           useqAppend = foldl' USeqNE.append useqNE xs
@@ -153,6 +152,9 @@ insertMember =
       annotateShow useqP
       assert $ USeqNE.member x useqP
 
+      uniqseqInvariants useqA
+      uniqseqInvariants useqP
+
 uniqseqInvariants :: (Hashable a, Show a) => UniqueSeqNE a -> PropertyT IO ()
 uniqseqInvariants useq = do
   foundRef <- liftIO $ newIORef HSet.empty
@@ -192,11 +194,11 @@ seqUnique foundRef (MkUniqueSeqNE seq _) = foldr go (pure ()) seq
           acc
 
 genUniqueSeq :: Gen (UniqueSeqNE Int)
-genUniqueSeq = USeqNE.fromNonEmpty <$> genList
+genUniqueSeq = USeqNE.fromNonEmpty <$> genNonEmpty
 
-genUniqueList :: Gen (NonEmpty Int)
-genUniqueList = do
-  x :| xs <- genList
+genUniqueNonEmpty :: Gen (NonEmpty Int)
+genUniqueNonEmpty = do
+  x :| xs <- genNonEmpty
   let (_, uniq) = foldl' go (HSet.singleton x, []) xs
   pure (x :| uniq)
   where
@@ -205,8 +207,8 @@ genUniqueList = do
       | not (HSet.member y found) = (HSet.insert y found, y : acc)
       | otherwise = (found, acc)
 
-genList :: Gen (NonEmpty Int)
-genList = Gen.nonEmpty listRange genInt
+genNonEmpty :: Gen (NonEmpty Int)
+genNonEmpty = Gen.nonEmpty listRange genInt
   where
     listRange = Range.exponential 1 10_000
 
@@ -215,8 +217,48 @@ genInt = Gen.integral intRange
   where
     intRange = Range.exponentialFrom 0 0 1_000
 
-useqNeToList :: UniqueSeqNE a -> [a]
-useqNeToList = neSeqToList . view #seq
+specs :: TestTree
+specs =
+  testGroup
+    "Specs"
+    [ duplicatePreservesOrder,
+      unionPreservesOrder
+    ]
 
-neSeqToList :: NESeq a -> [a]
-neSeqToList (x :<|| xs) = x : toList xs
+duplicatePreservesOrder :: TestTree
+duplicatePreservesOrder = testCase "Duplicate preserves order" $ do
+  let useq = USeqNE.fromNonEmpty xs
+
+  expected @=? useq
+  where
+    xs :: NonEmpty Int
+    xs = 0 :| [1, 0]
+
+    expected =
+      UnsafeUniqueSeqNE
+        { seq = NESeq.fromList $ (0 :: Int) :| [1],
+          set = HSet.fromList [0, 1, 0]
+        }
+
+unionPreservesOrder :: TestTree
+unionPreservesOrder = testCase "Union preserves order" $ do
+  expected @=? x `USeqNE.union` y
+  expected @=? y `USeqNE.union` x
+  where
+    x =
+      UnsafeUniqueSeqNE
+        { seq = NESeq.fromList $ (0 :: Int) :| [],
+          set = HSet.fromList [0]
+        }
+
+    y =
+      UnsafeUniqueSeqNE
+        { seq = NESeq.fromList $ (0 :: Int) :| [1],
+          set = HSet.fromList [0, 1]
+        }
+
+    expected =
+      UnsafeUniqueSeqNE
+        { seq = NESeq.fromList $ (0 :: Int) :| [1],
+          set = HSet.fromList [0, 1]
+        }

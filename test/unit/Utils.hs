@@ -1,11 +1,22 @@
 module Utils
   ( assertSameOrder,
+    assertSameOrderNE,
   )
 where
 
+import Data.Foldable (Foldable (toList))
 import Data.HashSet qualified as HSet
 import Hedgehog (PropertyT)
 import Unit.Prelude
+
+-- | assertSameOrder for 'NonEmpty'.
+assertSameOrderNE ::
+  -- | Expected
+  NonEmpty Int ->
+  -- | Actual
+  NonEmpty Int ->
+  PropertyT IO ()
+assertSameOrderNE xs ys = assertSameOrder (toList xs) (toList ys)
 
 -- | Asserts that the UniqueSeq matches the expected order.
 assertSameOrder ::

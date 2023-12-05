@@ -4,8 +4,15 @@ module Unit.Data.UniqueSeq
   )
 where
 
-import Charon.Data.UniqueSeq (UniqueSeq (MkUniqueSeq))
 import Charon.Data.UniqueSeq qualified as USeq
+import Charon.Data.UniqueSeq.Internal
+  ( UniqueSeq
+      ( MkUniqueSeq,
+        UnsafeUniqueSeq,
+        seq,
+        set
+      ),
+  )
 import Data.HashSet qualified as HSet
 import Data.Sequence (Seq (Empty))
 import GHC.Exts (IsList (fromList, toList))
@@ -20,39 +27,54 @@ tests =
   testGroup
     "Data.UniqueSeq"
     [ invariantTests,
-      lawsTests
+      lawsTests,
+      specs
     ]
 
 invariantTests :: TestTree
 invariantTests =
   testGroup
     "General Invariants"
-    [ isListIsomorphism,
-      isListOrder,
+    [ toFromListIsomorphism,
+      fromToListIsomorphism,
+      fromToListOrder,
       fromFoldableOrder,
       unionOrder,
       mapInvariant,
       insertInvariant
     ]
 
-isListIsomorphism :: TestTree
-isListIsomorphism =
-  testPropertyNamed "fromList . toList === id" "isListIsomorphism" $ do
+toFromListIsomorphism :: TestTree
+toFromListIsomorphism =
+  testPropertyNamed "fromList . toList === id" "toFromListIsomorphism" $ do
     property $ do
-      xs <- forAll genUniqueSeq
-      let useq = toList xs
-      annotateShow useq
-      xs === fromList useq
+      useq <- forAll genUniqueSeq
+      let xs = toList useq
+      annotateShow xs
 
-isListOrder :: TestTree
-isListOrder =
-  testPropertyNamed "toList . fromList preserves order" "isListOrder" $ do
+      useq === fromList xs
+
+fromToListIsomorphism :: TestTree
+fromToListIsomorphism =
+  testPropertyNamed "toList . fromList === id for unique list" "fromToListIsomorphism" $ do
     property $ do
-      origList <- forAll genUniqueList
-      let useq = fromList @(UniqueSeq Int) origList
+      xs <- forAll genUniqueList
+      let useq = fromList @(UniqueSeq Int) xs
       annotateShow useq
 
-      Utils.assertSameOrder origList (toList useq)
+      xs === toList useq
+      uniqseqInvariants useq
+
+fromToListOrder :: TestTree
+fromToListOrder =
+  testPropertyNamed "toList . fromList preserves order" "fromToListOrder" $ do
+    property $ do
+      xs <- forAll genList
+      let useq = fromList @(UniqueSeq Int) xs
+      annotateShow useq
+
+      Utils.assertSameOrder xs (toList useq)
+      uniqseqInvariants useq
 
 fromFoldableOrder :: TestTree
 fromFoldableOrder =
@@ -154,6 +176,9 @@ insertMember =
       annotateShow useqP
       assert $ USeq.member x useqP
 
+      uniqseqInvariants useqA
+      uniqseqInvariants useqP
+
 uniqseqInvariants :: (Hashable a, Show a) => UniqueSeq a -> PropertyT IO ()
 uniqseqInvariants useq = do
   foundRef <- liftIO $ newIORef HSet.empty
@@ -209,9 +234,55 @@ genUniqueList = do
 genList :: Gen [Int]
 genList = Gen.list listRange genInt
   where
-    listRange = Range.exponential 1 10_000
+    listRange = Range.exponential 0 10_000
 
 genInt :: Gen Int
 genInt = Gen.integral intRange
   where
     intRange = Range.exponentialFrom 0 0 1_000
+
+specs :: TestTree
+specs =
+  testGroup
+    "Specs"
+    [ duplicatePreservesOrder,
+      unionPreservesOrder
+    ]
+
+duplicatePreservesOrder :: TestTree
+duplicatePreservesOrder = testCase "Duplicate preserves order" $ do
+  let useq = USeq.fromFoldable xs
+
+  expected @=? useq
+  where
+    xs :: [Int]
+    xs = [0, 1, 0]
+
+    expected =
+      UnsafeUniqueSeq
+        { seq = fromList [0, 1],
+          set = HSet.fromList xs
+        }
+
+unionPreservesOrder :: TestTree
+unionPreservesOrder = testCase "Union preserves order" $ do
+  expected @=? x `USeq.union` y
+  expected @=? y `USeq.union` x
+  where
+    x =
+      UnsafeUniqueSeq
+        { seq = fromList [0 :: Int],
+          set = HSet.fromList [0]
+        }
+
+    y =
+      UnsafeUniqueSeq
+        { seq = fromList [0, 1 :: Int],
+          set = HSet.fromList [0, 1]
+        }
+
+    expected =
+      UnsafeUniqueSeq
+        { seq = fromList [0, 1 :: Int],
+          set = HSet.fromList [0, 1]
+        }

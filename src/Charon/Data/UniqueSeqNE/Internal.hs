@@ -3,7 +3,7 @@
 -- | Provides the 'UniqueSeqNE' type.
 module Charon.Data.UniqueSeqNE.Internal
   ( -- * Type
-    UniqueSeqNE (MkUniqueSeqNE, UnsafeUniqueSeqNE),
+    UniqueSeqNE (MkUniqueSeqNE, ..),
 
     -- * Operations
     union,

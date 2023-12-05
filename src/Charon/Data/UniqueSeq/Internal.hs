@@ -3,7 +3,7 @@
 -- | Provides the 'UniqueSeq' type.
 module Charon.Data.UniqueSeq.Internal
   ( -- * Type
-    UniqueSeq (MkUniqueSeq, UnsafeUniqueSeq),
+    UniqueSeq (MkUniqueSeq, ..),
 
     -- * Creation
     fromFoldable,
