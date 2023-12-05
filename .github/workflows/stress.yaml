@@ -1,0 +1,69 @@
+name: stress
+
+on:
+  schedule:
+    # Every Sunday at 00:00 UTC.
+    #
+    # https://crontab.guru
+    - cron: '0 0 * * 0'
+
+  workflow_dispatch:
+
+  # This job is essentially a copy of ci.yaml's cabal jobs with the
+  # hedgehog trials turned up. It takes a very long time, hence only running
+  # once per week, not every change.
+
+jobs:
+  cabal:
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc:
+          - "9.4.7"
+          - "9.6.3"
+        platform:
+          - os: "macos-latest"
+            set-env: "export"
+            unit-trials: 10000
+            int-trials: 10000
+          - os: "ubuntu-latest"
+            set-env: "export"
+            unit-trials: 10000
+            int-trials: 10000
+          - os: "windows-latest"
+            set-env: "set"
+            unit-trials: 10000
+            int-trials: 10000
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+
+      - name: Configure
+        run: cabal configure --enable-tests --enable-benchmarks
+
+      - name: Compile
+        run: cabal build charon:exe:charon
+
+      - name: Unit Tests
+        id: unit
+        run: |
+          cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.unit-trials }}'
+
+      - uses: actions/upload-artifact@v3
+        name: Unit Tests Upload
+        if: ${{ failure() && steps.unit.conclusion == 'failure' }}
+        with:
+          name: unit-artifacts
+          path: test/unit/Unit/Data/Index/*
+
+      - name: Integration Tests
+        run: |
+          ${{ matrix.platform.set-env }} INT_LOGS=1
+          cabal test integration --test-options '--hedgehog-tests ${{ matrix.platform.int-trials }} --hedgehog-discards 10000'
+
+      - name: Functional Tests
+        run: cabal test functional
