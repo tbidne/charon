@@ -13,7 +13,7 @@ module Charon.Data.UniqueSeq
 
     -- * Operations
     Internal.prepend,
-    append,
+    Internal.append,
     Internal.union,
     map,
   )
@@ -38,9 +38,6 @@ singleton x = UnsafeUniqueSeq (Seq.singleton x) (HSet.singleton x)
 
 member :: (Hashable a) => a -> UniqueSeq a -> Bool
 member x (UnsafeUniqueSeq _ set) = HSet.member x set
-
-append :: (Hashable a) => UniqueSeq a -> a -> UniqueSeq a
-append = flip (Internal.insertSeq (flip (:|>)))
 
 map :: (Hashable b) => (a -> b) -> UniqueSeq a -> UniqueSeq b
 map f (UnsafeUniqueSeq seq _) = UnsafeUniqueSeq newSeq newSet

@@ -214,4 +214,4 @@ genList = Gen.list listRange genInt
 genInt :: Gen Int
 genInt = Gen.integral intRange
   where
-    intRange = Range.linearFrom 0 minBound maxBound
+    intRange = Range.exponentialFrom 0 0 1_000

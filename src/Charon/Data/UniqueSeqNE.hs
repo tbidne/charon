@@ -68,24 +68,16 @@ map f (UnsafeUniqueSeqNE (x :<|| seq) _) = UnsafeUniqueSeqNE (f x :<|| newSeq) n
       where
         y = f z
 
--- NOTE: [UniqueSeqNE foldr vs. foldl']
---
 -- When building a UniqueSeqNE from some ordered Foldable, we want to
 -- preserve order. Because we are dealing with NonEmpty, we hold onto the
 -- head and prepend it when we are finished. Note that we need to add x to the
 -- Set so that duplicates will not exist.
---
--- An alternative strategy would be to iterate though the entire structure
--- but use foldl' and append. We use the former strategy for now to keep it
--- consistent w/ UniqueSeq (i.e. laziness properties).
-
--- see NOTE: [UniqueSeqNE foldr vs. foldl']
 fromNonEmpty :: (Hashable a) => NonEmpty a -> UniqueSeqNE a
-fromNonEmpty (x :| xs) =
-  let (seq, set) = foldr f (Seq.empty, HSet.singleton x) xs
-   in UnsafeUniqueSeqNE (x :<|| seq) set
+fromNonEmpty (x :| xs) = UnsafeUniqueSeqNE (x :<|| seq) set
   where
-    f = insertSeq' (:<|)
+    -- To preserve order, we must fold from the left
+    (seq, set) = foldl' f (Seq.empty, HSet.singleton x) xs
+    f = flip (insertSeq' (flip (:|>)))
 
 toNonEmpty :: UniqueSeqNE a -> NonEmpty a
 toNonEmpty useq = x :| toList xs

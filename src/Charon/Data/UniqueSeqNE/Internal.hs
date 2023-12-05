@@ -54,13 +54,11 @@ union (UnsafeUniqueSeqNE (x :<|| xseq) _) (UnsafeUniqueSeqNE (y :<|| yseq) _) =
     -- Given union (x : xs) (y : ys), we want (x : xs <> y : ys), eliminating
     -- duplicates. To do this, we iterate through (xs <> y : ys), building our
     -- new Seq/Set, only prepending x at the end.
-    --
-    -- see NOTE: [UniqueSeqNE foldr vs. foldl']
-    (newSeq, newSet) = foldr go (Seq.empty, HSet.singleton x) (xseq <> (y :<| yseq))
+    (newSeq, newSet) = foldl' go (Seq.empty, HSet.singleton x) (xseq <> (y :<| yseq))
 
-    go :: a -> (Seq a, HashSet a) -> (Seq a, HashSet a)
-    go z (accSeq, accSet)
-      | notHSetMember z accSet = (z :<| accSeq, HSet.insert z accSet)
+    go :: (Seq a, HashSet a) -> a -> (Seq a, HashSet a)
+    go (accSeq, accSet) z
+      | notHSetMember z accSet = (accSeq :|> z, HSet.insert z accSet)
       | otherwise = (accSeq, accSet)
 
 notHSetMember :: (Hashable a) => a -> HashSet a -> Bool

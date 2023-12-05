@@ -10,6 +10,7 @@ module Charon.Data.UniqueSeq.Internal
 
     -- * Operations
     prepend,
+    append,
     union,
 
     -- * Utils
@@ -66,14 +67,19 @@ union :: forall a. (Hashable a) => UniqueSeq a -> UniqueSeq a -> UniqueSeq a
 union (UnsafeUniqueSeq xseq _) (UnsafeUniqueSeq yseq _) =
   UnsafeUniqueSeq newSeq newSet
   where
-    (newSeq, newSet) = foldr go (Seq.empty, HSet.empty) (xseq <> yseq)
-    go :: a -> (Seq a, HashSet a) -> (Seq a, HashSet a)
-    go z (accSeq, accSet)
-      | notHSetMember z accSet = (z :<| accSeq, HSet.insert z accSet)
+    -- To preserve order, we must fold from the left
+    (newSeq, newSet) = foldl' go (Seq.empty, HSet.empty) (xseq <> yseq)
+    go :: (Seq a, HashSet a) -> a -> (Seq a, HashSet a)
+    go (accSeq, accSet) z
+      | notHSetMember z accSet = (accSeq :|> z, HSet.insert z accSet)
       | otherwise = (accSeq, accSet)
 
+-- To preserve order, we must fold from the left
 fromFoldable :: (Foldable f, Hashable a) => f a -> UniqueSeq a
-fromFoldable = foldr prepend (UnsafeUniqueSeq Seq.empty HSet.empty)
+fromFoldable = foldl' append (UnsafeUniqueSeq Seq.empty HSet.empty)
+
+append :: (Hashable a) => UniqueSeq a -> a -> UniqueSeq a
+append = flip (insertSeq (flip (:|>)))
 
 prepend :: (Hashable a) => a -> UniqueSeq a -> UniqueSeq a
 prepend = insertSeq (:<|)
