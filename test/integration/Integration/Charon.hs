@@ -4,6 +4,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
+{-# OPTIONS_GHC -Wwarn #-}
 
 -- | Property tests for the Charon API.
 module Integration.Charon
@@ -28,7 +29,6 @@ import Charon.Runner.Env
     LogEnv (MkLogEnv),
   )
 import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
@@ -40,7 +40,7 @@ import GHC.IsList (IsList (toList))
 import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
 import Integration.Prelude
-import Integration.Utils (PathWithType (MkPathWithType))
+import Integration.Utils (PathIntData, PathWithType)
 import Integration.Utils qualified as IntUtils
 import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 
@@ -160,7 +160,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
     property $ do
       annotateShow b
       testDir <- getTestPath mtestDir [osp|delete|] backend
-      (α, fps) <- forAll (IntUtils.genFileNameSet b)
+      α <- forAll (IntUtils.genFileNameSet b)
       let (_, αTest, αTestPaths) = mkPaths testDir α
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
@@ -168,7 +168,6 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow αTest
 
       -- create files and assert existence
-      annotateShow $ show $ USeqNE.map (fmap Ch.isPrint . IntUtils.normedFpToFp) fps
       setupDir testDir αTest
 
       -- delete files
@@ -192,7 +191,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Some paths are deleted, others error" "deleteSome" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|deleteSome|] backend
-      ((α, _), (β, _)) <- forAll (IntUtils.gen2FileNameSets b)
+      (α, β) <- forAll (IntUtils.gen2FileNameSets b)
       let (_, αTest, αTestPaths) = mkPaths testDir α
           (_, _, βTestPaths) = mkPaths testDir β
 
@@ -242,7 +241,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDelete" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|permDelete|] backend
-      (α, _) <- forAll (IntUtils.genFileNameSet b)
+      α <- forAll (IntUtils.genFileNameSet b)
       let trashDir = testDir </> [osp|.trash|]
           (αNames, αTest, αTestPaths) = mkPaths testDir α
       env <- liftIO $ mkEnv backend trashDir
@@ -278,7 +277,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "permDeleteSome" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|permDeleteSome|] backend
-      ((α, _), (β, _), (γ, _)) <- forAll (IntUtils.gen3FileNameSets b)
+      (α, β, γ) <- forAll (IntUtils.gen3FileNameSets b)
       let (αNames, αTest, αTestPaths) = mkPaths testDir α
           (βNames, _, _) = mkPaths testDir β
           (_, γTest, γTestPaths) = mkPaths testDir γ
@@ -335,7 +334,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Restores all trash entries" "restore" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|restore|] backend
-      (α, _) <- forAll (IntUtils.genFileNameSet b)
+      α <- forAll (IntUtils.genFileNameSet b)
       let (αNames, αTest, αTestPaths) = mkPaths testDir α
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
@@ -370,7 +369,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed desc "restoreSome" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|restoreSome|] backend
-      ((α, _), (β, _), (γ, _)) <- forAll (IntUtils.gen3FileNameSets b)
+      (α, β, γ) <- forAll (IntUtils.gen3FileNameSets b)
       let (αNames, αTest, αTestPaths) = mkPaths testDir α
           (βNames, _, _) = mkPaths testDir β
           (_, γTest, γTestPaths) = mkPaths testDir γ
@@ -429,7 +428,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Empties the trash" "empty" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|emptyTrash|] backend
-      (α, _) <- forAll (IntUtils.genFileNameSet b)
+      α <- forAll (IntUtils.genFileNameSet b)
       let (_, αTest, αTestPaths) = mkPaths testDir α
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
@@ -464,7 +463,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   testPropertyNamed "Retrieves metadata" "metadata" $ do
     property $ do
       testDir <- getTestPath mtestDir [osp|metadata|] backend
-      (α, _) <- forAll (IntUtils.genFileNameSet b)
+      α <- forAll (IntUtils.genFileNameSet b)
       let (_, αTest, αTestPaths) = mkPaths testDir α
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
@@ -489,9 +488,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       length α === natToInt (metadata' ^. #numEntries)
 
-      -- α >= numFiles because the latter can include dirs
-      -- diff (length α) (>=) (natToInt $ metadata' ^. #numFiles)
-      countFiles α === natToInt (metadata' ^. #numFiles)
+      countFiles αTest === natToInt (metadata' ^. #numFiles)
 
 natToInt :: (HasCallStack) => Natural -> Int
 natToInt i
@@ -556,11 +553,11 @@ setupDir dir paths = do
   let action = do
         clearDirectory dir
 
-        for_ paths $ \(MkPathWithType (p, MkPathTypeW ty)) -> case ty of
+        for_ paths $ \(p, MkPathTypeW ty) -> case ty of
           PathTypeFile -> createFileContents (p, "")
           PathTypeDirectory -> createDirectory p
           PathTypeSymbolicLink -> createSymlink (F p)
-        assertPathsExist (fmap (view (#unPathWithType % _1)) paths')
+        assertPathsExist (fmap (view _1) paths')
 
   action `catchAny` \ex -> do
     annotate $ displayException ex
@@ -575,25 +572,25 @@ mkPaths ::
   -- | TestDir
   OsPath ->
   -- | Set of pathNames
-  UniqueSeqNE PathWithType ->
+  UniqueSeqNE PathIntData ->
   -- | (pathNames, (testDir </> pathNames, a), testDir </> pathNames)
   ( UniqueSeqNE OsPath,
     UniqueSeqNE PathWithType,
     UniqueSeqNE OsPath
   )
 mkPaths testDir paths =
-  ( USeqNE.map (view (#unPathWithType % _1)) paths,
+  ( USeqNE.map (view #osPath) paths,
     prefixed,
-    USeqNE.map (view (#unPathWithType % _1)) prefixed
+    USeqNE.map (view _1) prefixed
   )
   where
-    prefixed = USeqNE.map (\(MkPathWithType (p, t)) -> MkPathWithType (testDir </> p, t)) paths
+    prefixed = USeqNE.map (\x -> (testDir </> view #osPath x, view #pathType x)) paths
 
 countFiles :: UniqueSeqNE PathWithType -> Int
 countFiles = length . filter isNotDir . toList . NESeq.toSeq . view #seq
   where
     isNotDir :: PathWithType -> Bool
-    isNotDir = not . is (#unPathWithType % _2 % #unPathTypeW % _PathTypeDirectory)
+    isNotDir = not . is (_2 % #unPathTypeW % _PathTypeDirectory)
 
 getIndex :: IntEnv -> PropertyT IO (Seq PathData)
 getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env Charon.getIndex

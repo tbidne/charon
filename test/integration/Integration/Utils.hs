@@ -5,7 +5,8 @@
 module Integration.Utils
   ( -- * Types
     GPaths,
-    PathWithType (..),
+    PathWithType,
+    PathIntData (..),
     NormedFp (..),
     fpToNormedFp,
     normedFpToFp,
@@ -20,8 +21,6 @@ where
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as USeqNE
-import Data.Hashable (Hashable (hash))
-import Data.List.NonEmpty qualified as NE
 import Data.Text qualified as T
 import Data.Text.Normalize (NormalizationMode (NFD))
 import Data.Text.Normalize qualified as TNormalize
@@ -31,26 +30,6 @@ import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
 import Integration.Prelude
 import Test.Utils qualified as TestUtils
-
--- | Generated path name along with the type to create.
-newtype PathWithType = MkPathWithType {unPathWithType :: (OsPath, PathTypeW)}
-  deriving stock (Show)
-
-makeFieldLabelsNoPrefix ''PathWithType
-
-instance Eq PathWithType where
-  MkPathWithType (p1, _) == MkPathWithType (p2, _) = p1 == p2
-
-instance Ord PathWithType where
-  MkPathWithType (p1, _) <= MkPathWithType (p2, _) = p1 <= p2
-
-instance Hashable PathWithType where
-  hashWithSalt i (MkPathWithType (p1, _)) = hashWithSalt i p1
-  hash (MkPathWithType (p1, _)) = hash p1
-
--- | Type of generated paths. Includes the original paths before encoding for
--- easier debugging.
-type GPaths = (UniqueSeqNE PathWithType, UniqueSeqNE NormedFp)
 
 -- NOTE: [Unicode normalization]
 --
@@ -84,6 +63,11 @@ type GPaths = (UniqueSeqNE PathWithType, UniqueSeqNE NormedFp)
 -- strategy. But there doesn't seem to be any point to doing this, as info
 -- files are not guaranteed to be match the original file anyway (i.e. real
 -- duplicates).
+
+type PathWithType = (OsPath, PathTypeW)
+
+-- | Uses for equality checks so that we do not generate multiple paths with
+-- the same normalization. See NOTE: [Unicode normalization].
 newtype NormedFp = MkNormedFp {unNormedFilePath :: Text}
   deriving stock (Eq, Show)
   deriving (Hashable) via Text
@@ -96,24 +80,47 @@ fpToNormedFp = MkNormedFp . TNormalize.normalize NFD . T.pack
 normedFpToFp :: NormedFp -> FilePath
 normedFpToFp = T.unpack . view #unNormedFilePath
 
+-- | Holds all generated path data used for our tests.
+data PathIntData = MkPathIntData
+  { -- | Encoded FilePath.
+    osPath :: OsPath,
+    -- | Generated PathType.
+    pathType :: PathTypeW,
+    -- | Generated FilePath.
+    filePath :: FilePath,
+    -- | Normalized FilePath. See NOTE: [Unicode normalization]
+    normed :: NormedFp
+  }
+  deriving stock (Show)
+
+makeFieldLabelsNoPrefix ''PathIntData
+
+instance Eq PathIntData where
+  x == y = x ^. #normed == y ^. #normed
+
+instance Hashable PathIntData where
+  hashWithSalt s x = hashWithSalt s (x ^. #normed)
+
+-- | Type of generated data.
+type GPaths = UniqueSeqNE PathIntData
+
 genFileNameSet :: (MonadGen m) => Bool -> m GPaths
 genFileNameSet asciiOnly =
-  splitPaths <$> Gen.nonEmpty seqRange (genFileName asciiOnly)
+  -- USeqNE.fromNonEmpty handles removing duplicates, as the generated
+  -- PathIntData defines equality on normalized paths.
+  USeqNE.fromNonEmpty <$> Gen.nonEmpty seqRange (genFileName asciiOnly)
 
 gen2FileNameSets :: (MonadGen m) => Bool -> m (GPaths, GPaths)
 gen2FileNameSets asciiOnly = do
-  α@(_, αFps) <- genFileNameSet asciiOnly
-  (\r -> (α, splitPaths r))
-    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly αFps)
+  α <- genFileNameSet asciiOnly
+  (\r -> (α, USeqNE.fromNonEmpty r))
+    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly α)
 
 gen3FileNameSets :: (MonadGen m) => Bool -> m (GPaths, GPaths, GPaths)
 gen3FileNameSets asciiOnly = do
-  (α@(_, αFps), β@(_, βFps)) <- gen2FileNameSets asciiOnly
-  (\r -> (α, β, splitPaths r))
-    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (αFps `USeqNE.union` βFps))
-
-splitPaths :: NonEmpty (PathWithType, NormedFp) -> GPaths
-splitPaths = bimap USeqNE.fromNonEmpty USeqNE.fromNonEmpty . NE.unzip
+  (α, β) <- gen2FileNameSets asciiOnly
+  (\r -> (α, β, USeqNE.fromNonEmpty r))
+    <$> Gen.nonEmpty seqRange (genFileNameNoDupes asciiOnly (α `USeqNE.union` β))
 
 seqRange :: Range Int
 seqRange = Range.linear 1 100
@@ -121,7 +128,7 @@ seqRange = Range.linear 1 100
 genFileName ::
   (MonadGen m) =>
   Bool ->
-  m (PathWithType, NormedFp)
+  m PathIntData
 genFileName asciiOnly = do
   pathType <-
     MkPathTypeW
@@ -131,7 +138,7 @@ genFileName asciiOnly = do
           PathTypeSymbolicLink
         ]
 
-  (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fpToNormedFp fp))
+  mkPathIntData pathType
     <$> Gen.string range (TestUtils.genPathChar asciiOnly)
   where
     range = Range.linear 1 20
@@ -139,8 +146,8 @@ genFileName asciiOnly = do
 genFileNameNoDupes ::
   (MonadGen m) =>
   Bool ->
-  UniqueSeqNE NormedFp ->
-  m (PathWithType, NormedFp)
+  UniqueSeqNE PathIntData ->
+  m PathIntData
 genFileNameNoDupes asciiOnly paths = do
   pathType <-
     MkPathTypeW
@@ -150,9 +157,19 @@ genFileNameNoDupes asciiOnly paths = do
           PathTypeSymbolicLink
         ]
 
-  (\fp -> (MkPathWithType (FsUtils.unsafeEncodeFpToValidOs fp, pathType), fpToNormedFp fp))
-    <$> Gen.filterT
-      (\fp -> not (USeqNE.member (fpToNormedFp fp) paths))
-      (Gen.string range (TestUtils.genPathChar asciiOnly))
+  Gen.filterT
+    (\x -> not (USeqNE.member x paths))
+    ( mkPathIntData pathType
+        <$> Gen.string range (TestUtils.genPathChar asciiOnly)
+    )
   where
     range = Range.linear 1 20
+
+mkPathIntData :: PathTypeW -> FilePath -> PathIntData
+mkPathIntData pt fp =
+  MkPathIntData
+    { osPath = FsUtils.unsafeEncodeFpToValidOs fp,
+      pathType = pt,
+      filePath = fp,
+      normed = fpToNormedFp fp
+    }
