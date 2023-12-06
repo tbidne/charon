@@ -552,6 +552,7 @@ setupDir dir paths = do
   let action = do
         clearDirectory dir
 
+        -- see NOTE: [Duplicate test files]
         for_ paths $ \(p, MkPathTypeW ty) -> case ty of
           PathTypeFile -> createFileContents (p, "")
           PathTypeDirectory -> createDirectory p

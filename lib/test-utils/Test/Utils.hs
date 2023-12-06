@@ -71,27 +71,53 @@ createFileContents ::
   (HasCallStack, MonadIO m) =>
   (OsPath, ByteString) ->
   m ()
-createFileContents (p, c) =
-  liftIO
-    $ writeBinaryFile p c
-    `catchAnyCS` \ex -> do
-      putStrLn
-        $ mconcat
-          [ "[Test.Utils.createFileContents] Encountered an exception\n",
-            "OsPath: '",
-            show p,
-            "'\n",
-            "Decoded: '",
-            FsUtils.decodeOsToFpShow p,
-            "'\n",
-            "Contents: '",
-            bsToStr c,
-            "'\n",
-            "Exception: '",
-            displayException ex,
-            "'"
-          ]
-      throwCS ex
+createFileContents (p, c) = liftIO $ do
+  exists <- doesAnyPathExist p
+  -- NOTE: [Duplicate test files]
+  --
+  -- We want to throw an exception when "creating" the same file twice as this
+  -- is always a mistake in our test code. In particular, this silent behavior
+  -- played a role in the long-running OSX integration test bug.
+  --
+  -- On OSX, we would generated paths p1 and p2 that were unique in the sense
+  -- that they were different UTF-8 byte sequences (p1 /= p2), yet both
+  -- normalized to p.
+  --
+  -- We would then create our files as part of our setup, though notice this
+  -- means we would only create one actual file -- p -- because OSX filesystem
+  -- considers p1 == p2, due to normalization.
+  --
+  -- We would then run through our test, trying to delete both p1 and p2. The
+  -- problem was that p was deleted when we deleted p1, and there was no second
+  -- file for p2. We would get an exception that "p2 does not exist" because
+  -- of course it didn't.
+  --
+  -- The fix was to properly check for equality on the __normalized__ paths
+  -- in the integration tests. However, if we had ensured that we were not
+  -- overwriting files in this function, we would have had a better clue about
+  -- what was going wrong.
+  if exists
+    then throwString $ "Path already exists: " <> show p
+    else do
+      writeBinaryFile p c
+        `catchAnyCS` \ex -> do
+          putStrLn
+            $ mconcat
+              [ "[Test.Utils.createFileContents] Encountered an exception\n",
+                "OsPath: '",
+                show p,
+                "'\n",
+                "Decoded: '",
+                FsUtils.decodeOsToFpShow p,
+                "'\n",
+                "Contents: '",
+                bsToStr c,
+                "'\n",
+                "Exception: '",
+                displayException ex,
+                "'"
+              ]
+          throwCS ex
 
 -- | Creates empty files at the specified paths.
 createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
