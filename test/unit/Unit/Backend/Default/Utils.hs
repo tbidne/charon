@@ -1,6 +1,5 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
-{-# OPTIONS_GHC -Wwarn #-}
 
 module Unit.Backend.Default.Utils (tests) where
 
