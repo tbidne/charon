@@ -57,7 +57,12 @@ import Charon.Data.PathType (PathTypeW)
 import Charon.Data.PathType qualified as PathType
 import Charon.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashEntryPath, TrashHome),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath,
+        TrashEntryPath,
+        TrashHome
+      ),
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
@@ -109,8 +114,9 @@ delete ::
   m ()
 delete paths = do
   let appendDirectorySize :: (Fdo.PathData.PathData, PathTypeW, PathI TrashEntryPath) -> m ()
-      appendDirectorySize (pd, pathType, MkPathI newPath) =
-        when (is (#unPathTypeW % _PathTypeDirectory) pathType) $ do
+      appendDirectorySize (pd, pathType, MkPathI newPath) = addNamespace "appendDirectorySize"
+        $ when (is (#unPathTypeW % _PathTypeDirectory) pathType)
+        $ do
           -- In FDO's directorysizes spec, the listed size does not include
           -- the directory itself. That is, while getPathSize calculates
           --
@@ -122,6 +128,7 @@ delete paths = do
           --
           -- Thus we remove the dir size after performing the calculation.
           size <- Utils.getPathSize newPath
+          $(logDebug) $ "Size: " <> showt size
           sizeWithoutDir <- sizeMinusDir size newPath
 
           let MkTimestamp localTime = pd ^. #created
@@ -136,6 +143,7 @@ delete paths = do
                     fileName = fileNameEncoded
                   }
 
+          $(logDebug) $ "DirSize entry: " <> showt entry
           DirectorySizes.appendEntry entry
 
   Default.deletePostHook BackendArgs.backendArgs appendDirectorySize paths
@@ -164,7 +172,9 @@ permDelete ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete =
-  Default.permDeletePostHook BackendArgs.backendArgs removeDirectorySize
+  Default.permDeletePostHook
+    BackendArgs.backendArgs
+    (addNamespace "removeDirectorySize" . removeDirectorySize)
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -183,19 +193,19 @@ getIndex ::
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
-  trashHome <- asks getTrashHome
+  $(logTrace) "In getIndex"
 
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  trashHome <- asks getTrashHome
 
   Default.Trash.doesTrashExist >>= \case
     False -> do
-      $(logDebug) "Trash does not exist."
+      $(logTrace) "Trash does not exist."
       pure Index.empty
     True -> do
       MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome trashHome
       let dirSizesMap = HMap.fromList $ fmap (\e -> (e ^. #fileName, e)) (toList directorySizes)
           backendArgs' = BackendArgs.backendArgsDirectorySizes dirSizesMap
-      Default.Index.readIndex backendArgs' trashHome
+      Default.Index.readIndexTrashHome backendArgs' trashHome
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
@@ -213,10 +223,9 @@ getMetadata ::
   ) =>
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
-  trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  $(logTrace) "In getMetadata"
 
-  MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome trashHome
+  MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizes
   let dirSizesMap = HMap.fromList $ fmap (\e -> (e ^. #fileName, e)) (toList directorySizes)
       backendArgs' = BackendArgs.backendArgsDirectorySizes dirSizesMap
 
@@ -244,7 +253,10 @@ restore ::
   ) =>
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-restore = Default.restorePostHook BackendArgs.backendArgs removeDirectorySize
+restore =
+  Default.restorePostHook
+    BackendArgs.backendArgs
+    (addNamespace "removeDirectorySize" . removeDirectorySize)
 
 -- | Empties the trash.
 emptyTrash ::
@@ -283,6 +295,7 @@ merge ::
   PathI TrashHome ->
   m ()
 merge src dest = addNamespace "merge" $ do
+  $(logTrace) "In merge"
   srcDirectorySizes <- DirectorySizes.readDirectorySizesTrashHome src
   destDirectorySizes <- DirectorySizes.readDirectorySizesTrashHome dest
   directorySizesPath <- DirectorySizes.getDirectorySizesPath
@@ -302,8 +315,6 @@ merge src dest = addNamespace "merge" $ do
   let mergedDirectorySizes = srcDirectorySizes <> destDirectorySizes
 
   DirectorySizes.writeDirectorySizesTrashHome dest mergedDirectorySizes
-
-  $(logDebug) "Merge successful"
   where
     src' = src ^. #unPathI
     dest' = dest ^. #unPathI
@@ -326,10 +337,10 @@ toRosetta ::
   ) =>
   m Rosetta
 toRosetta = addNamespace "toRosetta" $ do
-  trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  $(logTrace) "In toRosetta"
 
   index <- getIndex
+  $(logDebug) ("Index: " <> showt index)
 
   let size = foldl' (\acc (pd, _) -> acc .+. pd ^. #size) zero (index ^. #unIndex)
 
@@ -354,6 +365,7 @@ fromRosetta ::
   Rosetta ->
   m ()
 fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
+  $(logTrace) "In fromRosetta"
   $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
 
   -- create tmp trash
@@ -369,6 +381,14 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
 
     -- copy dir
     PathType.copyPath (pd ^. #pathType) oldTrashPath newTrashPath trashPathDir
+    let msg =
+          mconcat
+            [ "Copying '",
+              decodeOsToFpDisplayExT oldTrashPath,
+              "' to '",
+              decodeOsToFpDisplayExT newTrashPath
+            ]
+    $(logDebug) msg
 
     -- create info files
     encoded <- Serial.encodeThrowM fdoPathData
@@ -438,11 +458,12 @@ removeDirectorySize pd = when (PathData.isDirectory pd) (removeEntry pd)
 isFdo ::
   ( HasCallStack,
     MonadCatch m,
+    MonadLoggerNS m,
     MonadPathReader m
   ) =>
   PathI TrashHome ->
   m (Maybe Bool)
-isFdo trashHome@(MkPathI th) = do
+isFdo trashHome@(MkPathI th) = addNamespace "isFdo" $ do
   exists <-
     Default.Trash.doesTrashExistPath trashHome
       `catchAnyCS` \_ -> pure False
@@ -452,24 +473,32 @@ isFdo trashHome@(MkPathI th) = do
 
       isDefinitelyFdo <- doesFileExist directorysizesPath
       if isDefinitelyFdo
-        then -- Trash dir contains directorysizes (fdo): Definitely true.
+        then do
+          -- Trash dir contains directorysizes (fdo): Definitely true.
+          $(logTrace) "Found fdo"
           pure (Just True)
         else do
-          PR.listDirectory trashPath <&> \case
+          PR.listDirectory trashPath >>= \case
             -- Trash dir is well-formed but contains no files: Maybe.
-            [] -> Nothing
+            [] -> do
+              $(logTrace) "Trash dir is well-formed but empty: Maybe"
+              pure Nothing
             -- Trash dir has at least one file: iff ext matches fdo.
-            (f : _) ->
+            (f : _) -> do
               let ext = OsP.takeExtension f
-               in Just $ Backend.backendExt BackendFdo == ext
-    else -- Trash does not exist or it is not a well-formed fdo backend: Definitely
-    -- false.
+              $(logTrace) $ "Found file with extension " <> decodeOsToFpDisplayExT ext
+              pure $ Just $ Backend.backendExt BackendFdo == ext
+    else do
+      -- Trash does not exist or it is not a well-formed fdo backend: Definitely
+      -- false.
+      $(logTrace) "Unknown, not fdo"
       pure $ Just False
   where
     MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome
 
 sizeMinusDir ::
   ( HasCallStack,
+    MonadLoggerNS m,
     MonadPathReader m
   ) =>
   -- | The base size b
@@ -478,10 +507,19 @@ sizeMinusDir ::
   OsPath ->
   -- | b - dir_size(d), clamped at 0.
   m (Bytes B Natural)
-sizeMinusDir size path = do
+sizeMinusDir size@(MkBytes sz) path = addNamespace "sizeMinusDir" $ do
   dirIntrisicSize <- fromIntegral <$> PR.getFileSize path
 
-  pure
-    $ if size >= MkBytes dirIntrisicSize
-      then fmap (\s -> s - dirIntrisicSize) size
-      else afromInteger 0
+  if size >= MkBytes dirIntrisicSize
+    then pure $ fmap (\s -> s - dirIntrisicSize) size
+    else do
+      let msg =
+            mconcat
+              [ "Directory intrinsic size (",
+                showt dirIntrisicSize,
+                " bytes) is somehow greater than its combined size (",
+                showt sz,
+                " bytes). Clamping to 0."
+              ]
+      $(logWarn) msg
+      pure $ afromInteger 0

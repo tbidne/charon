@@ -45,14 +45,6 @@ import Control.Monad as X
   )
 import Control.Monad.Fail as X (MonadFail (fail))
 import Control.Monad.IO.Class as X (MonadIO (liftIO))
-import Control.Monad.Logger as X
-  ( LogLevel (LevelDebug, LevelError, LevelInfo, LevelWarn),
-    MonadLogger (monadLoggerLog),
-    logDebug,
-    logError,
-    logInfo,
-    logWarn,
-  )
 import Control.Monad.Reader as X
   ( MonadReader (ask),
     ReaderT,
@@ -193,8 +185,18 @@ import Effects.IORef as X
     writeIORef,
   )
 import Effects.LoggerNS as X
-  ( MonadLoggerNS (getNamespace, localNamespace),
+  ( LogLevel (LevelDebug, LevelError, LevelInfo, LevelWarn),
+    MonadLogger (monadLoggerLog),
+    MonadLoggerNS (getNamespace, localNamespace),
     addNamespace,
+    levelFatal,
+    levelTrace,
+    logDebug,
+    logError,
+    logFatal,
+    logInfo,
+    logTrace,
+    logWarn,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
 import Effects.System.PosixCompat as X (MonadPosixCompat)

@@ -16,6 +16,10 @@ module Charon.Data.UniqueSeq
     Internal.append,
     Internal.union,
     map,
+
+    -- * Display
+    displayShow,
+    display,
   )
 where
 
@@ -27,8 +31,10 @@ import Charon.Data.UniqueSeq.Internal
   )
 import Charon.Data.UniqueSeq.Internal qualified as Internal
 import Charon.Prelude
+import Data.Foldable (Foldable (toList))
 import Data.HashSet qualified as HSet
 import Data.Sequence qualified as Seq
+import Data.Text qualified as T
 
 empty :: UniqueSeq a
 empty = UnsafeUniqueSeq Seq.empty HSet.empty
@@ -53,3 +59,13 @@ fromSet :: HashSet a -> UniqueSeq a
 fromSet set = UnsafeUniqueSeq seq set
   where
     seq = foldr (flip (:|>)) Seq.empty set
+
+displayShow :: (Show a) => UniqueSeq a -> Text
+displayShow = display (T.pack . show)
+
+display :: (a -> Text) -> UniqueSeq a -> Text
+display toText =
+  T.intercalate ","
+    . fmap toText
+    . toList
+    . view #seq

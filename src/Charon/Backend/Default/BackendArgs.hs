@@ -13,14 +13,20 @@ import Charon.Data.Paths (PathI, PathIndex (TrashEntryOriginalPath, TrashHome))
 import Charon.Data.Timestamp (Timestamp)
 import Charon.Prelude
 
+-- | These args are provided backends that want to use the Default
+-- functionality.
 data BackendArgs m pd = MkBackendArgs
-  { backend :: Backend,
+  { -- | The backend type.
+    backend :: Backend,
+    -- | Function for retrieving the custom path data pd.
     toPd ::
       Timestamp ->
       PathI TrashHome ->
       PathI TrashEntryOriginalPath ->
       m (pd, PathTypeW),
+    -- | Transformation from custom pd to common PathData.
     toCorePathData :: PathI TrashHome -> pd -> m PathData,
+    -- | Transformation from common PathData to custom pd.
     fromCorePathData :: PathData -> pd
   }
 

@@ -53,6 +53,7 @@ import Charon.Data.Paths
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
@@ -122,8 +123,8 @@ deletePostHook ::
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
+  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   void Trash.createTrash
 
@@ -133,7 +134,7 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
   let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
 
       handleEx p ex = do
-        $(logWarn) (T.pack $ displayNoCS ex)
+        $(logError) (T.pack $ displayNoCS ex)
         putStrLn
           $ mconcat
             [ "Error deleting path '",
@@ -170,7 +171,8 @@ permDelete ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
-    Serial pd
+    Serial pd,
+    Show pd
   ) =>
   BackendArgs m pd ->
   Bool ->
@@ -197,7 +199,8 @@ permDeletePostHook ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
-    Serial pd
+    Serial pd,
+    Show pd
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
@@ -205,8 +208,8 @@ permDeletePostHook ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePostHook" $ do
+  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
 
@@ -215,7 +218,7 @@ permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePo
     -- Record error if any occurred
     (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
-        $(logWarn) (T.pack $ displayNoCS ex)
+        $(logError) (T.pack $ displayNoCS ex)
         putStrLn
           $ mconcat
             [ "Error permanently deleting path '",
@@ -247,14 +250,10 @@ getIndex ::
   BackendArgs m pd ->
   m Index
 getIndex backendArgs = addNamespace "getIndex" $ do
-  trashHome <- asks getTrashHome
-
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
-
   Trash.doesTrashExist >>= \case
-    True -> Default.Index.readIndex backendArgs trashHome
+    True -> Default.Index.readIndex backendArgs
     False -> do
-      $(logDebug) "Trash does not exist."
+      $(logTrace) "Trash does not exist."
       pure Index.empty
 
 -- | Retrieves metadata for the trash directory.
@@ -275,19 +274,19 @@ getMetadata ::
   BackendArgs m pd ->
   m Metadata
 getMetadata backendArgs = addNamespace "getMetadata" $ do
+  $(logTrace) "In getMetadata"
   trashHome <- asks getTrashHome
   trashLog <- Env.getTrashLog
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   let MkPathI trashPathsDir = Default.Utils.getTrashPathDir trashHome
 
   Trash.doesTrashExist >>= \case
     False -> do
-      $(logInfo) "Trash does not exist."
+      $(logTrace) "Trash does not exist."
       pure Metadata.empty
     True -> do
       -- Index size
-      index <- view #unIndex <$> Default.Index.readIndex backendArgs trashHome
+      index <- view #unIndex <$> Default.Index.readIndexTrashHome backendArgs trashHome
       let numIndex = length index
       $(logDebug) ("Index size: " <> showt numIndex)
 
@@ -302,7 +301,7 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
         if logExists
           then Bytes.normalize . toDouble . MkBytes @B <$> getFileSize logPath
           else do
-            $(logDebug) "Log does not exist"
+            $(logTrace) "Log does not exist"
             pure (afromRational 0)
 
       -- Summed size
@@ -348,7 +347,8 @@ restore ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serial pd
+    Serial pd,
+    Show pd
   ) =>
   BackendArgs m pd ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
@@ -373,15 +373,16 @@ restorePostHook ::
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
-    Serial pd
+    Serial pd,
+    Show pd
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
+  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
   trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   someExRef <- newIORef Nothing
 
@@ -390,7 +391,7 @@ restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
     -- Record error if any occurred
     (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfJust someExRef)
       `catchAnyCS` \ex -> do
-        $(logWarn) (T.pack $ displayNoCS ex)
+        $(logError) (T.pack $ displayNoCS ex)
         putStrLn
           $ mconcat
             [ "Error restoring path '",
@@ -424,17 +425,18 @@ emptyTrash ::
   Bool ->
   m ()
 emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
+  $(logTrace) "In emptyTrash"
   trashHome@(MkPathI th) <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
 
   exists <- doesDirectoryExist th
   if not exists
     then do
-      $(logDebug) "Trash home does not exist."
+      $(logTrace) "Trash home does not exist."
       putTextLn $ Paths.toText trashHome <> " is empty."
     else
       if force
         then do
+          $(logTrace) "Force on; deleting entire trash."
           removeDirectoryRecursive th
           void Trash.createTrash
         else do
@@ -446,12 +448,12 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
           c <- Ch.toLower <$> Term.getChar
           if
             | c == 'y' -> do
-                $(logDebug) "Deleting contents."
+                $(logTrace) "Deleting contents."
                 removeDirectoryRecursive th
                 void Trash.createTrash
                 putStrLn ""
             | c == 'n' -> do
-                $(logDebug) "Not deleting contents."
+                $(logTrace) "Not deleting contents."
                 putStrLn ""
             | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 

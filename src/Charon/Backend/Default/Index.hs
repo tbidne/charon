@@ -2,6 +2,7 @@
 
 module Charon.Backend.Default.Index
   ( readIndex,
+    readIndexTrashHome,
   )
 where
 
@@ -21,6 +22,7 @@ import Charon.Data.Paths
       ),
     (<//>),
   )
+import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Exception
   ( InfoDecodeE (MkInfoDecodeE),
     TrashEntryFileNotFoundE (MkTrashEntryFileNotFoundE),
@@ -39,6 +41,28 @@ type Acc = (Seq (PathData, PathI TrashEntryPath), HashSet (PathI TrashEntryFileN
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
 -- and trash/info.
 readIndex ::
+  forall m env (pd :: Type) k.
+  ( DecodeExtra pd ~ PathI TrashEntryFileName,
+    HasCallStack,
+    HasTrashHome env,
+    Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadFileReader m,
+    MonadCatch m,
+    MonadLoggerNS m,
+    MonadReader env m,
+    MonadPathReader m,
+    Serial pd
+  ) =>
+  BackendArgs m pd ->
+  m Index
+readIndex backendArgs =
+  asks getTrashHome >>= readIndexTrashHome backendArgs
+
+-- | Reads the trash directory into the 'Index'. If this succeeds then
+-- everything is 'well-formed' i.e. there is a bijection between trash/files
+-- and trash/info.
+readIndexTrashHome ::
   forall m (pd :: Type) k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
@@ -53,7 +77,7 @@ readIndex ::
   BackendArgs m pd ->
   PathI TrashHome ->
   m Index
-readIndex backendArgs trashHome = addNamespace "readIndex" $ do
+readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ do
   paths <- listDirectory trashInfoDir'
   $(logDebug) ("Trash info: " <> decodeOsToFpDisplayExT trashInfoDir')
   $(logDebug) ("Info: " <> T.intercalate ", " (decodeOsToFpDisplayExT <$> paths))

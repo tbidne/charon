@@ -8,7 +8,7 @@ where
 
 import Charon.Prelude
 import Charon.Runner.Env (Env, LogFile, handle, logLevel)
-import Effects.LoggerNS (defaultLogFormatter)
+import Effects.LoggerNS (defaultLogFormatter, guardLevel)
 import Effects.LoggerNS qualified as Logger
 
 -- | `CharonT` is the main application type that runs shell commands.
@@ -44,8 +44,8 @@ instance
     mhandle <- asks (preview (#logEnv % #logFile %? handleAndLevel))
     case mhandle of
       Nothing -> pure ()
-      Just (handle, logLevel) ->
-        when (logLevel <= lvl) $ do
+      Just (handle, logLevel) -> do
+        guardLevel logLevel lvl $ do
           formatted <- Logger.formatLog (defaultLogFormatter loc) lvl msg
           let bs = Logger.logStrToBs formatted
           hPut handle bs

@@ -67,7 +67,8 @@ delete ::
   ) =>
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
-delete paths =
+delete paths = addNamespace "delete" $ do
+  initalLog "In delete"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.delete paths
@@ -97,7 +98,8 @@ permDelete ::
   Bool ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-permDelete force paths =
+permDelete force paths = addNamespace "permDelete" $ do
+  initalLog "In permDelete"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.permDelete force paths
@@ -121,7 +123,8 @@ getIndex ::
     MonadTerminal m
   ) =>
   m Index
-getIndex =
+getIndex = addNamespace "getIndex" $ do
+  initalLog "In getIndex"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" Cbor.getIndex
@@ -144,7 +147,8 @@ getMetadata ::
     MonadTerminal m
   ) =>
   m Metadata
-getMetadata =
+getMetadata = addNamespace "getMetadata" $ do
+  initalLog "In getMetadata"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" Cbor.getMetadata
@@ -173,7 +177,8 @@ restore ::
   ) =>
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-restore paths =
+restore paths = addNamespace "restore" $ do
+  initalLog "In restore"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.restore paths
@@ -199,7 +204,8 @@ emptyTrash ::
   ) =>
   Bool ->
   m ()
-emptyTrash force =
+emptyTrash force = addNamespace "emptyTrash" $ do
+  initalLog "In emptyTrash"
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash force
@@ -226,8 +232,9 @@ convert ::
   Backend ->
   m ()
 convert dest = addNamespace "convert" $ do
-  trashHome@(MkPathI trashHome') <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  initalLog "In convert"
+
+  (MkPathI trashHome') <- asks getTrashHome
 
   src <- asks getBackend
   if src == dest
@@ -237,7 +244,7 @@ convert dest = addNamespace "convert" $ do
               [ "--backend == requested conversion type: " <> Backend.Data.backendName dest,
                 ". Nothing to do."
               ]
-      $(logDebug) $ T.pack msg
+      $(logInfo) $ T.pack msg
       putStrLn msg
     else do
       $(logDebug) $ "Current backend: " <> T.pack (Backend.Data.backendName src)
@@ -317,9 +324,10 @@ merge ::
   ) =>
   PathI TrashHome ->
   m ()
-merge dest = do
+merge dest = addNamespace "merge" $ do
+  initalLog "In merge"
+
   src <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText src)
 
   src' <- Paths.liftPathIF' canonicalizePath src
   dest' <- Paths.liftPathIF' canonicalizePath dest
@@ -336,7 +344,7 @@ merge dest = do
                 decodeOsToFpDisplayEx $ dest' ^. #unPathI,
                 ". Nothing to do."
               ]
-      $(logDebug) $ T.pack msg
+      $(logInfo) $ T.pack msg
       putStrLn msg
     else do
       $(logDebug) $ "Dest path: " <> Paths.toText dest
@@ -355,3 +363,14 @@ merge dest = do
           Json.isJson dest >>= \case
             Just False -> throwCS $ MkBackendDetectE BackendJson
             _ -> addNamespace "json" $ Json.merge src' dest'
+
+initalLog ::
+  ( HasTrashHome env,
+    MonadLoggerNS m,
+    MonadReader env m
+  ) =>
+  Text ->
+  m ()
+initalLog start = do
+  $(logTrace) start
+  asks getTrashHome >>= \th -> $(logDebug) ("TrashHome: " <> Paths.toText th)

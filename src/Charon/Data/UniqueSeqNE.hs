@@ -19,6 +19,10 @@ module Charon.Data.UniqueSeqNE
     append,
     Internal.union,
     map,
+
+    -- * Display
+    displayShow,
+    display,
   )
 where
 
@@ -36,6 +40,7 @@ import Data.HashSet qualified as HSet
 import Data.Sequence (Seq (Empty))
 import Data.Sequence qualified as Seq
 import Data.Sequence.NonEmpty qualified as NESeq
+import Data.Text qualified as T
 
 singleton :: (Hashable a) => a -> UniqueSeqNE a
 singleton x = UnsafeUniqueSeqNE (NESeq.singleton x) (HSet.singleton x)
@@ -103,3 +108,13 @@ insertSeq' ::
 insertSeq' seqIns y (seq, set)
   | Internal.notHSetMember y set = (seqIns y seq, HSet.insert y set)
   | otherwise = (seq, set)
+
+displayShow :: (Show a) => UniqueSeqNE a -> Text
+displayShow = display (T.pack . show)
+
+display :: (a -> Text) -> UniqueSeqNE a -> Text
+display toText =
+  T.intercalate ","
+    . fmap toText
+    . toList
+    . view #seq

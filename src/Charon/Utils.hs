@@ -110,10 +110,12 @@ formatBytes =
 -- | Reads the 'LogLevel'.
 readLogLevel :: (MonadFail m) => Text -> m (Maybe LogLevel)
 readLogLevel "none" = pure Nothing
+readLogLevel "fatal" = pure $ Just levelFatal
 readLogLevel "error" = pure $ Just LevelError
 readLogLevel "warn" = pure $ Just LevelWarn
 readLogLevel "info" = pure $ Just LevelInfo
 readLogLevel "debug" = pure $ Just LevelDebug
+readLogLevel "trace" = pure $ Just levelTrace
 readLogLevel other =
   fail
     $ mconcat
@@ -125,7 +127,7 @@ readLogLevel other =
 
 -- | String description of possible log levels parsed by 'readLogLevel'.
 logLevelStrings :: String
-logLevelStrings = "(none|error|warn|info|debug)"
+logLevelStrings = "(none|fatal|error|warn|info|debug|trace)"
 
 -- | Merge two fields using the 'Alternative' instance.
 mergeAlt ::
@@ -317,7 +319,7 @@ getPathSizeConfig ::
   PathSize.Config ->
   OsPath ->
   m (Bytes B Natural)
-getPathSizeConfig config path = do
+getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
   fmap (MkBytes @B)
     $ PathSize.pathSizeRecursiveConfig config path
     >>= \case
@@ -328,24 +330,26 @@ getPathSizeConfig config path = do
         for_ errs $ \e -> do
           let errMsg = T.pack $ displayException e
           putTextLn errMsg
-          $(logError) errMsg
+          $(logWarn) errMsg
         pure n
       PathSizeFailure errs -> do
         putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
         for_ errs $ \e -> do
           let errMsg = T.pack $ displayException e
           putTextLn errMsg
-          $(logError) errMsg
+          $(logWarn) errMsg
         pure 0
 
 getAllFiles ::
   ( HasCallStack,
     MonadCatch m,
+    MonadLoggerNS m,
     MonadPathReader m
   ) =>
   OsPath ->
   m [OsPath]
-getAllFiles fp =
+getAllFiles fp = addNamespace "getAllFiles" $ do
+  $(logTrace) $ "Retrieving files for: " <> decodeOsToFpDisplayExT fp
   -- NOTE: [getPathType]
   --
   -- It would be nice to switch this from PathReader's getPathType to
@@ -379,13 +383,14 @@ epoch = Time.Posix.posixSecondsToUTCTime 0
 
 getRandomTmpFile ::
   ( HasCallStack,
+    MonadLoggerNS m,
     MonadPathReader m,
     MonadThrow m,
     MonadTime m
   ) =>
   OsPath ->
   m OsPath
-getRandomTmpFile prefix = do
+getRandomTmpFile prefix = addNamespace "getRandomTmpFile" $ do
   -- NOTE: [File name collisions]
   --
   -- Is getMonotonicTimeNSec less likely to have collisions than
@@ -393,7 +398,11 @@ getRandomTmpFile prefix = do
   -- number if we are feeling paranoid.
   timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
   tmpDir <- PR.getTemporaryDirectory
-  pure $ tmpDir </> prefix <> [osp|_|] <> timeStr
+
+  let tmpFile = tmpDir </> prefix <> [osp|_|] <> timeStr
+  $(logDebug) $ "Generated temp file: " <> decodeOsToFpDisplayExT tmpFile
+
+  pure tmpFile
 
 getSymLinkSize ::
   ( HasCallStack,

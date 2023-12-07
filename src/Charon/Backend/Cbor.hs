@@ -47,7 +47,7 @@ import Charon.Data.Paths
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
-import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
+import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude
 import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
@@ -120,15 +120,13 @@ getIndex ::
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
-  trashHome <- asks getTrashHome
-
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  $(logTrace) "In getIndex"
 
   Default.Trash.doesTrashExist >>= \case
     False -> do
-      $(logDebug) "Trash does not exist."
+      $(logTrace) "Trash does not exist"
       pure Index.empty
-    True -> Default.Index.readIndex backendArgs trashHome
+    True -> Default.Index.readIndex backendArgs
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
@@ -217,10 +215,10 @@ toRosetta ::
   ) =>
   m Rosetta
 toRosetta = addNamespace "toRosetta" $ do
-  trashHome <- asks getTrashHome
-  $(logDebug) ("Trash home: " <> Paths.toText trashHome)
+  $(logTrace) "In toRosetta"
 
   index <- getIndex
+  $(logDebug) ("Index: " <> showt index)
 
   let size = foldl' (\acc (pd, _) -> acc .+. pd ^. #size) zero (index ^. #unIndex)
 
@@ -244,6 +242,7 @@ fromRosetta ::
   Rosetta ->
   m ()
 fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
+  $(logTrace) "In fromRosetta"
   $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
 
   -- create tmp trash
@@ -259,6 +258,14 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
 
     -- copy dir
     PathType.copyPath (pd ^. #pathType) oldTrashPath newTrashPath trashPathDir
+    let msg =
+          mconcat
+            [ "Copying '",
+              decodeOsToFpDisplayExT oldTrashPath,
+              "' to '",
+              decodeOsToFpDisplayExT newTrashPath
+            ]
+    $(logDebug) msg
 
     -- create info files
     encoded <- Serial.encodeThrowM cborPathData
@@ -282,11 +289,13 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
 isCbor ::
   ( HasCallStack,
     MonadCatch m,
+    MonadLoggerNS m,
     MonadPathReader m
   ) =>
   PathI TrashHome ->
   m (Maybe Bool)
-isCbor trashHome@(MkPathI th) = do
+isCbor trashHome@(MkPathI th) = addNamespace "isCbor" $ do
+  $(logTrace) "In isCbor"
   exists <-
     Default.Trash.doesTrashExistPath trashHome
       `catchAnyCS` \_ -> pure False
@@ -296,18 +305,25 @@ isCbor trashHome@(MkPathI th) = do
 
       isDefinitelyFdo <- doesFileExist directorysizesPath
       if isDefinitelyFdo
-        then -- Trash dir contains directorysizes (fdo): Definitely false.
+        then do
+          -- Trash dir contains directorysizes (fdo): Definitely false.
+          $(logTrace) "Found fdo"
           pure (Just False)
         else do
-          PR.listDirectory trashPath <&> \case
+          PR.listDirectory trashPath >>= \case
             -- Trash dir is well-formed but contains no files: Maybe.
-            [] -> Nothing
+            [] -> do
+              $(logTrace) "Trash dir is well-formed but empty: Maybe"
+              pure Nothing
             -- Trash dir has at least one file: iff ext matches cbor.
-            (f : _) ->
+            (f : _) -> do
               let ext = OsP.takeExtension f
-               in Just $ Backend.backendExt BackendCbor == ext
-    else -- Trash does not exist or it is not a well-formed cbor backend: Definitely
-    -- false.
+              $(logTrace) $ "Found file with extension " <> decodeOsToFpDisplayExT ext
+              pure $ Just $ Backend.backendExt BackendCbor == ext
+    else do
+      -- Trash does not exist or it is not a well-formed cbor backend: Definitely
+      -- false.
+      $(logTrace) "Unknown, not cbor"
       pure $ Just False
   where
     MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome

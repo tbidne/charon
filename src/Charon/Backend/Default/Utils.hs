@@ -137,7 +137,9 @@ mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
 
   -- Paranoia check for previous bug: check that derived name is not empty.
   isEmpty <- Paths.applyPathI (fmap null . decodeOsToFpThrowM) fileName
-  when isEmpty $ throwCS $ MkFileNameEmptyE origPath
+  when isEmpty $ do
+    $(logError) "Decoded filename is empty"
+    throwCS $ MkFileNameEmptyE origPath
 
   pure (origAbsoluteNoSlash, fileName)
 

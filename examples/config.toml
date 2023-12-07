@@ -2,7 +2,7 @@
 # XDG data ~/.local/share/charon
 trash-home = "./tmp"
 
-# File log level. Can be one of none, error, warn, info, or debug.
+# File log level. Can be one of none, fatal, error, warn, info, debug or trace.
 # Defaults to none.
 log-level = "info"
 

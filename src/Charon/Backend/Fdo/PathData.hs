@@ -125,7 +125,8 @@ toCorePathData ::
   PathI TrashHome ->
   PathData ->
   m PathData.PathData
-toCorePathData trashHome pd = do
+toCorePathData trashHome pd = addNamespace "toCorePathData" $ do
+  $(logDebug) $ "PathData: " <> showt pd
   pathType <- Default.Utils.pathDataToType trashHome pd
 
   size <- Utils.getPathSize path
@@ -154,7 +155,8 @@ toCorePathDataDirectorySizes ::
   PathI TrashHome ->
   PathData ->
   m PathData.PathData
-toCorePathDataDirectorySizes dsizeMap trashHome pd = do
+toCorePathDataDirectorySizes dsizeMap trashHome pd = addNamespace "toCorePathDataDirectorySizes" $ do
+  $(logDebug) $ "PathData: " <> showt pd
   pathType <- Default.Utils.pathDataToType trashHome pd
 
   size <- case pathType ^. #unPathTypeW of

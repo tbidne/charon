@@ -249,7 +249,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 --        Return @C_min@. We are going to wrap regardless since @D_len > T_max@,
 --        so just ust it and @C_min@.
 mkDynamicLen ::
-  (MonadLogger f) =>
+  (MonadLoggerNS f) =>
   -- | @T_max@: Max total len for our dynamic columns
   Natural ->
   -- | @C_min@: Min required len for our derived column
@@ -262,42 +262,43 @@ mkDynamicLen ::
   -- | Derived @C_len@
   f Natural
 mkDynamicLen tMax cMin cMax dLen =
-  if dLen + cMax <= tMax
-    then -- 1. O and cMaxLen fits; use both
-      pure cMax
-    else do
-      -- 2. MaxLen will not fit; use all remaining space to print
-      -- as much as we can. As we require at least minimums, this could lead
-      -- to wrapping.
-      if dLen < tMax
-        then do
-          $(logDebug)
-            $ mconcat
-              [ "Maximum len (",
-                showt cMax,
-                ") does not fit with requested other length (",
-                showt dLen,
-                ") and calculated terminal space (",
-                showt tMax,
-                ")"
-              ]
-          pure (max (tMax - dLen) cMin)
-        else -- 3. Requested origLen > available space. We are going to wrap
-        -- regardless, so use it and the minimum name.
-        do
-          $(logWarn)
-            $ mconcat
-              [ "Requested other length (",
-                showt dLen,
-                ") > calculated terminal space (",
-                showt tMax,
-                "). Falling back to minimum len: ",
-                showt cMin
-              ]
-          pure cMin
+  addNamespace "mkDynamicLen"
+    $ if dLen + cMax <= tMax
+      then -- 1. O and cMaxLen fits; use both
+        pure cMax
+      else do
+        -- 2. MaxLen will not fit; use all remaining space to print
+        -- as much as we can. As we require at least minimums, this could lead
+        -- to wrapping.
+        if dLen < tMax
+          then do
+            $(logDebug)
+              $ mconcat
+                [ "Maximum len (",
+                  showt cMax,
+                  ") does not fit with requested other length (",
+                  showt dLen,
+                  ") and calculated terminal space (",
+                  showt tMax,
+                  ")"
+                ]
+            pure (max (tMax - dLen) cMin)
+          else -- 3. Requested origLen > available space. We are going to wrap
+          -- regardless, so use it and the minimum name.
+          do
+            $(logWarn)
+              $ mconcat
+                [ "Requested other length (",
+                  showt dLen,
+                  ") > calculated terminal space (",
+                  showt tMax,
+                  "). Falling back to minimum len: ",
+                  showt cMin
+                ]
+            pure cMin
 
-getMaxLen :: (MonadCatch m, MonadLogger m, MonadTerminal m) => m Natural
-getMaxLen = do
+getMaxLen :: (MonadCatch m, MonadLoggerNS m, MonadTerminal m) => m Natural
+getMaxLen = addNamespace "getMaxLen" $ do
   tryAny getTerminalWidth >>= \case
     Right w -> pure w
     Left err -> do
