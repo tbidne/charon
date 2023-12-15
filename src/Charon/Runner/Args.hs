@@ -12,7 +12,10 @@ where
 
 import Charon.Backend.Data (Backend, parseBackend)
 import Charon.Data.Index (Sort, readSort)
-import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax), Coloring (ColoringDetect, ColoringOff, ColoringOn))
+import Charon.Data.PathData.Formatting
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    Coloring (ColoringDetect, ColoringOff, ColoringOn),
+  )
 import Charon.Data.PathData.Formatting qualified as PathData
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
@@ -88,13 +91,13 @@ data Args = MkArgs
     tomlConfigPath :: TomlConfigPath,
     -- | Backend to use.
     backend :: Maybe Backend,
-    -- | Path to trash home.
-    trashHome :: !(Maybe (PathI TrashHome)),
     -- | The file logging level. The double Maybe is so we distinguish between
     -- unspecified (Nothing) and explicitly disabled (Just Nothing).
     logLevel :: !(Maybe (Maybe LogLevel)),
     -- | Whether to warn/delete for large log files.
     logSizeMode :: Maybe FileSizeMode,
+    -- | Path to trash home.
+    trashHome :: !(Maybe (PathI TrashHome)),
     -- | Command to run.
     command :: CommandP1
   }
@@ -134,9 +137,9 @@ argsParser =
   MkArgs
     <$> configParser
     <*> backendParser
-    <*> trashParser
     <*> logLevelParser
     <*> logSizeModeParser
+    <*> trashParser
     <**> version
     <**> OA.helper
     <*> commandParser

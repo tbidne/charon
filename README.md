@@ -47,8 +47,9 @@
 Charon: A tool for deleting files to a trash directory.
 
 Usage: charon [-c|--config (none|PATH)] [-b|--backend (cbor|fdo|json)]
-              [-t|--trash-home PATH] [--log-level (none|error|warn|info|debug)]
-              [--log-size-mode (warn SIZE | delete SIZE)] [--version] COMMAND
+              [--log-level (none|fatal|error|warn|info|debug|trace)]
+              [--log-size-mode (warn SIZE | delete SIZE)] [-t|--trash-home PATH]
+              [--version] COMMAND
 
   Charon moves files to a trash directory, so they can later be restored or
   permanently deleted. It is intended as a safer alternative to rm. See
@@ -69,11 +70,7 @@ Available options:
                            - fdo: Compatible with FreeDesktop.org.
                            - json: Inspectable.
 
-  -t,--trash-home PATH     Path to the trash directory. This overrides the toml
-                           config, if it exists. If neither is given then we use
-                           the XDG data directory e.g. ~/.local/share/charon.
-
-  --log-level (none|error|warn|info|debug)
+  --log-level (none|fatal|error|warn|info|debug|trace)
                            The file level in which to log. Defaults to none.
                            Logs are written to the XDG state directory e.g.
                            ~/.local/state/charon.
@@ -84,6 +81,10 @@ Available options:
                            exceeded. The SIZE should include the value and units
                            e.g. 'warn 10 mb', 'warn 5 gigabytes', 'delete
                            20.5B'.
+
+  -t,--trash-home PATH     Path to the trash directory. This overrides the toml
+                           config, if it exists. If neither is given then we use
+                           the XDG data directory e.g. ~/.local/share/charon.
 
   -h,--help                Show this help text
 
