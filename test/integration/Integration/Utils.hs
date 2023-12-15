@@ -19,7 +19,7 @@ module Integration.Utils
 where
 
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
-import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∉))
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Data.Text qualified as T
 import Data.Text.Normalize (NormalizationMode (NFD))
@@ -158,7 +158,7 @@ genFileNameNoDupes asciiOnly paths = do
         ]
 
   Gen.filterT
-    (\x -> not (USeqNE.member x paths))
+    (∉ paths)
     ( mkPathIntData pathType
         <$> Gen.string range (TestUtils.genPathChar asciiOnly)
     )

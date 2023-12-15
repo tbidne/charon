@@ -4,6 +4,7 @@ module Unit.Data.UniqueSeqNE
   )
 where
 
+import Charon.Data.UniqueSeqNE ((∈), (∪), (⋃))
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Data.UniqueSeqNE.Internal
   ( UniqueSeqNE
@@ -38,6 +39,7 @@ invariantTests =
       fromToNEIsomorphism,
       fromToNEOrder,
       unionOrder,
+      unionsOrder,
       mapInvariant,
       insertInvariant
     ]
@@ -78,24 +80,42 @@ unionOrder :: TestTree
 unionOrder =
   testPropertyNamed "union preserves order" "unionOrder" $ do
     property $ do
-      xs <- forAll genUniqueNonEmpty
-      ys <- forAll genUniqueNonEmpty
-      let xuseq = USeqNE.fromNonEmpty xs
-          yuseq = USeqNE.fromNonEmpty ys
+      as <- forAll genUniqueNonEmpty
+      bs <- forAll genUniqueNonEmpty
+      let a = USeqNE.fromNonEmpty as
+          b = USeqNE.fromNonEmpty bs
 
-          uxy = USeqNE.union xuseq yuseq
-          uyx = USeqNE.union yuseq xuseq
+          ab = a ∪ b
+          ba = b ∪ a
 
-      annotateShow xuseq
-      annotateShow yuseq
-      annotateShow uxy
-      annotateShow uyx
+      annotateShow a
+      annotateShow b
+      annotateShow ab
+      annotateShow ba
 
-      Utils.assertSameOrderNE (xs <> ys) (USeqNE.toNonEmpty uxy)
-      Utils.assertSameOrderNE (ys <> xs) (USeqNE.toNonEmpty uyx)
+      Utils.assertSameOrderNE (as <> bs) (USeqNE.toNonEmpty ab)
+      Utils.assertSameOrderNE (bs <> as) (USeqNE.toNonEmpty ba)
 
-      uniqseqInvariants uxy
-      uniqseqInvariants uyx
+      uniqseqInvariants ab
+      uniqseqInvariants ba
+
+unionsOrder :: TestTree
+unionsOrder =
+  testPropertyNamed "unions preserves order" "unionsOrder" $ do
+    property $ do
+      as <- forAll genUniqueNonEmpty
+      bs <- forAll genUniqueNonEmpty
+      cs <- forAll genUniqueNonEmpty
+      let a = USeqNE.fromNonEmpty as
+          b = USeqNE.fromNonEmpty bs
+          c = USeqNE.fromNonEmpty cs
+          abc = (⋃) (a :| [b, c])
+
+      annotateShow abc
+
+      Utils.assertSameOrderNE (as <> bs <> cs) (USeqNE.toNonEmpty abc)
+
+      uniqseqInvariants abc
 
 mapInvariant :: TestTree
 mapInvariant =
@@ -134,7 +154,7 @@ semigroup =
       c <- forAll genUniqueSeq
 
       annotate "Associativity"
-      (a `USeqNE.union` b) `USeqNE.union` c === a `USeqNE.union` (b `USeqNE.union` c)
+      (a ∪ b) ∪ c === a ∪ (b ∪ c)
 
 insertMember :: TestTree
 insertMember =
@@ -147,10 +167,10 @@ insertMember =
           useqP = USeqNE.prepend x useq
 
       annotateShow useqA
-      assert $ USeqNE.member x useqA
+      assert $ x ∈ useqA
 
       annotateShow useqP
-      assert $ USeqNE.member x useqP
+      assert $ x ∈ useqP
 
       uniqseqInvariants useqA
       uniqseqInvariants useqP
@@ -242,8 +262,8 @@ duplicatePreservesOrder = testCase "Duplicate preserves order" $ do
 
 unionPreservesOrder :: TestTree
 unionPreservesOrder = testCase "Union preserves order" $ do
-  expected @=? x `USeqNE.union` y
-  expected @=? y `USeqNE.union` x
+  expected @=? x ∪ y
+  expected @=? y ∪ x
   where
     x =
       UnsafeUniqueSeqNE

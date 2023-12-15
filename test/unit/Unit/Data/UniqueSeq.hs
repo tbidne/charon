@@ -4,6 +4,7 @@ module Unit.Data.UniqueSeq
   )
 where
 
+import Charon.Data.UniqueSeq ((∈), (∪), (⋃))
 import Charon.Data.UniqueSeq qualified as USeq
 import Charon.Data.UniqueSeq.Internal
   ( UniqueSeq
@@ -40,6 +41,7 @@ invariantTests =
       fromToListOrder,
       fromFoldableOrder,
       unionOrder,
+      unionsOrder,
       mapInvariant,
       insertInvariant
     ]
@@ -99,24 +101,42 @@ unionOrder :: TestTree
 unionOrder =
   testPropertyNamed "union preserves order" "unionOrder" $ do
     property $ do
-      xs <- forAll genUniqueList
-      ys <- forAll genUniqueList
-      let xuseq = USeq.fromFoldable xs
-          yuseq = USeq.fromFoldable ys
+      as <- forAll genUniqueList
+      bs <- forAll genUniqueList
+      let a = USeq.fromFoldable as
+          b = USeq.fromFoldable bs
 
-          uxy = USeq.union xuseq yuseq
-          uyx = USeq.union yuseq xuseq
+          ab = a ∪ b
+          ba = b ∪ a
 
-      annotateShow xuseq
-      annotateShow yuseq
-      annotateShow uxy
-      annotateShow uyx
+      annotateShow a
+      annotateShow b
+      annotateShow ab
+      annotateShow ba
 
-      Utils.assertSameOrder (xs ++ ys) (toList uxy)
-      Utils.assertSameOrder (ys ++ xs) (toList uyx)
+      Utils.assertSameOrder (as ++ bs) (toList ab)
+      Utils.assertSameOrder (bs ++ as) (toList ba)
 
-      uniqseqInvariants uxy
-      uniqseqInvariants uyx
+      uniqseqInvariants ab
+      uniqseqInvariants ba
+
+unionsOrder :: TestTree
+unionsOrder =
+  testPropertyNamed "unions preserves order" "unionsOrder" $ do
+    property $ do
+      as <- forAll genUniqueList
+      bs <- forAll genUniqueList
+      cs <- forAll genUniqueList
+      let a = USeq.fromFoldable as
+          b = USeq.fromFoldable bs
+          c = USeq.fromFoldable cs
+          abc = (⋃) [a, b, c]
+
+      annotateShow abc
+
+      Utils.assertSameOrder (as <> bs <> cs) (toList abc)
+
+      uniqseqInvariants abc
 
 mapInvariant :: TestTree
 mapInvariant =
@@ -154,11 +174,11 @@ monoid =
       c <- forAll genUniqueSeq
 
       annotate "Identity"
-      a === a `USeq.union` USeq.empty
-      a === USeq.empty `USeq.union` a
+      a === a ∪ USeq.empty
+      a === USeq.empty ∪ a
 
       annotate "Associativity"
-      (a `USeq.union` b) `USeq.union` c === a `USeq.union` (b `USeq.union` c)
+      (a ∪ b) ∪ c === a ∪ (b ∪ c)
 
 insertMember :: TestTree
 insertMember =
@@ -171,10 +191,10 @@ insertMember =
           useqP = USeq.prepend x useq
 
       annotateShow useqA
-      assert $ USeq.member x useqA
+      assert $ x ∈ useqA
 
       annotateShow useqP
-      assert $ USeq.member x useqP
+      assert $ x ∈ useqP
 
       uniqseqInvariants useqA
       uniqseqInvariants useqP
@@ -266,8 +286,8 @@ duplicatePreservesOrder = testCase "Duplicate preserves order" $ do
 
 unionPreservesOrder :: TestTree
 unionPreservesOrder = testCase "Union preserves order" $ do
-  expected @=? x `USeq.union` y
-  expected @=? y `USeq.union` x
+  expected @=? x ∪ y
+  expected @=? y ∪ x
   where
     x =
       UnsafeUniqueSeq

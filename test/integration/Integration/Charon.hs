@@ -17,7 +17,7 @@ import Charon.Backend.Data qualified as Backend.Data
 import Charon.Data.PathData (PathData)
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI))
-import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∪))
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
@@ -205,7 +205,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- delete files
       -- should succeed on α and fail on β
-      let toDelete = αTestPaths `USeqNE.union` βTestPaths
+      let toDelete = αTestPaths ∪ βTestPaths
 
       caughtEx <-
         tryCS @_ @IOException
@@ -281,7 +281,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
           (βNames, _, _) = mkPaths testDir β
           (_, γTest, γTestPaths) = mkPaths testDir γ
 
-          toDelete = αTestPaths `USeqNE.union` γTestPaths
+          toDelete = αTestPaths ∪ γTestPaths
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
 
@@ -289,7 +289,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toDelete
 
       -- create files and assert existence
-      setupDir testDir (αTest `USeqNE.union` γTest)
+      setupDir testDir (αTest ∪ γTest)
 
       -- delete files
       usingIntIO env $ Charon.delete (USeqNE.map MkPathI toDelete)
@@ -301,7 +301,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- permanently delete files
       -- should succeed on α and fail on β
-      let toPermDelete = USeqNE.map MkPathI (αNames `USeqNE.union` βNames)
+      let toPermDelete = USeqNE.map MkPathI (αNames ∪ βNames)
       annotateShow toPermDelete
 
       caughtEx <-
@@ -373,7 +373,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
           (βNames, _, _) = mkPaths testDir β
           (_, γTest, γTestPaths) = mkPaths testDir γ
 
-          toDelete = αTestPaths `USeqNE.union` γTestPaths
+          toDelete = αTestPaths ∪ γTestPaths
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
 
@@ -381,7 +381,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toDelete
 
       -- create files and assert existence
-      setupDir testDir (αTest `USeqNE.union` γTest)
+      setupDir testDir (αTest ∪ γTest)
 
       -- delete files
       usingIntIO env $ Charon.delete (USeqNE.map MkPathI toDelete)
@@ -393,7 +393,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- restore
       -- should succeed on α and fail on β
-      let toRestore = USeqNE.map MkPathI (αNames `USeqNE.union` βNames)
+      let toRestore = USeqNE.map MkPathI (αNames ∪ βNames)
       annotateShow toRestore
 
       caughtEx <-

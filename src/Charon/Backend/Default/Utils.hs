@@ -95,15 +95,9 @@ getPathInfo trashHome origPath = addNamespace "getPathInfo" $ do
   uniqName <- mkUniqName trashHome fileName
 
   -- see NOTE: [getPathType]
-  Paths.applyPathI PR.getPathType origAbsolute >>= \case
-    PathTypeSymbolicLink -> pure (uniqName, origAbsolute, MkPathTypeW PathTypeSymbolicLink)
-    PathTypeFile -> pure (uniqName, origAbsolute, MkPathTypeW PathTypeFile)
-    PathTypeDirectory ->
-      pure
-        ( uniqName,
-          origAbsolute,
-          MkPathTypeW PathTypeDirectory
-        )
+  (uniqName,origAbsolute,)
+    . MkPathTypeW
+    <$> Paths.applyPathI PR.getPathType origAbsolute
 
 mkAbsoluteAndGetName ::
   ( HasCallStack,

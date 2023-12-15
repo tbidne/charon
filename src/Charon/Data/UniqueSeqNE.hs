@@ -13,11 +13,15 @@ module Charon.Data.UniqueSeqNE
 
     -- * Lookup
     member,
+    (∈),
+    (∉),
 
     -- * Operations
     prepend,
     append,
     Internal.union,
+    (∪),
+    (⋃),
     map,
 
     -- * Display
@@ -118,3 +122,33 @@ display toText =
     . fmap toText
     . toList
     . view #seq
+
+-- | Operator alias for 'union'. U+222A.
+--
+-- @since 0.1
+(∪) :: (Hashable a) => UniqueSeqNE a -> UniqueSeqNE a -> UniqueSeqNE a
+(∪) = Internal.union
+
+infixl 6 ∪
+
+-- | Fold over 'union'.
+--
+-- @since 0.1
+(⋃) :: (Hashable a) => NonEmpty (UniqueSeqNE a) -> UniqueSeqNE a
+(⋃) (x :| xs) = foldl' (∪) x xs
+
+-- | Operator alias for 'member'. U+2216.
+--
+-- @since 0.1
+(∈) :: (Hashable a) => a -> UniqueSeqNE a -> Bool
+(∈) = member
+
+infix 4 ∈
+
+-- | Negation of '(∈)'.
+--
+-- @since 0.1
+(∉) :: (Hashable a) => a -> UniqueSeqNE a -> Bool
+(∉) x = not . (∈) x
+
+infix 4 ∉
