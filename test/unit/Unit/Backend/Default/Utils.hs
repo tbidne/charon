@@ -8,6 +8,7 @@ import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryOriginalPath, TrashHome),
   )
+import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.Utils qualified as FS.Utils
@@ -211,12 +212,12 @@ genString :: Gen String
 genString = Gen.string (Range.linear 1 100) genPathChar
 
 genPathChar :: Gen Char
-genPathChar = Gen.filter goodChar Gen.unicode
+genPathChar = Gen.filter isGoodChar Gen.unicode
   where
-    goodChar c =
-      c
-        /= '\NUL'
-        && c
-        /= '/'
-        && c
-        /= '.'
+    isGoodChar = not . flip Set.member (Set.fromList badChars)
+    badChars =
+      [ '\NUL',
+        '/',
+        '.',
+        '\\' -- windows
+      ]

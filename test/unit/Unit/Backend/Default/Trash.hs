@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | Unit tests for Trash
 module Unit.Backend.Default.Trash
@@ -34,7 +35,11 @@ import Charon.Data.Paths
   )
 import Charon.Data.Timestamp (Timestamp, fromText)
 import Charon.Env (HasBackend)
+#if WINDOWS
+import Charon.Exception (DotsPathE, EmptyPathE, FileNameEmptyE, RootE)
+#else
 import Charon.Exception (DotsPathE, EmptyPathE, RootE)
+#endif
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
@@ -243,14 +248,15 @@ backendTests ::
 backendTests b =
   testGroup
     (Backend.backendTestDesc (b ^. #backend))
-    [ mvTrash b,
-      mvTrashWhitespace b,
-      mvTrashRootError b,
-      mvTrashEmptyError b,
-      mvTrashDotError b,
-      mvTrashDotsError b,
-      mvTrashDotsEndError b
-    ]
+    $ [ mvTrash b,
+        mvTrashWhitespace b,
+        mvTrashRootError b,
+        mvTrashEmptyError b,
+        mvTrashDotError b,
+        mvTrashDotsError b,
+        mvTrashDotsEndError b
+      ]
+    ++ osTests b
 
 mvTrash ::
   ( Is k A_Getter,
@@ -318,7 +324,9 @@ mvTrashEmptyError ::
   BackendArgs PathDataT pd ->
   TestTree
 mvTrashEmptyError backendArgs = testCase desc $ do
-  -- NOTE: Need filepath's encodeUtf here as the quasiquote and our functions
+  -- NOTE: [QuasiQuoter Validation]
+  --
+  -- Need filepath's encodeUtf here as the quasiquote and our functions
   -- will (correctly) fail on empty paths. This check is out of paranoia, in
   -- case an empty string somehow gets through.
   empty <- encodeUtf ""
@@ -394,6 +402,48 @@ mvTrashDotsEndError backendArgs = testCase desc $ do
   where
     desc = "mvOriginalToTrash throws exception for dots original path"
     dotDir = MkPathI [osp|/path/with/dots/...|]
+
+osTests ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  [TestTree]
+
+#if WINDOWS
+
+osTests backendArgs = [ deriveEmptyErrorWindows backendArgs ]
+
+deriveEmptyErrorWindows ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+deriveEmptyErrorWindows backendArgs = testCase desc $ do
+  -- see NOTE: [QuasiQuoter Validation]
+  empty <- encodeUtf "\\"
+  eformatted <-
+    tryCS @_ @FileNameEmptyE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts (MkPathI empty))
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Derived empty file name from the path '\\'" @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws FileNameEmptyE for \\"
+
+#else
+
+osTests _ = [ ]
+
+#endif
 
 trashHome :: PathI TrashHome
 trashHome = MkPathI $ [osp|test|] </> [osp|unit|] </> pathDotTrash
