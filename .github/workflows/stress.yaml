@@ -33,7 +33,7 @@ jobs:
           - os: "windows-latest"
             set-env: "set"
             unit-trials: 10000
-            int-trials: 10000
+            int-trials: 1000     # 10,000 takes so long that CI is canceled
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v3
