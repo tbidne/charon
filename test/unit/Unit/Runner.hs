@@ -14,6 +14,7 @@ import Charon.Data.PathData.Formatting
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
 import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
@@ -76,8 +77,8 @@ delete = testCase "Parses delete" $ do
   where
     argList = ["delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
+      MkPathI
+        ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
@@ -88,8 +89,8 @@ permDelete = testCase "Parses perm delete" $ do
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
+      MkPathI
+        ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteForce :: TestTree
 permDeleteForce = testCase "Parses perm delete with force" $ do
@@ -100,8 +101,8 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
   where
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
+      MkPathI
+        ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
@@ -130,8 +131,8 @@ restore = testCase "Parses restore" $ do
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      UniqueSeqNE.map MkPathI
-        $ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
+      MkPathI
+        ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 list :: TestTree
 list = testCase "Parses list" $ do

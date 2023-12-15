@@ -20,6 +20,8 @@ module Charon.Data.UniqueSeq
     (∪),
     (⋃),
     map,
+    (↤),
+    (↦),
 
     -- * Display
     displayShow,
@@ -82,7 +84,7 @@ display toText =
 
 infixl 6 ∪
 
--- | Fold over 'union'.
+-- | Fold over 'union'. U+22C3.
 --
 -- @since 0.1
 (⋃) :: (Foldable f, Hashable a) => f (UniqueSeq a) -> UniqueSeq a
@@ -96,10 +98,26 @@ infixl 6 ∪
 
 infix 4 ∈
 
--- | Negation of '(∈)'.
+-- | Negation of '(∈)'. U+2209.
 --
 -- @since 0.1
 (∉) :: (Hashable a) => a -> UniqueSeq a -> Bool
 (∉) x = not . (∈) x
 
 infix 4 ∉
+
+-- | Flipped '(↤)'. U+21A6.
+--
+-- @since 0.1
+(↦) :: (Hashable b) => UniqueSeq a -> (a -> b) -> UniqueSeq b
+(↦) = flip (↤)
+
+infix 3 ↦
+
+-- | Operator alias for 'map'. U+21A4.
+--
+-- @since 0.1
+(↤) :: (Hashable b) => (a -> b) -> UniqueSeq a -> UniqueSeq b
+(↤) = map
+
+infix 3 ↤
