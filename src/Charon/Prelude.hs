@@ -152,7 +152,12 @@ import Effects.FileSystem.PathReader as X
         listDirectory,
         makeAbsolute
       ),
-    PathType (PathTypeDirectory, PathTypeFile, PathTypeSymbolicLink),
+    PathType
+      ( PathTypeDirectory,
+        PathTypeFile,
+        PathTypeOther,
+        PathTypeSymbolicLink
+      ),
     doesSymbolicLinkExist,
     getXdgConfig,
   )

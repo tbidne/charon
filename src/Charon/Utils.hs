@@ -359,9 +359,10 @@ getAllFiles fp = addNamespace "getAllFiles" $ do
   -- If we figure out how to mock it (or make the tests realer), we can then
   -- swap it.
   PR.getPathType fp >>= \case
-    PR.PathTypeSymbolicLink -> pure [fp]
-    PR.PathTypeFile -> pure [fp]
-    PR.PathTypeDirectory ->
+    PathTypeSymbolicLink -> pure [fp]
+    PathTypeFile -> pure [fp]
+    PathTypeOther -> pure [fp]
+    PathTypeDirectory ->
       listDirectory fp
         >>= fmap join
         . traverse (getAllFiles . (fp </>))

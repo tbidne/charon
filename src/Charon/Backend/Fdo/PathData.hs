@@ -161,6 +161,7 @@ toCorePathDataDirectorySizes dsizeMap trashHome pd = addNamespace "toCorePathDat
 
   size <- case pathType ^. #unPathTypeW of
     PathTypeFile -> afromInteger <$> PR.getFileSize path
+    PathTypeOther -> afromInteger <$> PR.getFileSize path
     PathTypeDirectory -> do
       name <- Fdo.Utils.percentEncodeFileName pd
       case HMap.lookup name dsizeMap of

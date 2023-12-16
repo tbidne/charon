@@ -556,6 +556,7 @@ setupDir dir paths = do
           PathTypeFile -> createFileContents (p, "")
           PathTypeDirectory -> createDirectory p
           PathTypeSymbolicLink -> createSymlink (F p)
+          PathTypeOther -> createFileContents (p, "")
         assertPathsExist (fmap (view _1) paths')
 
   action `catchAny` \ex -> do

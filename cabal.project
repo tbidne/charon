@@ -37,7 +37,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/monad-effects.git
-    tag: 07bda6c472b145973d9c4cacd5991a60fa9bce18
+    tag: 487e244cb1329780413e556adc86977fdcfe50b1
     subdir:
         lib/effects-async
         lib/effects-exceptions
@@ -54,7 +54,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: 91655d85572aa3992ab36272c1612eea4d4ead63
+    tag: 95cf3dfdc19cad49393d4c66159fb734b6645b1f
 
 source-repository-package
     type: git
