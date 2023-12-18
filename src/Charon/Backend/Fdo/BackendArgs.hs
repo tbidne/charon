@@ -10,8 +10,8 @@ import Charon.Backend.Default.BackendArgs
       ( MkBackendArgs,
         backend,
         fromCorePathData,
-        toCorePathData,
-        toPd
+        makePathData,
+        toCorePathData
       ),
   )
 import Charon.Backend.Fdo.DirectorySizes (DirectorySizesEntry)
@@ -30,7 +30,7 @@ backendArgs ::
 backendArgs =
   MkBackendArgs
     { backend = BackendFdo,
-      toPd = Fdo.PathData.toPathData,
+      makePathData = Fdo.PathData.toPathData,
       toCorePathData = Fdo.PathData.toCorePathData,
       fromCorePathData = Fdo.PathData.fromCorePathData
     }
@@ -52,7 +52,7 @@ backendArgsDirectorySizes ::
 backendArgsDirectorySizes dsizeMap =
   MkBackendArgs
     { backend = BackendFdo,
-      toPd = Fdo.PathData.toPathData,
+      makePathData = Fdo.PathData.toPathData,
       toCorePathData = Fdo.PathData.toCorePathDataDirectorySizes dsizeMap,
       fromCorePathData = Fdo.PathData.fromCorePathData
     }

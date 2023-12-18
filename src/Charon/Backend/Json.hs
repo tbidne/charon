@@ -47,7 +47,7 @@ import Charon.Data.Paths
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
-import Charon.Env (HasBackend, HasTrashHome)
+import Charon.Env (HasTrashHome)
 import Charon.Prelude
 import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
@@ -61,8 +61,7 @@ import System.OsPath qualified as OsP
 -- defaults to XDG data e.g. @~\/.local/share/charon/@.
 delete ::
   forall env m.
-  ( HasBackend env,
-    HasCallStack,
+  ( HasCallStack,
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
@@ -83,8 +82,7 @@ delete = Default.delete backendArgs
 -- | Permanently deletes the paths from the trash.
 permDelete ::
   forall env m.
-  ( HasBackend env,
-    HasCallStack,
+  ( HasCallStack,
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
@@ -149,8 +147,7 @@ getMetadata = Default.getMetadata backendArgs
 -- location.
 restore ::
   forall env m.
-  ( HasBackend env,
-    HasCallStack,
+  ( HasCallStack,
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,

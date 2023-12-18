@@ -18,8 +18,8 @@ import Charon.Backend.Default.BackendArgs
       ( MkBackendArgs,
         backend,
         fromCorePathData,
-        toCorePathData,
-        toPd
+        makePathData,
+        toCorePathData
       ),
   )
 import Charon.Backend.Default.Trash qualified as Trash
@@ -71,7 +71,7 @@ tests =
     backendFdo =
       MkBackendArgs
         { backend = BackendCbor,
-          toPd = Fdo.PathData.toPathData,
+          makePathData = Fdo.PathData.toPathData,
           toCorePathData = \_ pd ->
             pure
               $ PathData.UnsafePathData

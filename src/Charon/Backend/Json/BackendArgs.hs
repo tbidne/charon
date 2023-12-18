@@ -9,8 +9,8 @@ import Charon.Backend.Default.BackendArgs
       ( MkBackendArgs,
         backend,
         fromCorePathData,
-        toCorePathData,
-        toPd
+        makePathData,
+        toCorePathData
       ),
   )
 import Charon.Backend.Json.PathData qualified as Json.PathData
@@ -28,7 +28,7 @@ backendArgs ::
 backendArgs =
   MkBackendArgs
     { backend = BackendJson,
-      toPd = Json.PathData.toPathData,
+      makePathData = Json.PathData.toPathData,
       toCorePathData = const (pure . Json.PathData.toCorePathData),
       fromCorePathData = Json.PathData.fromCorePathData
     }

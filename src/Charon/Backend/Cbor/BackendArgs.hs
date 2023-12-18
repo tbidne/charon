@@ -10,8 +10,8 @@ import Charon.Backend.Default.BackendArgs
       ( MkBackendArgs,
         backend,
         fromCorePathData,
-        toCorePathData,
-        toPd
+        makePathData,
+        toCorePathData
       ),
   )
 import Charon.Prelude
@@ -28,7 +28,7 @@ backendArgs ::
 backendArgs =
   MkBackendArgs
     { backend = BackendCbor,
-      toPd = Cbor.PathData.toPathData,
+      makePathData = Cbor.PathData.toPathData,
       toCorePathData = const (pure . Cbor.PathData.toCorePathData),
       fromCorePathData = Cbor.PathData.fromCorePathData
     }

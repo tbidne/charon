@@ -54,7 +54,7 @@ import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as USeqNE
-import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
+import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
 import Charon.Utils qualified as Utils
@@ -75,8 +75,7 @@ import Numeric.Literal.Rational (FromRational (afromRational))
 -- defaults to XDG data e.g. @~\/.local/share/charon/@.
 delete ::
   forall m env pd k.
-  ( HasBackend env,
-    HasCallStack,
+  ( HasCallStack,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
@@ -101,8 +100,7 @@ delete backendArgs = deletePostHook backendArgs (const $ pure ())
 -- the delete succeeded.
 deletePostHook ::
   forall m env pd k.
-  ( HasBackend env,
-    HasCallStack,
+  ( HasCallStack,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
@@ -156,7 +154,6 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
 permDelete ::
   forall m env pd k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
-    HasBackend env,
     HasCallStack,
     HasTrashHome env,
     Is k A_Getter,
@@ -184,7 +181,6 @@ permDelete backendArgs = permDeletePostHook backendArgs (const $ pure ())
 permDeletePostHook ::
   forall m env pd k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
-    HasBackend env,
     HasCallStack,
     HasTrashHome env,
     Is k A_Getter,
@@ -334,7 +330,6 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
 restore ::
   forall m env pd k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
-    HasBackend env,
     HasCallStack,
     HasTrashHome env,
     Is k A_Getter,
@@ -360,7 +355,6 @@ restore backendArgs = restorePostHook backendArgs (const $ pure ())
 restorePostHook ::
   forall m env pd k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
-    HasBackend env,
     HasCallStack,
     HasTrashHome env,
     Is k A_Getter,
