@@ -21,11 +21,13 @@ where
 import Charon.Data.PathData (PathData)
 import Charon.Data.PathData qualified as PathDataCore
 import Charon.Data.PathData.Formatting
-  ( ColFormat (ColFormatFixed, ColFormatMax),
+  ( ColFormat,
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
     Sort (Name, Size),
     readSort,
+    _ColFormatFixed,
+    _ColFormatMax,
   )
 import Charon.Data.PathData.Formatting qualified as Formatting
 import Charon.Data.Paths
@@ -142,10 +144,10 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
     -- maxNameLen := longest name
     -- maxOrigLen := orig path
-    (maxNameLen, maxOrigLen) <- foldl' foldMap (pure maxStart) idx
+    (maxNameLen, maxOrigLen) <- foldl' findMaxes (pure maxStart) idx
 
     -- maxLen := maximum terminal width
-    maxLen <- getMaxLen
+    maxLen <- getTerminalLen
 
     -- maxLenForDynCols := available combined length for our dynamic
     -- columns (fileName + originalPath)
@@ -165,17 +167,29 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
     -- Basically: if an option is explicitly specified; use it. Otherwise,
     -- try to calculate a "good" value.
-    (nameLen, origLen) <- case ( nameFmtToStrategy maxNameLen nameFormat,
-                                 origFmtToStrategy maxOrigLen origFormat
+    (nameLen, origLen) <- case ( fmtToStrategy maxNameLen nameFormat,
+                                 fmtToStrategy maxOrigLen origFormat
                                ) of
       -- Both set, use them.
-      (Right nLen, Right oLen) -> pure (nLen, oLen)
+      (Just nLen, Just oLen) -> pure (nLen, oLen)
       -- nLen set -> derive oLen
-      (Right nLen, Left mkOLen) -> mkOLen maxLenForDynCols maxOrigLen nLen
-      -- derive nLen <- oLen set
-      (Left mkNLen, Right oLen) -> mkNLen maxLenForDynCols maxNameLen oLen
+      (Just nLen, Nothing) ->
+        (nLen,) -- (nLen, derived oLen)
+          <$> mkDynamicLen
+            maxLenForDynCols
+            Formatting.formatOriginalPathLenMin
+            maxOrigLen
+            nLen
+      -- oLen set -> derive nLen
+      (Nothing, Just oLen) ->
+        (,oLen) -- (derived nLen, oLen)
+          <$> mkDynamicLen
+            maxLenForDynCols
+            Formatting.formatFileNameLenMin
+            maxNameLen
+            oLen
       -- Neither set; Use both maxes if they fit, otherwise approx.
-      (Left _, Left _) ->
+      (Nothing, Nothing) ->
         if maxNameLen + maxOrigLen <= maxLenForDynCols
           then pure (maxNameLen, maxOrigLen)
           else
@@ -187,8 +201,8 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
     pure $ tabular coloring (Formatting.sortFn revSort sort) nameLen origLen idx
     where
       -- Search the index; find the longest name and orig path
-      foldMap :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
-      foldMap acc pd = do
+      findMaxes :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
+      findMaxes acc pd = do
         (!maxNameSoFar, !maxOrigSoFar) <- acc
         nameLen <- pathLen $ pd ^. #fileName
         origLen <- pathLen $ pd ^. #originalPath
@@ -202,33 +216,12 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
         p' <- decodeOsToFpThrowM p
         pure $ fromIntegral $ length p'
 
-      -- Map the name format to its strategy
-      nameFmtToStrategy _ (Just (ColFormatFixed nameLen)) = Right nameLen
-      nameFmtToStrategy maxNameLen (Just ColFormatMax) = Right maxNameLen
-      nameFmtToStrategy _ Nothing = Left mkNameLen
-
-      -- Map the orig format to its strategy
-      origFmtToStrategy _ (Just (ColFormatFixed origLen)) = Right origLen
-      origFmtToStrategy maxOrigLen (Just ColFormatMax) = Right maxOrigLen
-      origFmtToStrategy _ Nothing = Left mkOrigLen
-
-      -- Given a fixed nameLen, derive a "good" origLen
-      mkOrigLen maxLenForDynCols maxOrigLen nLen =
-        (nLen,) -- (nLen, derived oLen)
-          <$> mkDynamicLen
-            maxLenForDynCols
-            Formatting.formatOriginalPathLenMin
-            maxOrigLen
-            nLen
-
-      -- Given a fixed origLen, derive a "good" nameLen
-      mkNameLen maxLenForDynCols maxNameLen oLen =
-        (,oLen) -- (derived nLen, oLen)
-          <$> mkDynamicLen
-            maxLenForDynCols
-            Formatting.formatFileNameLenMin
-            maxNameLen
-            oLen
+      -- Map the format to its strategy
+      fmtToStrategy :: Natural -> Maybe ColFormat -> Maybe Natural
+      fmtToStrategy maxLen mcolFormat = wantsFixed <|> wantsMax
+        where
+          wantsFixed = preview (_Just % _ColFormatFixed) mcolFormat
+          wantsMax = preview (_Just % _ColFormatMax) mcolFormat $> maxLen
 
       revSort = listCmd ^. #revSort
       sort = listCmd ^. #sort
@@ -264,12 +257,12 @@ mkDynamicLen ::
 mkDynamicLen tMax cMin cMax dLen =
   addNamespace "mkDynamicLen"
     $ if dLen + cMax <= tMax
-      then -- 1. O and cMaxLen fits; use both
+      then -- 1. dLen and cMax fit; use cMax
         pure cMax
       else do
-        -- 2. MaxLen will not fit; use all remaining space to print
-        -- as much as we can. As we require at least minimums, this could lead
-        -- to wrapping.
+        -- 2. dLen + cMax will not fit, but at least dLen < tMax; use all
+        -- remaining space to print as much as we can. As we require at least
+        -- minimums, this could lead to wrapping.
         if dLen < tMax
           then do
             $(logDebug)
@@ -283,8 +276,8 @@ mkDynamicLen tMax cMin cMax dLen =
                   ")"
                 ]
             pure (max (tMax - dLen) cMin)
-          else -- 3. Requested origLen > available space. We are going to wrap
-          -- regardless, so use it and the minimum name.
+          else -- 3. Requested dLen > tMax. We are going to wrap regardless,
+          -- so use cMin.
           do
             $(logWarn)
               $ mconcat
@@ -297,8 +290,8 @@ mkDynamicLen tMax cMin cMax dLen =
                 ]
             pure cMin
 
-getMaxLen :: (MonadCatch m, MonadLoggerNS m, MonadTerminal m) => m Natural
-getMaxLen = addNamespace "getMaxLen" $ do
+getTerminalLen :: (MonadCatch m, MonadLoggerNS m, MonadTerminal m) => m Natural
+getTerminalLen = addNamespace "getTerminalLen" $ do
   tryAny getTerminalWidth >>= \case
     Right w -> pure w
     Left err -> do

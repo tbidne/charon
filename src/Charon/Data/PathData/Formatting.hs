@@ -6,6 +6,8 @@ module Charon.Data.PathData.Formatting
     _FormatTabular,
     _FormatSingleline,
     ColFormat (..),
+    _ColFormatFixed,
+    _ColFormatMax,
     Coloring (..),
 
     -- ** Sort
