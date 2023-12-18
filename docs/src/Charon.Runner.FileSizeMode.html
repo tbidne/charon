@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Runner.FileSizeMode</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier">FileSizeMode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#defaultSizeMode"><span class="hs-identifier">defaultSizeMode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#parseFileSizeMode"><span class="hs-identifier">parseFileSizeMode</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.html"><span class="hs-identifier">Data.Bytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#Size"><span class="hs-identifier">Size</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#M"><span class="hs-identifier">M</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier">SomeSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.html"><span class="hs-identifier">Data.Bytes</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Bytes</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Char</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ch</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Real</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">truncate</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | Determines what to do if the log file surpasses the given size</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- threshold.</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="FileSizeMode"><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier hs-var">FileSizeMode</span></a></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Print a warning.</span></span><span>
+</span><span id="line-19"></span><span>    </span><span id="FileSizeModeWarn"><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeModeWarn"><span class="hs-identifier hs-var">FileSizeModeWarn</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#Bytes"><span class="hs-identifier hs-type">Bytes</span></a></span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Delete the file.</span></span><span>
+</span><span id="line-21"></span><span>    </span><span id="FileSizeModeDelete"><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeModeDelete"><span class="hs-identifier hs-var">FileSizeModeDelete</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#Bytes"><span class="hs-identifier hs-type">Bytes</span></a></span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679626536"><span id="local-6989586621679626542"><span class="annot"><span class="annottext">FileSizeMode -&gt; FileSizeMode -&gt; Bool
+(FileSizeMode -&gt; FileSizeMode -&gt; Bool)
+-&gt; (FileSizeMode -&gt; FileSizeMode -&gt; Bool) -&gt; Eq FileSizeMode
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: FileSizeMode -&gt; FileSizeMode -&gt; Bool
+== :: FileSizeMode -&gt; FileSizeMode -&gt; Bool
+$c/= :: FileSizeMode -&gt; FileSizeMode -&gt; Bool
+/= :: FileSizeMode -&gt; FileSizeMode -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679626548"><span id="local-6989586621679626557"><span id="local-6989586621679626561"><span class="annot"><span class="annottext">Int -&gt; FileSizeMode -&gt; ShowS
+[FileSizeMode] -&gt; ShowS
+FileSizeMode -&gt; String
+(Int -&gt; FileSizeMode -&gt; ShowS)
+-&gt; (FileSizeMode -&gt; String)
+-&gt; ([FileSizeMode] -&gt; ShowS)
+-&gt; Show FileSizeMode
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FileSizeMode -&gt; ShowS
+showsPrec :: Int -&gt; FileSizeMode -&gt; ShowS
+$cshow :: FileSizeMode -&gt; String
+show :: FileSizeMode -&gt; String
+$cshowList :: [FileSizeMode] -&gt; ShowS
+showList :: [FileSizeMode] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#defaultSizeMode"><span class="hs-identifier hs-type">defaultSizeMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier hs-type">FileSizeMode</span></a></span><span>
+</span><span id="line-25"></span><span id="defaultSizeMode"><span class="annot"><span class="annottext">defaultSizeMode :: FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#defaultSizeMode"><span class="hs-identifier hs-var hs-var">defaultSizeMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#FileSizeModeDelete"><span class="hs-identifier hs-var">FileSizeModeDelete</span></a></span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; FileSizeMode)
+-&gt; Bytes 'B Natural -&gt; FileSizeMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy 'B -&gt; Bytes 'M Natural -&gt; Converted 'B (Bytes 'M Natural)
+forall a (t :: Size).
+(Conversion a, SingSize t) =&gt;
+Proxy t -&gt; a -&gt; Converted t a
+forall (t :: Size).
+SingSize t =&gt;
+Proxy t -&gt; Bytes 'M Natural -&gt; Converted t (Bytes 'M Natural)
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Class.Conversion.html#convert"><span class="hs-identifier hs-var">Bytes.convert</span></a></span><span> </span><span class="annot"><span class="annottext">Proxy 'B
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="annot"><span class="annottext">Bytes 'M Natural
+</span><a href="#local-6989586621679626567"><span class="hs-identifier hs-var">fiftyMb</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-27"></span><span>    </span><span id="local-6989586621679626567"><span class="annot"><span class="annottext">fiftyMb :: Bytes 'M Natural
+</span><a href="#local-6989586621679626567"><span class="hs-identifier hs-var hs-var">fiftyMb</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (s :: Size) n. n -&gt; Bytes s n
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#MkBytes"><span class="hs-identifier hs-var">MkBytes</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#M"><span class="hs-identifier hs-type">M</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">50</span></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span id="local-6989586621679626476"><span class="annot"><a href="Charon.Runner.FileSizeMode.html#parseFileSizeMode"><span class="hs-identifier hs-type">parseFileSizeMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679626476"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679626476"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier hs-type">FileSizeMode</span></a></span></span><span>
+</span><span id="line-30"></span><span id="parseFileSizeMode"><span class="annot"><span class="annottext">parseFileSizeMode :: forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#parseFileSizeMode"><span class="hs-identifier hs-var hs-var">parseFileSizeMode</span></a></span></span><span> </span><span id="local-6989586621679626595"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626595"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679626596"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626596"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679626597"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626597"><span class="hs-identifier hs-var">byteTxt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Bool) -&gt; Text -&gt; (Text, Text)
+</span><span class="hs-identifier hs-var">T.break</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Bool
+</span><span class="hs-identifier hs-var">Ch.isSpace</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626595"><span class="hs-identifier hs-var">txt</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679626600"><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; FileSizeMode
+</span><a href="#local-6989586621679626600"><span class="hs-identifier hs-var">cons</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626596"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;warn&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; FileSizeMode)
+-&gt; m (Bytes 'B Natural -&gt; FileSizeMode)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#FileSizeModeWarn"><span class="hs-identifier hs-var">FileSizeModeWarn</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;delete&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; FileSizeMode)
+-&gt; m (Bytes 'B Natural -&gt; FileSizeMode)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#FileSizeModeDelete"><span class="hs-identifier hs-var">FileSizeModeDelete</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679626601"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626601"><span class="hs-identifier hs-var">bad</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; m (Bytes 'B Natural -&gt; FileSizeMode)
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m (Bytes 'B Natural -&gt; FileSizeMode))
+-&gt; String -&gt; m (Bytes 'B Natural -&gt; FileSizeMode)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unrecognized size-mode: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626601"><span class="hs-identifier hs-var">bad</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text (Bytes 'B Natural)
+</span><a href="Charon.Runner.FileSizeMode.html#parseByteText"><span class="hs-identifier hs-var">parseByteText</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626597"><span class="hs-identifier hs-var">byteTxt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679626604"><span class="annot"><span class="annottext">Bytes 'B Natural
+</span><a href="#local-6989586621679626604"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">FileSizeMode -&gt; m FileSizeMode
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(FileSizeMode -&gt; m FileSizeMode) -&gt; FileSizeMode -&gt; m FileSizeMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; FileSizeMode
+</span><a href="#local-6989586621679626600"><span class="hs-identifier hs-var">cons</span></a></span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural
+</span><a href="#local-6989586621679626604"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679626605"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626605"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; m FileSizeMode
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m FileSizeMode) -&gt; String -&gt; m FileSizeMode
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Could not parse size-mode size: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626605"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#parseByteText"><span class="hs-identifier hs-type">parseByteText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#Bytes"><span class="hs-identifier hs-type">Bytes</span></a></span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span id="parseByteText"><span class="annot"><span class="annottext">parseByteText :: Text -&gt; Either Text (Bytes 'B Natural)
+</span><a href="Charon.Runner.FileSizeMode.html#parseByteText"><span class="hs-identifier hs-var hs-var">parseByteText</span></a></span></span><span> </span><span id="local-6989586621679626606"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626606"><span class="hs-identifier hs-var">txt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall a. Parser a =&gt; Text -&gt; Either Text a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Class.Parser.html#parse"><span class="hs-identifier hs-var">Bytes.parse</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier hs-type">SomeSize</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626606"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679626608"><span class="annot"><span class="annottext">SomeSize Natural
+</span><a href="#local-6989586621679626608"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; Either Text (Bytes 'B Natural)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; Either Text (Bytes 'B Natural))
+-&gt; Bytes 'B Natural -&gt; Either Text (Bytes 'B Natural)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Proxy 'B -&gt; SomeSize Natural -&gt; Converted 'B (SomeSize Natural)
+forall a (t :: Size).
+(Conversion a, SingSize t) =&gt;
+Proxy t -&gt; a -&gt; Converted t a
+forall (t :: Size).
+SingSize t =&gt;
+Proxy t -&gt; SomeSize Natural -&gt; Converted t (SomeSize Natural)
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Class.Conversion.html#convert"><span class="hs-identifier hs-var">Bytes.convert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: Size). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SomeSize Natural
+</span><a href="#local-6989586621679626608"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">forall a. Parser a =&gt; Text -&gt; Either Text a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Class.Parser.html#parse"><span class="hs-identifier hs-var">Bytes.parse</span></a></span><span> </span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier hs-type">SomeSize</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626606"><span class="hs-identifier hs-var">txt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-45"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679626609"><span class="annot"><span class="annottext">SomeSize Double
+</span><a href="#local-6989586621679626609"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; Either Text (Bytes 'B Natural)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Natural
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">truncate</span></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Natural) -&gt; Bytes 'B Double -&gt; Bytes 'B Natural
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Proxy 'B -&gt; SomeSize Double -&gt; Converted 'B (SomeSize Double)
+forall a (t :: Size).
+(Conversion a, SingSize t) =&gt;
+Proxy t -&gt; a -&gt; Converted t a
+forall (t :: Size).
+SingSize t =&gt;
+Proxy t -&gt; SomeSize Double -&gt; Converted t (SomeSize Double)
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Class.Conversion.html#convert"><span class="hs-identifier hs-var">Bytes.convert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall {k} (t :: k). Proxy t
+forall (t :: Size). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">SomeSize Double
+</span><a href="#local-6989586621679626609"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679626611"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626611"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Either Text (Bytes 'B Natural)
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679626611"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-47"></span></pre></body></html>

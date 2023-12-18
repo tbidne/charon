@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Provides the 'Serial' class.</span></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Class.Serial</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Class</span></span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier">Serial</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Encoding</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#encodeThrowM"><span class="hs-identifier">encodeThrowM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Decoding</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#decodeUnit"><span class="hs-identifier">decodeUnit</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#decodeUnitThrowM"><span class="hs-identifier">decodeUnitThrowM</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | Class for (de)serializing data. This differs from the Serialise class</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- in that Serialise is specifically used for the Cbor backend, whereas this</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- is meant as a general interface.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- For instance, the Cbor PathData implements Serial in terms of its</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- Serialise (binary) instance. We then use the common Serial interface</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- when (en|de)coding to/from a file.</span><span>
+</span><span id="line-24"></span><span class="hs-comment">--</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- Thus this interface is primarily intended for the various PathDatas to</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- implement. Less commonly, however, there are some types that implement</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- Serial as a general to/from ByteString, e.g. Timestampe implements it,</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- which is used by the Fdo backend.</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">class</span><span> </span><span id="Serial"><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-var">Serial</span></a></span></span><span> </span><span id="local-6989586621679621675"><span class="annot"><a href="#local-6989586621679621675"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-comment">-- | Extra data used for decoding.</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="DecodeExtra"><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-var">DecodeExtra</span></a></span></span><span> </span><span id="local-6989586621679621675"><span class="annot"><a href="#local-6989586621679621675"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-comment">-- | Encode to bytestring.</span><span>
+</span><span id="line-34"></span><span>  </span><span id="encode"><span class="annot"><a href="Charon.Class.Serial.html#encode"><span class="hs-identifier hs-type">encode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679621675"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-comment">-- | Decode from a bytestring.</span><span>
+</span><span id="line-37"></span><span>  </span><span id="decode"><span class="annot"><a href="Charon.Class.Serial.html#decode"><span class="hs-identifier hs-type">decode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621675"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><a href="#local-6989586621679621675"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><span class="hs-comment">-- | Encodes the value, throwing an exception for any failures.</span></span><span>
+</span><span id="line-40"></span><span id="local-6989586621679621666"><span id="local-6989586621679621668"><span class="annot"><a href="Charon.Class.Serial.html#encodeThrowM"><span class="hs-identifier hs-type">encodeThrowM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679621666"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621668"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679621668"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679621666"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span></span></span><span>
+</span><span id="line-41"></span><span id="encodeThrowM"><span class="annot"><span class="annottext">encodeThrowM :: forall (m :: * -&gt; *) a.
+(HasCallStack, MonadThrow m, Serial a) =&gt;
+a -&gt; m ByteString
+</span><a href="Charon.Class.Serial.html#encodeThrowM"><span class="hs-identifier hs-var hs-var">encodeThrowM</span></a></span></span><span> </span><span id="local-6989586621679621711"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679621711"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; Either String ByteString
+forall a. Serial a =&gt; a -&gt; Either String ByteString
+</span><a href="Charon.Class.Serial.html#encode"><span class="hs-identifier hs-var">encode</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679621711"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679621712"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679621712"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; m ByteString
+forall (m :: * -&gt; *) a.
+(MonadThrow m, HasCallStack) =&gt;
+String -&gt; m a
+</span><a href="file:///nix/store/k8ymz6x7925i5fvv6hz3aqafkv3b2i5b-safe-exceptions-0.1.7.4-doc/share/doc/safe-exceptions-0.1.7.4/html/src/Control.Exception.Safe.html#throwString"><span class="hs-identifier hs-var">throwString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679621712"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679621714"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679621714"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; m ByteString
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679621714"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span class="annot"><span class="hs-comment">-- | Decodes the value, throwing an exception for any failures.</span></span><span>
+</span><span id="line-46"></span><span id="local-6989586621679621680"><span id="local-6989586621679621681"><span class="annot"><a href="Charon.Class.Serial.html#decodeThrowM"><span class="hs-identifier hs-type">decodeThrowM</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621680"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679621681"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621680"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="#local-6989586621679621681"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621680"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-54"></span><span id="decodeThrowM"><span class="annot"><span class="annottext">decodeThrowM :: forall a (m :: * -&gt; *).
+(HasCallStack, Serial a, MonadThrow m) =&gt;
+DecodeExtra a -&gt; ByteString -&gt; m a
+</span><a href="Charon.Class.Serial.html#decodeThrowM"><span class="hs-identifier hs-var hs-var">decodeThrowM</span></a></span></span><span> </span><span id="local-6989586621679621726"><span class="annot"><span class="annottext">DecodeExtra a
+</span><a href="#local-6989586621679621726"><span class="hs-identifier hs-var">extra</span></a></span></span><span> </span><span id="local-6989586621679621727"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679621727"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">DecodeExtra a -&gt; ByteString -&gt; Either String a
+forall a.
+Serial a =&gt;
+DecodeExtra a -&gt; ByteString -&gt; Either String a
+</span><a href="Charon.Class.Serial.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeExtra a
+</span><a href="#local-6989586621679621726"><span class="hs-identifier hs-var">extra</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679621727"><span class="hs-identifier hs-var">bs</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679621728"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679621728"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadThrow m, HasCallStack) =&gt;
+String -&gt; m a
+</span><a href="file:///nix/store/k8ymz6x7925i5fvv6hz3aqafkv3b2i5b-safe-exceptions-0.1.7.4-doc/share/doc/safe-exceptions-0.1.7.4/html/src/Control.Exception.Safe.html#throwString"><span class="hs-identifier hs-var">throwString</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679621728"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679621729"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679621729"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; m a
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679621729"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><span class="hs-comment">-- | Convenience function for when decoding takes no extra data.</span></span><span>
+</span><span id="line-59"></span><span id="local-6989586621679621685"><span class="annot"><a href="Charon.Class.Serial.html#decodeUnit"><span class="hs-identifier hs-type">decodeUnit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621685"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621685"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="annot"><a href="#local-6989586621679621685"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-60"></span><span id="decodeUnit"><span class="annot"><span class="annottext">decodeUnit :: forall a.
+(DecodeExtra a ~ (), Serial a) =&gt;
+ByteString -&gt; Either String a
+</span><a href="Charon.Class.Serial.html#decodeUnit"><span class="hs-identifier hs-var hs-var">decodeUnit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeExtra a -&gt; ByteString -&gt; Either String a
+forall a.
+Serial a =&gt;
+DecodeExtra a -&gt; ByteString -&gt; Either String a
+</span><a href="Charon.Class.Serial.html#decode"><span class="hs-identifier hs-var">decode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | Convenience function for when 'decodeThrowM' takes no extra data.</span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679621690"><span id="local-6989586621679621691"><span class="annot"><a href="Charon.Class.Serial.html#decodeUnitThrowM"><span class="hs-identifier hs-type">decodeUnitThrowM</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621690"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679621691"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621690"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-70"></span><span>  </span><span class="annot"><a href="#local-6989586621679621691"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679621690"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-71"></span><span id="decodeUnitThrowM"><span class="annot"><span class="annottext">decodeUnitThrowM :: forall a (m :: * -&gt; *).
+(DecodeExtra a ~ (), HasCallStack, MonadThrow m, Serial a) =&gt;
+ByteString -&gt; m a
+</span><a href="Charon.Class.Serial.html#decodeUnitThrowM"><span class="hs-identifier hs-var hs-var">decodeUnitThrowM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DecodeExtra a -&gt; ByteString -&gt; m a
+forall a (m :: * -&gt; *).
+(HasCallStack, Serial a, MonadThrow m) =&gt;
+DecodeExtra a -&gt; ByteString -&gt; m a
+</span><a href="Charon.Class.Serial.html#decodeThrowM"><span class="hs-identifier hs-var">decodeThrowM</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span></pre></body></html>

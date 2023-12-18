@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Fdo.Utils</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.Utils.html#percentEncodeFileName"><span class="hs-identifier">percentEncodeFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Utils.html"><span class="hs-identifier">Charon.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><a href="file:///nix/store/1znim02rkqixxlsqxf5qrmxc749nar7r-scientific-0.3.7.0-doc/share/doc/scientific-0.3.7.0/html/src/Utils.html"><span class="hs-identifier">Utils</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="annot"><a href="Charon.Backend.Fdo.Utils.html#percentEncodeFileName"><span class="hs-identifier hs-type">percentEncodeFileName</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679630873"><span class="annot"><a href="#local-6989586621679630873"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679630869"><span class="annot"><a href="#local-6989586621679630869"><span class="hs-identifier hs-type">pd</span></a></span></span><span> </span><span id="local-6989586621679630866"><span class="annot"><a href="#local-6989586621679630866"><span class="hs-identifier hs-type">k</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Subtyping.html#Is"><span class="hs-identifier hs-type">Is</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679630866"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Types.html#A_Getter"><span class="hs-identifier hs-type">A_Getter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Label.html#LabelOptic%27"><span class="hs-identifier hs-type">LabelOptic'</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fileName&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679630866"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679630869"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="annot"><a href="#local-6989586621679630873"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><a href="#local-6989586621679630869"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="#local-6989586621679630873"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span>
+</span><span id="line-20"></span><span id="percentEncodeFileName"><span class="annot"><span class="annottext">percentEncodeFileName :: forall (m :: * -&gt; *) pd k.
+(HasCallStack, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadThrow m) =&gt;
+pd -&gt; m ByteString
+</span><a href="Charon.Backend.Fdo.Utils.html#percentEncodeFileName"><span class="hs-identifier hs-var hs-var">percentEncodeFileName</span></a></span></span><span> </span><span id="local-6989586621679630933"><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679630933"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; ByteString
+</span><a href="#local-6989586621679630934"><span class="hs-identifier hs-var">percentEncode</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ByteString) -&gt; m String -&gt; m ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; m String
+forall (m :: * -&gt; *).
+(HasCallStack, MonadThrow m) =&gt;
+OsPath -&gt; m String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpThrowM"><span class="hs-identifier hs-var">decodeOsToFpThrowM</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679630937"><span class="hs-identifier hs-var">fileName</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-23"></span><span>    </span><span id="local-6989586621679630934"><span class="annot"><span class="annottext">percentEncode :: String -&gt; ByteString
+</span><a href="#local-6989586621679630934"><span class="hs-identifier hs-var hs-var">percentEncode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="Charon.Utils.html#percentEncode"><span class="hs-identifier hs-var">Utils.percentEncode</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (String -&gt; ByteString) -&gt; String -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString
+</span><span class="hs-identifier hs-var">encodeUtf8</span></span><span> </span><span class="annot"><span class="annottext">(Text -&gt; ByteString) -&gt; (String -&gt; Text) -&gt; String -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">T.pack</span></span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679630937"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679630937"><span class="hs-identifier hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Optic' k NoIx pd (PathI 'TrashEntryFileName)
+-&gt; pd -&gt; PathI 'TrashEntryFileName
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' k NoIx pd (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679630933"><span class="hs-identifier hs-var">pd</span></a></span><span>
+</span><span id="line-25"></span></pre></body></html>

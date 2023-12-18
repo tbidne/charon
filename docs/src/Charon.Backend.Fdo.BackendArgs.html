@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Fdo.BackendArgs</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgs"><span class="hs-identifier">backendArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgsDirectorySizes"><span class="hs-identifier">backendArgsDirectorySizes</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier">Backend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#BackendFdo"><span class="hs-identifier">BackendFdo</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html"><span class="hs-identifier">Charon.Backend.Default.BackendArgs</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier">BackendArgs</span></a></span><span>
+</span><span id="line-10"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#MkBackendArgs"><span class="hs-identifier">MkBackendArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3Abackend%3AMkBackendArgs"><span class="hs-identifier">backend</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AfromCorePathData%3AMkBackendArgs"><span class="hs-identifier">fromCorePathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AmakePathData%3AMkBackendArgs"><span class="hs-identifier">makePathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AtoCorePathData%3AMkBackendArgs"><span class="hs-identifier">toCorePathData</span></a></span><span>
+</span><span id="line-15"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.DirectorySizes.html"><span class="hs-identifier">Charon.Backend.Fdo.DirectorySizes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Fdo.DirectorySizes.html#DirectorySizesEntry"><span class="hs-identifier">DirectorySizesEntry</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.PathData.html"><span class="hs-identifier">Charon.Backend.Fdo.PathData</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Fdo.PathData</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span id="local-6989586621679636225"><span class="annot"><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgs"><span class="hs-identifier hs-type">backendArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier hs-type">BackendArgs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636225"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.PathData.html#PathData"><span class="hs-identifier hs-type">Fdo.PathData.PathData</span></a></span></span><span>
+</span><span id="line-30"></span><span id="backendArgs"><span class="annot"><span class="annottext">backendArgs :: forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var hs-var">backendArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#MkBackendArgs"><span class="hs-identifier hs-type">MkBackendArgs</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:backend:MkBackendArgs :: Backend
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3Abackend%3AMkBackendArgs"><span class="hs-identifier hs-var">backend</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Backend
+</span><a href="Charon.Backend.Data.html#BackendFdo"><span class="hs-identifier hs-var">BackendFdo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">$sel:makePathData:MkBackendArgs :: Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AmakePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">makePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadLoggerNS m, MonadPathReader m) =&gt;
+Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Fdo.PathData.html#toPathData"><span class="hs-identifier hs-var">Fdo.PathData.toPathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><span class="annottext">$sel:toCorePathData:MkBackendArgs :: PathI 'TrashHome -&gt; PathData -&gt; m PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AtoCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">toCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathData -&gt; m PathData
+forall (m :: * -&gt; *).
+(HasCallStack, MonadAsync m, MonadCatch m, MonadLoggerNS m,
+ MonadPathReader m, MonadPosixCompat m, MonadTerminal m) =&gt;
+PathI 'TrashHome -&gt; PathData -&gt; m PathData
+</span><a href="Charon.Backend.Fdo.PathData.html#toCorePathData"><span class="hs-identifier hs-var">Fdo.PathData.toCorePathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><span class="annottext">$sel:fromCorePathData:MkBackendArgs :: PathData -&gt; PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AfromCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">fromCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData
+</span><a href="Charon.Backend.Fdo.PathData.html#fromCorePathData"><span class="hs-identifier hs-var">Fdo.PathData.fromCorePathData</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Like backendArgs, but uses directorysizes to transform</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- Fdo PathData -&gt; Core PathData instead of calculating size on the fly.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- This has the potential to be faster when we expect to do many calculations</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- (e.g. reading the index).</span><span>
+</span><span id="line-42"></span><span id="local-6989586621679636245"><span class="annot"><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgsDirectorySizes"><span class="hs-identifier hs-type">backendArgsDirectorySizes</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashMap.Internal.html#HashMap"><span class="hs-identifier hs-type">HashMap</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.DirectorySizes.html#DirectorySizesEntry"><span class="hs-identifier hs-type">DirectorySizesEntry</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier hs-type">BackendArgs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679636245"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Fdo.PathData.html#PathData"><span class="hs-identifier hs-type">Fdo.PathData.PathData</span></a></span></span><span>
+</span><span id="line-52"></span><span id="backendArgsDirectorySizes"><span class="annot"><span class="annottext">backendArgsDirectorySizes :: forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+HashMap ByteString DirectorySizesEntry -&gt; BackendArgs m PathData
+</span><a href="Charon.Backend.Fdo.BackendArgs.html#backendArgsDirectorySizes"><span class="hs-identifier hs-var hs-var">backendArgsDirectorySizes</span></a></span></span><span> </span><span id="local-6989586621679636300"><span class="annot"><span class="annottext">HashMap ByteString DirectorySizesEntry
+</span><a href="#local-6989586621679636300"><span class="hs-identifier hs-var">dsizeMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#MkBackendArgs"><span class="hs-identifier hs-type">MkBackendArgs</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:backend:MkBackendArgs :: Backend
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3Abackend%3AMkBackendArgs"><span class="hs-identifier hs-var">backend</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Backend
+</span><a href="Charon.Backend.Data.html#BackendFdo"><span class="hs-identifier hs-var">BackendFdo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>      </span><span class="annot"><span class="annottext">$sel:makePathData:MkBackendArgs :: Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AmakePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">makePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadLoggerNS m, MonadPathReader m) =&gt;
+Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Fdo.PathData.html#toPathData"><span class="hs-identifier hs-var">Fdo.PathData.toPathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">$sel:toCorePathData:MkBackendArgs :: PathI 'TrashHome -&gt; PathData -&gt; m PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AtoCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">toCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">HashMap ByteString DirectorySizesEntry
+-&gt; PathI 'TrashHome -&gt; PathData -&gt; m PathData
+forall (m :: * -&gt; *).
+(HasCallStack, MonadAsync m, MonadCatch m, MonadLoggerNS m,
+ MonadPathReader m, MonadPosixCompat m, MonadTerminal m) =&gt;
+HashMap ByteString DirectorySizesEntry
+-&gt; PathI 'TrashHome -&gt; PathData -&gt; m PathData
+</span><a href="Charon.Backend.Fdo.PathData.html#toCorePathDataDirectorySizes"><span class="hs-identifier hs-var">Fdo.PathData.toCorePathDataDirectorySizes</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap ByteString DirectorySizesEntry
+</span><a href="#local-6989586621679636300"><span class="hs-identifier hs-var">dsizeMap</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">$sel:fromCorePathData:MkBackendArgs :: PathData -&gt; PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AfromCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">fromCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData
+</span><a href="Charon.Backend.Fdo.PathData.html#fromCorePathData"><span class="hs-identifier hs-var">Fdo.PathData.fromCorePathData</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-59"></span></pre></body></html>

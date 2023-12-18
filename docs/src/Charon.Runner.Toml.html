@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Provides TOML configuration.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Runner.Toml</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier">TomlConfig</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Runner.Toml.html#mergeConfigs"><span class="hs-identifier">mergeConfigs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Charon.Runner.Toml.html#defaultTomlConfig"><span class="hs-identifier">defaultTomlConfig</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier">Backend</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier">TrashHome</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.Args.html"><span class="hs-identifier">Charon.Runner.Args</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Args.html#Args"><span class="hs-identifier">Args</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.Command.html"><span class="hs-identifier">Charon.Runner.Command</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.html#CommandP2"><span class="hs-identifier">CommandP2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html"><span class="hs-identifier">Charon.Runner.FileSizeMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier">FileSizeMode</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#parseFileSizeMode"><span class="hs-identifier">parseFileSizeMode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html"><span class="hs-identifier">Charon.Runner.Phase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier">advancePhase</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Utils.html"><span class="hs-identifier">Charon.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.html"><span class="hs-identifier">TOML</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#DecodeTOML"><span class="hs-identifier">DecodeTOML</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOpt"><span class="hs-identifier">getFieldOpt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOptWith"><span class="hs-identifier">getFieldOptWith</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html"><span class="hs-identifier">TOML.Decode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#tomlDecoder"><span class="hs-identifier">tomlDecoder</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="annot"><span class="hs-comment">-- | Holds TOML configuration.</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">data</span><span> </span><span id="TomlConfig"><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier hs-var">TomlConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkTomlConfig"><span class="annot"><a href="Charon.Runner.Toml.html#MkTomlConfig"><span class="hs-identifier hs-var">MkTomlConfig</span></a></span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Trash home.</span></span><span>
+</span><span id="line-30"></span><span>    </span><span id="%24sel%3AtrashHome%3AMkTomlConfig"><span class="annot"><span class="annottext">TomlConfig -&gt; Maybe (PathI 'TrashHome)
+</span><a href="Charon.Runner.Toml.html#%24sel%3AtrashHome%3AMkTomlConfig"><span class="hs-identifier hs-var hs-var">trashHome</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Backend.</span></span><span>
+</span><span id="line-32"></span><span>    </span><span id="%24sel%3Abackend%3AMkTomlConfig"><span class="annot"><span class="annottext">TomlConfig -&gt; Maybe Backend
+</span><a href="Charon.Runner.Toml.html#%24sel%3Abackend%3AMkTomlConfig"><span class="hs-identifier hs-var hs-var">backend</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier hs-type">Backend</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">-- | Log level. The double Maybe is so we distinguish between</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- unspecified (Nothing) and explicitly disabled (Just Nothing).</span><span>
+</span><span id="line-35"></span><span>    </span><span id="%24sel%3AlogLevel%3AMkTomlConfig"><span class="annot"><span class="annottext">TomlConfig -&gt; Maybe (Maybe LogLevel)
+</span><a href="Charon.Runner.Toml.html#%24sel%3AlogLevel%3AMkTomlConfig"><span class="hs-identifier hs-var hs-var">logLevel</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Whether to warn/delete large log files.</span></span><span>
+</span><span id="line-37"></span><span>    </span><span id="%24sel%3AlogSizeMode%3AMkTomlConfig"><span class="annot"><span class="annottext">TomlConfig -&gt; Maybe FileSizeMode
+</span><a href="Charon.Runner.Toml.html#%24sel%3AlogSizeMode%3AMkTomlConfig"><span class="hs-identifier hs-var hs-var">logSizeMode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Runner.FileSizeMode.html#FileSizeMode"><span class="hs-identifier hs-type">FileSizeMode</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679643952"><span id="local-6989586621679643963"><span class="annot"><span class="annottext">TomlConfig -&gt; TomlConfig -&gt; Bool
+(TomlConfig -&gt; TomlConfig -&gt; Bool)
+-&gt; (TomlConfig -&gt; TomlConfig -&gt; Bool) -&gt; Eq TomlConfig
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TomlConfig -&gt; TomlConfig -&gt; Bool
+== :: TomlConfig -&gt; TomlConfig -&gt; Bool
+$c/= :: TomlConfig -&gt; TomlConfig -&gt; Bool
+/= :: TomlConfig -&gt; TomlConfig -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679643973"><span id="local-6989586621679643986"><span id="local-6989586621679643990"><span class="annot"><span class="annottext">Int -&gt; TomlConfig -&gt; ShowS
+[TomlConfig] -&gt; ShowS
+TomlConfig -&gt; String
+(Int -&gt; TomlConfig -&gt; ShowS)
+-&gt; (TomlConfig -&gt; String)
+-&gt; ([TomlConfig] -&gt; ShowS)
+-&gt; Show TomlConfig
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TomlConfig -&gt; ShowS
+showsPrec :: Int -&gt; TomlConfig -&gt; ShowS
+$cshow :: TomlConfig -&gt; String
+show :: TomlConfig -&gt; String
+$cshowList :: [TomlConfig] -&gt; ShowS
+showList :: [TomlConfig] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span id="local-6989586621679643771"><span id="local-6989586621679643772"><span id="local-6989586621679643773"><span id="local-6989586621679643774"><span id="local-6989586621679643775"><span id="local-6989586621679643776"><span id="local-6989586621679643777"><span id="local-6989586621679643778"><span id="local-6989586621679643779"><span id="local-6989586621679643780"><span id="local-6989586621679643781"><span id="local-6989586621679643782"><span id="local-6989586621679644002"><span id="local-6989586621679644007"><span id="local-6989586621679644012"><span id="local-6989586621679644017"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">TomlConfig</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Charon.Runner.Toml.html#defaultTomlConfig"><span class="hs-identifier hs-type">defaultTomlConfig</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier hs-type">TomlConfig</span></a></span><span>
+</span><span id="line-44"></span><span id="defaultTomlConfig"><span class="annot"><span class="annottext">defaultTomlConfig :: TomlConfig
+</span><a href="Charon.Runner.Toml.html#defaultTomlConfig"><span class="hs-identifier hs-var hs-var">defaultTomlConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashHome)
+-&gt; Maybe Backend
+-&gt; Maybe (Maybe LogLevel)
+-&gt; Maybe FileSizeMode
+-&gt; TomlConfig
+</span><a href="Charon.Runner.Toml.html#MkTomlConfig"><span class="hs-identifier hs-var">MkTomlConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashHome)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe Backend
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe LogLevel)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="annot"><span class="annottext">Maybe FileSizeMode
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#DecodeTOML"><span class="hs-identifier hs-type">DecodeTOML</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier hs-type">TomlConfig</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-47"></span><span>  </span><span id="local-6989586621679644078"><span class="annot"><span class="annottext">tomlDecoder :: Decoder TomlConfig
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#tomlDecoder"><span class="hs-identifier hs-var hs-var hs-var hs-var">tomlDecoder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashHome)
+-&gt; Maybe Backend
+-&gt; Maybe (Maybe LogLevel)
+-&gt; Maybe FileSizeMode
+-&gt; TomlConfig
+</span><a href="Charon.Runner.Toml.html#MkTomlConfig"><span class="hs-identifier hs-var">MkTomlConfig</span></a></span><span>
+</span><span id="line-49"></span><span>      </span><span class="annot"><span class="annottext">(Maybe (PathI 'TrashHome)
+ -&gt; Maybe Backend
+ -&gt; Maybe (Maybe LogLevel)
+ -&gt; Maybe FileSizeMode
+ -&gt; TomlConfig)
+-&gt; Decoder (Maybe (PathI 'TrashHome))
+-&gt; Decoder
+     (Maybe Backend
+      -&gt; Maybe (Maybe LogLevel) -&gt; Maybe FileSizeMode -&gt; TomlConfig)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder (Maybe (PathI 'TrashHome))
+forall {i :: PathIndex}. Decoder (Maybe (PathI i))
+</span><a href="#local-6989586621679644080"><span class="hs-identifier hs-var">decodeTrashHome</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Decoder
+  (Maybe Backend
+   -&gt; Maybe (Maybe LogLevel) -&gt; Maybe FileSizeMode -&gt; TomlConfig)
+-&gt; Decoder (Maybe Backend)
+-&gt; Decoder
+     (Maybe (Maybe LogLevel) -&gt; Maybe FileSizeMode -&gt; TomlConfig)
+forall a b. Decoder (a -&gt; b) -&gt; Decoder a -&gt; Decoder b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder (Maybe Backend)
+</span><a href="#local-6989586621679644081"><span class="hs-identifier hs-var">decodeBackend</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">Decoder
+  (Maybe (Maybe LogLevel) -&gt; Maybe FileSizeMode -&gt; TomlConfig)
+-&gt; Decoder (Maybe (Maybe LogLevel))
+-&gt; Decoder (Maybe FileSizeMode -&gt; TomlConfig)
+forall a b. Decoder (a -&gt; b) -&gt; Decoder a -&gt; Decoder b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder (Maybe (Maybe LogLevel))
+</span><a href="#local-6989586621679644082"><span class="hs-identifier hs-var">decodeLogLevel</span></a></span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><span class="annottext">Decoder (Maybe FileSizeMode -&gt; TomlConfig)
+-&gt; Decoder (Maybe FileSizeMode) -&gt; Decoder TomlConfig
+forall a b. Decoder (a -&gt; b) -&gt; Decoder a -&gt; Decoder b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;*&gt;</span></span><span> </span><span class="annot"><span class="annottext">Decoder (Maybe FileSizeMode)
+</span><a href="#local-6989586621679644083"><span class="hs-identifier hs-var">decodeSizeMode</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>      </span><span id="local-6989586621679644080"><span class="annot"><span class="annottext">decodeTrashHome :: Decoder (Maybe (PathI i))
+</span><a href="#local-6989586621679644080"><span class="hs-identifier hs-var hs-var">decodeTrashHome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>        </span><span id="local-6989586621679644101"><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679644101"><span class="hs-identifier hs-var">mh</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Decoder (Maybe String)
+forall a. DecodeTOML a =&gt; Text -&gt; Decoder (Maybe a)
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOpt"><span class="hs-identifier hs-var">getFieldOpt</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;trash-home&quot;</span></span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe String
+</span><a href="#local-6989586621679644101"><span class="hs-identifier hs-var">mh</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-57"></span><span>          </span><span class="annot"><span class="annottext">Maybe String
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (PathI i) -&gt; Decoder (Maybe (PathI i))
+forall a. a -&gt; Decoder a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Maybe (PathI i)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-58"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679644102"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679644102"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-59"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either EncodingException OsPath
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#encodeFpToOs"><span class="hs-identifier hs-var">encodeFpToOs</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679644102"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-60"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679644104"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679644104"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe (PathI i) -&gt; Decoder (Maybe (PathI i))
+forall a. a -&gt; Decoder a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Maybe (PathI i) -&gt; Decoder (Maybe (PathI i)))
+-&gt; Maybe (PathI i) -&gt; Decoder (Maybe (PathI i))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI i -&gt; Maybe (PathI i)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(PathI i -&gt; Maybe (PathI i)) -&gt; PathI i -&gt; Maybe (PathI i)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; PathI i
+forall (i :: PathIndex). OsPath -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679644104"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-61"></span><span>              </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679644105"><span class="annot"><span class="annottext">EncodingException
+</span><a href="#local-6989586621679644105"><span class="hs-identifier hs-var">ex</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Decoder (Maybe (PathI i))
+forall a. String -&gt; Decoder a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Decoder (Maybe (PathI i)))
+-&gt; String -&gt; Decoder (Maybe (PathI i))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Could not encode trash-home: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EncodingException -&gt; String
+forall e. Exception e =&gt; e -&gt; String
+</span><span class="hs-identifier hs-var">displayException</span></span><span> </span><span class="annot"><span class="annottext">EncodingException
+</span><a href="#local-6989586621679644105"><span class="hs-identifier hs-var">ex</span></a></span><span>
+</span><span id="line-62"></span><span>      </span><span id="local-6989586621679644081"><span class="annot"><span class="annottext">decodeBackend :: Decoder (Maybe Backend)
+</span><a href="#local-6989586621679644081"><span class="hs-identifier hs-var hs-var">decodeBackend</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder Backend -&gt; Text -&gt; Decoder (Maybe Backend)
+forall a. Decoder a -&gt; Text -&gt; Decoder (Maybe a)
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOptWith"><span class="hs-identifier hs-var">getFieldOptWith</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder Backend
+forall a. DecodeTOML a =&gt; Decoder a
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#tomlDecoder"><span class="hs-identifier hs-var">tomlDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;backend&quot;</span></span><span>
+</span><span id="line-63"></span><span>      </span><span id="local-6989586621679644082"><span class="annot"><span class="annottext">decodeLogLevel :: Decoder (Maybe (Maybe LogLevel))
+</span><a href="#local-6989586621679644082"><span class="hs-identifier hs-var hs-var">decodeLogLevel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">Decoder (Maybe LogLevel)
+-&gt; Text -&gt; Decoder (Maybe (Maybe LogLevel))
+forall a. Decoder a -&gt; Text -&gt; Decoder (Maybe a)
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOptWith"><span class="hs-identifier hs-var">getFieldOptWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder Text
+forall a. DecodeTOML a =&gt; Decoder a
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#tomlDecoder"><span class="hs-identifier hs-var">tomlDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder Text
+-&gt; (Text -&gt; Decoder (Maybe LogLevel)) -&gt; Decoder (Maybe LogLevel)
+forall a b. Decoder a -&gt; (a -&gt; Decoder b) -&gt; Decoder b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Decoder (Maybe LogLevel)
+forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m (Maybe LogLevel)
+</span><a href="Charon.Utils.html#readLogLevel"><span class="hs-identifier hs-var">U.readLogLevel</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;log-level&quot;</span></span><span>
+</span><span id="line-65"></span><span>      </span><span id="local-6989586621679644083"><span class="annot"><span class="annottext">decodeSizeMode :: Decoder (Maybe FileSizeMode)
+</span><a href="#local-6989586621679644083"><span class="hs-identifier hs-var hs-var">decodeSizeMode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Decoder FileSizeMode -&gt; Text -&gt; Decoder (Maybe FileSizeMode)
+forall a. Decoder a -&gt; Text -&gt; Decoder (Maybe a)
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#getFieldOptWith"><span class="hs-identifier hs-var">getFieldOptWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Decoder Text
+forall a. DecodeTOML a =&gt; Decoder a
+</span><a href="file:///nix/store/gfwzh9i8rj34931p88bivbfkk2k4cn2d-toml-reader-0.2.1.0-doc/share/doc/toml-reader-0.2.1.0/html/src/TOML.Decode.html#tomlDecoder"><span class="hs-identifier hs-var">tomlDecoder</span></a></span><span> </span><span class="annot"><span class="annottext">Decoder Text
+-&gt; (Text -&gt; Decoder FileSizeMode) -&gt; Decoder FileSizeMode
+forall a b. Decoder a -&gt; (a -&gt; Decoder b) -&gt; Decoder b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Decoder FileSizeMode
+forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m FileSizeMode
+</span><a href="Charon.Runner.FileSizeMode.html#parseFileSizeMode"><span class="hs-identifier hs-var">parseFileSizeMode</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;log-size-mode&quot;</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Merges the args and toml config into a single toml config. If some field</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- F is specified by both args and toml config, then args takes precedence.</span><span>
+</span><span id="line-69"></span><span class="annot"><a href="Charon.Runner.Toml.html#mergeConfigs"><span class="hs-identifier hs-type">mergeConfigs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Args.html#Args"><span class="hs-identifier hs-type">Args</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier hs-type">TomlConfig</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Toml.html#TomlConfig"><span class="hs-identifier hs-type">TomlConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Command.html#CommandP2"><span class="hs-identifier hs-type">CommandP2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span id="mergeConfigs"><span class="annot"><span class="annottext">mergeConfigs :: Args -&gt; TomlConfig -&gt; (TomlConfig, CommandP2)
+</span><a href="Charon.Runner.Toml.html#mergeConfigs"><span class="hs-identifier hs-var hs-var">mergeConfigs</span></a></span></span><span> </span><span id="local-6989586621679644120"><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span></span><span> </span><span id="local-6989586621679644121"><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644121"><span class="hs-identifier hs-var">toml</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644122"><span class="hs-identifier hs-var">mergedConfig</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">CommandP1 -&gt; NextPhase CommandP1
+forall a. AdvancePhase a =&gt; a -&gt; NextPhase a
+</span><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier hs-var">advancePhase</span></a></span><span> </span><span class="annot"><span class="annottext">CommandP1
+</span><a href="#local-6989586621679644123"><span class="hs-identifier hs-var">cmd</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-72"></span><span>    </span><span id="local-6989586621679644123"><span class="annot"><span class="annottext">cmd :: CommandP1
+</span><a href="#local-6989586621679644123"><span class="hs-identifier hs-var hs-var">cmd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">Args -&gt; Optic' A_Lens NoIx Args CommandP1 -&gt; CommandP1
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Args CommandP1
+</span><span class="">#command</span></span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679644122"><span class="annot"><span class="annottext">mergedConfig :: TomlConfig
+</span><a href="#local-6989586621679644122"><span class="hs-identifier hs-var hs-var">mergedConfig</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><a href="Charon.Runner.Toml.html#MkTomlConfig"><span class="hs-identifier hs-type">MkTomlConfig</span></a></span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:trashHome:MkTomlConfig :: Maybe (PathI 'TrashHome)
+</span><a href="Charon.Runner.Toml.html#%24sel%3AtrashHome%3AMkTomlConfig"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe (PathI 'TrashHome))
+-&gt; Lens' TomlConfig (Maybe (PathI 'TrashHome))
+-&gt; Args
+-&gt; TomlConfig
+-&gt; Maybe (PathI 'TrashHome)
+forall (f :: * -&gt; *) s a t.
+Alternative f =&gt;
+Lens' s (f a) -&gt; Lens' t (f a) -&gt; s -&gt; t -&gt; f a
+</span><a href="Charon.Utils.html#mergeAlt"><span class="hs-identifier hs-var">U.mergeAlt</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe (PathI 'TrashHome))
+</span><span class="">#trashHome</span></span><span> </span><span class="annot"><span class="annottext">Lens' TomlConfig (Maybe (PathI 'TrashHome))
+</span><span class="">#trashHome</span></span><span> </span><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644121"><span class="hs-identifier hs-var">toml</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>          </span><span class="annot"><span class="annottext">$sel:backend:MkTomlConfig :: Maybe Backend
+</span><a href="Charon.Runner.Toml.html#%24sel%3Abackend%3AMkTomlConfig"><span class="hs-identifier hs-var">backend</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe Backend)
+-&gt; Lens' TomlConfig (Maybe Backend)
+-&gt; Args
+-&gt; TomlConfig
+-&gt; Maybe Backend
+forall (f :: * -&gt; *) s a t.
+Alternative f =&gt;
+Lens' s (f a) -&gt; Lens' t (f a) -&gt; s -&gt; t -&gt; f a
+</span><a href="Charon.Utils.html#mergeAlt"><span class="hs-identifier hs-var">U.mergeAlt</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe Backend)
+</span><span class="">#backend</span></span><span> </span><span class="annot"><span class="annottext">Lens' TomlConfig (Maybe Backend)
+</span><span class="">#backend</span></span><span> </span><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644121"><span class="hs-identifier hs-var">toml</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>          </span><span class="annot"><span class="annottext">$sel:logLevel:MkTomlConfig :: Maybe (Maybe LogLevel)
+</span><a href="Charon.Runner.Toml.html#%24sel%3AlogLevel%3AMkTomlConfig"><span class="hs-identifier hs-var">logLevel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe (Maybe LogLevel))
+-&gt; Lens' TomlConfig (Maybe (Maybe LogLevel))
+-&gt; Args
+-&gt; TomlConfig
+-&gt; Maybe (Maybe LogLevel)
+forall (f :: * -&gt; *) s a t.
+Alternative f =&gt;
+Lens' s (f a) -&gt; Lens' t (f a) -&gt; s -&gt; t -&gt; f a
+</span><a href="Charon.Utils.html#mergeAlt"><span class="hs-identifier hs-var">U.mergeAlt</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe (Maybe LogLevel))
+</span><span class="">#logLevel</span></span><span> </span><span class="annot"><span class="annottext">Lens' TomlConfig (Maybe (Maybe LogLevel))
+</span><span class="">#logLevel</span></span><span> </span><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644121"><span class="hs-identifier hs-var">toml</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><span class="annottext">$sel:logSizeMode:MkTomlConfig :: Maybe FileSizeMode
+</span><a href="Charon.Runner.Toml.html#%24sel%3AlogSizeMode%3AMkTomlConfig"><span class="hs-identifier hs-var">logSizeMode</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe FileSizeMode)
+-&gt; Lens' TomlConfig (Maybe FileSizeMode)
+-&gt; Args
+-&gt; TomlConfig
+-&gt; Maybe FileSizeMode
+forall (f :: * -&gt; *) s a t.
+Alternative f =&gt;
+Lens' s (f a) -&gt; Lens' t (f a) -&gt; s -&gt; t -&gt; f a
+</span><a href="Charon.Utils.html#mergeAlt"><span class="hs-identifier hs-var">U.mergeAlt</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' Args (Maybe FileSizeMode)
+</span><span class="">#logSizeMode</span></span><span> </span><span class="annot"><span class="annottext">Lens' TomlConfig (Maybe FileSizeMode)
+</span><span class="">#logSizeMode</span></span><span> </span><span class="annot"><span class="annottext">Args
+</span><a href="#local-6989586621679644120"><span class="hs-identifier hs-var">args</span></a></span><span> </span><span class="annot"><span class="annottext">TomlConfig
+</span><a href="#local-6989586621679644121"><span class="hs-identifier hs-var">toml</span></a></span><span>
+</span><span id="line-79"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-80"></span></pre></body></html>

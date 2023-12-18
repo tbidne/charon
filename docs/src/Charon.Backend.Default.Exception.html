@@ -1,0 +1,102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Exceptions specific to the default trash backend.</span></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Default.Exception</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirFilesNotFoundE"><span class="hs-identifier">TrashDirFilesNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirInfoNotFoundE"><span class="hs-identifier">TrashDirInfoNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Utils.html"><span class="hs-identifier">Charon.Backend.Default.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default.Utils</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span>
+</span><span id="line-12"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier">TrashHome</span></a></span><span>
+</span><span id="line-13"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="annot"><span class="hs-comment">-- | Trash path dir not found error.</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">newtype</span><span> </span><span id="TrashDirFilesNotFoundE"><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirFilesNotFoundE"><span class="hs-identifier hs-var">TrashDirFilesNotFoundE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashDirFilesNotFoundE"><span class="annot"><a href="Charon.Backend.Default.Exception.html#MkTrashDirFilesNotFoundE"><span class="hs-identifier hs-var">MkTrashDirFilesNotFoundE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679633778"><span id="local-6989586621679633784"><span id="local-6989586621679633788"><span class="annot"><span class="annottext">Int -&gt; TrashDirFilesNotFoundE -&gt; ShowS
+[TrashDirFilesNotFoundE] -&gt; ShowS
+TrashDirFilesNotFoundE -&gt; String
+(Int -&gt; TrashDirFilesNotFoundE -&gt; ShowS)
+-&gt; (TrashDirFilesNotFoundE -&gt; String)
+-&gt; ([TrashDirFilesNotFoundE] -&gt; ShowS)
+-&gt; Show TrashDirFilesNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashDirFilesNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashDirFilesNotFoundE -&gt; ShowS
+$cshow :: TrashDirFilesNotFoundE -&gt; String
+show :: TrashDirFilesNotFoundE -&gt; String
+$cshowList :: [TrashDirFilesNotFoundE] -&gt; ShowS
+showList :: [TrashDirFilesNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679633796"><span id="local-6989586621679633800"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirFilesNotFoundE"><span class="hs-identifier hs-type">TrashDirFilesNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679633811"><span class="annot"><span class="annottext">displayException :: TrashDirFilesNotFoundE -&gt; String
+</span><a href="#local-6989586621679633811"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Default.Exception.html#MkTrashDirFilesNotFoundE"><span class="hs-identifier hs-type">MkTrashDirFilesNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679633813"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633813"><span class="hs-identifier hs-var">th</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-24"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The trash files directory was not found at '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633815"><span class="hs-identifier hs-var">files</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' despite the trash home existing. This can be fixed by &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;manually creating the directory or resetting everything (i.e. charon empty -f).&quot;</span></span><span>
+</span><span id="line-28"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-29"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>      </span><span id="local-6989586621679633815"><span class="annot"><span class="annottext">files :: OsPath
+</span><a href="#local-6989586621679633815"><span class="hs-identifier hs-var hs-var">files</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633813"><span class="hs-identifier hs-var">th</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="Charon.Backend.Default.Utils.html#pathFiles"><span class="hs-identifier hs-var">Default.Utils.pathFiles</span></a></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="annot"><span class="hs-comment">-- | Trash info dir not found error.</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">newtype</span><span> </span><span id="TrashDirInfoNotFoundE"><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirInfoNotFoundE"><span class="hs-identifier hs-var">TrashDirInfoNotFoundE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashDirInfoNotFoundE"><span class="annot"><a href="Charon.Backend.Default.Exception.html#MkTrashDirInfoNotFoundE"><span class="hs-identifier hs-var">MkTrashDirInfoNotFoundE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679633820"><span id="local-6989586621679633824"><span id="local-6989586621679633828"><span class="annot"><span class="annottext">Int -&gt; TrashDirInfoNotFoundE -&gt; ShowS
+[TrashDirInfoNotFoundE] -&gt; ShowS
+TrashDirInfoNotFoundE -&gt; String
+(Int -&gt; TrashDirInfoNotFoundE -&gt; ShowS)
+-&gt; (TrashDirInfoNotFoundE -&gt; String)
+-&gt; ([TrashDirInfoNotFoundE] -&gt; ShowS)
+-&gt; Show TrashDirInfoNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashDirInfoNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashDirInfoNotFoundE -&gt; ShowS
+$cshow :: TrashDirInfoNotFoundE -&gt; String
+show :: TrashDirInfoNotFoundE -&gt; String
+$cshowList :: [TrashDirInfoNotFoundE] -&gt; ShowS
+showList :: [TrashDirInfoNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679633835"><span id="local-6989586621679633839"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Backend.Default.Exception.html#TrashDirInfoNotFoundE"><span class="hs-identifier hs-type">TrashDirInfoNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679633847"><span class="annot"><span class="annottext">displayException :: TrashDirInfoNotFoundE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Default.Exception.html#MkTrashDirInfoNotFoundE"><span class="hs-identifier hs-type">MkTrashDirInfoNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679633848"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633848"><span class="hs-identifier hs-var">th</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The trash info directory was not found at '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633849"><span class="hs-identifier hs-var">info</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' despite the trash home existing. This can be fixed by &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;manually creating the directory or resetting everything (i.e. charon empty -f).&quot;</span></span><span>
+</span><span id="line-43"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>      </span><span id="local-6989586621679633849"><span class="annot"><span class="annottext">info :: OsPath
+</span><a href="#local-6989586621679633849"><span class="hs-identifier hs-var hs-var">info</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679633848"><span class="hs-identifier hs-var">th</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="Charon.Backend.Default.Utils.html#pathInfo"><span class="hs-identifier hs-var">Default.Utils.pathInfo</span></a></span><span>
+</span><span id="line-46"></span></pre></body></html>

@@ -1,0 +1,771 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="annot"><span class="hs-comment">-- | Provides exceptions used by Charon.</span></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Exception</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Trash</span></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Entries</span></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** General</span></span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryNotFoundE"><span class="hs-identifier">TrashEntryNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryWildcardNotFoundE"><span class="hs-identifier">TrashEntryWildcardNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- *** Partial success</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryFileNotFoundE"><span class="hs-identifier">TrashEntryFileNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoNotFoundE"><span class="hs-identifier">TrashEntryInfoNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoBadExtE"><span class="hs-identifier">TrashEntryInfoBadExtE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Misc</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#RenameDuplicateE"><span class="hs-identifier">RenameDuplicateE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#RestoreCollisionE"><span class="hs-identifier">RestoreCollisionE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#RootE"><span class="hs-identifier">RootE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#EmptyPathE"><span class="hs-identifier">EmptyPathE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#DotsPathE"><span class="hs-identifier">DotsPathE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#FileNameEmptyE"><span class="hs-identifier">FileNameEmptyE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#UniquePathNotPrefixE"><span class="hs-identifier">UniquePathNotPrefixE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#InfoDecodeE"><span class="hs-identifier">InfoDecodeE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#EmptySearchResults"><span class="hs-identifier">EmptySearchResults</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#BackendDetectE"><span class="hs-identifier">BackendDetectE</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier">Backend</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Backend</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-38"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryInfo"><span class="hs-identifier">TrashEntryInfo</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier">TrashEntryOriginalPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier">TrashEntryPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier">TrashHome</span></a></span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Paths</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.UniqueSeq.html"><span class="hs-identifier">Charon.Data.UniqueSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.UniqueSeq.Internal.html#UniqueSeq"><span class="hs-identifier">UniqueSeq</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">toList</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.OsPath</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">encodeUtf</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- REVIEW: Consider making some (all?) of these IOException. This would be</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- less structured, but it would match most of the exceptions thrown by our</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- deps (e.g. directory).</span><span>
+</span><span id="line-53"></span><span class="hs-comment">--</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- If we did this, we would have to make sure tests check the type/message</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- to ensure we're throwing the correct one.</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | Could not rename file due to duplicate names.</span></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">newtype</span><span> </span><span id="RenameDuplicateE"><span class="annot"><a href="Charon.Exception.html#RenameDuplicateE"><span class="hs-identifier hs-var">RenameDuplicateE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkRenameDuplicateE"><span class="annot"><a href="Charon.Exception.html#MkRenameDuplicateE"><span class="hs-identifier hs-var">MkRenameDuplicateE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier hs-type">TrashEntryPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679622966"><span id="local-6989586621679622972"><span id="local-6989586621679622976"><span class="annot"><span class="annottext">Int -&gt; RenameDuplicateE -&gt; ShowS
+[RenameDuplicateE] -&gt; ShowS
+RenameDuplicateE -&gt; String
+(Int -&gt; RenameDuplicateE -&gt; ShowS)
+-&gt; (RenameDuplicateE -&gt; String)
+-&gt; ([RenameDuplicateE] -&gt; ShowS)
+-&gt; Show RenameDuplicateE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RenameDuplicateE -&gt; ShowS
+showsPrec :: Int -&gt; RenameDuplicateE -&gt; ShowS
+$cshow :: RenameDuplicateE -&gt; String
+show :: RenameDuplicateE -&gt; String
+$cshowList :: [RenameDuplicateE] -&gt; ShowS
+showList :: [RenameDuplicateE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679622984"><span id="local-6989586621679622988"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#RenameDuplicateE"><span class="hs-identifier hs-type">RenameDuplicateE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-62"></span><span>  </span><span id="local-6989586621679623012"><span class="annot"><span class="annottext">displayException :: RenameDuplicateE -&gt; String
+</span><a href="#local-6989586621679623012"><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkRenameDuplicateE"><span class="hs-identifier hs-type">MkRenameDuplicateE</span></a></span><span> </span><span id="local-6989586621679623014"><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679623014"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-64"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Failed renaming duplicate file: '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679623014"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryPath) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryPath) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | Generic trash path not found error. Distinct from 'TrashEntryFileNotFoundE'</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- in that the latter indicates that the entry exists in @trash\/info@ but not</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- @trash\/files@, whereas this exception is less specific i.e. we found nothing</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- in @trash\/info@ but did not look in @trash\/files@.</span><span>
+</span><span id="line-73"></span><span class="hs-keyword">newtype</span><span> </span><span id="TrashEntryNotFoundE"><span class="annot"><a href="Charon.Exception.html#TrashEntryNotFoundE"><span class="hs-identifier hs-var">TrashEntryNotFoundE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashEntryNotFoundE"><span class="annot"><a href="Charon.Exception.html#MkTrashEntryNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryNotFoundE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623019"><span id="local-6989586621679623023"><span id="local-6989586621679623027"><span class="annot"><span class="annottext">Int -&gt; TrashEntryNotFoundE -&gt; ShowS
+[TrashEntryNotFoundE] -&gt; ShowS
+TrashEntryNotFoundE -&gt; String
+(Int -&gt; TrashEntryNotFoundE -&gt; ShowS)
+-&gt; (TrashEntryNotFoundE -&gt; String)
+-&gt; ([TrashEntryNotFoundE] -&gt; ShowS)
+-&gt; Show TrashEntryNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashEntryNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashEntryNotFoundE -&gt; ShowS
+$cshow :: TrashEntryNotFoundE -&gt; String
+show :: TrashEntryNotFoundE -&gt; String
+$cshowList :: [TrashEntryNotFoundE] -&gt; ShowS
+showList :: [TrashEntryNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623034"><span id="local-6989586621679623038"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#TrashEntryNotFoundE"><span class="hs-identifier hs-type">TrashEntryNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679623054"><span class="annot"><span class="annottext">displayException :: TrashEntryNotFoundE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryNotFoundE"><span class="hs-identifier hs-type">MkTrashEntryNotFoundE</span></a></span><span> </span><span id="local-6989586621679623055"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623055"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;No entry for '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623055"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span class="annot"><span class="hs-comment">-- | Error for not finding any files via wildcard search.</span></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">newtype</span><span> </span><span id="TrashEntryWildcardNotFoundE"><span class="annot"><a href="Charon.Exception.html#TrashEntryWildcardNotFoundE"><span class="hs-identifier hs-var">TrashEntryWildcardNotFoundE</span></a></span></span><span>
+</span><span id="line-86"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashEntryWildcardNotFoundE"><span class="annot"><a href="Charon.Exception.html#MkTrashEntryWildcardNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryWildcardNotFoundE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623058"><span id="local-6989586621679623062"><span id="local-6989586621679623066"><span class="annot"><span class="annottext">Int -&gt; TrashEntryWildcardNotFoundE -&gt; ShowS
+[TrashEntryWildcardNotFoundE] -&gt; ShowS
+TrashEntryWildcardNotFoundE -&gt; String
+(Int -&gt; TrashEntryWildcardNotFoundE -&gt; ShowS)
+-&gt; (TrashEntryWildcardNotFoundE -&gt; String)
+-&gt; ([TrashEntryWildcardNotFoundE] -&gt; ShowS)
+-&gt; Show TrashEntryWildcardNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashEntryWildcardNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashEntryWildcardNotFoundE -&gt; ShowS
+$cshow :: TrashEntryWildcardNotFoundE -&gt; String
+show :: TrashEntryWildcardNotFoundE -&gt; String
+$cshowList :: [TrashEntryWildcardNotFoundE] -&gt; ShowS
+showList :: [TrashEntryWildcardNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623073"><span id="local-6989586621679623077"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#TrashEntryWildcardNotFoundE"><span class="hs-identifier hs-type">TrashEntryWildcardNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>  </span><span id="local-6989586621679623093"><span class="annot"><span class="annottext">displayException :: TrashEntryWildcardNotFoundE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryWildcardNotFoundE"><span class="hs-identifier hs-type">MkTrashEntryWildcardNotFoundE</span></a></span><span> </span><span id="local-6989586621679623094"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623094"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-92"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;No entries found for wildcard search '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623094"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-95"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><span class="hs-comment">-- | Path found in the index but not files.</span></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">data</span><span> </span><span id="TrashEntryFileNotFoundE"><span class="annot"><a href="Charon.Exception.html#TrashEntryFileNotFoundE"><span class="hs-identifier hs-var">TrashEntryFileNotFoundE</span></a></span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashEntryFileNotFoundE"><span class="annot"><a href="Charon.Exception.html#MkTrashEntryFileNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryFileNotFoundE</span></a></span></span><span>
+</span><span id="line-100"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-101"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623097"><span id="local-6989586621679623102"><span id="local-6989586621679623106"><span class="annot"><span class="annottext">Int -&gt; TrashEntryFileNotFoundE -&gt; ShowS
+[TrashEntryFileNotFoundE] -&gt; ShowS
+TrashEntryFileNotFoundE -&gt; String
+(Int -&gt; TrashEntryFileNotFoundE -&gt; ShowS)
+-&gt; (TrashEntryFileNotFoundE -&gt; String)
+-&gt; ([TrashEntryFileNotFoundE] -&gt; ShowS)
+-&gt; Show TrashEntryFileNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashEntryFileNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashEntryFileNotFoundE -&gt; ShowS
+$cshow :: TrashEntryFileNotFoundE -&gt; String
+show :: TrashEntryFileNotFoundE -&gt; String
+$cshowList :: [TrashEntryFileNotFoundE] -&gt; ShowS
+showList :: [TrashEntryFileNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623113"><span id="local-6989586621679623117"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#TrashEntryFileNotFoundE"><span class="hs-identifier hs-type">TrashEntryFileNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-105"></span><span>  </span><span id="local-6989586621679623136"><span class="annot"><span class="annottext">displayException :: TrashEntryFileNotFoundE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryFileNotFoundE"><span class="hs-identifier hs-type">MkTrashEntryFileNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679623137"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623137"><span class="hs-identifier hs-var">thome</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679623138"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623138"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-107"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The file '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-108"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623138"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' was not found in the trash '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-110"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623137"><span class="hs-identifier hs-var">thome</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' despite being listed in the index. This can be &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;fixed by manually deleting the info file or deleting everything &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(i.e. charon empty -f).&quot;</span></span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><span class="hs-comment">-- | Path found files but not index.</span></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">data</span><span> </span><span id="TrashEntryInfoNotFoundE"><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoNotFoundE"><span class="hs-identifier hs-var">TrashEntryInfoNotFoundE</span></a></span></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashEntryInfoNotFoundE"><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryInfoNotFoundE</span></a></span></span><span>
+</span><span id="line-119"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623141"><span id="local-6989586621679623146"><span id="local-6989586621679623150"><span class="annot"><span class="annottext">Int -&gt; TrashEntryInfoNotFoundE -&gt; ShowS
+[TrashEntryInfoNotFoundE] -&gt; ShowS
+TrashEntryInfoNotFoundE -&gt; String
+(Int -&gt; TrashEntryInfoNotFoundE -&gt; ShowS)
+-&gt; (TrashEntryInfoNotFoundE -&gt; String)
+-&gt; ([TrashEntryInfoNotFoundE] -&gt; ShowS)
+-&gt; Show TrashEntryInfoNotFoundE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashEntryInfoNotFoundE -&gt; ShowS
+showsPrec :: Int -&gt; TrashEntryInfoNotFoundE -&gt; ShowS
+$cshow :: TrashEntryInfoNotFoundE -&gt; String
+show :: TrashEntryInfoNotFoundE -&gt; String
+$cshowList :: [TrashEntryInfoNotFoundE] -&gt; ShowS
+showList :: [TrashEntryInfoNotFoundE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623157"><span id="local-6989586621679623161"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoNotFoundE"><span class="hs-identifier hs-type">TrashEntryInfoNotFoundE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679623175"><span class="annot"><span class="annottext">displayException :: TrashEntryInfoNotFoundE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoNotFoundE"><span class="hs-identifier hs-type">MkTrashEntryInfoNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679623176"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623176"><span class="hs-identifier hs-var">thome</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679623177"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623177"><span class="hs-identifier hs-var">name</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The file '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623178"><span class="hs-identifier hs-var">nameExt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' was not found in the trash '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623176"><span class="hs-identifier hs-var">thome</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-130"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' index despite existing in the trash itself. This can be fixed by &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;manually deleting the entry or deleting everything &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-132"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;(i.e. charon empty -f).&quot;</span></span><span>
+</span><span id="line-133"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-135"></span><span>      </span><span class="hs-comment">-- Have to do this because &quot;.&lt;ext&gt;&quot; is not valid on windows i.e. fails</span><span>
+</span><span id="line-136"></span><span>      </span><span class="hs-comment">-- QuasiQuote</span><span>
+</span><span id="line-137"></span><span>      </span><span id="local-6989586621679623178"><span class="annot"><span class="annottext">nameExt :: OsPath
+</span><a href="#local-6989586621679623178"><span class="hs-identifier hs-var hs-var">nameExt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">String -&gt; Maybe OsPath
+forall (m :: * -&gt; *). MonadThrow m =&gt; String -&gt; m OsPath
+</span><span class="hs-identifier hs-var">encodeUtf</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.&lt;ext&gt;&quot;</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>        </span><span class="annot"><span class="annottext">Maybe OsPath
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623177"><span class="hs-identifier hs-var">name</span></a></span><span>
+</span><span id="line-139"></span><span>        </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679623179"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623179"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623177"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623179"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-140"></span><span>
+</span><span id="line-141"></span><span class="annot"><span class="hs-comment">-- | Unexpected file extension error.</span></span><span>
+</span><span id="line-142"></span><span class="hs-keyword">data</span><span> </span><span id="TrashEntryInfoBadExtE"><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoBadExtE"><span class="hs-identifier hs-var">TrashEntryInfoBadExtE</span></a></span></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkTrashEntryInfoBadExtE"><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoBadExtE"><span class="hs-identifier hs-var">MkTrashEntryInfoBadExtE</span></a></span></span><span>
+</span><span id="line-144"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">OsPath</span></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">OsPath</span></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623182"><span id="local-6989586621679623189"><span id="local-6989586621679623193"><span class="annot"><span class="annottext">Int -&gt; TrashEntryInfoBadExtE -&gt; ShowS
+[TrashEntryInfoBadExtE] -&gt; ShowS
+TrashEntryInfoBadExtE -&gt; String
+(Int -&gt; TrashEntryInfoBadExtE -&gt; ShowS)
+-&gt; (TrashEntryInfoBadExtE -&gt; String)
+-&gt; ([TrashEntryInfoBadExtE] -&gt; ShowS)
+-&gt; Show TrashEntryInfoBadExtE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TrashEntryInfoBadExtE -&gt; ShowS
+showsPrec :: Int -&gt; TrashEntryInfoBadExtE -&gt; ShowS
+$cshow :: TrashEntryInfoBadExtE -&gt; String
+show :: TrashEntryInfoBadExtE -&gt; String
+$cshowList :: [TrashEntryInfoBadExtE] -&gt; ShowS
+showList :: [TrashEntryInfoBadExtE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623200"><span id="local-6989586621679623204"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoBadExtE"><span class="hs-identifier hs-type">TrashEntryInfoBadExtE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-150"></span><span>  </span><span id="local-6989586621679623222"><span class="annot"><span class="annottext">displayException :: TrashEntryInfoBadExtE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoBadExtE"><span class="hs-identifier hs-type">MkTrashEntryInfoBadExtE</span></a></span><span> </span><span id="local-6989586621679623223"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623223"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679623224"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623224"><span class="hs-identifier hs-var">actualExt</span></a></span></span><span> </span><span id="local-6989586621679623225"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623225"><span class="hs-identifier hs-var">expectedExt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-152"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;The trash index file '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623223"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' has an unexpected file extension: '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623224"><span class="hs-identifier hs-var">actualExt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-156"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'. Expected '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679623225"><span class="hs-identifier hs-var">expectedExt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-158"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-159"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><span class="hs-comment">-- | Unexpected backend error.</span></span><span>
+</span><span id="line-162"></span><span class="hs-keyword">newtype</span><span> </span><span id="BackendDetectE"><span class="annot"><a href="Charon.Exception.html#BackendDetectE"><span class="hs-identifier hs-var">BackendDetectE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkBackendDetectE"><span class="annot"><a href="Charon.Exception.html#MkBackendDetectE"><span class="hs-identifier hs-var">MkBackendDetectE</span></a></span></span><span> </span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier hs-type">Backend</span></a></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623228"><span id="local-6989586621679623233"><span id="local-6989586621679623237"><span class="annot"><span class="annottext">Int -&gt; BackendDetectE -&gt; ShowS
+[BackendDetectE] -&gt; ShowS
+BackendDetectE -&gt; String
+(Int -&gt; BackendDetectE -&gt; ShowS)
+-&gt; (BackendDetectE -&gt; String)
+-&gt; ([BackendDetectE] -&gt; ShowS)
+-&gt; Show BackendDetectE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; BackendDetectE -&gt; ShowS
+showsPrec :: Int -&gt; BackendDetectE -&gt; ShowS
+$cshow :: BackendDetectE -&gt; String
+show :: BackendDetectE -&gt; String
+$cshowList :: [BackendDetectE] -&gt; ShowS
+showList :: [BackendDetectE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623244"><span id="local-6989586621679623248"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#BackendDetectE"><span class="hs-identifier hs-type">BackendDetectE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-166"></span><span>  </span><span id="local-6989586621679623256"><span class="annot"><span class="annottext">displayException :: BackendDetectE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkBackendDetectE"><span class="hs-identifier hs-type">MkBackendDetectE</span></a></span><span> </span><span id="local-6989586621679623257"><span class="annot"><span class="annottext">Backend
+</span><a href="#local-6989586621679623257"><span class="hs-identifier hs-var">wantedExt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-167"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Wanted backend '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-169"></span><span>        </span><span class="annot"><span class="annottext">Backend -&gt; String
+forall s. IsString s =&gt; Backend -&gt; s
+</span><a href="Charon.Backend.Data.html#backendName"><span class="hs-identifier hs-var">Backend.backendName</span></a></span><span> </span><span class="annot"><span class="annottext">Backend
+</span><a href="#local-6989586621679623257"><span class="hs-identifier hs-var">wantedExt</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-170"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;', but detected something else&quot;</span></span><span>
+</span><span id="line-171"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><span class="hs-comment">-- | Collision with existing file when attempting a restore.</span></span><span>
+</span><span id="line-174"></span><span class="hs-keyword">data</span><span> </span><span id="RestoreCollisionE"><span class="annot"><a href="Charon.Exception.html#RestoreCollisionE"><span class="hs-identifier hs-var">RestoreCollisionE</span></a></span></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkRestoreCollisionE"><span class="annot"><a href="Charon.Exception.html#MkRestoreCollisionE"><span class="hs-identifier hs-var">MkRestoreCollisionE</span></a></span></span><span>
+</span><span id="line-176"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier hs-type">TrashEntryOriginalPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-178"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623261"><span id="local-6989586621679623266"><span id="local-6989586621679623270"><span class="annot"><span class="annottext">Int -&gt; RestoreCollisionE -&gt; ShowS
+[RestoreCollisionE] -&gt; ShowS
+RestoreCollisionE -&gt; String
+(Int -&gt; RestoreCollisionE -&gt; ShowS)
+-&gt; (RestoreCollisionE -&gt; String)
+-&gt; ([RestoreCollisionE] -&gt; ShowS)
+-&gt; Show RestoreCollisionE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RestoreCollisionE -&gt; ShowS
+showsPrec :: Int -&gt; RestoreCollisionE -&gt; ShowS
+$cshow :: RestoreCollisionE -&gt; String
+show :: RestoreCollisionE -&gt; String
+$cshowList :: [RestoreCollisionE] -&gt; ShowS
+showList :: [RestoreCollisionE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>
+</span><span id="line-180"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623277"><span id="local-6989586621679623281"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#RestoreCollisionE"><span class="hs-identifier hs-type">RestoreCollisionE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-181"></span><span>  </span><span id="local-6989586621679623307"><span class="annot"><span class="annottext">displayException :: RestoreCollisionE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkRestoreCollisionE"><span class="hs-identifier hs-type">MkRestoreCollisionE</span></a></span><span> </span><span id="local-6989586621679623308"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623308"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679623309"><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623309"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-183"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Cannot restore the trash file '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-184"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623308"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-185"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' as one exists at the original location: '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-186"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623309"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+-&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-188"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-189"></span><span>
+</span><span id="line-190"></span><span class="annot"><span class="hs-comment">-- | Exception for deleting the root.</span></span><span>
+</span><span id="line-191"></span><span class="hs-keyword">data</span><span> </span><span id="RootE"><span class="annot"><a href="Charon.Exception.html#RootE"><span class="hs-identifier hs-var">RootE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkRootE"><span class="annot"><a href="Charon.Exception.html#MkRootE"><span class="hs-identifier hs-var">MkRootE</span></a></span></span><span>
+</span><span id="line-192"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623312"><span id="local-6989586621679623314"><span id="local-6989586621679623318"><span class="annot"><span class="annottext">Int -&gt; RootE -&gt; ShowS
+[RootE] -&gt; ShowS
+RootE -&gt; String
+(Int -&gt; RootE -&gt; ShowS)
+-&gt; (RootE -&gt; String) -&gt; ([RootE] -&gt; ShowS) -&gt; Show RootE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; RootE -&gt; ShowS
+showsPrec :: Int -&gt; RootE -&gt; ShowS
+$cshow :: RootE -&gt; String
+show :: RootE -&gt; String
+$cshowList :: [RootE] -&gt; ShowS
+showList :: [RootE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>
+</span><span id="line-194"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623325"><span id="local-6989586621679623329"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#RootE"><span class="hs-identifier hs-type">RootE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-195"></span><span>  </span><span id="local-6989586621679623332"><span class="annot"><span class="annottext">displayException :: RootE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="annot"><span class="annottext">RootE
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Attempted to delete root! This is not allowed.&quot;</span></span><span>
+</span><span id="line-196"></span><span>
+</span><span id="line-197"></span><span class="annot"><span class="hs-comment">-- | Exception for deleting an empty path.</span></span><span>
+</span><span id="line-198"></span><span class="hs-keyword">data</span><span> </span><span id="EmptyPathE"><span class="annot"><a href="Charon.Exception.html#EmptyPathE"><span class="hs-identifier hs-var">EmptyPathE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkEmptyPathE"><span class="annot"><a href="Charon.Exception.html#MkEmptyPathE"><span class="hs-identifier hs-var">MkEmptyPathE</span></a></span></span><span>
+</span><span id="line-199"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623335"><span id="local-6989586621679623337"><span id="local-6989586621679623341"><span class="annot"><span class="annottext">Int -&gt; EmptyPathE -&gt; ShowS
+[EmptyPathE] -&gt; ShowS
+EmptyPathE -&gt; String
+(Int -&gt; EmptyPathE -&gt; ShowS)
+-&gt; (EmptyPathE -&gt; String)
+-&gt; ([EmptyPathE] -&gt; ShowS)
+-&gt; Show EmptyPathE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; EmptyPathE -&gt; ShowS
+showsPrec :: Int -&gt; EmptyPathE -&gt; ShowS
+$cshow :: EmptyPathE -&gt; String
+show :: EmptyPathE -&gt; String
+$cshowList :: [EmptyPathE] -&gt; ShowS
+showList :: [EmptyPathE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623348"><span id="local-6989586621679623352"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#EmptyPathE"><span class="hs-identifier hs-type">EmptyPathE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-202"></span><span>  </span><span id="local-6989586621679623355"><span class="annot"><span class="annottext">displayException :: EmptyPathE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="annot"><span class="annottext">EmptyPathE
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Attempted to delete the empty path! This is not allowed.&quot;</span></span><span>
+</span><span id="line-203"></span><span>
+</span><span id="line-204"></span><span class="annot"><span class="hs-comment">-- | Exception for deleting the special dots paths.</span></span><span>
+</span><span id="line-205"></span><span class="hs-keyword">newtype</span><span> </span><span id="DotsPathE"><span class="annot"><a href="Charon.Exception.html#DotsPathE"><span class="hs-identifier hs-var">DotsPathE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkDotsPathE"><span class="annot"><a href="Charon.Exception.html#MkDotsPathE"><span class="hs-identifier hs-var">MkDotsPathE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier hs-type">TrashEntryOriginalPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-206"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623358"><span id="local-6989586621679623362"><span id="local-6989586621679623366"><span class="annot"><span class="annottext">Int -&gt; DotsPathE -&gt; ShowS
+[DotsPathE] -&gt; ShowS
+DotsPathE -&gt; String
+(Int -&gt; DotsPathE -&gt; ShowS)
+-&gt; (DotsPathE -&gt; String)
+-&gt; ([DotsPathE] -&gt; ShowS)
+-&gt; Show DotsPathE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DotsPathE -&gt; ShowS
+showsPrec :: Int -&gt; DotsPathE -&gt; ShowS
+$cshow :: DotsPathE -&gt; String
+show :: DotsPathE -&gt; String
+$cshowList :: [DotsPathE] -&gt; ShowS
+showList :: [DotsPathE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-207"></span><span>
+</span><span id="line-208"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623373"><span id="local-6989586621679623377"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#DotsPathE"><span class="hs-identifier hs-type">DotsPathE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-209"></span><span>  </span><span id="local-6989586621679623393"><span class="annot"><span class="annottext">displayException :: DotsPathE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkDotsPathE"><span class="hs-identifier hs-type">MkDotsPathE</span></a></span><span> </span><span id="local-6989586621679623394"><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623394"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-211"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Attempted to delete the special path '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-212"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623394"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+-&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-213"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'! This is not allowed.&quot;</span></span><span>
+</span><span id="line-214"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span class="annot"><span class="hs-comment">-- | Exception for deriving an empty file name.</span></span><span>
+</span><span id="line-217"></span><span class="hs-keyword">newtype</span><span> </span><span id="FileNameEmptyE"><span class="annot"><a href="Charon.Exception.html#FileNameEmptyE"><span class="hs-identifier hs-var">FileNameEmptyE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkFileNameEmptyE"><span class="annot"><a href="Charon.Exception.html#MkFileNameEmptyE"><span class="hs-identifier hs-var">MkFileNameEmptyE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier hs-type">TrashEntryOriginalPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623397"><span id="local-6989586621679623401"><span id="local-6989586621679623405"><span class="annot"><span class="annottext">Int -&gt; FileNameEmptyE -&gt; ShowS
+[FileNameEmptyE] -&gt; ShowS
+FileNameEmptyE -&gt; String
+(Int -&gt; FileNameEmptyE -&gt; ShowS)
+-&gt; (FileNameEmptyE -&gt; String)
+-&gt; ([FileNameEmptyE] -&gt; ShowS)
+-&gt; Show FileNameEmptyE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; FileNameEmptyE -&gt; ShowS
+showsPrec :: Int -&gt; FileNameEmptyE -&gt; ShowS
+$cshow :: FileNameEmptyE -&gt; String
+show :: FileNameEmptyE -&gt; String
+$cshowList :: [FileNameEmptyE] -&gt; ShowS
+showList :: [FileNameEmptyE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span>
+</span><span id="line-220"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623412"><span id="local-6989586621679623416"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#FileNameEmptyE"><span class="hs-identifier hs-type">FileNameEmptyE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-221"></span><span>  </span><span id="local-6989586621679623432"><span class="annot"><span class="annottext">displayException :: FileNameEmptyE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkFileNameEmptyE"><span class="hs-identifier hs-type">MkFileNameEmptyE</span></a></span><span> </span><span id="local-6989586621679623433"><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623433"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-223"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Derived empty file name from the path '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-224"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+</span><a href="#local-6989586621679623433"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryOriginalPath
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+-&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryOriginalPath) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-225"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-226"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- | Exception for when the original name is not a prefix of the derived</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- unique name.</span><span>
+</span><span id="line-230"></span><span class="hs-keyword">data</span><span> </span><span id="UniquePathNotPrefixE"><span class="annot"><a href="Charon.Exception.html#UniquePathNotPrefixE"><span class="hs-identifier hs-var">UniquePathNotPrefixE</span></a></span></span><span>
+</span><span id="line-231"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkUniquePathNotPrefixE"><span class="annot"><a href="Charon.Exception.html#MkUniquePathNotPrefixE"><span class="hs-identifier hs-var">MkUniquePathNotPrefixE</span></a></span></span><span>
+</span><span id="line-232"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-233"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-234"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623436"><span id="local-6989586621679623441"><span id="local-6989586621679623445"><span class="annot"><span class="annottext">Int -&gt; UniquePathNotPrefixE -&gt; ShowS
+[UniquePathNotPrefixE] -&gt; ShowS
+UniquePathNotPrefixE -&gt; String
+(Int -&gt; UniquePathNotPrefixE -&gt; ShowS)
+-&gt; (UniquePathNotPrefixE -&gt; String)
+-&gt; ([UniquePathNotPrefixE] -&gt; ShowS)
+-&gt; Show UniquePathNotPrefixE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; UniquePathNotPrefixE -&gt; ShowS
+showsPrec :: Int -&gt; UniquePathNotPrefixE -&gt; ShowS
+$cshow :: UniquePathNotPrefixE -&gt; String
+show :: UniquePathNotPrefixE -&gt; String
+$cshowList :: [UniquePathNotPrefixE] -&gt; ShowS
+showList :: [UniquePathNotPrefixE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>
+</span><span id="line-236"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623452"><span id="local-6989586621679623456"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#UniquePathNotPrefixE"><span class="hs-identifier hs-type">UniquePathNotPrefixE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-237"></span><span>  </span><span id="local-6989586621679623481"><span class="annot"><span class="annottext">displayException :: UniquePathNotPrefixE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkUniquePathNotPrefixE"><span class="hs-identifier hs-type">MkUniquePathNotPrefixE</span></a></span><span> </span><span id="local-6989586621679623482"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623482"><span class="hs-identifier hs-var">origName</span></a></span></span><span> </span><span id="local-6989586621679623483"><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623483"><span class="hs-identifier hs-var">newName</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-238"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-239"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Original path name '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-240"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623482"><span class="hs-identifier hs-var">origName</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-241"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' is not a prefix of the new unique name '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-242"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679623483"><span class="hs-identifier hs-var">newName</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryFileName) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-243"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;'&quot;</span></span><span>
+</span><span id="line-244"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span class="annot"><span class="hs-comment">-- | Exception for decoding.</span></span><span>
+</span><span id="line-247"></span><span class="hs-keyword">data</span><span> </span><span id="InfoDecodeE"><span class="annot"><a href="Charon.Exception.html#InfoDecodeE"><span class="hs-identifier hs-var">InfoDecodeE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkInfoDecodeE"><span class="annot"><a href="Charon.Exception.html#MkInfoDecodeE"><span class="hs-identifier hs-var">MkInfoDecodeE</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryInfo"><span class="hs-identifier hs-type">TrashEntryInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ByteString</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-248"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623486"><span id="local-6989586621679623495"><span id="local-6989586621679623499"><span class="annot"><span class="annottext">Int -&gt; InfoDecodeE -&gt; ShowS
+[InfoDecodeE] -&gt; ShowS
+InfoDecodeE -&gt; String
+(Int -&gt; InfoDecodeE -&gt; ShowS)
+-&gt; (InfoDecodeE -&gt; String)
+-&gt; ([InfoDecodeE] -&gt; ShowS)
+-&gt; Show InfoDecodeE
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; InfoDecodeE -&gt; ShowS
+showsPrec :: Int -&gt; InfoDecodeE -&gt; ShowS
+$cshow :: InfoDecodeE -&gt; String
+show :: InfoDecodeE -&gt; String
+$cshowList :: [InfoDecodeE] -&gt; ShowS
+showList :: [InfoDecodeE] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-249"></span><span>
+</span><span id="line-250"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623507"><span id="local-6989586621679623511"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#InfoDecodeE"><span class="hs-identifier hs-type">InfoDecodeE</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-251"></span><span>  </span><span id="local-6989586621679623528"><span class="annot"><span class="annottext">displayException :: InfoDecodeE -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkInfoDecodeE"><span class="hs-identifier hs-type">MkInfoDecodeE</span></a></span><span> </span><span id="local-6989586621679623529"><span class="annot"><span class="annottext">PathI 'TrashEntryInfo
+</span><a href="#local-6989586621679623529"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span id="local-6989586621679623530"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679623530"><span class="hs-identifier hs-var">bs</span></a></span></span><span> </span><span id="local-6989586621679623531"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679623531"><span class="hs-identifier hs-var">err</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-253"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Could not decode file '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-254"></span><span>        </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; String) -&gt; OsPath -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryInfo
+</span><a href="#local-6989586621679623529"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryInfo
+-&gt; Optic' An_Iso NoIx (PathI 'TrashEntryInfo) OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' An_Iso NoIx (PathI 'TrashEntryInfo) OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">,</span><span>
+</span><span id="line-255"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;' with contents:\n&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-256"></span><span>        </span><span class="annot"><span class="annottext">ByteString -&gt; String
+</span><a href="Charon.Prelude.html#bsToStrLenient"><span class="hs-identifier hs-var">bsToStrLenient</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679623530"><span class="hs-identifier hs-var">bs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-257"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;\nError: &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-258"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679623531"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-259"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span class="annot"><span class="hs-comment">-- | No search results.</span></span><span>
+</span><span id="line-262"></span><span class="hs-keyword">newtype</span><span> </span><span id="EmptySearchResults"><span class="annot"><a href="Charon.Exception.html#EmptySearchResults"><span class="hs-identifier hs-var">EmptySearchResults</span></a></span></span><span>
+</span><span id="line-263"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="MkEmptySearchResults"><span class="annot"><a href="Charon.Exception.html#MkEmptySearchResults"><span class="hs-identifier hs-var">MkEmptySearchResults</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.UniqueSeq.Internal.html#UniqueSeq"><span class="hs-identifier hs-type">UniqueSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679623535"><span id="local-6989586621679623541"><span id="local-6989586621679623545"><span class="annot"><span class="annottext">Int -&gt; EmptySearchResults -&gt; ShowS
+[EmptySearchResults] -&gt; ShowS
+EmptySearchResults -&gt; String
+(Int -&gt; EmptySearchResults -&gt; ShowS)
+-&gt; (EmptySearchResults -&gt; String)
+-&gt; ([EmptySearchResults] -&gt; ShowS)
+-&gt; Show EmptySearchResults
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; EmptySearchResults -&gt; ShowS
+showsPrec :: Int -&gt; EmptySearchResults -&gt; ShowS
+$cshow :: EmptySearchResults -&gt; String
+show :: EmptySearchResults -&gt; String
+$cshowList :: [EmptySearchResults] -&gt; ShowS
+showList :: [EmptySearchResults] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679623552"><span id="local-6989586621679623556"><span class="annot"><span class="hs-identifier hs-type">Exception</span></span><span> </span><span class="annot"><a href="Charon.Exception.html#EmptySearchResults"><span class="hs-identifier hs-type">EmptySearchResults</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-267"></span><span>  </span><span id="local-6989586621679623573"><span class="annot"><span class="annottext">displayException :: EmptySearchResults -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">displayException</span></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkEmptySearchResults"><span class="hs-identifier hs-type">MkEmptySearchResults</span></a></span><span> </span><span id="local-6989586621679623574"><span class="annot"><span class="annottext">UniqueSeq (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679623574"><span class="hs-identifier hs-var">useq</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><span class="annottext">[String] -&gt; String
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-269"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Search for paths failed: &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-270"></span><span>        </span><span class="annot"><span class="annottext">[PathI 'TrashEntryFileName] -&gt; String
+forall (a :: PathIndex). [PathI a] -&gt; String
+</span><a href="Charon.Data.Paths.html#showPaths"><span class="hs-identifier hs-var">Paths.showPaths</span></a></span><span> </span><span class="annot"><span class="annottext">([PathI 'TrashEntryFileName] -&gt; String)
+-&gt; [PathI 'TrashEntryFileName] -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seq (PathI 'TrashEntryFileName)
+-&gt; [Item (Seq (PathI 'TrashEntryFileName))]
+forall l. IsList l =&gt; l -&gt; [Item l]
+</span><span class="hs-identifier hs-var">toList</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">UniqueSeq (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679623574"><span class="hs-identifier hs-var">useq</span></a></span><span> </span><span class="annot"><span class="annottext">UniqueSeq (PathI 'TrashEntryFileName)
+-&gt; Optic'
+     A_Getter
+     NoIx
+     (UniqueSeq (PathI 'TrashEntryFileName))
+     (Seq (PathI 'TrashEntryFileName))
+-&gt; Seq (PathI 'TrashEntryFileName)
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic'
+  A_Getter
+  NoIx
+  (UniqueSeq (PathI 'TrashEntryFileName))
+  (Seq (PathI 'TrashEntryFileName))
+</span><span class="">#seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-271"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-272"></span></pre></body></html>

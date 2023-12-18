@@ -1,0 +1,344 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Provides functionality for the list command</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Runner.Command.List</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Phase 1</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyle"><span class="hs-identifier">ListFormatStyle</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier">parseListFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhase1"><span class="hs-identifier">ListFormatPhase1</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Phase 2</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier">ListCmd</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmdP1"><span class="hs-identifier">ListCmdP1</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmdP2"><span class="hs-identifier">ListCmdP2</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html"><span class="hs-identifier">Charon.Data.PathData.Formatting</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier">ColFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier">Coloring</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColoringDetect"><span class="hs-identifier">ColoringDetect</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier">PathDataFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatMultiline"><span class="hs-identifier">FormatMultiline</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatSingleline"><span class="hs-identifier">FormatSingleline</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier">FormatTabular</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier">Sort</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Name"><span class="hs-identifier">Name</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html"><span class="hs-identifier">Charon.Runner.Phase</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#AdvancePhase"><span class="hs-identifier">AdvancePhase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Phase.html#NextPhase"><span class="hs-identifier">NextPhase</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier">advancePhase</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><a href="Charon.Runner.Phase.html#MaybePhaseF"><span class="hs-identifier">MaybePhaseF</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase"><span class="hs-identifier">Phase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier">Phase1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier">Phase2</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-33"></span><span class="hs-comment">----------------------------------- PHASE 1 ------------------------------------</span><span>
+</span><span id="line-34"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="annot"><span class="hs-comment">-- | Configuration option for the list command format.</span></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="ListFormatStyle"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyle"><span class="hs-identifier hs-var">ListFormatStyle</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="ListFormatStyleMultiline"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyleMultiline"><span class="hs-identifier hs-var">ListFormatStyleMultiline</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ListFormatStyleTabular"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyleTabular"><span class="hs-identifier hs-var">ListFormatStyleTabular</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ListFormatStyleSingleline"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyleSingleline"><span class="hs-identifier hs-var">ListFormatStyleSingleline</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628877"><span id="local-6989586621679628879"><span class="annot"><span class="annottext">ListFormatStyle -&gt; ListFormatStyle -&gt; Bool
+(ListFormatStyle -&gt; ListFormatStyle -&gt; Bool)
+-&gt; (ListFormatStyle -&gt; ListFormatStyle -&gt; Bool)
+-&gt; Eq ListFormatStyle
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ListFormatStyle -&gt; ListFormatStyle -&gt; Bool
+== :: ListFormatStyle -&gt; ListFormatStyle -&gt; Bool
+$c/= :: ListFormatStyle -&gt; ListFormatStyle -&gt; Bool
+/= :: ListFormatStyle -&gt; ListFormatStyle -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628884"><span id="local-6989586621679628886"><span id="local-6989586621679628890"><span class="annot"><span class="annottext">Int -&gt; ListFormatStyle -&gt; ShowS
+[ListFormatStyle] -&gt; ShowS
+ListFormatStyle -&gt; String
+(Int -&gt; ListFormatStyle -&gt; ShowS)
+-&gt; (ListFormatStyle -&gt; String)
+-&gt; ([ListFormatStyle] -&gt; ShowS)
+-&gt; Show ListFormatStyle
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ListFormatStyle -&gt; ShowS
+showsPrec :: Int -&gt; ListFormatStyle -&gt; ShowS
+$cshow :: ListFormatStyle -&gt; String
+show :: ListFormatStyle -&gt; String
+$cshowList :: [ListFormatStyle] -&gt; ShowS
+showList :: [ListFormatStyle] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span id="local-6989586621679628739"><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-type">parseListFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679628739"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628739"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyle"><span class="hs-identifier hs-type">ListFormatStyle</span></a></span></span><span>
+</span><span id="line-44"></span><span id="parseListFormat"><span class="annot"><span class="annottext">parseListFormat :: forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var hs-var">parseListFormat</span></a></span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;multi&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleMultiline"><span class="hs-identifier hs-var">ListFormatStyleMultiline</span></a></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;m&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleMultiline"><span class="hs-identifier hs-var">ListFormatStyleMultiline</span></a></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;tabular&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleTabular"><span class="hs-identifier hs-var">ListFormatStyleTabular</span></a></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;t&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleTabular"><span class="hs-identifier hs-var">ListFormatStyleTabular</span></a></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;single&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleSingleline"><span class="hs-identifier hs-var">ListFormatStyleSingleline</span></a></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;s&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatStyle -&gt; m ListFormatStyle
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleSingleline"><span class="hs-identifier hs-var">ListFormatStyleSingleline</span></a></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Charon.Runner.Command.List.html#parseListFormat"><span class="hs-identifier hs-var">parseListFormat</span></a></span><span> </span><span id="local-6989586621679628924"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628924"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; m ListFormatStyle
+forall a. String -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; m ListFormatStyle) -&gt; String -&gt; m ListFormatStyle
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unrecognized format: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; String
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628924"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- | Holds all configuration data for list formatting i.e. style and</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- truncation params.</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">data</span><span> </span><span id="ListFormatPhase1"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhase1"><span class="hs-identifier hs-var">ListFormatPhase1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkListFormatPhase1"><span class="annot"><a href="Charon.Runner.Command.List.html#MkListFormatPhase1"><span class="hs-identifier hs-var">MkListFormatPhase1</span></a></span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="%24sel%3Acoloring%3AMkListFormatPhase1"><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; Maybe Coloring
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Acoloring%3AMkListFormatPhase1"><span class="hs-identifier hs-var hs-var">coloring</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Format style.</span></span><span>
+</span><span id="line-57"></span><span>    </span><span id="%24sel%3Astyle%3AMkListFormatPhase1"><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; Maybe ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Astyle%3AMkListFormatPhase1"><span class="hs-identifier hs-var hs-var">style</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatStyle"><span class="hs-identifier hs-type">ListFormatStyle</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Name truncation.</span></span><span>
+</span><span id="line-59"></span><span>    </span><span id="%24sel%3AnameTrunc%3AMkListFormatPhase1"><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; Maybe ColFormat
+</span><a href="Charon.Runner.Command.List.html#%24sel%3AnameTrunc%3AMkListFormatPhase1"><span class="hs-identifier hs-var hs-var">nameTrunc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Original path truncation.</span></span><span>
+</span><span id="line-61"></span><span>    </span><span id="%24sel%3AorigTrunc%3AMkListFormatPhase1"><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; Maybe ColFormat
+</span><a href="Charon.Runner.Command.List.html#%24sel%3AorigTrunc%3AMkListFormatPhase1"><span class="hs-identifier hs-var hs-var">origTrunc</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628932"><span id="local-6989586621679628942"><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool
+(ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool)
+-&gt; (ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool)
+-&gt; Eq ListFormatPhase1
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool
+== :: ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool
+$c/= :: ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool
+/= :: ListFormatPhase1 -&gt; ListFormatPhase1 -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628948"><span id="local-6989586621679628960"><span id="local-6989586621679628964"><span class="annot"><span class="annottext">Int -&gt; ListFormatPhase1 -&gt; ShowS
+[ListFormatPhase1] -&gt; ShowS
+ListFormatPhase1 -&gt; String
+(Int -&gt; ListFormatPhase1 -&gt; ShowS)
+-&gt; (ListFormatPhase1 -&gt; String)
+-&gt; ([ListFormatPhase1] -&gt; ShowS)
+-&gt; Show ListFormatPhase1
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ListFormatPhase1 -&gt; ShowS
+showsPrec :: Int -&gt; ListFormatPhase1 -&gt; ShowS
+$cshow :: ListFormatPhase1 -&gt; String
+show :: ListFormatPhase1 -&gt; String
+$cshowList :: [ListFormatPhase1] -&gt; ShowS
+showList :: [ListFormatPhase1] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>
+</span><span id="line-65"></span><span id="local-6989586621679628783"><span id="local-6989586621679628784"><span id="local-6989586621679628785"><span id="local-6989586621679628786"><span id="local-6989586621679628787"><span id="local-6989586621679628788"><span id="local-6989586621679628789"><span id="local-6989586621679628790"><span id="local-6989586621679628791"><span id="local-6989586621679628792"><span id="local-6989586621679628793"><span id="local-6989586621679628794"><span id="local-6989586621679628972"><span id="local-6989586621679628977"><span id="local-6989586621679628982"><span id="local-6989586621679628987"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">ListFormatPhase1</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-68"></span><span class="hs-comment">----------------------------------- PHASE 2 ------------------------------------</span><span>
+</span><span id="line-69"></span><span class="hs-comment">--------------------------------------------------------------------------------</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="annot"><span class="hs-comment">-- | Associates the phase to the formatting type.</span></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhaseF"><span class="hs-identifier hs-type">ListFormatPhaseF</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase"><span class="hs-identifier hs-type">Phase</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="ListFormatPhaseF"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhaseF"><span class="hs-identifier hs-var">ListFormatPhaseF</span></a></span></span><span> </span><span id="local-6989586621679629043"><span class="annot"><a href="#local-6989586621679629043"><span class="hs-identifier hs-type">s</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-74"></span><span>  </span><span id="ListFormatPhaseF"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhaseF"><span class="hs-identifier hs-var">ListFormatPhaseF</span></a></span></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhase1"><span class="hs-identifier hs-type">ListFormatPhase1</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span id="ListFormatPhaseF"><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhaseF"><span class="hs-identifier hs-var">ListFormatPhaseF</span></a></span></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier hs-type">Phase2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-type">PathDataFormat</span></a></span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#AdvancePhase"><span class="hs-identifier hs-type">AdvancePhase</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhase1"><span class="hs-identifier hs-type">ListFormatPhase1</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="NextPhase"><span class="annot"><a href="Charon.Runner.Phase.html#NextPhase"><span class="hs-identifier hs-var">NextPhase</span></a></span></span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhase1"><span class="hs-identifier hs-type">ListFormatPhase1</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-type">PathDataFormat</span></a></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679629091"><span class="annot"><span class="annottext">advancePhase :: ListFormatPhase1 -&gt; NextPhase ListFormatPhase1
+</span><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier hs-var hs-var hs-var hs-var">advancePhase</span></a></span></span><span> </span><span id="local-6989586621679629092"><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe ListFormatStyle)
+-&gt; Maybe ListFormatStyle
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe ListFormatStyle)
+</span><span class="">#style</span></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-81"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleMultiline"><span class="hs-identifier hs-var">ListFormatStyleMultiline</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NextPhase ListFormatPhase1
+PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatMultiline"><span class="hs-identifier hs-var">FormatMultiline</span></a></span><span>
+</span><span id="line-82"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleSingleline"><span class="hs-identifier hs-var">ListFormatStyleSingleline</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Coloring -&gt; PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatSingleline"><span class="hs-identifier hs-var">FormatSingleline</span></a></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679629094"><span class="hs-identifier hs-var">coloring</span></a></span><span>
+</span><span id="line-83"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="annot"><span class="annottext">ListFormatStyle
+</span><a href="Charon.Runner.Command.List.html#ListFormatStyleTabular"><span class="hs-identifier hs-var">ListFormatStyleTabular</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-84"></span><span>      </span><span class="annot"><span class="annottext">Coloring -&gt; Maybe ColFormat -&gt; Maybe ColFormat -&gt; PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier hs-var">FormatTabular</span></a></span><span>
+</span><span id="line-85"></span><span>        </span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679629094"><span class="hs-identifier hs-var">coloring</span></a></span><span>
+</span><span id="line-86"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+-&gt; Maybe ColFormat
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+</span><span class="">#nameTrunc</span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+-&gt; Maybe ColFormat
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+</span><span class="">#origTrunc</span></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="annottext">Maybe ListFormatStyle
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-89"></span><span>      </span><span class="annot"><span class="annottext">Coloring -&gt; Maybe ColFormat -&gt; Maybe ColFormat -&gt; PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier hs-var">FormatTabular</span></a></span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679629094"><span class="hs-identifier hs-var">coloring</span></a></span><span>
+</span><span id="line-91"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+-&gt; Maybe ColFormat
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+</span><span class="">#nameTrunc</span></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+-&gt; Maybe ColFormat
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe ColFormat)
+</span><span class="">#origTrunc</span></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-94"></span><span>      </span><span id="local-6989586621679629094"><span class="annot"><span class="annottext">coloring :: Coloring
+</span><a href="#local-6989586621679629094"><span class="hs-identifier hs-var hs-var">coloring</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coloring -&gt; Maybe Coloring -&gt; Coloring
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="Charon.Data.PathData.Formatting.html#ColoringDetect"><span class="hs-identifier hs-var">ColoringDetect</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListFormatPhase1
+</span><a href="#local-6989586621679629092"><span class="hs-identifier hs-var">formatPhase1</span></a></span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1
+-&gt; Optic' A_Lens NoIx ListFormatPhase1 (Maybe Coloring)
+-&gt; Maybe Coloring
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx ListFormatPhase1 (Maybe Coloring)
+</span><span class="">#coloring</span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><span class="hs-comment">-- | Arguments for the list command.</span></span><span>
+</span><span id="line-97"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase"><span class="hs-identifier hs-type">Phase</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-98"></span><span class="hs-keyword">data</span><span> </span><span id="ListCmd"><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-var">ListCmd</span></a></span></span><span> </span><span id="local-6989586621679628830"><span class="annot"><a href="#local-6989586621679628830"><span class="hs-identifier hs-type">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkListCmd"><span class="annot"><a href="Charon.Runner.Command.List.html#MkListCmd"><span class="hs-identifier hs-var">MkListCmd</span></a></span></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Format style.</span></span><span>
+</span><span id="line-100"></span><span>    </span><span id="%24sel%3Aformat%3AMkListCmd"><span class="annot"><span class="annottext">forall (p :: Phase). ListCmd p -&gt; ListFormatPhaseF p
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Aformat%3AMkListCmd"><span class="hs-identifier hs-var hs-var">format</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListFormatPhaseF"><span class="hs-identifier hs-type">ListFormatPhaseF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679628830"><span class="hs-identifier hs-type">p</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>    </span><span class="annot"><span class="hs-comment">-- | How to sort the list.</span></span><span>
+</span><span id="line-102"></span><span>    </span><span id="%24sel%3Asort%3AMkListCmd"><span class="annot"><span class="annottext">forall (p :: Phase). ListCmd p -&gt; MaybePhaseF p Sort
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Asort%3AMkListCmd"><span class="hs-identifier hs-var hs-var">sort</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#MaybePhaseF"><span class="hs-identifier hs-type">MaybePhaseF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679628830"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier hs-type">Sort</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Whether to reverse the sort.</span></span><span>
+</span><span id="line-104"></span><span>    </span><span id="%24sel%3ArevSort%3AMkListCmd"><span class="annot"><span class="annottext">forall (p :: Phase). ListCmd p -&gt; MaybePhaseF p Bool
+</span><a href="Charon.Runner.Command.List.html#%24sel%3ArevSort%3AMkListCmd"><span class="hs-identifier hs-var hs-var">revSort</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#MaybePhaseF"><span class="hs-identifier hs-type">MaybePhaseF</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679628830"><span class="hs-identifier hs-type">p</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span id="local-6989586621679628830"><span id="local-6989586621679628850"><span id="local-6989586621679628851"><span id="local-6989586621679628852"><span id="local-6989586621679628853"><span id="local-6989586621679628854"><span id="local-6989586621679628855"><span id="local-6989586621679628856"><span id="local-6989586621679628857"><span id="local-6989586621679628858"><span id="local-6989586621679629104"><span id="local-6989586621679629109"><span id="local-6989586621679629114"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">ListCmd</span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span id="local-6989586621679629158"><span id="local-6989586621679629165"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span id="local-6989586621679629171"><span id="local-6989586621679629179"><span id="local-6989586621679629183"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span id="local-6989586621679629188"><span id="local-6989586621679629194"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Eq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier hs-type">Phase2</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-114"></span><span>
+</span><span id="line-115"></span><span id="local-6989586621679629198"><span id="local-6989586621679629205"><span id="local-6989586621679629209"><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Show</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier hs-type">Phase2</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-116"></span><span>
+</span><span id="line-117"></span><span class="hs-keyword">type</span><span> </span><span id="ListCmdP1"><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmdP1"><span class="hs-identifier hs-var">ListCmdP1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-keyword">type</span><span> </span><span id="ListCmdP2"><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmdP2"><span class="hs-identifier hs-var">ListCmdP2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier hs-type">Phase2</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#AdvancePhase"><span class="hs-identifier hs-type">AdvancePhase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">type</span><span> </span><span id="NextPhase"><span class="annot"><a href="Charon.Runner.Phase.html#NextPhase"><span class="hs-identifier hs-var">NextPhase</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase1"><span class="hs-identifier hs-type">Phase1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Charon.Runner.Command.List.html#ListCmd"><span class="hs-identifier hs-type">ListCmd</span></a></span><span> </span><span class="annot"><a href="Charon.Runner.Phase.html#Phase2"><span class="hs-identifier hs-type">Phase2</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span>  </span><span id="local-6989586621679629241"><span class="annot"><span class="annottext">advancePhase :: ListCmd 'Phase1 -&gt; NextPhase (ListCmd 'Phase1)
+</span><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier hs-var hs-var hs-var hs-var">advancePhase</span></a></span></span><span> </span><span id="local-6989586621679629242"><span class="annot"><span class="annottext">ListCmd 'Phase1
+</span><a href="#local-6989586621679629242"><span class="hs-identifier hs-var">listCfg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><a href="Charon.Runner.Command.List.html#MkListCmd"><span class="hs-identifier hs-type">MkListCmd</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">NextPhase ListFormatPhase1
+ListFormatPhaseF 'Phase2
+$sel:format:MkListCmd :: ListFormatPhaseF 'Phase2
+format :: NextPhase ListFormatPhase1
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Aformat%3AMkListCmd"><span class="hs-identifier hs-var hs-var">format</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">MaybePhaseF 'Phase2 Sort
+Sort
+$sel:sort:MkListCmd :: MaybePhaseF 'Phase2 Sort
+sort :: Sort
+</span><a href="Charon.Runner.Command.List.html#%24sel%3Asort%3AMkListCmd"><span class="hs-identifier hs-var hs-var">sort</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">Bool
+MaybePhaseF 'Phase2 Bool
+$sel:revSort:MkListCmd :: MaybePhaseF 'Phase2 Bool
+revSort :: Bool
+</span><a href="Charon.Runner.Command.List.html#%24sel%3ArevSort%3AMkListCmd"><span class="hs-identifier hs-var hs-var">revSort</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-131"></span><span>      </span><span id="local-6989586621679629244"><span class="annot"><span class="annottext">sort :: Sort
+</span><a href="#local-6989586621679629244"><span class="hs-identifier hs-var hs-var">sort</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Sort -&gt; Maybe Sort -&gt; Sort
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="annot"><span class="annottext">Sort
+</span><a href="Charon.Data.PathData.Formatting.html#Name"><span class="hs-identifier hs-var">Name</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListCmd 'Phase1
+</span><a href="#local-6989586621679629242"><span class="hs-identifier hs-var">listCfg</span></a></span><span> </span><span class="annot"><span class="annottext">ListCmd 'Phase1
+-&gt; Optic' A_Lens NoIx (ListCmd 'Phase1) (Maybe Sort) -&gt; Maybe Sort
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (ListCmd 'Phase1) (Maybe Sort)
+</span><span class="">#sort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-132"></span><span>      </span><span id="local-6989586621679629245"><span class="annot"><span class="annottext">revSort :: Bool
+</span><a href="#local-6989586621679629245"><span class="hs-identifier hs-var hs-var">revSort</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool -&gt; Bool
+forall a. a -&gt; Maybe a -&gt; a
+</span><span class="hs-identifier hs-var">fromMaybe</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListCmd 'Phase1
+</span><a href="#local-6989586621679629242"><span class="hs-identifier hs-var">listCfg</span></a></span><span> </span><span class="annot"><span class="annottext">ListCmd 'Phase1
+-&gt; Optic' A_Lens NoIx (ListCmd 'Phase1) (Maybe Bool) -&gt; Maybe Bool
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (ListCmd 'Phase1) (Maybe Bool)
+</span><span class="">#revSort</span></span><span class="hs-special">)</span><span>
+</span><span id="line-133"></span><span>      </span><span id="local-6989586621679629243"><span class="annot"><span class="annottext">format :: NextPhase ListFormatPhase1
+</span><a href="#local-6989586621679629243"><span class="hs-identifier hs-var hs-var">format</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ListFormatPhase1 -&gt; NextPhase ListFormatPhase1
+forall a. AdvancePhase a =&gt; a -&gt; NextPhase a
+</span><a href="Charon.Runner.Phase.html#advancePhase"><span class="hs-identifier hs-var">advancePhase</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ListCmd 'Phase1
+</span><a href="#local-6989586621679629242"><span class="hs-identifier hs-var">listCfg</span></a></span><span> </span><span class="annot"><span class="annottext">ListCmd 'Phase1
+-&gt; Optic' A_Lens NoIx (ListCmd 'Phase1) ListFormatPhase1
+-&gt; ListFormatPhase1
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (ListCmd 'Phase1) ListFormatPhase1
+</span><span class="">#format</span></span><span class="hs-special">)</span><span>
+</span><span id="line-134"></span></pre></body></html>

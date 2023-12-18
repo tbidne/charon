@@ -1,0 +1,397 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedLists #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- | Core 'PathData'. This intended to be the 'main' type representing path</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- data. Actual backends are transformed to/from this type.</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Data.PathData</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * PathData</span></span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier">PathData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.html#headerNames"><span class="hs-identifier">headerNames</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.html#originalPathExists"><span class="hs-identifier">originalPathExists</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.html#isDirectory"><span class="hs-identifier">isDirectory</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathType.html"><span class="hs-identifier">Charon.Data.PathType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathType.html#PathTypeW"><span class="hs-identifier">PathTypeW</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathType.html"><span class="hs-identifier">Charon.Data.PathType</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PathType</span></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier">TrashEntryOriginalPath</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Timestamp.html"><span class="hs-identifier">Charon.Data.Timestamp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Timestamp.html#Timestamp"><span class="hs-identifier">Timestamp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Utils.html"><span class="hs-identifier">Charon.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html"><span class="hs-identifier">Effects.FileSystem.PathReader</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#_PathTypeDirectory"><span class="hs-identifier">_PathTypeDirectory</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsList</span></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Exts</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Exts</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- | Data for a path. Maintains an invariant that the original path is not</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- the root nor is it empty.</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">data</span><span> </span><span id="PathData"><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-var">PathData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="UnsafePathData"><span class="annot"><a href="Charon.Data.PathData.html#UnsafePathData"><span class="hs-identifier hs-var">UnsafePathData</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | The type of the path.</span></span><span>
+</span><span id="line-34"></span><span>    </span><span id="%24sel%3ApathType%3AUnsafePathData"><span class="annot"><span class="annottext">PathData -&gt; PathTypeW
+</span><a href="Charon.Data.PathData.html#%24sel%3ApathType%3AUnsafePathData"><span class="hs-identifier hs-var hs-var">pathType</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathType.html#PathTypeW"><span class="hs-identifier hs-type">PathTypeW</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The path to be used in the trash directory.</span></span><span>
+</span><span id="line-36"></span><span>    </span><span id="%24sel%3AfileName%3AUnsafePathData"><span class="annot"><span class="annottext">PathData -&gt; PathI 'TrashEntryFileName
+</span><a href="Charon.Data.PathData.html#%24sel%3AfileName%3AUnsafePathData"><span class="hs-identifier hs-var hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="hs-comment">-- | The original path on the file system.</span></span><span>
+</span><span id="line-38"></span><span>    </span><span id="%24sel%3AoriginalPath%3AUnsafePathData"><span class="annot"><span class="annottext">PathData -&gt; PathI 'TrashEntryOriginalPath
+</span><a href="Charon.Data.PathData.html#%24sel%3AoriginalPath%3AUnsafePathData"><span class="hs-identifier hs-var hs-var">originalPath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier hs-type">TrashEntryOriginalPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- | The size of the file or directory. This is the __total__ size,</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- i.e. in the case of a directory it is</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-comment">--     size := size(dir) + size(dir contents)</span><span>
+</span><span id="line-43"></span><span>    </span><span id="%24sel%3Asize%3AUnsafePathData"><span class="annot"><span class="annottext">PathData -&gt; Bytes 'B Natural
+</span><a href="Charon.Data.PathData.html#%24sel%3Asize%3AUnsafePathData"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#Bytes"><span class="hs-identifier hs-type">Bytes</span></a></span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Time this entry was created.</span></span><span>
+</span><span id="line-45"></span><span>    </span><span id="%24sel%3Acreated%3AUnsafePathData"><span class="annot"><span class="annottext">PathData -&gt; Timestamp
+</span><a href="Charon.Data.PathData.html#%24sel%3Acreated%3AUnsafePathData"><span class="hs-identifier hs-var hs-var">created</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Timestamp.html#Timestamp"><span class="hs-identifier hs-type">Timestamp</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679627723"><span id="local-6989586621679627735"><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Bool
+(PathData -&gt; PathData -&gt; Bool)
+-&gt; (PathData -&gt; PathData -&gt; Bool) -&gt; Eq PathData
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PathData -&gt; PathData -&gt; Bool
+== :: PathData -&gt; PathData -&gt; Bool
+$c/= :: PathData -&gt; PathData -&gt; Bool
+/= :: PathData -&gt; PathData -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679627741"><span id="local-6989586621679627743"><span class="annot"><span class="annottext">(forall x. PathData -&gt; Rep PathData x)
+-&gt; (forall x. Rep PathData x -&gt; PathData) -&gt; Generic PathData
+forall x. Rep PathData x -&gt; PathData
+forall x. PathData -&gt; Rep PathData x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. PathData -&gt; Rep PathData x
+from :: forall x. PathData -&gt; Rep PathData x
+$cto :: forall x. Rep PathData x -&gt; PathData
+to :: forall x. Rep PathData x -&gt; PathData
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679627747"><span id="local-6989586621679627761"><span id="local-6989586621679627765"><span class="annot"><span class="annottext">Int -&gt; PathData -&gt; ShowS
+[PathData] -&gt; ShowS
+PathData -&gt; String
+(Int -&gt; PathData -&gt; ShowS)
+-&gt; (PathData -&gt; String) -&gt; ([PathData] -&gt; ShowS) -&gt; Show PathData
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PathData -&gt; ShowS
+showsPrec :: Int -&gt; PathData -&gt; ShowS
+$cshow :: PathData -&gt; String
+show :: PathData -&gt; String
+$cshowList :: [PathData] -&gt; ShowS
+showList :: [PathData] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679627772"><span id="local-6989586621679627779"><span class="annot"><span class="annottext">Eq PathData
+Eq PathData =&gt;
+(Int -&gt; PathData -&gt; Int) -&gt; (PathData -&gt; Int) -&gt; Hashable PathData
+Int -&gt; PathData -&gt; Int
+PathData -&gt; Int
+forall a. Eq a =&gt; (Int -&gt; a -&gt; Int) -&gt; (a -&gt; Int) -&gt; Hashable a
+$chashWithSalt :: Int -&gt; PathData -&gt; Int
+hashWithSalt :: Int -&gt; PathData -&gt; Int
+$chash :: PathData -&gt; Int
+hash :: PathData -&gt; Int
+</span><a href="file:///nix/store/vzl5qkxfbzyja75hpgy5yl9324sr9ywy-hashable-1.4.3.0-doc/share/doc/hashable-1.4.3.0/html/src/Data.Hashable.Class.html#Hashable"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Hashable</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679627812"><span class="annot"><span class="annottext">PathData -&gt; ()
+(PathData -&gt; ()) -&gt; NFData PathData
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: PathData -&gt; ()
+rnf :: PathData -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span id="local-6989586621679627484"><span id="local-6989586621679627485"><span id="local-6989586621679627486"><span id="local-6989586621679627563"><span id="local-6989586621679627564"><span id="local-6989586621679627565"><span id="local-6989586621679627566"><span id="local-6989586621679627567"><span id="local-6989586621679627568"><span id="local-6989586621679627569"><span id="local-6989586621679627570"><span id="local-6989586621679627571"><span id="local-6989586621679627572"><span id="local-6989586621679627573"><span id="local-6989586621679627574"><span id="local-6989586621679627852"><span id="local-6989586621679627857"><span id="local-6989586621679627862"><span id="local-6989586621679627867"><span id="local-6989586621679627872"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">PathData</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679627947"><span class="annot"><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679628038"><span class="annot"><span class="annottext">pretty :: forall ann. PathData -&gt; Doc ann
+</span><a href="#local-6989586621679628038"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span id="local-6989586621679628040"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#vsep"><span class="hs-identifier hs-var">vsep</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann]
+</span><a href="#local-6989586621679628042"><span class="hs-identifier hs-var">strs</span></a></span><span>
+</span><span id="line-54"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>      </span><span id="local-6989586621679628042"><span class="annot"><span class="annottext">strs :: [Doc ann]
+</span><a href="#local-6989586621679628042"><span class="hs-identifier hs-var hs-var">strs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; (Doc ann -&gt; Doc ann) -&gt; Doc ann)
+-&gt; [Doc ann] -&gt; [Doc ann -&gt; Doc ann] -&gt; [Doc ann]
+forall a b c. (a -&gt; b -&gt; c) -&gt; [a] -&gt; [b] -&gt; [c]
+</span><span class="hs-identifier hs-var">zipWith</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann)
+-&gt; Doc ann -&gt; (Doc ann -&gt; Doc ann) -&gt; Doc ann
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">(Doc ann -&gt; Doc ann) -&gt; Doc ann -&gt; Doc ann
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">($)</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Doc ann]
+forall a. (IsList a, IsString (Item a)) =&gt; a
+</span><a href="Charon.Data.PathData.html#headerNames"><span class="hs-identifier hs-var">headerNames</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann -&gt; Doc ann]
+</span><a href="#local-6989586621679628045"><span class="hs-identifier hs-var">labelFn</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span id="local-6989586621679628045"><span class="annot"><span class="annottext">labelFn :: [Doc ann -&gt; Doc ann]
+</span><a href="#local-6989586621679628045"><span class="hs-identifier hs-var hs-var">labelFn</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-57"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628046"><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628046"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628046"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;:     &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; Text
+</span><a href="#local-6989586621679628048"><span class="hs-identifier hs-var">displayPath</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; Text) -&gt; OsPath -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-58"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679628051"><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628051"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628051"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; Text
+</span><a href="#local-6989586621679628048"><span class="hs-identifier hs-var">displayPath</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; Text) -&gt; OsPath -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+</span><span class="">#originalPath</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryOriginalPath)
+     (PathI 'TrashEntryOriginalPath)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-59"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679628052"><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628052"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628052"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;:     &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PathTypeW -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. PathTypeW -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+-&gt; Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+-&gt; PathTypeW
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+</span><span class="">#pathType</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679628053"><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628053"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628053"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;:     &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; Text
+</span><a href="Charon.Utils.html#normalizedFormat"><span class="hs-identifier hs-var">U.normalizedFormat</span></a></span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; Text) -&gt; Bytes 'B Natural -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+-&gt; Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+-&gt; Bytes 'B Natural
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+</span><span class="">#size</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>          </span><span class="hs-glyph">\</span><span id="local-6989586621679628055"><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628055"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><a href="#local-6989586621679628055"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;:  &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+forall ann. Timestamp -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628040"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData Timestamp -&gt; Timestamp
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData Timestamp
+</span><span class="">#created</span></span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>      </span><span id="local-6989586621679628048"><span class="annot"><span class="annottext">displayPath :: OsPath -&gt; Text
+</span><a href="#local-6989586621679628048"><span class="hs-identifier hs-var hs-var">displayPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Text
+</span><span class="hs-identifier hs-var">T.pack</span></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (OsPath -&gt; String) -&gt; OsPath -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; String
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | Header names.</span></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679627650"><span class="annot"><a href="Charon.Data.PathData.html#headerNames"><span class="hs-identifier hs-type">headerNames</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">IsList</span></span><span> </span><span class="annot"><a href="#local-6989586621679627650"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Exts.Item</span></span><span> </span><span class="annot"><a href="#local-6989586621679627650"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679627650"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-68"></span><span id="headerNames"><span class="annot"><span class="annottext">headerNames :: forall a. (IsList a, IsString (Item a)) =&gt; a
+</span><a href="Charon.Data.PathData.html#headerNames"><span class="hs-identifier hs-var hs-var">headerNames</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Item a
+</span><span class="hs-string">&quot;Name&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item a
+</span><span class="hs-string">&quot;Original&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item a
+</span><span class="hs-string">&quot;Type&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item a
+</span><span class="hs-string">&quot;Size&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Item a
+</span><span class="hs-string">&quot;Created&quot;</span></span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | Returns 'True' if the 'PathData'\'s @originalPath@ corresponds to a real</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- path that exists.</span><span>
+</span><span id="line-72"></span><span id="local-6989586621679627674"><span class="annot"><a href="Charon.Data.PathData.html#originalPathExists"><span class="hs-identifier hs-type">originalPathExists</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679627674"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679627674"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="#local-6989586621679627674"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span></span><span>
+</span><span id="line-79"></span><span id="originalPathExists"><span class="annot"><span class="annottext">originalPathExists :: forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadPathReader m) =&gt;
+PathData -&gt; m Bool
+</span><a href="Charon.Data.PathData.html#originalPathExists"><span class="hs-identifier hs-var hs-var">originalPathExists</span></a></span></span><span> </span><span id="local-6989586621679628100"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628100"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><span class="annottext">PathTypeW -&gt; OsPath -&gt; m Bool
+forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadPathReader m) =&gt;
+PathTypeW -&gt; OsPath -&gt; m Bool
+</span><a href="Charon.Data.PathType.html#existsFn"><span class="hs-identifier hs-var">PathType.existsFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628100"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+-&gt; Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+-&gt; PathTypeW
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+</span><span class="">#pathType</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628100"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+</span><span class="">#originalPath</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryOriginalPath)
+     (PathI 'TrashEntryOriginalPath)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Charon.Data.PathData.html#isDirectory"><span class="hs-identifier hs-type">isDirectory</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span>
+</span><span id="line-83"></span><span id="isDirectory"><span class="annot"><span class="annottext">isDirectory :: PathData -&gt; Bool
+</span><a href="Charon.Data.PathData.html#isDirectory"><span class="hs-identifier hs-var hs-var">isDirectory</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Optic' An_AffineTraversal NoIx PathData () -&gt; PathData -&gt; Bool
+forall k (is :: IxList) s a.
+Is k An_AffineFold =&gt;
+Optic' k is s a -&gt; s -&gt; Bool
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Core.Extras.html#is"><span class="hs-identifier hs-var">is</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+</span><span class="">#pathType</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+-&gt; Optic An_Iso NoIx PathTypeW PathTypeW PathType PathType
+-&gt; Optic A_Lens NoIx PathData PathData PathType PathType
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic An_Iso NoIx PathTypeW PathTypeW PathType PathType
+</span><span class="">#unPathTypeW</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathType PathType
+-&gt; Optic A_Prism NoIx PathType PathType () ()
+-&gt; Optic' An_AffineTraversal NoIx PathData ()
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic A_Prism NoIx PathType PathType () ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#_PathTypeDirectory"><span class="hs-identifier hs-var">_PathTypeDirectory</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span></pre></body></html>

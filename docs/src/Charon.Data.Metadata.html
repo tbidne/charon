@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | Provides metadata functionality.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Data.Metadata</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier">Metadata</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Data.Metadata.html#empty"><span class="hs-identifier">empty</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Utils.html"><span class="hs-identifier">Charon.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.html"><span class="hs-identifier">Data.Bytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier">SomeSize</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.html"><span class="hs-identifier">Numeric.Algebra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#AMonoid"><span class="hs-identifier">AMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#zero"><span class="hs-identifier">zero</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | Holds trash metadata.</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">data</span><span> </span><span id="Metadata"><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier hs-var">Metadata</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkMetadata"><span class="annot"><a href="Charon.Data.Metadata.html#MkMetadata"><span class="hs-identifier hs-var">MkMetadata</span></a></span></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | Number of top level entries in the trash index. This should be the</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- same as the index length.</span><span>
+</span><span id="line-20"></span><span>    </span><span id="%24sel%3AnumEntries%3AMkMetadata"><span class="annot"><span class="annottext">Metadata -&gt; Natural
+</span><a href="Charon.Data.Metadata.html#%24sel%3AnumEntries%3AMkMetadata"><span class="hs-identifier hs-var hs-var">numEntries</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Number of total files in the trash.</span></span><span>
+</span><span id="line-22"></span><span>    </span><span id="%24sel%3AnumFiles%3AMkMetadata"><span class="annot"><span class="annottext">Metadata -&gt; Natural
+</span><a href="Charon.Data.Metadata.html#%24sel%3AnumFiles%3AMkMetadata"><span class="hs-identifier hs-var hs-var">numFiles</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Size of the log file.</span></span><span>
+</span><span id="line-24"></span><span>    </span><span id="%24sel%3AlogSize%3AMkMetadata"><span class="annot"><span class="annottext">Metadata -&gt; SomeSize Double
+</span><a href="Charon.Data.Metadata.html#%24sel%3AlogSize%3AMkMetadata"><span class="hs-identifier hs-var hs-var">logSize</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier hs-type">SomeSize</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- | Total size of the trash directory.</span></span><span>
+</span><span id="line-26"></span><span>    </span><span id="%24sel%3Asize%3AMkMetadata"><span class="annot"><span class="annottext">Metadata -&gt; SomeSize Double
+</span><a href="Charon.Data.Metadata.html#%24sel%3Asize%3AMkMetadata"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#SomeSize"><span class="hs-identifier hs-type">SomeSize</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Double</span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679630652"><span id="local-6989586621679630663"><span class="annot"><span class="annottext">Metadata -&gt; Metadata -&gt; Bool
+(Metadata -&gt; Metadata -&gt; Bool)
+-&gt; (Metadata -&gt; Metadata -&gt; Bool) -&gt; Eq Metadata
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Metadata -&gt; Metadata -&gt; Bool
+== :: Metadata -&gt; Metadata -&gt; Bool
+$c/= :: Metadata -&gt; Metadata -&gt; Bool
+/= :: Metadata -&gt; Metadata -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679630670"><span id="local-6989586621679630672"><span class="annot"><span class="annottext">(forall x. Metadata -&gt; Rep Metadata x)
+-&gt; (forall x. Rep Metadata x -&gt; Metadata) -&gt; Generic Metadata
+forall x. Rep Metadata x -&gt; Metadata
+forall x. Metadata -&gt; Rep Metadata x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Metadata -&gt; Rep Metadata x
+from :: forall x. Metadata -&gt; Rep Metadata x
+$cto :: forall x. Rep Metadata x -&gt; Metadata
+to :: forall x. Rep Metadata x -&gt; Metadata
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679630676"><span id="local-6989586621679630687"><span id="local-6989586621679630691"><span class="annot"><span class="annottext">Int -&gt; Metadata -&gt; ShowS
+[Metadata] -&gt; ShowS
+Metadata -&gt; String
+(Int -&gt; Metadata -&gt; ShowS)
+-&gt; (Metadata -&gt; String) -&gt; ([Metadata] -&gt; ShowS) -&gt; Show Metadata
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Metadata -&gt; ShowS
+showsPrec :: Int -&gt; Metadata -&gt; ShowS
+$cshow :: Metadata -&gt; String
+show :: Metadata -&gt; String
+$cshowList :: [Metadata] -&gt; ShowS
+showList :: [Metadata] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679630696"><span class="annot"><span class="annottext">Metadata -&gt; ()
+(Metadata -&gt; ()) -&gt; NFData Metadata
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: Metadata -&gt; ()
+rnf :: Metadata -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span id="local-6989586621679630569"><span id="local-6989586621679630570"><span id="local-6989586621679630571"><span id="local-6989586621679630572"><span id="local-6989586621679630573"><span id="local-6989586621679630574"><span id="local-6989586621679630575"><span id="local-6989586621679630576"><span id="local-6989586621679630577"><span id="local-6989586621679630578"><span id="local-6989586621679630579"><span id="local-6989586621679630580"><span id="local-6989586621679630726"><span id="local-6989586621679630731"><span id="local-6989586621679630736"><span id="local-6989586621679630741"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Metadata</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | Empty metadata.</span></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Charon.Data.Metadata.html#empty"><span class="hs-identifier hs-type">empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier hs-type">Metadata</span></a></span><span>
+</span><span id="line-35"></span><span id="empty"><span class="annot"><span class="annottext">empty :: Metadata
+</span><a href="Charon.Data.Metadata.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+-&gt; Natural -&gt; SomeSize Double -&gt; SomeSize Double -&gt; Metadata
+</span><a href="Charon.Data.Metadata.html#MkMetadata"><span class="hs-identifier hs-var">MkMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">SomeSize Double
+forall m. AMonoid m =&gt; m
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#zero"><span class="hs-identifier hs-var">zero</span></a></span><span> </span><span class="annot"><span class="annottext">SomeSize Double
+forall m. AMonoid m =&gt; m
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#zero"><span class="hs-identifier hs-var">zero</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679630799"><span class="annot"><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#Pretty"><span class="hs-identifier hs-type">Pretty</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier hs-type">Metadata</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679630856"><span class="annot"><span class="annottext">pretty :: forall ann. Metadata -&gt; Doc ann
+</span><a href="#local-6989586621679630856"><span class="hs-identifier hs-var hs-var hs-var hs-var">pretty</span></a></span></span><span> </span><span id="local-6989586621679630858"><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679630858"><span class="hs-identifier hs-var">stats</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Doc ann] -&gt; Doc ann
+forall ann. [Doc ann] -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#vsep"><span class="hs-identifier hs-var">vsep</span></a></span><span> </span><span class="annot"><span class="annottext">[Doc ann]
+</span><a href="#local-6989586621679630860"><span class="hs-identifier hs-var">strs</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Doc ann
+forall ann. Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#line"><span class="hs-identifier hs-var">line</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-40"></span><span>      </span><span id="local-6989586621679630860"><span class="annot"><span class="annottext">strs :: [Doc ann]
+</span><a href="#local-6989586621679630860"><span class="hs-identifier hs-var hs-var">strs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Entries:     &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Doc ann
+forall ann. Natural -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679630858"><span class="hs-identifier hs-var">stats</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata -&gt; Optic' A_Lens NoIx Metadata Natural -&gt; Natural
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Metadata Natural
+</span><span class="">#numEntries</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-42"></span><span>          </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Total Files: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Doc ann
+forall ann. Natural -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679630858"><span class="hs-identifier hs-var">stats</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata -&gt; Optic' A_Lens NoIx Metadata Natural -&gt; Natural
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Metadata Natural
+</span><span class="">#numFiles</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-43"></span><span>          </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Log size:    &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SomeSize Double -&gt; Text
+forall a.
+(BaseFormatter (Unwrapped a) ~ FloatingFormatter,
+ PrintfArg (Unwrapped a), Sized a, Unwrapper a) =&gt;
+a -&gt; Text
+</span><a href="Charon.Utils.html#formatBytes"><span class="hs-identifier hs-var">U.formatBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeSize Double -&gt; Text) -&gt; SomeSize Double -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679630858"><span class="hs-identifier hs-var">stats</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata
+-&gt; Optic' A_Lens NoIx Metadata (SomeSize Double) -&gt; SomeSize Double
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Metadata (SomeSize Double)
+</span><span class="">#logSize</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-44"></span><span>          </span><span class="annot"><span class="annottext">Doc ann
+</span><span class="hs-string">&quot;Size:        &quot;</span></span><span> </span><span class="annot"><span class="annottext">Doc ann -&gt; Doc ann -&gt; Doc ann
+forall ann. Doc ann -&gt; Doc ann -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#%3C%2B%3E"><span class="hs-operator hs-var">&lt;+&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Doc ann
+forall ann. Text -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/8dbdwk0963kxpz5byjy6s9y2sn57fdk7-prettyprinter-1.7.1-doc/share/doc/prettyprinter-1.7.1/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">SomeSize Double -&gt; Text
+forall a.
+(BaseFormatter (Unwrapped a) ~ FloatingFormatter,
+ PrintfArg (Unwrapped a), Sized a, Unwrapper a) =&gt;
+a -&gt; Text
+</span><a href="Charon.Utils.html#formatBytes"><span class="hs-identifier hs-var">U.formatBytes</span></a></span><span> </span><span class="annot"><span class="annottext">(SomeSize Double -&gt; Text) -&gt; SomeSize Double -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Metadata
+</span><a href="#local-6989586621679630858"><span class="hs-identifier hs-var">stats</span></a></span><span> </span><span class="annot"><span class="annottext">Metadata
+-&gt; Optic' A_Lens NoIx Metadata (SomeSize Double) -&gt; SomeSize Double
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx Metadata (SomeSize Double)
+</span><span class="">#size</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span></pre></body></html>

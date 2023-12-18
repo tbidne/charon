@@ -1,0 +1,44 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Rosetta</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html#Rosetta"><span class="hs-identifier">Rosetta</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Index.html"><span class="hs-identifier">Charon.Data.Index</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier">Index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- | Rosetta is used to convert from/to backend. If we want to covert backends</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- b -&gt; c, we essentially do c.fromRosetta (b.toRosetta()).</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">data</span><span> </span><span id="Rosetta"><span class="annot"><a href="Charon.Backend.Rosetta.html#Rosetta"><span class="hs-identifier hs-var">Rosetta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkRosetta"><span class="annot"><a href="Charon.Backend.Rosetta.html#MkRosetta"><span class="hs-identifier hs-var">MkRosetta</span></a></span></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="%24sel%3Aindex%3AMkRosetta"><span class="annot"><span class="annottext">Rosetta -&gt; Index
+</span><a href="Charon.Backend.Rosetta.html#%24sel%3Aindex%3AMkRosetta"><span class="hs-identifier hs-var hs-var">index</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span id="%24sel%3Asize%3AMkRosetta"><span class="annot"><span class="annottext">Rosetta -&gt; Bytes 'B Natural
+</span><a href="Charon.Backend.Rosetta.html#%24sel%3Asize%3AMkRosetta"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Internal.html#Bytes"><span class="hs-identifier hs-type">Bytes</span></a></span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/si-bytes-0.1-97cb24a33de91ba49ee0c56be2863dcf522540262bce46ec251c99d0bda0642a/share/doc/html/src/Data.Bytes.Size.html#B"><span class="hs-identifier hs-type">B</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679630291"><span id="local-6989586621679630298"><span class="annot"><span class="annottext">Rosetta -&gt; Rosetta -&gt; Bool
+(Rosetta -&gt; Rosetta -&gt; Bool)
+-&gt; (Rosetta -&gt; Rosetta -&gt; Bool) -&gt; Eq Rosetta
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Rosetta -&gt; Rosetta -&gt; Bool
+== :: Rosetta -&gt; Rosetta -&gt; Bool
+$c/= :: Rosetta -&gt; Rosetta -&gt; Bool
+/= :: Rosetta -&gt; Rosetta -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679630304"><span id="local-6989586621679630313"><span id="local-6989586621679630317"><span class="annot"><span class="annottext">Int -&gt; Rosetta -&gt; ShowS
+[Rosetta] -&gt; ShowS
+Rosetta -&gt; String
+(Int -&gt; Rosetta -&gt; ShowS)
+-&gt; (Rosetta -&gt; String) -&gt; ([Rosetta] -&gt; ShowS) -&gt; Show Rosetta
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Rosetta -&gt; ShowS
+showsPrec :: Int -&gt; Rosetta -&gt; ShowS
+$cshow :: Rosetta -&gt; String
+show :: Rosetta -&gt; String
+$cshowList :: [Rosetta] -&gt; ShowS
+showList :: [Rosetta] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span id="local-6989586621679630270"><span id="local-6989586621679630271"><span id="local-6989586621679630272"><span id="local-6989586621679630273"><span id="local-6989586621679630274"><span id="local-6989586621679630275"><span id="local-6989586621679630325"><span id="local-6989586621679630330"><span class="hs-identifier">makeFieldLabelsNoPrefix</span><span> </span><span class="hs-special">''</span><span class="hs-identifier">Rosetta</span></span></span></span></span></span></span></span></span><span>
+</span><span id="line-21"></span></pre></body></html>

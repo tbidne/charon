@@ -1,0 +1,1075 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Formats the default 'PathData'.</span></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Data.PathData.Formatting</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Types</span></span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier">PathDataFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatMultiline"><span class="hs-identifier">_FormatMultiline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatTabular"><span class="hs-identifier">_FormatTabular</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatSingleline"><span class="hs-identifier">_FormatSingleline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier">ColFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatFixed"><span class="hs-identifier">_ColFormatFixed</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatMax"><span class="hs-identifier">_ColFormatMax</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier">Coloring</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- ** Sort</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier">Sort</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#readSort"><span class="hs-identifier">readSort</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortFn"><span class="hs-identifier">sortFn</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Format functions</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader"><span class="hs-identifier">formatTabularHeader</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularHeaderColor"><span class="hs-identifier">formatTabularHeaderColor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularRow"><span class="hs-identifier">formatTabularRow</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularRowColor"><span class="hs-identifier">formatTabularRowColor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatMultiline"><span class="hs-identifier">formatMultiline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSingleline"><span class="hs-identifier">formatSingleline</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSinglelineColor"><span class="hs-identifier">formatSinglelineColor</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Sorting</span></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortNameCreated"><span class="hs-identifier">sortNameCreated</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortSizeName"><span class="hs-identifier">sortSizeName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortReverse"><span class="hs-identifier">sortReverse</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Field lengths</span></span><span>
+</span><span id="line-33"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatFileNameLenMin"><span class="hs-identifier">formatFileNameLenMin</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatOriginalPathLenMin"><span class="hs-identifier">formatOriginalPathLenMin</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#minTableWidth"><span class="hs-identifier">minTableWidth</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#reservedLineLen"><span class="hs-identifier">reservedLineLen</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html"><span class="hs-identifier">Charon.Data.PathData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier">PathData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Timestamp.html"><span class="hs-identifier">Charon.Data.Timestamp</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Timestamp</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Utils.html"><span class="hs-identifier">Charon.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">U</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Char</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Ch</span></span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html"><span class="hs-identifier">System.Console.Pretty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier">Color</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html"><span class="hs-identifier">System.Console.Pretty</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CPretty</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">data</span><span> </span><span id="ColFormat"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-var">ColFormat</span></a></span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Fixed length format.</span></span><span>
+</span><span id="line-51"></span><span>    </span><span id="ColFormatFixed"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormatFixed"><span class="hs-identifier hs-var">ColFormatFixed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Format the column according to its longest entry, if possible.</span></span><span>
+</span><span id="line-53"></span><span>    </span><span id="ColFormatMax"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormatMax"><span class="hs-identifier hs-var">ColFormatMax</span></a></span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628530"><span id="local-6989586621679628534"><span class="annot"><span class="annottext">ColFormat -&gt; ColFormat -&gt; Bool
+(ColFormat -&gt; ColFormat -&gt; Bool)
+-&gt; (ColFormat -&gt; ColFormat -&gt; Bool) -&gt; Eq ColFormat
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ColFormat -&gt; ColFormat -&gt; Bool
+== :: ColFormat -&gt; ColFormat -&gt; Bool
+$c/= :: ColFormat -&gt; ColFormat -&gt; Bool
+/= :: ColFormat -&gt; ColFormat -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628539"><span id="local-6989586621679628544"><span id="local-6989586621679628548"><span class="annot"><span class="annottext">Int -&gt; ColFormat -&gt; ShowS
+[ColFormat] -&gt; ShowS
+ColFormat -&gt; [Char]
+(Int -&gt; ColFormat -&gt; ShowS)
+-&gt; (ColFormat -&gt; [Char])
+-&gt; ([ColFormat] -&gt; ShowS)
+-&gt; Show ColFormat
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ColFormat -&gt; ShowS
+showsPrec :: Int -&gt; ColFormat -&gt; ShowS
+$cshow :: ColFormat -&gt; [Char]
+show :: ColFormat -&gt; [Char]
+$cshowList :: [ColFormat] -&gt; ShowS
+showList :: [ColFormat] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatFixed"><span class="hs-identifier hs-type">_ColFormatFixed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#Prism%27"><span class="hs-identifier hs-type">Prism'</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-57"></span><span id="_ColFormatFixed"><span class="annot"><span class="annottext">_ColFormatFixed :: Prism' ColFormat Natural
+</span><a href="Charon.Data.PathData.Formatting.html#_ColFormatFixed"><span class="hs-identifier hs-var hs-var">_ColFormatFixed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">(Natural -&gt; ColFormat)
+-&gt; (ColFormat -&gt; Either ColFormat Natural)
+-&gt; Prism' ColFormat Natural
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Natural -&gt; ColFormat
+</span><a href="Charon.Data.PathData.Formatting.html#ColFormatFixed"><span class="hs-identifier hs-var">ColFormatFixed</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628552"><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628552"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628552"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormatFixed"><span class="hs-identifier hs-type">ColFormatFixed</span></a></span><span> </span><span id="local-6989586621679628553"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628553"><span class="hs-identifier hs-var">lbl</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Either ColFormat Natural
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628553"><span class="hs-identifier hs-var">lbl</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">ColFormat
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ColFormat -&gt; Either ColFormat Natural
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628552"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatFixed"><span class="hs-pragma hs-type">_ColFormatFixed</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatMax"><span class="hs-identifier hs-type">_ColFormatMax</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#Prism%27"><span class="hs-identifier hs-type">Prism'</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span id="_ColFormatMax"><span class="annot"><span class="annottext">_ColFormatMax :: Prism' ColFormat ()
+</span><a href="Charon.Data.PathData.Formatting.html#_ColFormatMax"><span class="hs-identifier hs-var hs-var">_ColFormatMax</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="annot"><span class="annottext">(() -&gt; ColFormat)
+-&gt; (ColFormat -&gt; Either ColFormat ()) -&gt; Prism' ColFormat ()
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ColFormat -&gt; () -&gt; ColFormat
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="Charon.Data.PathData.Formatting.html#ColFormatMax"><span class="hs-identifier hs-var">ColFormatMax</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-70"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628555"><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628555"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628555"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-71"></span><span>        </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="Charon.Data.PathData.Formatting.html#ColFormatMax"><span class="hs-identifier hs-var">ColFormatMax</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either ColFormat ()
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>        </span><span class="annot"><span class="annottext">ColFormat
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ColFormat -&gt; Either ColFormat ()
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">ColFormat
+</span><a href="#local-6989586621679628555"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_ColFormatMax"><span class="hs-pragma hs-type">_ColFormatMax</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><span class="hs-comment">-- | Whether we should color list command.</span></span><span>
+</span><span id="line-77"></span><span class="hs-keyword">data</span><span> </span><span id="Coloring"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-var">Coloring</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Coloring on</span></span><span>
+</span><span id="line-79"></span><span>    </span><span id="ColoringOn"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColoringOn"><span class="hs-identifier hs-var">ColoringOn</span></a></span></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Coloring off</span></span><span>
+</span><span id="line-81"></span><span>    </span><span id="ColoringOff"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColoringOff"><span class="hs-identifier hs-var">ColoringOff</span></a></span></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Attempt to detect if the terminal support colors.</span></span><span>
+</span><span id="line-83"></span><span>    </span><span id="ColoringDetect"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColoringDetect"><span class="hs-identifier hs-var">ColoringDetect</span></a></span></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628560"><span id="local-6989586621679628562"><span class="annot"><span class="annottext">Coloring -&gt; Coloring -&gt; Bool
+(Coloring -&gt; Coloring -&gt; Bool)
+-&gt; (Coloring -&gt; Coloring -&gt; Bool) -&gt; Eq Coloring
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Coloring -&gt; Coloring -&gt; Bool
+== :: Coloring -&gt; Coloring -&gt; Bool
+$c/= :: Coloring -&gt; Coloring -&gt; Bool
+/= :: Coloring -&gt; Coloring -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628566"><span id="local-6989586621679628568"><span id="local-6989586621679628572"><span class="annot"><span class="annottext">Int -&gt; Coloring -&gt; ShowS
+[Coloring] -&gt; ShowS
+Coloring -&gt; [Char]
+(Int -&gt; Coloring -&gt; ShowS)
+-&gt; (Coloring -&gt; [Char]) -&gt; ([Coloring] -&gt; ShowS) -&gt; Show Coloring
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Coloring -&gt; ShowS
+showsPrec :: Int -&gt; Coloring -&gt; ShowS
+$cshow :: Coloring -&gt; [Char]
+show :: Coloring -&gt; [Char]
+$cshowList :: [Coloring] -&gt; ShowS
+showList :: [Coloring] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><span class="hs-comment">-- | Determines how to format a textual 'PathData'.</span></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">data</span><span> </span><span id="PathDataFormat"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-var">PathDataFormat</span></a></span></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Formats each file on its own line.</span></span><span>
+</span><span id="line-89"></span><span>    </span><span id="FormatMultiline"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatMultiline"><span class="hs-identifier hs-var">FormatMultiline</span></a></span></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Formats all fields on the same line.</span></span><span>
+</span><span id="line-91"></span><span>    </span><span id="FormatTabular"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier hs-var">FormatTabular</span></a></span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Formats each entry on a single line, no table.</span></span><span>
+</span><span id="line-93"></span><span>    </span><span id="FormatSingleline"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatSingleline"><span class="hs-identifier hs-var">FormatSingleline</span></a></span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628578"><span id="local-6989586621679628586"><span class="annot"><span class="annottext">PathDataFormat -&gt; PathDataFormat -&gt; Bool
+(PathDataFormat -&gt; PathDataFormat -&gt; Bool)
+-&gt; (PathDataFormat -&gt; PathDataFormat -&gt; Bool) -&gt; Eq PathDataFormat
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PathDataFormat -&gt; PathDataFormat -&gt; Bool
+== :: PathDataFormat -&gt; PathDataFormat -&gt; Bool
+$c/= :: PathDataFormat -&gt; PathDataFormat -&gt; Bool
+/= :: PathDataFormat -&gt; PathDataFormat -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628590"><span id="local-6989586621679628600"><span id="local-6989586621679628604"><span class="annot"><span class="annottext">Int -&gt; PathDataFormat -&gt; ShowS
+[PathDataFormat] -&gt; ShowS
+PathDataFormat -&gt; [Char]
+(Int -&gt; PathDataFormat -&gt; ShowS)
+-&gt; (PathDataFormat -&gt; [Char])
+-&gt; ([PathDataFormat] -&gt; ShowS)
+-&gt; Show PathDataFormat
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PathDataFormat -&gt; ShowS
+showsPrec :: Int -&gt; PathDataFormat -&gt; ShowS
+$cshow :: PathDataFormat -&gt; [Char]
+show :: PathDataFormat -&gt; [Char]
+$cshowList :: [PathDataFormat] -&gt; ShowS
+showList :: [PathDataFormat] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatMultiline"><span class="hs-identifier hs-type">_FormatMultiline</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#Prism%27"><span class="hs-identifier hs-type">Prism'</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-type">PathDataFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span id="_FormatMultiline"><span class="annot"><span class="annottext">_FormatMultiline :: Prism' PathDataFormat ()
+</span><a href="Charon.Data.PathData.Formatting.html#_FormatMultiline"><span class="hs-identifier hs-var hs-var">_FormatMultiline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><span class="annottext">(() -&gt; PathDataFormat)
+-&gt; (PathDataFormat -&gt; Either PathDataFormat ())
+-&gt; Prism' PathDataFormat ()
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span>
+</span><span id="line-99"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathDataFormat -&gt; () -&gt; PathDataFormat
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatMultiline"><span class="hs-identifier hs-var">FormatMultiline</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628606"><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628606"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628606"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>        </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatMultiline"><span class="hs-identifier hs-var">FormatMultiline</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; Either PathDataFormat ()
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span>        </span><span class="annot"><span class="annottext">PathDataFormat
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathDataFormat -&gt; Either PathDataFormat ()
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628606"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-104"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatMultiline"><span class="hs-pragma hs-type">_FormatMultiline</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatTabular"><span class="hs-identifier hs-type">_FormatTabular</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#Prism%27"><span class="hs-identifier hs-type">Prism'</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-type">PathDataFormat</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#ColFormat"><span class="hs-identifier hs-type">ColFormat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span id="_FormatTabular"><span class="annot"><span class="annottext">_FormatTabular :: Prism' PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat)
+</span><a href="Charon.Data.PathData.Formatting.html#_FormatTabular"><span class="hs-identifier hs-var hs-var">_FormatTabular</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="annottext">((Coloring, Maybe ColFormat, Maybe ColFormat) -&gt; PathDataFormat)
+-&gt; (PathDataFormat
+    -&gt; Either
+         PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat))
+-&gt; Prism'
+     PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat)
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span>
+</span><span id="line-109"></span><span>    </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679628607"><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628607"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628608"><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628608"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628609"><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628609"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Coloring -&gt; Maybe ColFormat -&gt; Maybe ColFormat -&gt; PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier hs-var">FormatTabular</span></a></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628607"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628608"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628609"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628610"><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628610"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628610"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-111"></span><span>        </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatTabular"><span class="hs-identifier hs-type">FormatTabular</span></a></span><span> </span><span id="local-6989586621679628611"><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628611"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679628612"><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628612"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span id="local-6989586621679628613"><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628613"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(Coloring, Maybe ColFormat, Maybe ColFormat)
+-&gt; Either
+     PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat)
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628611"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628612"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe ColFormat
+</span><a href="#local-6989586621679628613"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>        </span><span class="annot"><span class="annottext">PathDataFormat
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+-&gt; Either
+     PathDataFormat (Coloring, Maybe ColFormat, Maybe ColFormat)
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628610"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-114"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatTabular"><span class="hs-pragma hs-type">_FormatTabular</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatSingleline"><span class="hs-identifier hs-type">_FormatSingleline</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#Prism%27"><span class="hs-identifier hs-type">Prism'</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#PathDataFormat"><span class="hs-identifier hs-type">PathDataFormat</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Coloring"><span class="hs-identifier hs-type">Coloring</span></a></span><span>
+</span><span id="line-117"></span><span id="_FormatSingleline"><span class="annot"><span class="annottext">_FormatSingleline :: Prism' PathDataFormat Coloring
+</span><a href="Charon.Data.PathData.Formatting.html#_FormatSingleline"><span class="hs-identifier hs-var hs-var">_FormatSingleline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><span class="annottext">(Coloring -&gt; PathDataFormat)
+-&gt; (PathDataFormat -&gt; Either PathDataFormat Coloring)
+-&gt; Prism' PathDataFormat Coloring
+forall b t s a. (b -&gt; t) -&gt; (s -&gt; Either t a) -&gt; Prism s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Prism.html#prism"><span class="hs-identifier hs-var">prism</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><span class="annottext">Coloring -&gt; PathDataFormat
+</span><a href="Charon.Data.PathData.Formatting.html#FormatSingleline"><span class="hs-identifier hs-var">FormatSingleline</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679628614"><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628614"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628614"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-121"></span><span>        </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#FormatSingleline"><span class="hs-identifier hs-type">FormatSingleline</span></a></span><span> </span><span id="local-6989586621679628615"><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628615"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Coloring -&gt; Either PathDataFormat Coloring
+forall a b. b -&gt; Either a b
+</span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="annot"><span class="annottext">Coloring
+</span><a href="#local-6989586621679628615"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-122"></span><span>        </span><span class="annot"><span class="annottext">PathDataFormat
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathDataFormat -&gt; Either PathDataFormat Coloring
+forall a b. a -&gt; Either a b
+</span><span class="hs-identifier hs-var">Left</span></span><span> </span><span class="annot"><span class="annottext">PathDataFormat
+</span><a href="#local-6989586621679628614"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#_FormatSingleline"><span class="hs-pragma hs-type">_FormatSingleline</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortNameCreated"><span class="hs-identifier hs-type">sortNameCreated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-127"></span><span id="sortNameCreated"><span class="annot"><span class="annottext">sortNameCreated :: PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortNameCreated"><span class="hs-identifier hs-var hs-var">sortNameCreated</span></a></span></span><span> </span><span id="local-6989586621679628616"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628616"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679628617"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628617"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortName"><span class="hs-identifier hs-var">sortName</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628616"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628617"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortCreated"><span class="hs-identifier hs-var">sortCreated</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628616"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628617"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-129"></span><span>  </span><span id="local-6989586621679628620"><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679628620"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679628620"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortSizeName"><span class="hs-identifier hs-type">sortSizeName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-132"></span><span id="sortSizeName"><span class="annot"><span class="annottext">sortSizeName :: PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortSizeName"><span class="hs-identifier hs-var hs-var">sortSizeName</span></a></span></span><span> </span><span id="local-6989586621679628621"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628621"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679628622"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628622"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortSize"><span class="hs-identifier hs-var">sortSize</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628621"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628622"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortName"><span class="hs-identifier hs-var">sortName</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628621"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628622"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-134"></span><span>  </span><span id="local-6989586621679628624"><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679628624"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><a href="#local-6989586621679628624"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span id="local-6989586621679628221"><span id="local-6989586621679628222"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortReverse"><span class="hs-identifier hs-type">sortReverse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679628221"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628222"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628221"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628222"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span></span></span><span>
+</span><span id="line-137"></span><span id="sortReverse"><span class="annot"><span class="annottext">sortReverse :: forall a b. (a -&gt; b -&gt; Ordering) -&gt; a -&gt; b -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortReverse"><span class="hs-identifier hs-var hs-var">sortReverse</span></a></span></span><span> </span><span id="local-6989586621679628625"><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679628625"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679628626"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628626"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679628627"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679628627"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a -&gt; b -&gt; Ordering
+</span><a href="#local-6989586621679628625"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628626"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679628627"><span class="hs-identifier hs-var">y</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">EQ</span></span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">GT</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Ordering
+</span><span class="hs-identifier hs-var">LT</span></span><span>
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="annot"><span class="hs-comment">-- | Sorts by the created date.</span></span><span>
+</span><span id="line-143"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortCreated"><span class="hs-identifier hs-type">sortCreated</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-144"></span><span id="sortCreated"><span class="annot"><span class="annottext">sortCreated :: PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortCreated"><span class="hs-identifier hs-var hs-var">sortCreated</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; Timestamp) -&gt; PathData -&gt; PathData -&gt; Ordering
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#mapOrd"><span class="hs-identifier hs-var">mapOrd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData Timestamp -&gt; PathData -&gt; Timestamp
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData Timestamp
+</span><span class="">#created</span></span><span class="hs-special">)</span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="annot"><span class="hs-comment">-- | Sorts by the name.</span></span><span>
+</span><span id="line-147"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortName"><span class="hs-identifier hs-type">sortName</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-148"></span><span id="sortName"><span class="annot"><span class="annottext">sortName :: PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortName"><span class="hs-identifier hs-var hs-var">sortName</span></a></span></span><span> </span><span id="local-6989586621679628630"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628630"><span class="hs-identifier hs-var">pd1</span></a></span></span><span> </span><span id="local-6989586621679628631"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628631"><span class="hs-identifier hs-var">pd2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; [Char] -&gt; ([Char], [Char]))
+-&gt; Either EncodingException [Char]
+-&gt; Either EncodingException [Char]
+-&gt; Either EncodingException ([Char], [Char])
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; Either EncodingException a
+-&gt; Either EncodingException b
+-&gt; Either EncodingException c
+forall (f :: * -&gt; *) a b c.
+Applicative f =&gt;
+(a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c
+</span><span class="hs-identifier hs-var">liftA2</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; Either EncodingException [Char]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFp"><span class="hs-identifier hs-var">decodeOsToFp</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679628634"><span class="hs-identifier hs-var">p1</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; Either EncodingException [Char]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFp"><span class="hs-identifier hs-var">decodeOsToFp</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679628635"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-comment">-- NOTE: Decoding to string is the default ordering. If for some reason this</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-comment">-- fails, fall back to OsPaths' ordering.</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628636"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628636"><span class="hs-identifier hs-var">s1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628637"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628637"><span class="hs-identifier hs-var">s2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [Char] -&gt; [Char] -&gt; Ordering
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#mapOrd"><span class="hs-identifier hs-var">mapOrd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-identifier hs-var">fmap</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><span class="hs-identifier hs-var">Ch.toLower</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628636"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628637"><span class="hs-identifier hs-var">s2</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">EncodingException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679628634"><span class="hs-identifier hs-var">p1</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-operator hs-var">`compare`</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679628635"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679628634"><span class="annot"><span class="annottext">p1 :: OsPath
+</span><a href="#local-6989586621679628634"><span class="hs-identifier hs-var hs-var">p1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628630"><span class="hs-identifier hs-var">pd1</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span>    </span><span id="local-6989586621679628635"><span class="annot"><span class="annottext">p2 :: OsPath
+</span><a href="#local-6989586621679628635"><span class="hs-identifier hs-var hs-var">p2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628631"><span class="hs-identifier hs-var">pd2</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="annot"><span class="hs-comment">-- | Sorts by the name.</span></span><span>
+</span><span id="line-158"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortSize"><span class="hs-identifier hs-type">sortSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-159"></span><span id="sortSize"><span class="annot"><span class="annottext">sortSize :: PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortSize"><span class="hs-identifier hs-var hs-var">sortSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; Bytes 'B Natural) -&gt; PathData -&gt; PathData -&gt; Ordering
+forall b a. Ord b =&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#mapOrd"><span class="hs-identifier hs-var">mapOrd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+-&gt; PathData -&gt; Bytes 'B Natural
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+</span><span class="">#size</span></span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span id="local-6989586621679628225"><span id="local-6989586621679628226"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#mapOrd"><span class="hs-identifier hs-type">mapOrd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Ord</span></span><span> </span><span class="annot"><a href="#local-6989586621679628225"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679628226"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628225"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628226"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628226"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span></span></span><span>
+</span><span id="line-162"></span><span id="mapOrd"><span class="annot"><span class="annottext">mapOrd :: forall b a. Ord b =&gt; (a -&gt; b) -&gt; a -&gt; a -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#mapOrd"><span class="hs-identifier hs-var hs-var">mapOrd</span></a></span></span><span> </span><span id="local-6989586621679628644"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679628644"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679628645"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628645"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span id="local-6989586621679628646"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628646"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679628644"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628645"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; b -&gt; Ordering
+forall a. Ord a =&gt; a -&gt; a -&gt; Ordering
+</span><span class="hs-operator hs-var">`compare`</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679628644"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679628646"><span class="hs-identifier hs-var">y</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatMultiline"><span class="hs-identifier hs-type">formatMultiline</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-165"></span><span id="formatMultiline"><span class="annot"><span class="annottext">formatMultiline :: PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatMultiline"><span class="hs-identifier hs-var hs-var">formatMultiline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Text
+forall a. Pretty a =&gt; a -&gt; Text
+</span><a href="Charon.Utils.html#renderPretty"><span class="hs-identifier hs-var">U.renderPretty</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSingleline"><span class="hs-identifier hs-type">formatSingleline</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-168"></span><span id="formatSingleline"><span class="annot"><span class="annottext">formatSingleline :: PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatSingleline"><span class="hs-identifier hs-var hs-var">formatSingleline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatSingleline%27"><span class="hs-identifier hs-var">formatSingleline'</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSinglelineColor"><span class="hs-identifier hs-type">formatSinglelineColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-171"></span><span id="formatSinglelineColor"><span class="annot"><span class="annottext">formatSinglelineColor :: Color -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatSinglelineColor"><span class="hs-identifier hs-var hs-var">formatSinglelineColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatSingleline%27"><span class="hs-identifier hs-var">formatSingleline'</span></a></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Text) -&gt; PathData -&gt; Text)
+-&gt; (Color -&gt; Text -&gt; Text) -&gt; Color -&gt; PathData -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Color -&gt; Text -&gt; Text
+forall a. Pretty a =&gt; Color -&gt; a -&gt; a
+</span><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#color"><span class="hs-identifier hs-var">CPretty.color</span></a></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSingleline%27"><span class="hs-identifier hs-type">formatSingleline'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-174"></span><span id="formatSingleline%27"><span class="annot"><span class="annottext">formatSingleline' :: (Text -&gt; Text) -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatSingleline%27"><span class="hs-identifier hs-var hs-var">formatSingleline'</span></a></span></span><span> </span><span id="local-6989586621679628652"><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628652"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679628653"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628653"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-175"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628652"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-177"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Timestamp -&gt; Text
+</span><a href="Charon.Data.Timestamp.html#toTextSpace"><span class="hs-identifier hs-var">Timestamp.toTextSpace</span></a></span><span> </span><span class="annot"><span class="annottext">(Timestamp -&gt; Text) -&gt; Timestamp -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628653"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData Timestamp -&gt; Timestamp
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData Timestamp
+</span><span class="">#created</span></span><span class="hs-special">,</span><span>
+</span><span id="line-178"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-179"></span><span>        </span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><span class="hs-identifier hs-var">T.pack</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Text) -&gt; [Char] -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; [Char]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; [Char]) -&gt; OsPath -&gt; [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628653"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+</span><span class="">#originalPath</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryOriginalPath)
+     (PathI 'TrashEntryOriginalPath)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span>
+</span><span id="line-180"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader"><span class="hs-identifier hs-type">formatTabularHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-183"></span><span id="formatTabularHeader"><span class="annot"><span class="annottext">formatTabularHeader :: Natural -&gt; Natural -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader"><span class="hs-identifier hs-var hs-var">formatTabularHeader</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader%27"><span class="hs-identifier hs-var">formatTabularHeader'</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-184"></span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularHeaderColor"><span class="hs-identifier hs-type">formatTabularHeaderColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-186"></span><span id="formatTabularHeaderColor"><span class="annot"><span class="annottext">formatTabularHeaderColor :: Color -&gt; Natural -&gt; Natural -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularHeaderColor"><span class="hs-identifier hs-var hs-var">formatTabularHeaderColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader%27"><span class="hs-identifier hs-var">formatTabularHeader'</span></a></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; Text)
+-&gt; (Color -&gt; Text -&gt; Text) -&gt; Color -&gt; Natural -&gt; Natural -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Color -&gt; Text -&gt; Text
+forall a. Pretty a =&gt; Color -&gt; a -&gt; a
+</span><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#color"><span class="hs-identifier hs-var">CPretty.color</span></a></span><span>
+</span><span id="line-187"></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader%27"><span class="hs-identifier hs-type">formatTabularHeader'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-189"></span><span id="formatTabularHeader%27"><span class="annot"><span class="annottext">formatTabularHeader' :: (Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularHeader%27"><span class="hs-identifier hs-var hs-var">formatTabularHeader'</span></a></span></span><span> </span><span id="local-6989586621679628658"><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628658"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679628659"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628659"><span class="hs-identifier hs-var">nameLen</span></a></span></span><span> </span><span id="local-6989586621679628660"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628660"><span class="hs-identifier hs-var">origLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-190"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628658"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-192"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628659"><span class="hs-identifier hs-var">nameLen</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Name&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-193"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-194"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628660"><span class="hs-identifier hs-var">origLen</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Original&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-195"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-196"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatTypeLen"><span class="hs-identifier hs-var">formatTypeLen</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Type&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-197"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-198"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSizeLen"><span class="hs-identifier hs-var">formatSizeLen</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Size&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-199"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-200"></span><span>        </span><span class="hs-comment">-- No need to pad the length here as this is the last column</span><span>
+</span><span id="line-201"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Created&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-202"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;\n&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-203"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628665"><span class="hs-identifier hs-var">titleLen</span></a></span><span>
+</span><span id="line-204"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-205"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-206"></span><span>    </span><span class="hs-comment">-- extra 12 is from the separators</span><span>
+</span><span id="line-207"></span><span>    </span><span id="local-6989586621679628666"><span class="annot"><span class="annottext">totalLen :: Natural
+</span><a href="#local-6989586621679628666"><span class="hs-identifier hs-var hs-var">totalLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628659"><span class="hs-identifier hs-var">nameLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628660"><span class="hs-identifier hs-var">origLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#reservedLineLen"><span class="hs-identifier hs-var">reservedLineLen</span></a></span><span>
+</span><span id="line-208"></span><span>    </span><span id="local-6989586621679628665"><span class="annot"><span class="annottext">titleLen :: Text
+</span><a href="#local-6989586621679628665"><span class="hs-identifier hs-var hs-var">titleLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">T.replicate</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Natural -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628666"><span class="hs-identifier hs-var">totalLen</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;-&quot;</span></span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- | For tabular formatting, this is the necessary width for the fixed</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- columns:</span><span>
+</span><span id="line-212"></span><span class="hs-comment">--</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- type: 9</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- size: 7</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- created: 19</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- separators: 12</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- NOTE: The separators includes the adjacent whitespace i.e. one separator</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- ' | ' counts for 3, and since we have 4 that makes 12.</span><span>
+</span><span id="line-220"></span><span class="hs-comment">--</span><span>
+</span><span id="line-221"></span><span class="hs-comment">-- This does not include the minimum necessary total space (i.e. minimum</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- 4 for name and 8 for original).</span><span>
+</span><span id="line-223"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#reservedLineLen"><span class="hs-identifier hs-type">reservedLineLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-224"></span><span id="reservedLineLen"><span class="annot"><span class="annottext">reservedLineLen :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#reservedLineLen"><span class="hs-identifier hs-var hs-var">reservedLineLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-225"></span><span>  </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatTypeLen"><span class="hs-identifier hs-var">formatTypeLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSizeLen"><span class="hs-identifier hs-var">formatSizeLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatCreatedLen"><span class="hs-identifier hs-var">formatCreatedLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSeparatorsLen"><span class="hs-identifier hs-var">formatSeparatorsLen</span></a></span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span class="annot"><span class="hs-comment">-- | Minimum length needed to display the table.</span></span><span>
+</span><span id="line-228"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#minTableWidth"><span class="hs-identifier hs-type">minTableWidth</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-229"></span><span id="minTableWidth"><span class="annot"><span class="annottext">minTableWidth :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#minTableWidth"><span class="hs-identifier hs-var hs-var">minTableWidth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-230"></span><span>  </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#reservedLineLen"><span class="hs-identifier hs-var">reservedLineLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatFileNameLenMin"><span class="hs-identifier hs-var">formatFileNameLenMin</span></a></span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Natural -&gt; Natural
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatOriginalPathLenMin"><span class="hs-identifier hs-var">formatOriginalPathLenMin</span></a></span><span>
+</span><span id="line-231"></span><span>
+</span><span id="line-232"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularRow"><span class="hs-identifier hs-type">formatTabularRow</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-233"></span><span id="formatTabularRow"><span class="annot"><span class="annottext">formatTabularRow :: Natural -&gt; Natural -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularRow"><span class="hs-identifier hs-var hs-var">formatTabularRow</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularRow%27"><span class="hs-identifier hs-var">formatTabularRow'</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-234"></span><span>
+</span><span id="line-235"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularRowColor"><span class="hs-identifier hs-type">formatTabularRowColor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-236"></span><span id="formatTabularRowColor"><span class="annot"><span class="annottext">formatTabularRowColor :: Color -&gt; Natural -&gt; Natural -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularRowColor"><span class="hs-identifier hs-var hs-var">formatTabularRowColor</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularRow%27"><span class="hs-identifier hs-var">formatTabularRow'</span></a></span><span> </span><span class="annot"><span class="annottext">((Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; PathData -&gt; Text)
+-&gt; (Color -&gt; Text -&gt; Text)
+-&gt; Color
+-&gt; Natural
+-&gt; Natural
+-&gt; PathData
+-&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Color -&gt; Text -&gt; Text
+forall a. Pretty a =&gt; Color -&gt; a -&gt; a
+</span><a href="file:///nix/store/dv2zphjzf4a3zscs3gaqgz6xwjsrfxk1-pretty-terminal-0.1.0.0-doc/share/doc/pretty-terminal-0.1.0.0/html/src/System.Console.Pretty.html#color"><span class="hs-identifier hs-var">CPretty.color</span></a></span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTabularRow%27"><span class="hs-identifier hs-type">formatTabularRow'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-239"></span><span id="formatTabularRow%27"><span class="annot"><span class="annottext">formatTabularRow' :: (Text -&gt; Text) -&gt; Natural -&gt; Natural -&gt; PathData -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#formatTabularRow%27"><span class="hs-identifier hs-var hs-var">formatTabularRow'</span></a></span></span><span> </span><span id="local-6989586621679628672"><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628672"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679628673"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628673"><span class="hs-identifier hs-var">nameLen</span></a></span></span><span> </span><span id="local-6989586621679628674"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628674"><span class="hs-identifier hs-var">origLen</span></a></span></span><span> </span><span id="local-6989586621679628675"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-240"></span><span>  </span><span class="annot"><span class="annottext">Text -&gt; Text
+</span><a href="#local-6989586621679628672"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-241"></span><span>    </span><span class="annot"><span class="annottext">(Text -&gt; Text) -&gt; Text -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-242"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; [Char] -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen%27"><span class="hs-identifier hs-var">fixLen'</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628673"><span class="hs-identifier hs-var">nameLen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; [Char]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; [Char]) -&gt; OsPath -&gt; [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-243"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-244"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; [Char] -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen%27"><span class="hs-identifier hs-var">fixLen'</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628674"><span class="hs-identifier hs-var">origLen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsPath -&gt; [Char]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.Utils.html#decodeOsToFpDisplayEx"><span class="hs-identifier hs-var">decodeOsToFpDisplayEx</span></a></span><span> </span><span class="annot"><span class="annottext">(OsPath -&gt; [Char]) -&gt; OsPath -&gt; [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+</span><span class="">#originalPath</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryOriginalPath)
+     (PathI 'TrashEntryOriginalPath)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryOriginalPath)
+  (PathI 'TrashEntryOriginalPath)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-245"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-246"></span><span>        </span><span class="annot"><span class="annottext">PathType -&gt; Text
+forall {a}. IsString a =&gt; PathType -&gt; a
+</span><a href="#local-6989586621679628677"><span class="hs-identifier hs-var">paddedType</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData PathType -&gt; PathType
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+</span><span class="">#pathType</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx PathData PathData PathTypeW PathTypeW
+-&gt; Optic An_Iso NoIx PathTypeW PathTypeW PathType PathType
+-&gt; Optic' A_Lens NoIx PathData PathType
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic An_Iso NoIx PathTypeW PathTypeW PathType PathType
+</span><span class="">#unPathTypeW</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-247"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-248"></span><span>        </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSizeLen"><span class="hs-identifier hs-var">formatSizeLen</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; Text
+</span><a href="Charon.Utils.html#normalizedFormat"><span class="hs-identifier hs-var">U.normalizedFormat</span></a></span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural -&gt; Text) -&gt; Bytes 'B Natural -&gt; Text
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+-&gt; Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+-&gt; Bytes 'B Natural
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData (Bytes 'B Natural)
+</span><span class="">#size</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-249"></span><span>        </span><span class="annot"><span class="annottext">Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var">sep</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-250"></span><span>        </span><span class="annot"><span class="annottext">Timestamp -&gt; Text
+</span><a href="Charon.Data.Timestamp.html#toTextSpace"><span class="hs-identifier hs-var">Timestamp.toTextSpace</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679628675"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData Timestamp -&gt; Timestamp
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData Timestamp
+</span><span class="">#created</span></span><span class="hs-special">)</span><span>
+</span><span id="line-251"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-252"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-253"></span><span>    </span><span id="local-6989586621679628677"><span class="annot"><span class="annottext">paddedType :: PathType -&gt; a
+</span><a href="#local-6989586621679628677"><span class="hs-identifier hs-var hs-var">paddedType</span></a></span></span><span> </span><span class="annot"><span class="annottext">PathType
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#PathTypeFile"><span class="hs-identifier hs-var">PathTypeFile</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;F   &quot;</span></span><span>
+</span><span id="line-254"></span><span>    </span><span class="annot"><a href="#local-6989586621679628677"><span class="hs-identifier hs-var">paddedType</span></a></span><span> </span><span class="annot"><span class="annottext">PathType
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#PathTypeDirectory"><span class="hs-identifier hs-var">PathTypeDirectory</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;D   &quot;</span></span><span>
+</span><span id="line-255"></span><span>    </span><span class="annot"><a href="#local-6989586621679628677"><span class="hs-identifier hs-var">paddedType</span></a></span><span> </span><span class="annot"><span class="annottext">PathType
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#PathTypeSymbolicLink"><span class="hs-identifier hs-var">PathTypeSymbolicLink</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;L   &quot;</span></span><span>
+</span><span id="line-256"></span><span>    </span><span class="annot"><a href="#local-6989586621679628677"><span class="hs-identifier hs-var">paddedType</span></a></span><span> </span><span class="annot"><span class="annottext">PathType
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#PathTypeOther"><span class="hs-identifier hs-var">PathTypeOther</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;O   &quot;</span></span><span>
+</span><span id="line-257"></span><span>
+</span><span id="line-258"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-type">sep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-259"></span><span id="sep"><span class="annot"><span class="annottext">sep :: Text
+</span><a href="Charon.Data.PathData.Formatting.html#sep"><span class="hs-identifier hs-var hs-var">sep</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; | &quot;</span></span><span>
+</span><span id="line-260"></span><span>
+</span><span id="line-261"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#fixLen%27"><span class="hs-identifier hs-type">fixLen'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-262"></span><span id="fixLen%27"><span class="annot"><span class="annottext">fixLen' :: Natural -&gt; [Char] -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen%27"><span class="hs-identifier hs-var hs-var">fixLen'</span></a></span></span><span> </span><span id="local-6989586621679628688"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628688"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span id="local-6989586621679628689"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628689"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var">fixLen</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628688"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Text
+</span><span class="hs-identifier hs-var">T.pack</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679628689"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-263"></span><span>
+</span><span id="line-264"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-type">fixLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span>
+</span><span id="line-265"></span><span id="fixLen"><span class="annot"><span class="annottext">fixLen :: Natural -&gt; Text -&gt; Text
+</span><a href="Charon.Data.PathData.Formatting.html#fixLen"><span class="hs-identifier hs-var hs-var">fixLen</span></a></span></span><span> </span><span id="local-6989586621679628690"><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628690"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span id="local-6989586621679628691"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628691"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-266"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679628692"><span class="hs-identifier hs-var">w'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><span class="hs-identifier hs-var">T.length</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628691"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">T.take</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679628692"><span class="hs-identifier hs-var">w'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628691"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;...&quot;</span></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628691"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Text -&gt; Text
+</span><span class="hs-identifier hs-var">T.replicate</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679628692"><span class="hs-identifier hs-var">w'</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Int
+</span><span class="hs-identifier hs-var">T.length</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628691"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot; &quot;</span></span><span>
+</span><span id="line-268"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-269"></span><span>    </span><span id="local-6989586621679628692"><span class="annot"><span class="annottext">w' :: Int
+</span><a href="#local-6989586621679628692"><span class="hs-identifier hs-var hs-var">w'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><a href="#local-6989586621679628690"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatTypeLen"><span class="hs-identifier hs-type">formatTypeLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-272"></span><span id="formatTypeLen"><span class="annot"><span class="annottext">formatTypeLen :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatTypeLen"><span class="hs-identifier hs-var hs-var">formatTypeLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-273"></span><span>
+</span><span id="line-274"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatFileNameLenMin"><span class="hs-identifier hs-type">formatFileNameLenMin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-275"></span><span id="formatFileNameLenMin"><span class="annot"><span class="annottext">formatFileNameLenMin :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatFileNameLenMin"><span class="hs-identifier hs-var hs-var">formatFileNameLenMin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-276"></span><span>
+</span><span id="line-277"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatOriginalPathLenMin"><span class="hs-identifier hs-type">formatOriginalPathLenMin</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-278"></span><span id="formatOriginalPathLenMin"><span class="annot"><span class="annottext">formatOriginalPathLenMin :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatOriginalPathLenMin"><span class="hs-identifier hs-var hs-var">formatOriginalPathLenMin</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-279"></span><span>
+</span><span id="line-280"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSizeLen"><span class="hs-identifier hs-type">formatSizeLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-281"></span><span id="formatSizeLen"><span class="annot"><span class="annottext">formatSizeLen :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSizeLen"><span class="hs-identifier hs-var hs-var">formatSizeLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">7</span></span><span>
+</span><span id="line-282"></span><span>
+</span><span id="line-283"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatCreatedLen"><span class="hs-identifier hs-type">formatCreatedLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-284"></span><span id="formatCreatedLen"><span class="annot"><span class="annottext">formatCreatedLen :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatCreatedLen"><span class="hs-identifier hs-var hs-var">formatCreatedLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">19</span></span><span>
+</span><span id="line-285"></span><span>
+</span><span id="line-286"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#formatSeparatorsLen"><span class="hs-identifier hs-type">formatSeparatorsLen</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Natural</span></span><span>
+</span><span id="line-287"></span><span id="formatSeparatorsLen"><span class="annot"><span class="annottext">formatSeparatorsLen :: Natural
+</span><a href="Charon.Data.PathData.Formatting.html#formatSeparatorsLen"><span class="hs-identifier hs-var hs-var">formatSeparatorsLen</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">12</span></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span class="annot"><span class="hs-comment">-- | How to sort the index list.</span></span><span>
+</span><span id="line-290"></span><span class="hs-keyword">data</span><span> </span><span id="Sort"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier hs-var">Sort</span></a></span></span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-comment">-- | Sort by name.</span></span><span>
+</span><span id="line-292"></span><span>    </span><span id="Name"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Name"><span class="hs-identifier hs-var">Name</span></a></span></span><span>
+</span><span id="line-293"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="hs-comment">-- | Sort by size.</span></span><span>
+</span><span id="line-294"></span><span>    </span><span id="Size"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Size"><span class="hs-identifier hs-var">Size</span></a></span></span><span>
+</span><span id="line-295"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679628699"><span id="local-6989586621679628701"><span class="annot"><span class="annottext">Sort -&gt; Sort -&gt; Bool
+(Sort -&gt; Sort -&gt; Bool) -&gt; (Sort -&gt; Sort -&gt; Bool) -&gt; Eq Sort
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Sort -&gt; Sort -&gt; Bool
+== :: Sort -&gt; Sort -&gt; Bool
+$c/= :: Sort -&gt; Sort -&gt; Bool
+/= :: Sort -&gt; Sort -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679628705"><span id="local-6989586621679628707"><span id="local-6989586621679628711"><span class="annot"><span class="annottext">Int -&gt; Sort -&gt; ShowS
+[Sort] -&gt; ShowS
+Sort -&gt; [Char]
+(Int -&gt; Sort -&gt; ShowS)
+-&gt; (Sort -&gt; [Char]) -&gt; ([Sort] -&gt; ShowS) -&gt; Show Sort
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; [Char]) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Sort -&gt; ShowS
+showsPrec :: Int -&gt; Sort -&gt; ShowS
+$cshow :: Sort -&gt; [Char]
+show :: Sort -&gt; [Char]
+$cshowList :: [Sort] -&gt; ShowS
+showList :: [Sort] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-296"></span><span>
+</span><span id="line-297"></span><span id="local-6989586621679628274"><span class="annot"><a href="Charon.Data.PathData.Formatting.html#readSort"><span class="hs-identifier hs-type">readSort</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFail</span></span><span> </span><span class="annot"><a href="#local-6989586621679628274"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Text</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679628274"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier hs-type">Sort</span></a></span></span><span>
+</span><span id="line-298"></span><span id="readSort"><span class="annot"><span class="annottext">readSort :: forall (m :: * -&gt; *). MonadFail m =&gt; Text -&gt; m Sort
+</span><a href="Charon.Data.PathData.Formatting.html#readSort"><span class="hs-identifier hs-var hs-var">readSort</span></a></span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;name&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Sort -&gt; m Sort
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Sort
+</span><a href="Charon.Data.PathData.Formatting.html#Name"><span class="hs-identifier hs-var">Name</span></a></span><span>
+</span><span id="line-299"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#readSort"><span class="hs-identifier hs-var">readSort</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;size&quot;</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Sort -&gt; m Sort
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Sort
+</span><a href="Charon.Data.PathData.Formatting.html#Size"><span class="hs-identifier hs-var">Size</span></a></span><span>
+</span><span id="line-300"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#readSort"><span class="hs-identifier hs-var">readSort</span></a></span><span> </span><span id="local-6989586621679628731"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628731"><span class="hs-identifier hs-var">other</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; m Sort
+forall a. [Char] -&gt; m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; [Char] -&gt; m a
+</span><span class="hs-identifier hs-var">fail</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; m Sort) -&gt; [Char] -&gt; m Sort
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Unrecognized sort: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Char]
+</span><span class="hs-identifier hs-var">T.unpack</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679628731"><span class="hs-identifier hs-var">other</span></a></span><span>
+</span><span id="line-301"></span><span>
+</span><span id="line-302"></span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#sortFn"><span class="hs-identifier hs-type">sortFn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.Formatting.html#Sort"><span class="hs-identifier hs-type">Sort</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Ordering</span></span><span>
+</span><span id="line-303"></span><span id="sortFn"><span class="annot"><span class="annottext">sortFn :: Bool -&gt; Sort -&gt; PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortFn"><span class="hs-identifier hs-var hs-var">sortFn</span></a></span></span><span> </span><span id="local-6989586621679628733"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679628733"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-304"></span><span>  </span><span class="annot"><span class="annottext">Sort
+</span><a href="Charon.Data.PathData.Formatting.html#Name"><span class="hs-identifier hs-var">Name</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; PathData -&gt; Ordering)
+-&gt; PathData -&gt; PathData -&gt; Ordering
+</span><a href="#local-6989586621679628734"><span class="hs-identifier hs-var">rev</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortNameCreated"><span class="hs-identifier hs-var">sortNameCreated</span></a></span><span>
+</span><span id="line-305"></span><span>  </span><span class="annot"><span class="annottext">Sort
+</span><a href="Charon.Data.PathData.Formatting.html#Size"><span class="hs-identifier hs-var">Size</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; PathData -&gt; Ordering)
+-&gt; PathData -&gt; PathData -&gt; Ordering
+</span><a href="#local-6989586621679628734"><span class="hs-identifier hs-var">rev</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortSizeName"><span class="hs-identifier hs-var">sortSizeName</span></a></span><span>
+</span><span id="line-306"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-307"></span><span>    </span><span id="local-6989586621679628734"><span class="annot"><span class="annottext">rev :: (PathData -&gt; PathData -&gt; Ordering)
+-&gt; PathData -&gt; PathData -&gt; Ordering
+</span><a href="#local-6989586621679628734"><span class="hs-identifier hs-var hs-var">rev</span></a></span></span><span>
+</span><span id="line-308"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679628733"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; PathData -&gt; Ordering)
+-&gt; PathData -&gt; PathData -&gt; Ordering
+forall a b. (a -&gt; b -&gt; Ordering) -&gt; a -&gt; b -&gt; Ordering
+</span><a href="Charon.Data.PathData.Formatting.html#sortReverse"><span class="hs-identifier hs-var">sortReverse</span></a></span><span>
+</span><span id="line-309"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; PathData -&gt; Ordering)
+-&gt; PathData -&gt; PathData -&gt; Ordering
+forall a. a -&gt; a
+</span><span class="hs-identifier hs-var">id</span></span><span>
+</span><span id="line-310"></span></pre></body></html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="annot"><span class="hs-comment">-- | The Json backend.</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Json</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Delete</span></span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#delete"><span class="hs-identifier">delete</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#permDelete"><span class="hs-identifier">permDelete</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#emptyTrash"><span class="hs-identifier">emptyTrash</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Restore</span></span><span>
+</span><span id="line-12"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#restore"><span class="hs-identifier">restore</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Information</span></span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#getIndex"><span class="hs-identifier">getIndex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#getMetadata"><span class="hs-identifier">getMetadata</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Transformations</span></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#merge"><span class="hs-identifier">merge</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Rosetta</span></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#toRosetta"><span class="hs-identifier">toRosetta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#fromRosetta"><span class="hs-identifier">fromRosetta</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Existence</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><a href="Charon.Backend.Json.html#isJson"><span class="hs-identifier">isJson</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier">Backend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#BackendJson"><span class="hs-identifier">BackendJson</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Backend</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.html"><span class="hs-identifier">Charon.Backend.Default</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Index.html"><span class="hs-identifier">Charon.Backend.Default.Index</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default.Index</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Trash.html"><span class="hs-identifier">Charon.Backend.Default.Trash</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default.Trash</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Utils.html"><span class="hs-identifier">Charon.Backend.Default.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default.Utils</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Json.BackendArgs.html"><span class="hs-identifier">Charon.Backend.Json.BackendArgs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier">backendArgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Json.PathData.html"><span class="hs-identifier">Charon.Backend.Json.PathData</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Json.PathData</span></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html"><span class="hs-identifier">Charon.Backend.Rosetta</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Rosetta.html#Rosetta"><span class="hs-identifier">Rosetta</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Rosetta.html#MkRosetta"><span class="hs-identifier">MkRosetta</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html#%24sel%3Aindex%3AMkRosetta"><span class="hs-identifier">index</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html#%24sel%3Asize%3AMkRosetta"><span class="hs-identifier">size</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html"><span class="hs-identifier">Charon.Class.Serial</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Serial</span></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Index.html"><span class="hs-identifier">Charon.Data.Index</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier">Index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Index.html"><span class="hs-identifier">Charon.Data.Index</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Index</span></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Metadata.html"><span class="hs-identifier">Charon.Data.Metadata</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier">Metadata</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathType.html"><span class="hs-identifier">Charon.Data.PathType</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PathType</span></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier">TrashEntryOriginalPath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier">TrashHome</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Paths</span></span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.UniqueSeqNE.html"><span class="hs-identifier">Charon.Data.UniqueSeqNE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.UniqueSeqNE.Internal.html#UniqueSeqNE"><span class="hs-identifier">UniqueSeqNE</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Env.html"><span class="hs-identifier">Charon.Env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier">HasTrashHome</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html"><span class="hs-identifier">Effects.FileSystem.PathReader</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">PR</span></span><span>
+</span><span id="line-53"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.html"><span class="hs-identifier">Numeric.Algebra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#AMonoid"><span class="hs-identifier">AMonoid</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#zero"><span class="hs-identifier">zero</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.ASemigroup.html#ASemigroup"><span class="hs-identifier">ASemigroup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.ASemigroup.html#.%2B."><span class="hs-operator">(.+.)</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.OsPath</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OsP</span></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- NOTE: For functions that can encounter multiple exceptions, the first</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- one is rethrown.</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | @delete trash p@ moves path @p@ to the given trash location @trash@ and</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- writes an entry in the trash index. If the trash location is not given,</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- defaults to XDG data e.g. @~\/.local/share/charon/@.</span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Charon.Backend.Json.html#delete"><span class="hs-identifier hs-type">delete</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637552"><span class="annot"><a href="#local-6989586621679637552"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679637554"><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637552"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-66"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileWriter.html#MonadFileWriter"><span class="hs-identifier hs-type">MonadFileWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-type">MonadIORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637552"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-time-0.1-823c98a264bd4dbc7f6570016b9dec1546976c4fe5abece18695d52e935fc334/share/doc/html/src/Effects.Time.html#MonadTime"><span class="hs-identifier hs-type">MonadTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Charon.Data.UniqueSeqNE.Internal.html#UniqueSeqNE"><span class="hs-identifier hs-type">UniqueSeqNE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryOriginalPath"><span class="hs-identifier hs-type">TrashEntryOriginalPath</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="#local-6989586621679637554"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span id="delete"><span class="annot"><span class="annottext">delete :: forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileWriter m, MonadIORef m, MonadLoggerNS m,
+ MonadPathReader m, MonadPathWriter m, MonadPosixCompat m,
+ MonadReader env m, MonadTerminal m, MonadTime m) =&gt;
+UniqueSeqNE (PathI 'TrashEntryOriginalPath) -&gt; m ()
+</span><a href="Charon.Backend.Json.html#delete"><span class="hs-identifier hs-var hs-var">delete</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+-&gt; UniqueSeqNE (PathI 'TrashEntryOriginalPath) -&gt; m ()
+forall (m :: * -&gt; *) env pd k.
+(HasCallStack, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ LabelOptic' &quot;originalPath&quot; k pd (PathI 'TrashEntryOriginalPath),
+ HasTrashHome env, MonadCatch m, MonadFileWriter m, MonadIORef m,
+ MonadLoggerNS m, MonadPathWriter m, MonadReader env m,
+ MonadTerminal m, MonadTime m, Serial pd, Show pd) =&gt;
+BackendArgs m pd
+-&gt; UniqueSeqNE (PathI 'TrashEntryOriginalPath) -&gt; m ()
+</span><a href="Charon.Backend.Default.html#delete"><span class="hs-identifier hs-var">Default.delete</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><span class="hs-comment">-- | Permanently deletes the paths from the trash.</span></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Charon.Backend.Json.html#permDelete"><span class="hs-identifier hs-type">permDelete</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637594"><span class="annot"><a href="#local-6989586621679637594"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679637595"><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637594"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-90"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#MonadHandleWriter"><span class="hs-identifier hs-type">MonadHandleWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-type">MonadIORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637594"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-96"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Charon.Data.UniqueSeqNE.Internal.html#UniqueSeqNE"><span class="hs-identifier hs-type">UniqueSeqNE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="#local-6989586621679637595"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-102"></span><span id="permDelete"><span class="annot"><span class="annottext">permDelete :: forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileReader m, MonadHandleWriter m, MonadIORef m,
+ MonadPathReader m, MonadPathWriter m, MonadLoggerNS m,
+ MonadReader env m, MonadPosixCompat m, MonadTerminal m) =&gt;
+Bool -&gt; UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+</span><a href="Charon.Backend.Json.html#permDelete"><span class="hs-identifier hs-var hs-var">permDelete</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+-&gt; Bool -&gt; UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadAsync m, MonadCatch m, MonadFileReader m, MonadHandleWriter m,
+ MonadIORef m, MonadPathReader m, MonadPathWriter m,
+ MonadLoggerNS m, MonadReader env m, MonadTerminal m, Serial pd,
+ Show pd) =&gt;
+BackendArgs m pd
+-&gt; Bool -&gt; UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+</span><a href="Charon.Backend.Default.html#permDelete"><span class="hs-identifier hs-var">Default.permDelete</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- | Reads the index at either the specified or default location. If the</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- file does not exist, returns empty.</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Charon.Backend.Json.html#getIndex"><span class="hs-identifier hs-type">getIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637605"><span class="annot"><a href="#local-6989586621679637605"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679637606"><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637605"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-111"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637605"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><a href="#local-6989586621679637606"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span>
+</span><span id="line-120"></span><span id="getIndex"><span class="annot"><span class="annottext">getIndex :: forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileReader m, MonadPathReader m, MonadLoggerNS m,
+ MonadReader env m, MonadPosixCompat m, MonadTerminal m) =&gt;
+m Index
+</span><a href="Charon.Backend.Json.html#getIndex"><span class="hs-identifier hs-var hs-var">getIndex</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m Index -&gt; m Index
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;getIndex&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m Index -&gt; m Index) -&gt; m Index -&gt; m Index
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;In getIndex&quot;</span></span><span>
+</span><span id="line-122"></span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><span class="annottext">m Bool
+forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadLoggerNS m,
+ MonadPathReader m, MonadReader env m, MonadThrow m) =&gt;
+m Bool
+</span><a href="Charon.Backend.Default.Trash.html#doesTrashExist"><span class="hs-identifier hs-var">Default.Trash.doesTrashExist</span></a></span><span> </span><span class="annot"><span class="annottext">m Bool -&gt; (Bool -&gt; m Index) -&gt; m Index
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-125"></span><span>      </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Trash does not exist.&quot;</span></span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">Index -&gt; m Index
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Index
+</span><a href="Charon.Data.Index.html#empty"><span class="hs-identifier hs-var">Index.empty</span></a></span><span>
+</span><span id="line-127"></span><span>    </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">True</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData -&gt; m Index
+forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadFileReader m, MonadCatch m, MonadLoggerNS m,
+ MonadReader env m, MonadPathReader m, Serial pd) =&gt;
+BackendArgs m pd -&gt; m Index
+</span><a href="Charon.Backend.Default.Index.html#readIndex"><span class="hs-identifier hs-var">Default.Index.readIndex</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="annot"><span class="hs-comment">-- | Retrieves metadata for the trash directory.</span></span><span>
+</span><span id="line-130"></span><span class="annot"><a href="Charon.Backend.Json.html#getMetadata"><span class="hs-identifier hs-type">getMetadata</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-131"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637643"><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679637642"><span class="annot"><a href="#local-6989586621679637642"><span class="hs-identifier hs-type">env</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637642"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-136"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-137"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637642"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="#local-6989586621679637643"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Metadata.html#Metadata"><span class="hs-identifier hs-type">Metadata</span></a></span><span>
+</span><span id="line-144"></span><span id="getMetadata"><span class="annot"><span class="annottext">getMetadata :: forall (m :: * -&gt; *) env.
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileReader m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadReader env m, MonadTerminal m) =&gt;
+m Metadata
+</span><a href="Charon.Backend.Json.html#getMetadata"><span class="hs-identifier hs-var hs-var">getMetadata</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData -&gt; m Metadata
+forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadCatch m, MonadFileReader m, MonadLoggerNS m,
+ MonadPathReader m, MonadReader env m, Serial pd) =&gt;
+BackendArgs m pd -&gt; m Metadata
+</span><a href="Charon.Backend.Default.html#getMetadata"><span class="hs-identifier hs-var">Default.getMetadata</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- | @restore trash p@ restores the trashed path @\&lt;trash\&gt;\/p@ to its original</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- location.</span><span>
+</span><span id="line-148"></span><span class="annot"><a href="Charon.Backend.Json.html#restore"><span class="hs-identifier hs-type">restore</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-149"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637651"><span class="annot"><a href="#local-6989586621679637651"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679637652"><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637651"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-type">MonadIORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-156"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-157"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637651"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-163"></span><span>  </span><span class="annot"><a href="Charon.Data.UniqueSeqNE.Internal.html#UniqueSeqNE"><span class="hs-identifier hs-type">UniqueSeqNE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-164"></span><span>  </span><span class="annot"><a href="#local-6989586621679637652"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span id="restore"><span class="annot"><span class="annottext">restore :: forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadIORef m, MonadFileReader m, MonadLoggerNS m,
+ MonadPathReader m, MonadPathWriter m, MonadPosixCompat m,
+ MonadReader env m, MonadTerminal m) =&gt;
+UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+</span><a href="Charon.Backend.Json.html#restore"><span class="hs-identifier hs-var hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+-&gt; UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadCatch m, MonadFileReader m, MonadIORef m, MonadLoggerNS m,
+ MonadPathReader m, MonadPathWriter m, MonadReader env m,
+ MonadTerminal m, Serial pd, Show pd) =&gt;
+BackendArgs m pd -&gt; UniqueSeqNE (PathI 'TrashEntryFileName) -&gt; m ()
+</span><a href="Charon.Backend.Default.html#restore"><span class="hs-identifier hs-var">Default.restore</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-166"></span><span>
+</span><span id="line-167"></span><span class="annot"><span class="hs-comment">-- | Empties the trash.</span></span><span>
+</span><span id="line-168"></span><span class="annot"><a href="Charon.Backend.Json.html#emptyTrash"><span class="hs-identifier hs-type">emptyTrash</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679637660"><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679637659"><span class="annot"><a href="#local-6989586621679637659"><span class="hs-identifier hs-type">env</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-170"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637659"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-173"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-174"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#MonadHandleWriter"><span class="hs-identifier hs-type">MonadHandleWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-177"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637659"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-181"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-182"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><a href="#local-6989586621679637660"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span id="emptyTrash"><span class="annot"><span class="annottext">emptyTrash :: forall (m :: * -&gt; *) env.
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileReader m, MonadHandleWriter m, MonadLoggerNS m,
+ MonadPathReader m, MonadPathWriter m, MonadPosixCompat m,
+ MonadReader env m, MonadTerminal m) =&gt;
+Bool -&gt; m ()
+</span><a href="Charon.Backend.Json.html#emptyTrash"><span class="hs-identifier hs-var hs-var">emptyTrash</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData -&gt; Bool -&gt; m ()
+forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadCatch m, MonadFileReader m, MonadHandleWriter m,
+ MonadLoggerNS m, MonadPathReader m, MonadPathWriter m,
+ MonadReader env m, MonadTerminal m, Serial pd) =&gt;
+BackendArgs m pd -&gt; Bool -&gt; m ()
+</span><a href="Charon.Backend.Default.html#emptyTrash"><span class="hs-identifier hs-var">Default.emptyTrash</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m PathData
+forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span id="local-6989586621679637667"><span class="annot"><a href="Charon.Backend.Json.html#merge"><span class="hs-identifier hs-type">merge</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-188"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-189"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-190"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-type">MonadIORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-194"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-196"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-197"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-198"></span><span>  </span><span class="annot"><a href="#local-6989586621679637667"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-199"></span><span id="merge"><span class="annot"><span class="annottext">merge :: forall (m :: * -&gt; *).
+(HasCallStack, MonadFileReader m, MonadIORef m, MonadLoggerNS m,
+ MonadMask m, MonadPathReader m, MonadPathWriter m) =&gt;
+PathI 'TrashHome -&gt; PathI 'TrashHome -&gt; m ()
+</span><a href="Charon.Backend.Json.html#merge"><span class="hs-identifier hs-var hs-var">merge</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathI 'TrashHome -&gt; m ()
+forall (m :: * -&gt; *).
+(HasCallStack, MonadFileReader m, MonadIORef m, MonadLoggerNS m,
+ MonadMask m, MonadPathReader m, MonadPathWriter m) =&gt;
+PathI 'TrashHome -&gt; PathI 'TrashHome -&gt; m ()
+</span><a href="Charon.Backend.Default.html#merge"><span class="hs-identifier hs-var">Default.merge</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span id="local-6989586621679637671"><span id="local-6989586621679637672"><span class="annot"><a href="Charon.Backend.Json.html#toRosetta"><span class="hs-identifier hs-type">toRosetta</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-202"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637671"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-204"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-205"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-206"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-207"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-208"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-209"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679637671"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-210"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-211"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-212"></span><span>  </span><span class="annot"><a href="#local-6989586621679637672"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html#Rosetta"><span class="hs-identifier hs-type">Rosetta</span></a></span></span></span><span>
+</span><span id="line-213"></span><span id="toRosetta"><span class="annot"><span class="annottext">toRosetta :: forall env (m :: * -&gt; *).
+(HasTrashHome env, MonadAsync m, MonadCatch m, MonadLoggerNS m,
+ MonadFileReader m, MonadPathReader m, MonadPosixCompat m,
+ MonadReader env m, MonadTerminal m) =&gt;
+m Rosetta
+</span><a href="Charon.Backend.Json.html#toRosetta"><span class="hs-identifier hs-var hs-var">toRosetta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m Rosetta -&gt; m Rosetta
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;toRosetta&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m Rosetta -&gt; m Rosetta) -&gt; m Rosetta -&gt; m Rosetta
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-214"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;In toRosetta&quot;</span></span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span>  </span><span id="local-6989586621679638182"><span class="annot"><span class="annottext">Index
+</span><a href="#local-6989586621679638182"><span class="hs-identifier hs-var">index</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Index
+forall env (m :: * -&gt; *).
+(HasCallStack, HasTrashHome env, MonadAsync m, MonadCatch m,
+ MonadFileReader m, MonadPathReader m, MonadLoggerNS m,
+ MonadReader env m, MonadPosixCompat m, MonadTerminal m) =&gt;
+m Index
+</span><a href="Charon.Backend.Json.html#getIndex"><span class="hs-identifier hs-var">getIndex</span></a></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Index: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Index -&gt; Text
+forall a. Show a =&gt; a -&gt; Text
+</span><a href="Charon.Prelude.html#showt"><span class="hs-identifier hs-var">showt</span></a></span><span> </span><span class="annot"><span class="annottext">Index
+</span><a href="#local-6989586621679638182"><span class="hs-identifier hs-var">index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-218"></span><span>
+</span><span id="line-219"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638186"><span class="annot"><span class="annottext">size :: Bytes 'B Natural
+</span><a href="#local-6989586621679638186"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bytes 'B Natural
+ -&gt; (PathDataCore, PathI 'TrashEntryPath) -&gt; Bytes 'B Natural)
+-&gt; Bytes 'B Natural
+-&gt; Seq (PathDataCore, PathI 'TrashEntryPath)
+-&gt; Bytes 'B Natural
+forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) b a.
+Foldable t =&gt;
+(b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldl'</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679638188"><span class="annot"><span class="annottext">Bytes 'B Natural
+</span><a href="#local-6989586621679638188"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679638189"><span class="annot"><span class="annottext">PathDataCore
+</span><a href="#local-6989586621679638189"><span class="hs-identifier hs-var">pd</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural
+</span><a href="#local-6989586621679638188"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural -&gt; Bytes 'B Natural -&gt; Bytes 'B Natural
+forall s. ASemigroup s =&gt; s -&gt; s -&gt; s
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.ASemigroup.html#.%2B."><span class="hs-operator hs-var">.+.</span></a></span><span> </span><span class="annot"><span class="annottext">PathDataCore
+</span><a href="#local-6989586621679638189"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathDataCore
+-&gt; Optic' A_Lens NoIx PathDataCore (Bytes 'B Natural)
+-&gt; Bytes 'B Natural
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathDataCore (Bytes 'B Natural)
+</span><span class="">#size</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Bytes 'B Natural
+forall m. AMonoid m =&gt; m
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/algebra-simple-0.1-84e0433fc8ef593f5fb5aca69cf28553884e11aa4eaff67ba40046b152f51dc6/share/doc/html/src/Numeric.Algebra.Additive.AMonoid.html#zero"><span class="hs-identifier hs-var">zero</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Index
+</span><a href="#local-6989586621679638182"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="annot"><span class="annottext">Index
+-&gt; Optic'
+     An_Iso NoIx Index (Seq (PathDataCore, PathI 'TrashEntryPath))
+-&gt; Seq (PathDataCore, PathI 'TrashEntryPath)
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic'
+  An_Iso NoIx Index (Seq (PathDataCore, PathI 'TrashEntryPath))
+</span><span class="">#unIndex</span></span><span class="hs-special">)</span><span>
+</span><span id="line-220"></span><span>
+</span><span id="line-221"></span><span>  </span><span class="annot"><span class="annottext">Rosetta -&gt; m Rosetta
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-222"></span><span>    </span><span class="annot"><span class="annottext">(Rosetta -&gt; m Rosetta) -&gt; Rosetta -&gt; m Rosetta
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><a href="Charon.Backend.Rosetta.html#MkRosetta"><span class="hs-identifier hs-type">MkRosetta</span></a></span><span>
+</span><span id="line-223"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">Index
+$sel:index:MkRosetta :: Index
+index :: Index
+</span><a href="Charon.Backend.Rosetta.html#%24sel%3Aindex%3AMkRosetta"><span class="hs-identifier hs-var hs-var">index</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-224"></span><span>        </span><span class="annot"><span class="annottext">Bytes 'B Natural
+$sel:size:MkRosetta :: Bytes 'B Natural
+size :: Bytes 'B Natural
+</span><a href="Charon.Backend.Rosetta.html#%24sel%3Asize%3AMkRosetta"><span class="hs-identifier hs-var hs-var">size</span></a></span><span>
+</span><span id="line-225"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span id="local-6989586621679637718"><span class="annot"><a href="Charon.Backend.Json.html#fromRosetta"><span class="hs-identifier hs-type">fromRosetta</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-228"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-229"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-230"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-231"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileWriter.html#MonadFileWriter"><span class="hs-identifier hs-type">MonadFileWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-232"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-type">MonadIORef</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-233"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-234"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-type">MonadPathWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-236"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-237"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-238"></span><span>  </span><span class="annot"><a href="Charon.Backend.Rosetta.html#Rosetta"><span class="hs-identifier hs-type">Rosetta</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-239"></span><span>  </span><span class="annot"><a href="#local-6989586621679637718"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-240"></span><span id="fromRosetta"><span class="annot"><span class="annottext">fromRosetta :: forall (m :: * -&gt; *).
+(HasCallStack, MonadLoggerNS m, MonadFileReader m,
+ MonadFileWriter m, MonadIORef m, MonadMask m, MonadPathReader m,
+ MonadPathWriter m) =&gt;
+PathI 'TrashHome -&gt; Rosetta -&gt; m ()
+</span><a href="Charon.Backend.Json.html#fromRosetta"><span class="hs-identifier hs-var hs-var">fromRosetta</span></a></span></span><span> </span><span id="local-6989586621679638320"><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679638320"><span class="hs-identifier hs-var">tmpDir</span></a></span></span><span> </span><span id="local-6989586621679638321"><span class="annot"><span class="annottext">Rosetta
+</span><a href="#local-6989586621679638321"><span class="hs-identifier hs-var">rosetta</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m () -&gt; m ()
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;fromRosetta&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-241"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;In fromRosetta&quot;</span></span><span>
+</span><span id="line-242"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Temp dir: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; Text
+forall (i :: PathIndex). PathI i -&gt; Text
+</span><a href="Charon.Data.Paths.html#toText"><span class="hs-identifier hs-var">Paths.toText</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679638320"><span class="hs-identifier hs-var">tmpDir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-243"></span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-comment">-- create tmp trash</span><span>
+</span><span id="line-245"></span><span>  </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679638323"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638323"><span class="hs-identifier hs-var">trashPathDir</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679638324"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638324"><span class="hs-identifier hs-var">trashInfoDir</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-246"></span><span>    </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; m (PathI 'TrashDirFiles, PathI 'TrashDirInfo)
+forall (m :: * -&gt; *).
+(HasCallStack, MonadLoggerNS m, MonadPathWriter m) =&gt;
+PathI 'TrashHome -&gt; m (PathI 'TrashDirFiles, PathI 'TrashDirInfo)
+</span><a href="Charon.Backend.Default.Trash.html#createTrashDir"><span class="hs-identifier hs-var">Default.Trash.createTrashDir</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679638320"><span class="hs-identifier hs-var">tmpDir</span></a></span><span>
+</span><span id="line-247"></span><span>
+</span><span id="line-248"></span><span>  </span><span class="annot"><span class="annottext">Seq (PathDataCore, PathI 'TrashEntryPath)
+-&gt; ((PathDataCore, PathI 'TrashEntryPath) -&gt; m ()) -&gt; m ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+t a -&gt; (a -&gt; f b) -&gt; f ()
+</span><span class="hs-identifier hs-var">for_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Rosetta
+</span><a href="#local-6989586621679638321"><span class="hs-identifier hs-var">rosetta</span></a></span><span> </span><span class="annot"><span class="annottext">Rosetta
+-&gt; Optic'
+     A_Lens NoIx Rosetta (Seq (PathDataCore, PathI 'TrashEntryPath))
+-&gt; Seq (PathDataCore, PathI 'TrashEntryPath)
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx Rosetta Rosetta Index Index
+</span><span class="">#index</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx Rosetta Rosetta Index Index
+-&gt; Optic'
+     An_Iso NoIx Index (Seq (PathDataCore, PathI 'TrashEntryPath))
+-&gt; Optic'
+     A_Lens NoIx Rosetta (Seq (PathDataCore, PathI 'TrashEntryPath))
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic'
+  An_Iso NoIx Index (Seq (PathDataCore, PathI 'TrashEntryPath))
+</span><span class="">#unIndex</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(((PathDataCore, PathI 'TrashEntryPath) -&gt; m ()) -&gt; m ())
+-&gt; ((PathDataCore, PathI 'TrashEntryPath) -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679638328"><span class="annot"><span class="annottext">PathDataCore
+</span><a href="#local-6989586621679638328"><span class="hs-identifier hs-var">pd</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679638329"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638329"><span class="hs-identifier hs-var">oldTrashPath</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-249"></span><span>    </span><span class="hs-comment">-- transform core path data to Json</span><span>
+</span><span id="line-250"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638330"><span class="annot"><span class="annottext">jsonPathData :: PathData
+</span><a href="#local-6989586621679638330"><span class="hs-identifier hs-var hs-var">jsonPathData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathDataCore -&gt; PathData
+</span><a href="Charon.Backend.Json.PathData.html#fromCorePathData"><span class="hs-identifier hs-var">Json.PathData.fromCorePathData</span></a></span><span> </span><span class="annot"><span class="annottext">PathDataCore
+</span><a href="#local-6989586621679638328"><span class="hs-identifier hs-var">pd</span></a></span><span>
+</span><span id="line-251"></span><span>        </span><span id="local-6989586621679638332"><span class="annot"><span class="annottext">newTrashPath :: OsPath
+</span><a href="#local-6989586621679638332"><span class="hs-identifier hs-var hs-var">newTrashPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-252"></span><span>          </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638323"><span class="hs-identifier hs-var">trashPathDir</span></a></span><span>
+</span><span id="line-253"></span><span>            </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679638330"><span class="hs-identifier hs-var">jsonPathData</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-254"></span><span>
+</span><span id="line-255"></span><span>    </span><span class="hs-comment">-- copy path</span><span>
+</span><span id="line-256"></span><span>    </span><span class="annot"><span class="annottext">PathTypeW -&gt; OsPath -&gt; OsPath -&gt; OsPath -&gt; m ()
+forall (m :: * -&gt; *).
+(HasCallStack, MonadIORef m, MonadMask m, MonadPathReader m,
+ MonadPathWriter m) =&gt;
+PathTypeW -&gt; OsPath -&gt; OsPath -&gt; OsPath -&gt; m ()
+</span><a href="Charon.Data.PathType.html#copyPath"><span class="hs-identifier hs-var">PathType.copyPath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathDataCore
+</span><a href="#local-6989586621679638328"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathDataCore
+-&gt; Optic' A_Lens NoIx PathDataCore PathTypeW -&gt; PathTypeW
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathDataCore PathTypeW
+</span><span class="">#pathType</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638329"><span class="hs-identifier hs-var">oldTrashPath</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638332"><span class="hs-identifier hs-var">newTrashPath</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638323"><span class="hs-identifier hs-var">trashPathDir</span></a></span><span>
+</span><span id="line-257"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638335"><span class="annot"><span class="annottext">msg :: Text
+</span><a href="#local-6989586621679638335"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-258"></span><span>          </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+forall a. Monoid a =&gt; [a] -&gt; a
+</span><span class="hs-identifier hs-var">mconcat</span></span><span>
+</span><span id="line-259"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Copying '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-260"></span><span>              </span><span class="annot"><span class="annottext">OsPath -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638329"><span class="hs-identifier hs-var">oldTrashPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-261"></span><span>              </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;' to '&quot;</span></span><span class="hs-special">,</span><span>
+</span><span id="line-262"></span><span>              </span><span class="annot"><span class="annottext">OsPath -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638332"><span class="hs-identifier hs-var">newTrashPath</span></a></span><span>
+</span><span id="line-263"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-264"></span><span>    </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679638335"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-265"></span><span>
+</span><span id="line-266"></span><span>    </span><span class="hs-comment">-- create info files</span><span>
+</span><span id="line-267"></span><span>    </span><span id="local-6989586621679638337"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679638337"><span class="hs-identifier hs-var">encoded</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; m ByteString
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadThrow m, Serial a) =&gt;
+a -&gt; m ByteString
+</span><a href="Charon.Class.Serial.html#encodeThrowM"><span class="hs-identifier hs-var">Serial.encodeThrowM</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679638330"><span class="hs-identifier hs-var">jsonPathData</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638339"><span class="annot"><span class="annottext">filePath :: OsPath
+</span><a href="#local-6989586621679638339"><span class="hs-identifier hs-var hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-269"></span><span>          </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638324"><span class="hs-identifier hs-var">trashInfoDir</span></a></span><span>
+</span><span id="line-270"></span><span>            </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679638330"><span class="hs-identifier hs-var">jsonPathData</span></a></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; Optic' A_Lens NoIx PathData OsPath -&gt; OsPath
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  PathData
+  PathData
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+-&gt; Optic
+     An_Iso
+     NoIx
+     (PathI 'TrashEntryFileName)
+     (PathI 'TrashEntryFileName)
+     OsPath
+     OsPath
+-&gt; Optic' A_Lens NoIx PathData OsPath
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  An_Iso
+  NoIx
+  (PathI 'TrashEntryFileName)
+  (PathI 'TrashEntryFileName)
+  OsPath
+  OsPath
+</span><span class="">#unPathI</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-271"></span><span>            </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;.&gt;</span></span><span> </span><span class="annot"><span class="">[osp|.json|]</span></span><span>
+</span><span id="line-272"></span><span>
+</span><span id="line-273"></span><span>    </span><span class="annot"><span class="annottext">OsPath -&gt; ByteString -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadFileWriter m, HasCallStack) =&gt;
+OsPath -&gt; ByteString -&gt; m ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileWriter.html#writeBinaryFile"><span class="hs-identifier hs-var">writeBinaryFile</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638339"><span class="hs-identifier hs-var">filePath</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679638337"><span class="hs-identifier hs-var">encoded</span></a></span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span class="hs-comment">-- | Determines if the backend is Json. The semantics are if the trash is</span><span>
+</span><span id="line-276"></span><span class="hs-comment">-- a well-formed json backend __and__ it has at least one file with the</span><span>
+</span><span id="line-277"></span><span class="hs-comment">-- extension .json, then we return @Just True@ (definitely true).</span><span>
+</span><span id="line-278"></span><span class="hs-comment">--</span><span>
+</span><span id="line-279"></span><span class="hs-comment">-- If the trash does not exist or is not well-formed, we return @Just False@</span><span>
+</span><span id="line-280"></span><span class="hs-comment">-- (definitely false).</span><span>
+</span><span id="line-281"></span><span class="hs-comment">--</span><span>
+</span><span id="line-282"></span><span class="hs-comment">-- If the trash __is__ a well-formed json backend but we do not have any files</span><span>
+</span><span id="line-283"></span><span class="hs-comment">-- we return Nothing (maybe), because we cannot tell. It __could__ be any</span><span>
+</span><span id="line-284"></span><span class="hs-comment">-- backend that shares the same trash structure, including json.</span><span>
+</span><span id="line-285"></span><span id="local-6989586621679637801"><span class="annot"><a href="Charon.Backend.Json.html#isJson"><span class="hs-identifier hs-type">isJson</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-286"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-287"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679637801"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-288"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637801"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-289"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679637801"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-290"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-291"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-292"></span><span>  </span><span class="annot"><a href="#local-6989586621679637801"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bool</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-293"></span><span id="isJson"><span class="annot"><span class="annottext">isJson :: forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadLoggerNS m, MonadPathReader m) =&gt;
+PathI 'TrashHome -&gt; m (Maybe Bool)
+</span><a href="Charon.Backend.Json.html#isJson"><span class="hs-identifier hs-var hs-var">isJson</span></a></span></span><span> </span><span id="local-6989586621679638412"><span class="annot"><span class="annottext">trashHome :: PathI 'TrashHome
+</span><a href="#local-6989586621679638412"><span class="hs-identifier hs-var">trashHome</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679638413"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638413"><span class="hs-identifier hs-var">th</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m (Maybe Bool) -&gt; m (Maybe Bool)
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;isJson&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m (Maybe Bool) -&gt; m (Maybe Bool))
+-&gt; m (Maybe Bool) -&gt; m (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-294"></span><span>  </span><span id="local-6989586621679638414"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679638414"><span class="hs-identifier hs-var">exists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-295"></span><span>    </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; m Bool
+forall (m :: * -&gt; *).
+(HasCallStack, MonadLoggerNS m, MonadPathReader m, MonadThrow m) =&gt;
+PathI 'TrashHome -&gt; m Bool
+</span><a href="Charon.Backend.Default.Trash.html#doesTrashExistPath"><span class="hs-identifier hs-var">Default.Trash.doesTrashExistPath</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679638412"><span class="hs-identifier hs-var">trashHome</span></a></span><span>
+</span><span id="line-296"></span><span>      </span><span class="annot"><span class="annottext">m Bool -&gt; (SomeException -&gt; m Bool) -&gt; m Bool
+forall (m :: * -&gt; *) a.
+(HasCallStack, MonadCatch m) =&gt;
+m a -&gt; (SomeException -&gt; m a) -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-exceptions-0.1-cbc6c6992b43b60e49e859c21827717f4c8f4d9ff6ce5ae6d908553d0e8694a2/share/doc/html/src/Effects.Exception.html#catchAnyCS"><span class="hs-operator hs-var">`catchAnyCS`</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m Bool
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-297"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679638414"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-298"></span><span>    </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-299"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638417"><span class="annot"><span class="annottext">directorysizesPath :: OsPath
+</span><a href="#local-6989586621679638417"><span class="hs-identifier hs-var hs-var">directorysizesPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638413"><span class="hs-identifier hs-var">th</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; OsPath
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="annot"><span class="">[osp|directorysizes|]</span></span><span>
+</span><span id="line-300"></span><span>
+</span><span id="line-301"></span><span>      </span><span id="local-6989586621679638418"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679638418"><span class="hs-identifier hs-var">isDefinitelyFdo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; m Bool
+forall (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; m Bool
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#doesFileExist"><span class="hs-identifier hs-var">doesFileExist</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638417"><span class="hs-identifier hs-var">directorysizesPath</span></a></span><span>
+</span><span id="line-302"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679638418"><span class="hs-identifier hs-var">isDefinitelyFdo</span></a></span><span>
+</span><span id="line-303"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-304"></span><span>          </span><span class="hs-comment">-- Trash dir contains directorysizes (fdo): Definitely false.</span><span>
+</span><span id="line-305"></span><span>          </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Found fdo&quot;</span></span><span>
+</span><span id="line-306"></span><span>          </span><span class="annot"><span class="annottext">Maybe Bool -&gt; m (Maybe Bool)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span class="hs-special">)</span><span>
+</span><span id="line-307"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-308"></span><span>          </span><span class="annot"><span class="annottext">OsPath -&gt; m [OsPath]
+forall (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; m [OsPath]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#listDirectory"><span class="hs-identifier hs-var">PR.listDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638421"><span class="hs-identifier hs-var">trashPath</span></a></span><span> </span><span class="annot"><span class="annottext">m [OsPath] -&gt; ([OsPath] -&gt; m (Maybe Bool)) -&gt; m (Maybe Bool)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-309"></span><span>            </span><span class="hs-comment">-- Trash dir is well-formed but contains no files: Maybe.</span><span>
+</span><span id="line-310"></span><span>            </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-311"></span><span>              </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Trash dir is well-formed but empty: Maybe&quot;</span></span><span>
+</span><span id="line-312"></span><span>              </span><span class="annot"><span class="annottext">Maybe Bool -&gt; m (Maybe Bool)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-313"></span><span>            </span><span class="hs-comment">-- Trash dir has at least one file: iff ext matches json.</span><span>
+</span><span id="line-314"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679638422"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638422"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[OsPath]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-315"></span><span>              </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679638423"><span class="annot"><span class="annottext">ext :: OsPath
+</span><a href="#local-6989586621679638423"><span class="hs-identifier hs-var hs-var">ext</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath
+</span><span class="hs-identifier hs-var">OsP.takeExtension</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638422"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-316"></span><span>              </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Text -&gt; m ()) -&gt; Text -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Found file with extension &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638423"><span class="hs-identifier hs-var">ext</span></a></span><span>
+</span><span id="line-317"></span><span>              </span><span class="annot"><span class="annottext">Maybe Bool -&gt; m (Maybe Bool)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; m (Maybe Bool)) -&gt; Maybe Bool -&gt; m (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Maybe Bool) -&gt; Bool -&gt; Maybe Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Backend -&gt; OsPath
+</span><a href="Charon.Backend.Data.html#backendExt"><span class="hs-identifier hs-var">Backend.backendExt</span></a></span><span> </span><span class="annot"><span class="annottext">Backend
+</span><a href="Charon.Backend.Data.html#BackendJson"><span class="hs-identifier hs-var">BackendJson</span></a></span><span> </span><span class="annot"><span class="annottext">OsPath -&gt; OsPath -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638423"><span class="hs-identifier hs-var">ext</span></a></span><span>
+</span><span id="line-318"></span><span>    </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-319"></span><span>      </span><span class="hs-comment">-- Trash does not exist or it is not a well-formed json backend: Definitely</span><span>
+</span><span id="line-320"></span><span>      </span><span class="hs-comment">-- false.</span><span>
+</span><span id="line-321"></span><span>      </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logTrace"><span class="hs-identifier hs-type">logTrace</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Unknown, not json&quot;</span></span><span>
+</span><span id="line-322"></span><span>      </span><span class="annot"><span class="annottext">Maybe Bool -&gt; m (Maybe Bool)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Maybe Bool -&gt; m (Maybe Bool)) -&gt; Maybe Bool -&gt; m (Maybe Bool)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">False</span></span><span>
+</span><span id="line-323"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-324"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679638421"><span class="annot"><span class="annottext">OsPath
+</span><a href="#local-6989586621679638421"><span class="hs-identifier hs-var">trashPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathI 'TrashDirInfo
+</span><a href="Charon.Backend.Default.Utils.html#getTrashInfoDir"><span class="hs-identifier hs-var">Default.Utils.getTrashInfoDir</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679638412"><span class="hs-identifier hs-var">trashHome</span></a></span><span>
+</span><span id="line-325"></span></pre></body></html>

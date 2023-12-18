@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Json.BackendArgs</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier">backendArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-4"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#Backend"><span class="hs-identifier">Backend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Data.html#BackendJson"><span class="hs-identifier">BackendJson</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html"><span class="hs-identifier">Charon.Backend.Default.BackendArgs</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier">BackendArgs</span></a></span><span>
+</span><span id="line-9"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#MkBackendArgs"><span class="hs-identifier">MkBackendArgs</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3Abackend%3AMkBackendArgs"><span class="hs-identifier">backend</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AfromCorePathData%3AMkBackendArgs"><span class="hs-identifier">fromCorePathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-12"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AmakePathData%3AMkBackendArgs"><span class="hs-identifier">makePathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-13"></span><span>        </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AtoCorePathData%3AMkBackendArgs"><span class="hs-identifier">toCorePathData</span></a></span><span>
+</span><span id="line-14"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Json.PathData.html"><span class="hs-identifier">Charon.Backend.Json.PathData</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Json.PathData</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span id="local-6989586621679633254"><span class="annot"><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-type">backendArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-type">MonadAsync</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-type">MonadPosixCompat</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-type">MonadTerminal</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier hs-type">BackendArgs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633254"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Json.PathData.html#PathData"><span class="hs-identifier hs-type">Json.PathData.PathData</span></a></span></span><span>
+</span><span id="line-28"></span><span id="backendArgs"><span class="annot"><span class="annottext">backendArgs :: forall (m :: * -&gt; *).
+(MonadAsync m, MonadCatch m, MonadLoggerNS m, MonadPathReader m,
+ MonadPosixCompat m, MonadTerminal m) =&gt;
+BackendArgs m PathData
+</span><a href="Charon.Backend.Json.BackendArgs.html#backendArgs"><span class="hs-identifier hs-var hs-var">backendArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#MkBackendArgs"><span class="hs-identifier hs-type">MkBackendArgs</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">$sel:backend:MkBackendArgs :: Backend
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3Abackend%3AMkBackendArgs"><span class="hs-identifier hs-var">backend</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Backend
+</span><a href="Charon.Backend.Data.html#BackendJson"><span class="hs-identifier hs-var">BackendJson</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>      </span><span class="annot"><span class="annottext">$sel:makePathData:MkBackendArgs :: Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AmakePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">makePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+forall (m :: * -&gt; *).
+(HasCallStack, MonadAsync m, MonadCatch m, MonadLoggerNS m,
+ MonadPathReader m, MonadPosixCompat m, MonadTerminal m) =&gt;
+Timestamp
+-&gt; PathI 'TrashHome
+-&gt; PathI 'TrashEntryOriginalPath
+-&gt; m (PathData, PathTypeW)
+</span><a href="Charon.Backend.Json.PathData.html#toPathData"><span class="hs-identifier hs-var">Json.PathData.toPathData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>      </span><span class="annot"><span class="annottext">$sel:toCorePathData:MkBackendArgs :: PathI 'TrashHome -&gt; PathData -&gt; m PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AtoCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">toCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; m PathData)
+-&gt; PathI 'TrashHome -&gt; PathData -&gt; m PathData
+forall a b. a -&gt; b -&gt; a
+</span><span class="hs-identifier hs-var">const</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData -&gt; m PathData
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(PathData -&gt; m PathData)
+-&gt; (PathData -&gt; PathData) -&gt; PathData -&gt; m PathData
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData
+</span><a href="Charon.Backend.Json.PathData.html#toCorePathData"><span class="hs-identifier hs-var">Json.PathData.toCorePathData</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">$sel:fromCorePathData:MkBackendArgs :: PathData -&gt; PathData
+</span><a href="Charon.Backend.Default.BackendArgs.html#%24sel%3AfromCorePathData%3AMkBackendArgs"><span class="hs-identifier hs-var">fromCorePathData</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathData -&gt; PathData
+</span><a href="Charon.Backend.Json.PathData.html#fromCorePathData"><span class="hs-identifier hs-var">Json.PathData.fromCorePathData</span></a></span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span></pre></body></html>

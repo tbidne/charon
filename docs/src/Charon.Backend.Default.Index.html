@@ -1,0 +1,549 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Backend.Default.Index</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Index.html#readIndex"><span class="hs-identifier">readIndex</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Charon.Backend.Default.Index.html#readIndexTrashHome"><span class="hs-identifier">readIndexTrashHome</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Data.html"><span class="hs-identifier">Charon.Backend.Data</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Backend.Data</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html"><span class="hs-identifier">Charon.Backend.Default.BackendArgs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier">BackendArgs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Backend.Default.Utils.html"><span class="hs-identifier">Charon.Backend.Default.Utils</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Default.Utils</span></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html"><span class="hs-identifier">Charon.Class.Serial</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier">Serial</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier">DecodeExtra</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html"><span class="hs-identifier">Charon.Class.Serial</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Serial</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Index.html"><span class="hs-identifier">Charon.Data.Index</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier">Index</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Index.html#MkIndex"><span class="hs-identifier">MkIndex</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.PathData.html"><span class="hs-identifier">Charon.Data.PathData</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier">PathData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html"><span class="hs-identifier">Charon.Data.Paths</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier">PathI</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier">MkPathI</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-18"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#PathIndex"><span class="hs-identifier">PathIndex</span></a></span><span>
+</span><span id="line-19"></span><span>      </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier">TrashEntryPath</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>        </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier">TrashHome</span></a></span><span>
+</span><span id="line-22"></span><span>      </span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#%3C%2F%2F%3E"><span class="hs-operator">(&lt;//&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Env.html"><span class="hs-identifier">Charon.Env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier">HasTrashHome</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Env.html#getTrashHome"><span class="hs-identifier">getTrashHome</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Exception.html"><span class="hs-identifier">Charon.Exception</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Exception.html#InfoDecodeE"><span class="hs-identifier">InfoDecodeE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkInfoDecodeE"><span class="hs-identifier">MkInfoDecodeE</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryFileNotFoundE"><span class="hs-identifier">TrashEntryFileNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryFileNotFoundE"><span class="hs-identifier">MkTrashEntryFileNotFoundE</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoBadExtE"><span class="hs-identifier">TrashEntryInfoBadExtE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoBadExtE"><span class="hs-identifier">MkTrashEntryInfoBadExtE</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><a href="Charon.Exception.html#TrashEntryInfoNotFoundE"><span class="hs-identifier">TrashEntryInfoNotFoundE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Exception.html#MkTrashEntryInfoNotFoundE"><span class="hs-identifier">MkTrashEntryInfoNotFoundE</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashSet.html"><span class="hs-identifier">Data.HashSet</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">HSet</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Text</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">System.OsPath</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">FP</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">type</span><span> </span><span id="Acc"><span class="annot"><a href="Charon.Backend.Default.Index.html#Acc"><span class="hs-identifier hs-var">Acc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.PathData.html#PathData"><span class="hs-identifier hs-type">PathData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier hs-type">TrashEntryPath</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashSet.Internal.html#HashSet"><span class="hs-identifier hs-type">HashSet</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | Reads the trash directory into the 'Index'. If this succeeds then</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- everything is 'well-formed' i.e. there is a bijection between trash/files</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- and trash/info.</span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Charon.Backend.Default.Index.html#readIndex"><span class="hs-identifier hs-type">readIndex</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679633324"><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679633318"><span class="annot"><a href="#local-6989586621679633318"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679633313"><span class="annot"><a href="#local-6989586621679633313"><span class="hs-identifier hs-type">pd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679633320"><span class="annot"><a href="#local-6989586621679633320"><span class="hs-identifier hs-type">k</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633313"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="Charon.Env.html#HasTrashHome"><span class="hs-identifier hs-type">HasTrashHome</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633318"><span class="hs-identifier hs-type">env</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-48"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Subtyping.html#Is"><span class="hs-identifier hs-type">Is</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633320"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Types.html#A_Getter"><span class="hs-identifier hs-type">A_Getter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Label.html#LabelOptic%27"><span class="hs-identifier hs-type">LabelOptic'</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fileName&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679633320"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633313"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-52"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679633318"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633313"><span class="hs-identifier hs-type">pd</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier hs-type">BackendArgs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633313"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><a href="#local-6989586621679633324"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span>
+</span><span id="line-59"></span><span id="readIndex"><span class="annot"><span class="annottext">readIndex :: forall (m :: * -&gt; *) env pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ HasTrashHome env, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadFileReader m, MonadCatch m, MonadLoggerNS m,
+ MonadReader env m, MonadPathReader m, Serial pd) =&gt;
+BackendArgs m pd -&gt; m Index
+</span><a href="Charon.Backend.Default.Index.html#readIndex"><span class="hs-identifier hs-var hs-var">readIndex</span></a></span></span><span> </span><span id="local-6989586621679633506"><span class="annot"><span class="annottext">BackendArgs m pd
+</span><a href="#local-6989586621679633506"><span class="hs-identifier hs-var">backendArgs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><span class="annottext">(env -&gt; PathI 'TrashHome) -&gt; m (PathI 'TrashHome)
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="annot"><span class="annottext">env -&gt; PathI 'TrashHome
+forall a. HasTrashHome a =&gt; a -&gt; PathI 'TrashHome
+</span><a href="Charon.Env.html#getTrashHome"><span class="hs-identifier hs-var">getTrashHome</span></a></span><span> </span><span class="annot"><span class="annottext">m (PathI 'TrashHome) -&gt; (PathI 'TrashHome -&gt; m Index) -&gt; m Index
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="annot"><span class="annottext">BackendArgs m pd -&gt; PathI 'TrashHome -&gt; m Index
+forall (m :: * -&gt; *) pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadFileReader m, MonadCatch m, MonadLoggerNS m,
+ MonadPathReader m, Serial pd) =&gt;
+BackendArgs m pd -&gt; PathI 'TrashHome -&gt; m Index
+</span><a href="Charon.Backend.Default.Index.html#readIndexTrashHome"><span class="hs-identifier hs-var">readIndexTrashHome</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m pd
+</span><a href="#local-6989586621679633506"><span class="hs-identifier hs-var">backendArgs</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | Reads the trash directory into the 'Index'. If this succeeds then</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- everything is 'well-formed' i.e. there is a bijection between trash/files</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- and trash/info.</span><span>
+</span><span id="line-65"></span><span class="annot"><a href="Charon.Backend.Default.Index.html#readIndexTrashHome"><span class="hs-identifier hs-type">readIndexTrashHome</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679633351"><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679633349"><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679633350"><span class="annot"><a href="#local-6989586621679633350"><span class="hs-identifier hs-type">k</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Class.Serial.html#DecodeExtra"><span class="hs-identifier hs-type">DecodeExtra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">~</span></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-69"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Subtyping.html#Is"><span class="hs-identifier hs-type">Is</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633350"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Types.html#A_Getter"><span class="hs-identifier hs-type">A_Getter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Label.html#LabelOptic%27"><span class="hs-identifier hs-type">LabelOptic'</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fileName&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679633350"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-type">MonadFileReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>    </span><span class="annot"><a href="Charon.Class.Serial.html#Serial"><span class="hs-identifier hs-type">Serial</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="Charon.Backend.Default.BackendArgs.html#BackendArgs"><span class="hs-identifier hs-type">BackendArgs</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Index.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span>
+</span><span id="line-80"></span><span id="readIndexTrashHome"><span class="annot"><span class="annottext">readIndexTrashHome :: forall (m :: * -&gt; *) pd k.
+(DecodeExtra pd ~ PathI 'TrashEntryFileName, HasCallStack,
+ Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadFileReader m, MonadCatch m, MonadLoggerNS m,
+ MonadPathReader m, Serial pd) =&gt;
+BackendArgs m pd -&gt; PathI 'TrashHome -&gt; m Index
+</span><a href="Charon.Backend.Default.Index.html#readIndexTrashHome"><span class="hs-identifier hs-var hs-var">readIndexTrashHome</span></a></span></span><span> </span><span id="local-6989586621679633638"><span class="annot"><span class="annottext">BackendArgs m pd
+</span><a href="#local-6989586621679633638"><span class="hs-identifier hs-var">backendArgs</span></a></span></span><span> </span><span id="local-6989586621679633639"><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m Index -&gt; m Index
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;readIndexTrashHome&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m Index -&gt; m Index) -&gt; m Index -&gt; m Index
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>  </span><span id="local-6989586621679633641"><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633641"><span class="hs-identifier hs-var">paths</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; m [OsString]
+forall (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsString -&gt; m [OsString]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#listDirectory"><span class="hs-identifier hs-var">listDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633643"><span class="hs-identifier hs-var">trashInfoDir'</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Trash info: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633643"><span class="hs-identifier hs-var">trashInfoDir'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Info: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><span class="hs-identifier hs-var">T.intercalate</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">(OsString -&gt; Text) -&gt; [OsString] -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633641"><span class="hs-identifier hs-var">paths</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679633654"><span class="hs-identifier hs-type">seqify</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">OsPath</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Default.Index.html#Acc"><span class="hs-identifier hs-type">Acc</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679633351"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Charon.Backend.Default.Index.html#Acc"><span class="hs-identifier hs-type">Acc</span></a></span><span>
+</span><span id="line-86"></span><span>      </span><span id="local-6989586621679633654"><span class="annot"><span class="annottext">seqify :: OsString -&gt; m Acc -&gt; m Acc
+</span><a href="#local-6989586621679633654"><span class="hs-identifier hs-var hs-var">seqify</span></a></span></span><span> </span><span id="local-6989586621679633656"><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633656"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679633657"><span class="annot"><span class="annottext">m Acc
+</span><a href="#local-6989586621679633657"><span class="hs-identifier hs-var">macc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-87"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679633658"><span class="annot"><span class="annottext">actualExt :: OsString
+</span><a href="#local-6989586621679633658"><span class="hs-identifier hs-var hs-var">actualExt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString
+</span><span class="hs-identifier hs-var">FP.takeExtension</span></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633656"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-88"></span><span>            </span><span id="local-6989586621679633660"><span class="annot"><span class="annottext">expectedExt :: OsString
+</span><a href="#local-6989586621679633660"><span class="hs-identifier hs-var hs-var">expectedExt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Backend -&gt; OsString
+</span><a href="Charon.Backend.Data.html#backendExt"><span class="hs-identifier hs-var">Backend.Data.backendExt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">BackendArgs m pd
+</span><a href="#local-6989586621679633638"><span class="hs-identifier hs-var">backendArgs</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m pd
+-&gt; Optic' A_Lens NoIx (BackendArgs m pd) Backend -&gt; Backend
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (BackendArgs m pd) Backend
+</span><span class="">#backend</span></span><span class="hs-special">)</span><span>
+</span><span id="line-89"></span><span>            </span><span id="local-6989586621679633663"><span class="annot"><span class="annottext">toCorePathData :: PathI 'TrashHome -&gt; pd -&gt; m PathData
+</span><a href="#local-6989586621679633663"><span class="hs-identifier hs-var hs-var">toCorePathData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BackendArgs m pd
+</span><a href="#local-6989586621679633638"><span class="hs-identifier hs-var">backendArgs</span></a></span><span> </span><span class="annot"><span class="annottext">BackendArgs m pd
+-&gt; Optic'
+     A_Lens
+     NoIx
+     (BackendArgs m pd)
+     (PathI 'TrashHome -&gt; pd -&gt; m PathData)
+-&gt; PathI 'TrashHome
+-&gt; pd
+-&gt; m PathData
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic'
+  A_Lens
+  NoIx
+  (BackendArgs m pd)
+  (PathI 'TrashHome -&gt; pd -&gt; m PathData)
+</span><span class="">#toCorePathData</span></span><span>
+</span><span id="line-90"></span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">when</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633658"><span class="hs-identifier hs-var">actualExt</span></a></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">/=</span></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633660"><span class="hs-identifier hs-var">expectedExt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>          </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TrashEntryInfoBadExtE -&gt; m ()
+forall (m :: * -&gt; *) e a.
+(Exception e, HasCallStack, MonadThrow m) =&gt;
+e -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-exceptions-0.1-cbc6c6992b43b60e49e859c21827717f4c8f4d9ff6ce5ae6d908553d0e8694a2/share/doc/html/src/Effects.Exception.html#throwCS"><span class="hs-identifier hs-var">throwCS</span></a></span><span>
+</span><span id="line-93"></span><span>          </span><span class="annot"><span class="annottext">(TrashEntryInfoBadExtE -&gt; m ()) -&gt; TrashEntryInfoBadExtE -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; OsString -&gt; OsString -&gt; TrashEntryInfoBadExtE
+</span><a href="Charon.Exception.html#MkTrashEntryInfoBadExtE"><span class="hs-identifier hs-var">MkTrashEntryInfoBadExtE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString -&gt; PathI 'TrashEntryFileName
+forall (i :: PathIndex). OsString -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633656"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633658"><span class="hs-identifier hs-var">actualExt</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633660"><span class="hs-identifier hs-var">expectedExt</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679633667"><span class="annot"><span class="annottext">path :: OsString
+</span><a href="#local-6989586621679633667"><span class="hs-identifier hs-var hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633643"><span class="hs-identifier hs-var">trashInfoDir'</span></a></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString -&gt; OsString
+</span><span class="hs-operator hs-var">&lt;/&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633656"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-96"></span><span>        </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Path: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633667"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>        </span><span id="local-6989586621679633669"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679633669"><span class="hs-identifier hs-var">contents</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; m ByteString
+forall (m :: * -&gt; *).
+(MonadFileReader m, HasCallStack) =&gt;
+OsString -&gt; m ByteString
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#readBinaryFile"><span class="hs-identifier hs-var">readBinaryFile</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633667"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-99"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="hs-comment">-- NOTE: We want the name without the suffix</span><span>
+</span><span id="line-100"></span><span>            </span><span id="local-6989586621679633671"><span class="annot"><span class="annottext">fileName :: OsString
+</span><a href="#local-6989586621679633671"><span class="hs-identifier hs-var hs-var">fileName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString
+</span><span class="hs-identifier hs-var">FP.dropExtension</span></span><span> </span><span class="annot"><span class="annottext">(OsString -&gt; OsString) -&gt; OsString -&gt; OsString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString
+</span><span class="hs-identifier hs-var">FP.takeFileName</span></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633667"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-101"></span><span>            </span><span id="local-6989586621679633674"><span class="annot"><span class="annottext">decoded :: Either String pd
+</span><a href="#local-6989586621679633674"><span class="hs-identifier hs-var hs-var">decoded</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a.
+Serial a =&gt;
+DecodeExtra a -&gt; ByteString -&gt; Either String a
+</span><a href="Charon.Class.Serial.html#decode"><span class="hs-identifier hs-var">Serial.decode</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString -&gt; PathI 'TrashEntryFileName
+forall (i :: PathIndex). OsString -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633671"><span class="hs-identifier hs-var">fileName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679633669"><span class="hs-identifier hs-var">contents</span></a></span><span>
+</span><span id="line-102"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either String pd
+</span><a href="#local-6989586621679633674"><span class="hs-identifier hs-var">decoded</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-103"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span id="local-6989586621679633676"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679633676"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">InfoDecodeE -&gt; m Acc
+forall (m :: * -&gt; *) e a.
+(Exception e, HasCallStack, MonadThrow m) =&gt;
+e -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-exceptions-0.1-cbc6c6992b43b60e49e859c21827717f4c8f4d9ff6ce5ae6d908553d0e8694a2/share/doc/html/src/Effects.Exception.html#throwCS"><span class="hs-identifier hs-var">throwCS</span></a></span><span> </span><span class="annot"><span class="annottext">(InfoDecodeE -&gt; m Acc) -&gt; InfoDecodeE -&gt; m Acc
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryInfo -&gt; ByteString -&gt; String -&gt; InfoDecodeE
+</span><a href="Charon.Exception.html#MkInfoDecodeE"><span class="hs-identifier hs-var">MkInfoDecodeE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString -&gt; PathI 'TrashEntryInfo
+forall (i :: PathIndex). OsString -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633667"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679633669"><span class="hs-identifier hs-var">contents</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679633676"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-104"></span><span>          </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679633677"><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633677"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>            </span><span id="local-6989586621679633678"><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633678"><span class="hs-identifier hs-var">trashEntryPath</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) pd k.
+(HasCallStack, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadCatch m, MonadLoggerNS m, MonadPathReader m) =&gt;
+PathI 'TrashHome -&gt; pd -&gt; m (PathI 'TrashEntryPath)
+</span><a href="Charon.Backend.Default.Index.html#getTrashEntryPath"><span class="hs-identifier hs-var">getTrashEntryPath</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679633349"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633677"><span class="hs-identifier hs-var">pd</span></a></span><span>
+</span><span id="line-106"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679633680"><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath)
+</span><a href="#local-6989586621679633680"><span class="hs-identifier hs-var">accSeq</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679633681"><span class="annot"><span class="annottext">HashSet (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679633681"><span class="hs-identifier hs-var">accSet</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Acc
+</span><a href="#local-6989586621679633657"><span class="hs-identifier hs-var">macc</span></a></span><span>
+</span><span id="line-107"></span><span>            </span><span id="local-6989586621679633682"><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679633682"><span class="hs-identifier hs-var">corePathData</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; pd -&gt; m PathData
+</span><a href="#local-6989586621679633663"><span class="hs-identifier hs-var">toCorePathData</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633677"><span class="hs-identifier hs-var">pd</span></a></span><span>
+</span><span id="line-108"></span><span>            </span><span class="annot"><span class="annottext">Acc -&gt; m Acc
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679633682"><span class="hs-identifier hs-var">corePathData</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633678"><span class="hs-identifier hs-var">trashEntryPath</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(PathData, PathI 'TrashEntryPath)
+-&gt; Seq (PathData, PathI 'TrashEntryPath)
+-&gt; Seq (PathData, PathI 'TrashEntryPath)
+forall a. a -&gt; Seq a -&gt; Seq a
+</span><span class="hs-operator hs-var">:&lt;|</span></span><span> </span><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath)
+</span><a href="#local-6989586621679633680"><span class="hs-identifier hs-var">accSeq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; HashSet (PathI 'TrashEntryFileName)
+-&gt; HashSet (PathI 'TrashEntryFileName)
+forall a. (Eq a, Hashable a) =&gt; a -&gt; HashSet a -&gt; HashSet a
+</span><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashSet.Internal.html#insert"><span class="hs-identifier hs-var">HSet.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathData
+</span><a href="#local-6989586621679633682"><span class="hs-identifier hs-var">corePathData</span></a></span><span> </span><span class="annot"><span class="annottext">PathData
+-&gt; Optic' A_Lens NoIx PathData (PathI 'TrashEntryFileName)
+-&gt; PathI 'TrashEntryFileName
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx PathData (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">HashSet (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679633681"><span class="hs-identifier hs-var">accSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679633685"><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath)
+</span><a href="#local-6989586621679633685"><span class="hs-identifier hs-var">indexSeq</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679633686"><span class="annot"><span class="annottext">HashSet (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679633686"><span class="hs-identifier hs-var">pathSet</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(OsString -&gt; m Acc -&gt; m Acc) -&gt; m Acc -&gt; [OsString] -&gt; m Acc
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; m Acc -&gt; m Acc
+</span><a href="#local-6989586621679633654"><span class="hs-identifier hs-var">seqify</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Acc -&gt; m Acc
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">HashSet (PathI 'TrashEntryFileName)
+forall a. HashSet a
+</span><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashSet.Internal.html#empty"><span class="hs-identifier hs-var">HSet.empty</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633641"><span class="hs-identifier hs-var">paths</span></a></span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-comment">-- NOTE: Check that all files in /files exist in the index.</span><span>
+</span><span id="line-113"></span><span>  </span><span id="local-6989586621679633690"><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633690"><span class="hs-identifier hs-var">allTrashPaths</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; m [OsString]
+forall (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsString -&gt; m [OsString]
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#listDirectory"><span class="hs-identifier hs-var">listDirectory</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633691"><span class="hs-identifier hs-var">trashPathsDir'</span></a></span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-special">$</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#logDebug"><span class="hs-identifier hs-type">logDebug</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;Paths: &quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><span class="hs-identifier hs-var">T.intercalate</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">OsString -&gt; Text
+</span><a href="Charon.Prelude.html#decodeOsToFpDisplayExT"><span class="hs-identifier hs-var">decodeOsToFpDisplayExT</span></a></span><span> </span><span class="annot"><span class="annottext">(OsString -&gt; Text) -&gt; [OsString] -&gt; [Text]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633690"><span class="hs-identifier hs-var">allTrashPaths</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><span class="annottext">[OsString] -&gt; (OsString -&gt; m ()) -&gt; m ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+t a -&gt; (a -&gt; f b) -&gt; f ()
+</span><span class="hs-identifier hs-var">for_</span></span><span> </span><span class="annot"><span class="annottext">[OsString]
+</span><a href="#local-6989586621679633690"><span class="hs-identifier hs-var">allTrashPaths</span></a></span><span> </span><span class="annot"><span class="annottext">((OsString -&gt; m ()) -&gt; m ()) -&gt; (OsString -&gt; m ()) -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679633693"><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633693"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679633694"><span class="annot"><span class="annottext">pName :: PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679633694"><span class="hs-identifier hs-var hs-var">pName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; PathI 'TrashEntryFileName
+forall (i :: PathIndex). OsString -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">(OsString -&gt; PathI 'TrashEntryFileName)
+-&gt; OsString -&gt; PathI 'TrashEntryFileName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; OsString
+</span><span class="hs-identifier hs-var">FP.takeFileName</span></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633693"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><span class="hs-identifier hs-var">unless</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679633694"><span class="hs-identifier hs-var">pName</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+-&gt; HashSet (PathI 'TrashEntryFileName) -&gt; Bool
+forall a. (Eq a, Hashable a) =&gt; a -&gt; HashSet a -&gt; Bool
+</span><a href="file:///nix/store/5lv6y93zqzymf4ryznc5wvz0s978f7px-unordered-containers-0.2.19.1-doc/share/doc/unordered-containers-0.2.19.1/html/src/Data.HashSet.Internal.html#member"><span class="hs-operator hs-var">`HSet.member`</span></a></span><span> </span><span class="annot"><span class="annottext">HashSet (PathI 'TrashEntryFileName)
+</span><a href="#local-6989586621679633686"><span class="hs-identifier hs-var">pathSet</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-118"></span><span>      </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">TrashEntryInfoNotFoundE -&gt; m ()
+forall (m :: * -&gt; *) e a.
+(Exception e, HasCallStack, MonadThrow m) =&gt;
+e -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-exceptions-0.1-cbc6c6992b43b60e49e859c21827717f4c8f4d9ff6ce5ae6d908553d0e8694a2/share/doc/html/src/Effects.Exception.html#throwCS"><span class="hs-identifier hs-var">throwCS</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">(TrashEntryInfoNotFoundE -&gt; m ())
+-&gt; TrashEntryInfoNotFoundE -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+-&gt; PathI 'TrashEntryFileName -&gt; TrashEntryInfoNotFoundE
+</span><a href="Charon.Exception.html#MkTrashEntryInfoNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryInfoNotFoundE</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679633694"><span class="hs-identifier hs-var">pName</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><span class="annottext">Index -&gt; m Index
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Index -&gt; m Index) -&gt; Index -&gt; m Index
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath) -&gt; Index
+</span><a href="Charon.Data.Index.html#MkIndex"><span class="hs-identifier hs-var">MkIndex</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (PathData, PathI 'TrashEntryPath)
+</span><a href="#local-6989586621679633685"><span class="hs-identifier hs-var">indexSeq</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679633691"><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633691"><span class="hs-identifier hs-var">trashPathsDir'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathI 'TrashDirFiles
+</span><a href="Charon.Backend.Default.Utils.html#getTrashPathDir"><span class="hs-identifier hs-var">Default.Utils.getTrashPathDir</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679633643"><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633643"><span class="hs-identifier hs-var">trashInfoDir'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathI 'TrashDirInfo
+</span><a href="Charon.Backend.Default.Utils.html#getTrashInfoDir"><span class="hs-identifier hs-var">Default.Utils.getTrashInfoDir</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633639"><span class="hs-identifier hs-var">trashHome</span></a></span><span>
+</span><span id="line-125"></span><span>
+</span><span id="line-126"></span><span class="annot"><span class="hs-comment">-- | Like 'throwIfTrashNonExtant' except returns the path if it exists.</span></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Charon.Backend.Default.Index.html#getTrashEntryPath"><span class="hs-identifier hs-type">getTrashEntryPath</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679633435"><span class="annot"><a href="#local-6989586621679633435"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679633434"><span class="annot"><a href="#local-6989586621679633434"><span class="hs-identifier hs-type">pd</span></a></span></span><span> </span><span id="local-6989586621679633433"><span class="annot"><a href="#local-6989586621679633433"><span class="hs-identifier hs-type">k</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-129"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-130"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Subtyping.html#Is"><span class="hs-identifier hs-type">Is</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633433"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Types.html#A_Getter"><span class="hs-identifier hs-type">A_Getter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Label.html#LabelOptic%27"><span class="hs-identifier hs-type">LabelOptic'</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fileName&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679633433"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633434"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679633435"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633435"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633435"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><a href="#local-6989586621679633434"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><a href="#local-6989586621679633435"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier hs-type">TrashEntryPath</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span id="getTrashEntryPath"><span class="annot"><span class="annottext">getTrashEntryPath :: forall (m :: * -&gt; *) pd k.
+(HasCallStack, Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ MonadCatch m, MonadLoggerNS m, MonadPathReader m) =&gt;
+PathI 'TrashHome -&gt; pd -&gt; m (PathI 'TrashEntryPath)
+</span><a href="Charon.Backend.Default.Index.html#getTrashEntryPath"><span class="hs-identifier hs-var hs-var">getTrashEntryPath</span></a></span></span><span> </span><span id="local-6989586621679633728"><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633728"><span class="hs-identifier hs-var">trashHome</span></a></span></span><span> </span><span id="local-6989586621679633729"><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633729"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m (PathI 'TrashEntryPath) -&gt; m (PathI 'TrashEntryPath)
+forall (m :: * -&gt; *) a. MonadLoggerNS m =&gt; Text -&gt; m a -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#addNamespace"><span class="hs-identifier hs-var">addNamespace</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;getTrashEntryPath&quot;</span></span><span> </span><span class="annot"><span class="annottext">(m (PathI 'TrashEntryPath) -&gt; m (PathI 'TrashEntryPath))
+-&gt; m (PathI 'TrashEntryPath) -&gt; m (PathI 'TrashEntryPath)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; pd -&gt; m (Maybe (PathI 'TrashEntryPath))
+forall (m :: * -&gt; *) pd k.
+(Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ HasCallStack, MonadCatch m, MonadPathReader m) =&gt;
+PathI 'TrashHome -&gt; pd -&gt; m (Maybe (PathI 'TrashEntryPath))
+</span><a href="Charon.Backend.Default.Index.html#lookupTrashPath"><span class="hs-identifier hs-var">lookupTrashPath</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633728"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633729"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">m (Maybe (PathI 'TrashEntryPath))
+-&gt; (Maybe (PathI 'TrashEntryPath) -&gt; m (PathI 'TrashEntryPath))
+-&gt; m (PathI 'TrashEntryPath)
+forall a b. m a -&gt; (a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><span class="hs-operator hs-var">&gt;&gt;=</span></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-141"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span id="local-6989586621679633731"><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633731"><span class="hs-identifier hs-var">trashPath</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath -&gt; m (PathI 'TrashEntryPath)
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633731"><span class="hs-identifier hs-var">trashPath</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashEntryPath)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">TrashEntryFileNotFoundE -&gt; m (PathI 'TrashEntryPath)
+forall (m :: * -&gt; *) e a.
+(Exception e, HasCallStack, MonadThrow m) =&gt;
+e -&gt; m a
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-exceptions-0.1-cbc6c6992b43b60e49e859c21827717f4c8f4d9ff6ce5ae6d908553d0e8694a2/share/doc/html/src/Effects.Exception.html#throwCS"><span class="hs-identifier hs-var">throwCS</span></a></span><span>
+</span><span id="line-144"></span><span>        </span><span class="annot"><span class="annottext">(TrashEntryFileNotFoundE -&gt; m (PathI 'TrashEntryPath))
+-&gt; TrashEntryFileNotFoundE -&gt; m (PathI 'TrashEntryPath)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+-&gt; PathI 'TrashEntryFileName -&gt; TrashEntryFileNotFoundE
+</span><a href="Charon.Exception.html#MkTrashEntryFileNotFoundE"><span class="hs-identifier hs-var">MkTrashEntryFileNotFoundE</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633728"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679633732"><span class="hs-identifier hs-var">filePath</span></a></span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679633732"><span class="annot"><span class="annottext">filePath :: PathI 'TrashEntryFileName
+</span><a href="#local-6989586621679633732"><span class="hs-identifier hs-var hs-var">filePath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633729"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">pd
+-&gt; Optic' k NoIx pd (PathI 'TrashEntryFileName)
+-&gt; PathI 'TrashEntryFileName
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' k NoIx pd (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><span class="hs-comment">-- | Like 'trashPathExists' except returns the path if it exists.</span></span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Charon.Backend.Default.Index.html#lookupTrashPath"><span class="hs-identifier hs-type">lookupTrashPath</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-150"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679633460"><span class="annot"><a href="#local-6989586621679633460"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679633459"><span class="annot"><a href="#local-6989586621679633459"><span class="hs-identifier hs-type">pd</span></a></span></span><span> </span><span id="local-6989586621679633458"><span class="annot"><a href="#local-6989586621679633458"><span class="hs-identifier hs-type">k</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Subtyping.html#Is"><span class="hs-identifier hs-type">Is</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633458"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.Types.html#A_Getter"><span class="hs-identifier hs-type">A_Getter</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-152"></span><span>    </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Label.html#LabelOptic%27"><span class="hs-identifier hs-type">LabelOptic'</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fileName&quot;</span></span><span> </span><span class="annot"><a href="#local-6989586621679633458"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633459"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryFileName"><span class="hs-identifier hs-type">TrashEntryFileName</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">HasCallStack</span></span><span class="hs-special">,</span><span>
+</span><span id="line-154"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">MonadCatch</span></span><span> </span><span class="annot"><a href="#local-6989586621679633460"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-type">MonadPathReader</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679633460"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-157"></span><span>  </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashHome"><span class="hs-identifier hs-type">TrashHome</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-158"></span><span>  </span><span class="annot"><a href="#local-6989586621679633459"><span class="hs-identifier hs-type">pd</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-159"></span><span>  </span><span class="annot"><a href="#local-6989586621679633460"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier hs-type">TrashEntryPath</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-160"></span><span id="lookupTrashPath"><span class="annot"><span class="annottext">lookupTrashPath :: forall (m :: * -&gt; *) pd k.
+(Is k A_Getter,
+ LabelOptic' &quot;fileName&quot; k pd (PathI 'TrashEntryFileName),
+ HasCallStack, MonadCatch m, MonadPathReader m) =&gt;
+PathI 'TrashHome -&gt; pd -&gt; m (Maybe (PathI 'TrashEntryPath))
+</span><a href="Charon.Backend.Default.Index.html#lookupTrashPath"><span class="hs-identifier hs-var hs-var">lookupTrashPath</span></a></span></span><span> </span><span id="local-6989586621679633750"><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633750"><span class="hs-identifier hs-var">trashHome</span></a></span></span><span> </span><span id="local-6989586621679633751"><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633751"><span class="hs-identifier hs-var">pd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-161"></span><span>  </span><span class="hs-comment">-- Unfortunately we don't know the path type, as we could be dealing with</span><span>
+</span><span id="line-162"></span><span>  </span><span class="hs-comment">-- a backend that does not have it on its PathData (e.g. fdo). Thus we</span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-comment">-- have to check symlinks first, then doesPathExist for files/dirs.</span><span>
+</span><span id="line-164"></span><span>  </span><span id="local-6989586621679633752"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679633752"><span class="hs-identifier hs-var">exists</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">OsString -&gt; m Bool
+forall (m :: * -&gt; *).
+(HasCallStack, MonadCatch m, MonadPathReader m) =&gt;
+OsString -&gt; m Bool
+</span><a href="Charon.Prelude.html#doesAnyPathExist"><span class="hs-identifier hs-var">doesAnyPathExist</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633754"><span class="hs-identifier hs-var">trashPath'</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashEntryPath) -&gt; m (Maybe (PathI 'TrashEntryPath))
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span>
+</span><span id="line-166"></span><span>    </span><span class="annot"><span class="annottext">(Maybe (PathI 'TrashEntryPath)
+ -&gt; m (Maybe (PathI 'TrashEntryPath)))
+-&gt; Maybe (PathI 'TrashEntryPath)
+-&gt; m (Maybe (PathI 'TrashEntryPath))
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679633752"><span class="hs-identifier hs-var">exists</span></a></span><span>
+</span><span id="line-167"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath -&gt; Maybe (PathI 'TrashEntryPath)
+forall a. a -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633755"><span class="hs-identifier hs-var">trashPath</span></a></span><span>
+</span><span id="line-168"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe (PathI 'TrashEntryPath)
+forall a. Maybe a
+</span><span class="hs-identifier hs-var">Nothing</span></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">-- NOTE: doesPathExist rather than doesFile/Dir... as that requires knowing</span><span>
+</span><span id="line-171"></span><span>    </span><span class="hs-comment">-- the path type. See Note [PathData PathType conditions].</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><a href="#local-6989586621679633755"><span class="hs-identifier hs-type">trashPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Data.Paths.html#PathI"><span class="hs-identifier hs-type">PathI</span></a></span><span> </span><span class="hs-special">'</span><span class="annot"><a href="Charon.Data.Paths.html#TrashEntryPath"><span class="hs-identifier hs-type">TrashEntryPath</span></a></span><span>
+</span><span id="line-173"></span><span>    </span><span id="local-6989586621679633755"><span class="annot"><span class="annottext">trashPath :: PathI 'TrashEntryPath
+</span><a href="#local-6989586621679633755"><span class="hs-identifier hs-var">trashPath</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-type">MkPathI</span></a></span><span> </span><span id="local-6989586621679633754"><span class="annot"><span class="annottext">OsString
+</span><a href="#local-6989586621679633754"><span class="hs-identifier hs-var">trashPath'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-174"></span><span>      </span><span class="annot"><span class="annottext">PathI 'TrashHome
+</span><a href="#local-6989586621679633750"><span class="hs-identifier hs-var">trashHome</span></a></span><span> </span><span class="annot"><span class="annottext">PathI 'TrashHome -&gt; PathI Any -&gt; PathI 'TrashEntryPath
+forall (i1 :: PathIndex) (i2 :: PathIndex) (i3 :: PathIndex).
+PathI i1 -&gt; PathI i2 -&gt; PathI i3
+</span><a href="Charon.Data.Paths.html#%3C%2F%2F%3E"><span class="hs-operator hs-var">&lt;//&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">OsString -&gt; PathI Any
+forall (i :: PathIndex). OsString -&gt; PathI i
+</span><a href="Charon.Data.Paths.html#MkPathI"><span class="hs-identifier hs-var">MkPathI</span></a></span><span> </span><span class="annot"><span class="annottext">OsString
+</span><a href="Charon.Backend.Default.Utils.html#pathFiles"><span class="hs-identifier hs-var">Default.Utils.pathFiles</span></a></span><span> </span><span class="annot"><span class="annottext">PathI Any -&gt; PathI 'TrashEntryFileName -&gt; PathI Any
+forall (i1 :: PathIndex) (i2 :: PathIndex) (i3 :: PathIndex).
+PathI i1 -&gt; PathI i2 -&gt; PathI i3
+</span><a href="Charon.Data.Paths.html#%3C%2F%2F%3E"><span class="hs-operator hs-var">&lt;//&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">pd
+</span><a href="#local-6989586621679633751"><span class="hs-identifier hs-var">pd</span></a></span><span> </span><span class="annot"><span class="annottext">pd
+-&gt; Optic' k NoIx pd (PathI 'TrashEntryFileName)
+-&gt; PathI 'TrashEntryFileName
+forall k s (is :: IxList) a.
+Is k A_Getter =&gt;
+s -&gt; Optic' k is s a -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Operators.html#%5E."><span class="hs-operator hs-var">^.</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' k NoIx pd (PathI 'TrashEntryFileName)
+</span><span class="">#fileName</span></span><span class="hs-special">)</span><span>
+</span><span id="line-175"></span></pre></body></html>

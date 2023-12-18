@@ -1,0 +1,2141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">-- | Provides the 'CharonT' type for running Charon.</span></span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Charon.Runner.CharonT</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier">CharonT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.CharonT.html#MkCharonT"><span class="hs-identifier">MkCharonT</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Charon.Runner.CharonT.html#runCharonT"><span class="hs-identifier">runCharonT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span class="annot"><a href="Charon.Runner.CharonT.html#usingCharonT"><span class="hs-identifier">usingCharonT</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Prelude.html"><span class="hs-identifier">Charon.Prelude</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Charon.Runner.Env.html"><span class="hs-identifier">Charon.Runner.Env</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Env.html#Env"><span class="hs-identifier">Env</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Env.html#LogFile"><span class="hs-identifier">LogFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Env.html#%24sel%3Ahandle%3AMkLogFile"><span class="hs-identifier">handle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Env.html#%24sel%3AlogLevel%3AMkLogFile"><span class="hs-identifier">logLevel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html"><span class="hs-identifier">Effects.LoggerNS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#defaultLogFormatter"><span class="hs-identifier">defaultLogFormatter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#guardLevel"><span class="hs-identifier">guardLevel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html"><span class="hs-identifier">Effects.LoggerNS</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Logger</span></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span class="annot"><span class="hs-comment">-- | `CharonT` is the main application type that runs shell commands.</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">type</span><span> </span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-type">CharonT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Type</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">newtype</span><span> </span><span id="CharonT"><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-var">CharonT</span></a></span></span><span> </span><span id="local-6989586621679624631"><span class="annot"><a href="#local-6989586621679624631"><span class="hs-identifier hs-type">env</span></a></span></span><span> </span><span id="local-6989586621679624632"><span class="annot"><a href="#local-6989586621679624632"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679624633"><span class="annot"><a href="#local-6989586621679624633"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="MkCharonT"><span class="annot"><a href="Charon.Runner.CharonT.html#MkCharonT"><span class="hs-identifier hs-var">MkCharonT</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ReaderT</span></span><span> </span><span class="annot"><a href="#local-6989586621679624631"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624632"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624633"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-keyword">deriving</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">(</span><span> </span><span id="local-6989586621679624636"><span id="local-6989586621679624641"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b)
+-&gt; (forall a b. a -&gt; CharonT env m b -&gt; CharonT env m a)
+-&gt; Functor (CharonT env m)
+forall a b. a -&gt; CharonT env m b -&gt; CharonT env m a
+forall a b. (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; CharonT env m b -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall env (m :: * -&gt; *) a b.
+Functor m =&gt;
+(a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+fmap :: forall a b. (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+$c&lt;$ :: forall env (m :: * -&gt; *) a b.
+Functor m =&gt;
+a -&gt; CharonT env m b -&gt; CharonT env m a
+&lt;$ :: forall a b. a -&gt; CharonT env m b -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-19"></span><span>      </span><span id="local-6989586621679624651"><span id="local-6989586621679624656"><span id="local-6989586621679624660"><span id="local-6989586621679624664"><span id="local-6989586621679624668"><span class="annot"><span class="annottext">Functor (CharonT env m)
+Functor (CharonT env m) =&gt;
+(forall a. a -&gt; CharonT env m a)
+-&gt; (forall a b.
+    CharonT env m (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b)
+-&gt; (forall a b c.
+    (a -&gt; b -&gt; c)
+    -&gt; CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m c)
+-&gt; (forall a b.
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b)
+-&gt; (forall a b.
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m a)
+-&gt; Applicative (CharonT env m)
+forall a. a -&gt; CharonT env m a
+forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m a
+forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+forall a b.
+CharonT env m (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m c
+forall env (m :: * -&gt; *). Applicative m =&gt; Functor (CharonT env m)
+forall env (m :: * -&gt; *) a. Applicative m =&gt; a -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c)
+-&gt; CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m c
+forall (f :: * -&gt; *).
+Functor f =&gt;
+(forall a. a -&gt; f a)
+-&gt; (forall a b. f (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b c. (a -&gt; b -&gt; c) -&gt; f a -&gt; f b -&gt; f c)
+-&gt; (forall a b. f a -&gt; f b -&gt; f b)
+-&gt; (forall a b. f a -&gt; f b -&gt; f a)
+-&gt; Applicative f
+$cpure :: forall env (m :: * -&gt; *) a. Applicative m =&gt; a -&gt; CharonT env m a
+pure :: forall a. a -&gt; CharonT env m a
+$c&lt;*&gt; :: forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+&lt;*&gt; :: forall a b.
+CharonT env m (a -&gt; b) -&gt; CharonT env m a -&gt; CharonT env m b
+$cliftA2 :: forall env (m :: * -&gt; *) a b c.
+Applicative m =&gt;
+(a -&gt; b -&gt; c)
+-&gt; CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m c
+liftA2 :: forall a b c.
+(a -&gt; b -&gt; c)
+-&gt; CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m c
+$c*&gt; :: forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+*&gt; :: forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+$c&lt;* :: forall env (m :: * -&gt; *) a b.
+Applicative m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m a
+&lt;* :: forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Applicative</span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>      </span><span id="local-6989586621679624679"><span id="local-6989586621679624684"><span id="local-6989586621679624688"><span class="annot"><span class="annottext">Applicative (CharonT env m)
+Applicative (CharonT env m) =&gt;
+(forall a b.
+ CharonT env m a -&gt; (a -&gt; CharonT env m b) -&gt; CharonT env m b)
+-&gt; (forall a b.
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b)
+-&gt; (forall a. a -&gt; CharonT env m a)
+-&gt; Monad (CharonT env m)
+forall a. a -&gt; CharonT env m a
+forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+forall a b.
+CharonT env m a -&gt; (a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall env (m :: * -&gt; *). Monad m =&gt; Applicative (CharonT env m)
+forall env (m :: * -&gt; *) a. Monad m =&gt; a -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a b.
+Monad m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+Monad m =&gt;
+CharonT env m a -&gt; (a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall (m :: * -&gt; *).
+Applicative m =&gt;
+(forall a b. m a -&gt; (a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. m a -&gt; m b -&gt; m b)
+-&gt; (forall a. a -&gt; m a)
+-&gt; Monad m
+$c&gt;&gt;= :: forall env (m :: * -&gt; *) a b.
+Monad m =&gt;
+CharonT env m a -&gt; (a -&gt; CharonT env m b) -&gt; CharonT env m b
+&gt;&gt;= :: forall a b.
+CharonT env m a -&gt; (a -&gt; CharonT env m b) -&gt; CharonT env m b
+$c&gt;&gt; :: forall env (m :: * -&gt; *) a b.
+Monad m =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+&gt;&gt; :: forall a b. CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m b
+$creturn :: forall env (m :: * -&gt; *) a. Monad m =&gt; a -&gt; CharonT env m a
+return :: forall a. a -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Monad</span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>      </span><span id="local-6989586621679624702"><span id="local-6989586621679624713"><span id="local-6989586621679624723"><span id="local-6989586621679624733"><span id="local-6989586621679624743"><span id="local-6989586621679624753"><span id="local-6989586621679624763"><span id="local-6989586621679624773"><span id="local-6989586621679624783"><span id="local-6989586621679624793"><span id="local-6989586621679624805"><span id="local-6989586621679624817"><span id="local-6989586621679624827"><span id="local-6989586621679624837"><span id="local-6989586621679624847"><span id="local-6989586621679624857"><span id="local-6989586621679624867"><span id="local-6989586621679624877"><span id="local-6989586621679624887"><span id="local-6989586621679624897"><span id="local-6989586621679624907"><span id="local-6989586621679624917"><span id="local-6989586621679624927"><span id="local-6989586621679624937"><span id="local-6989586621679624947"><span id="local-6989586621679624957"><span id="local-6989586621679624967"><span id="local-6989586621679624977"><span id="local-6989586621679624987"><span id="local-6989586621679624997"><span id="local-6989586621679625007"><span id="local-6989586621679625017"><span id="local-6989586621679625027"><span id="local-6989586621679625039"><span id="local-6989586621679625053"><span id="local-6989586621679625067"><span id="local-6989586621679625081"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(forall a b.
+ HasCallStack =&gt;
+ CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Int
+    -&gt; CharonT env m a
+    -&gt; (Async a -&gt; CharonT env m b)
+    -&gt; CharonT env m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    ((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+    -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Int
+    -&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+        -&gt; CharonT env m a)
+    -&gt; (Async a -&gt; CharonT env m b)
+    -&gt; CharonT env m b)
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; CharonT env m a)
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Async a -&gt; CharonT env m (Maybe (Either SomeException a)))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Async a -&gt; CharonT env m (Either SomeException a))
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ())
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ())
+-&gt; (forall e a.
+    (Exception e, HasCallStack) =&gt;
+    Async a -&gt; e -&gt; CharonT env m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (Either a b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (a, b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m ())
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; CharonT env m (Async a, a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; CharonT env m (Async a, Either SomeException a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; CharonT env m (Async a, a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; CharonT env m (Async a, Either SomeException a))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; CharonT env m (Either a b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a
+    -&gt; Async b
+    -&gt; CharonT
+         env m (Either (Either SomeException a) (Either SomeException b)))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; CharonT env m (Either a b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a
+    -&gt; Async b
+    -&gt; CharonT
+         env m (Either (Either SomeException a) (Either SomeException b)))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; CharonT env m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; CharonT env m (a, b))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; CharonT env m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    CharonT env m a -&gt; CharonT env m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Int -&gt; CharonT env m a -&gt; CharonT env m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    ((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+    -&gt; CharonT env m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Int
+    -&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+        -&gt; CharonT env m a)
+    -&gt; CharonT env m (Async a))
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ())
+-&gt; (forall a.
+    HasCallStack =&gt;
+    (SomeException -&gt; Bool) -&gt; Async a -&gt; CharonT env m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; CharonT env m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    (SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; CharonT env m ())
+-&gt; (forall (t :: * -&gt; *) a b.
+    (HasCallStack, Traversable t) =&gt;
+    Positive Int
+    -&gt; (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b))
+-&gt; (forall (t :: * -&gt; *) a b.
+    (HasCallStack, Traversable t) =&gt;
+    (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b))
+-&gt; (forall (f :: * -&gt; *) a b.
+    (Foldable f, HasCallStack) =&gt;
+    Positive Int -&gt; (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ())
+-&gt; (forall (f :: * -&gt; *) a b.
+    (Foldable f, HasCallStack) =&gt;
+    (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ())
+-&gt; MonadAsync (CharonT env m)
+forall a.
+HasCallStack =&gt;
+Int -&gt; CharonT env m a -&gt; CharonT env m (Async a)
+forall a.
+HasCallStack =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+forall a. HasCallStack =&gt; [Async a] -&gt; CharonT env m (Async a, a)
+forall a.
+HasCallStack =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+forall a. HasCallStack =&gt; Async a -&gt; CharonT env m a
+forall a.
+HasCallStack =&gt;
+Async a -&gt; CharonT env m (Maybe (Either SomeException a))
+forall a.
+HasCallStack =&gt;
+Async a -&gt; CharonT env m (Either SomeException a)
+forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ()
+forall a.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+forall a.
+HasCallStack =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; CharonT env m ()
+forall a.
+HasCallStack =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+forall a b.
+HasCallStack =&gt;
+Int
+-&gt; CharonT env m a
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall a b.
+HasCallStack =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall a b.
+HasCallStack =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+forall a b.
+HasCallStack =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+forall a b.
+HasCallStack =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (a, b)
+forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (Either a b)
+forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m ()
+forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (a, b)
+forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall a b.
+HasCallStack =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+forall a b.
+HasCallStack =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall e a.
+(Exception e, HasCallStack) =&gt;
+Async a -&gt; e -&gt; CharonT env m ()
+forall env (m :: * -&gt; *). MonadAsync m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Int -&gt; CharonT env m a -&gt; CharonT env m (Async a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m (Maybe (Either SomeException a))
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m (Either SomeException a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; CharonT env m a
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (a, b)
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (Either a b)
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (a, b)
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+forall env (m :: * -&gt; *) e a.
+(MonadAsync m, Exception e, HasCallStack) =&gt;
+Async a -&gt; e -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) (f :: * -&gt; *) a b.
+(MonadAsync m, Foldable f, HasCallStack) =&gt;
+Positive Int -&gt; (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) (f :: * -&gt; *) a b.
+(MonadAsync m, Foldable f, HasCallStack) =&gt;
+(a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) (t :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack, Traversable t) =&gt;
+Positive Int
+-&gt; (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+forall env (m :: * -&gt; *) (t :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack, Traversable t) =&gt;
+(a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a b. HasCallStack =&gt; m a -&gt; (Async a -&gt; m b) -&gt; m b)
+-&gt; (forall a b. HasCallStack =&gt; m a -&gt; (Async a -&gt; m b) -&gt; m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Int -&gt; m a -&gt; (Async a -&gt; m b) -&gt; m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    ((forall c. m c -&gt; m c) -&gt; m a) -&gt; (Async a -&gt; m b) -&gt; m b)
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Int -&gt; ((forall c. m c -&gt; m c) -&gt; m a) -&gt; (Async a -&gt; m b) -&gt; m b)
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; m a)
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Async a -&gt; m (Maybe (Either SomeException a)))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Async a -&gt; m (Either SomeException a))
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; m ())
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; m ())
+-&gt; (forall e a.
+    (Exception e, HasCallStack) =&gt;
+    Async a -&gt; e -&gt; m ())
+-&gt; (forall a b. HasCallStack =&gt; m a -&gt; m b -&gt; m (Either a b))
+-&gt; (forall a b. HasCallStack =&gt; m a -&gt; m b -&gt; m (a, b))
+-&gt; (forall a b. HasCallStack =&gt; m a -&gt; m b -&gt; m ())
+-&gt; (forall a. HasCallStack =&gt; [Async a] -&gt; m (Async a, a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; m (Async a, Either SomeException a))
+-&gt; (forall a. HasCallStack =&gt; [Async a] -&gt; m (Async a, a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    [Async a] -&gt; m (Async a, Either SomeException a))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; m (Either a b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a
+    -&gt; Async b
+    -&gt; m (Either (Either SomeException a) (Either SomeException b)))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a -&gt; Async b -&gt; m (Either a b))
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    Async a
+    -&gt; Async b
+    -&gt; m (Either (Either SomeException a) (Either SomeException b)))
+-&gt; (forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; m ())
+-&gt; (forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; m (a, b))
+-&gt; (forall a. HasCallStack =&gt; m a -&gt; m (Async a))
+-&gt; (forall a. HasCallStack =&gt; m a -&gt; m (Async a))
+-&gt; (forall a. HasCallStack =&gt; Int -&gt; m a -&gt; m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    ((forall c. m c -&gt; m c) -&gt; m a) -&gt; m (Async a))
+-&gt; (forall a.
+    HasCallStack =&gt;
+    Int -&gt; ((forall c. m c -&gt; m c) -&gt; m a) -&gt; m (Async a))
+-&gt; (forall a. HasCallStack =&gt; Async a -&gt; m ())
+-&gt; (forall a.
+    HasCallStack =&gt;
+    (SomeException -&gt; Bool) -&gt; Async a -&gt; m ())
+-&gt; (forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    (SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; m ())
+-&gt; (forall (t :: * -&gt; *) a b.
+    (HasCallStack, Traversable t) =&gt;
+    Positive Int -&gt; (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (t :: * -&gt; *) a b.
+    (HasCallStack, Traversable t) =&gt;
+    (a -&gt; m b) -&gt; t a -&gt; m (t b))
+-&gt; (forall (f :: * -&gt; *) a b.
+    (Foldable f, HasCallStack) =&gt;
+    Positive Int -&gt; (a -&gt; m b) -&gt; f a -&gt; m ())
+-&gt; (forall (f :: * -&gt; *) a b.
+    (Foldable f, HasCallStack) =&gt;
+    (a -&gt; m b) -&gt; f a -&gt; m ())
+-&gt; MonadAsync m
+forall (f :: * -&gt; *) a b.
+(Foldable f, HasCallStack) =&gt;
+Positive Int -&gt; (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+forall (f :: * -&gt; *) a b.
+(Foldable f, HasCallStack) =&gt;
+(a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+forall (t :: * -&gt; *) a b.
+(HasCallStack, Traversable t) =&gt;
+Positive Int
+-&gt; (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+forall (t :: * -&gt; *) a b.
+(HasCallStack, Traversable t) =&gt;
+(a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+$cwithAsync :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+withAsync :: forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+$cwithAsyncBound :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+withAsyncBound :: forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+$cwithAsyncOn :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; CharonT env m a
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+withAsyncOn :: forall a b.
+HasCallStack =&gt;
+Int
+-&gt; CharonT env m a
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+$cwithAsyncWithUnmask :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+withAsyncWithUnmask :: forall a b.
+HasCallStack =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b) -&gt; CharonT env m b
+$cwithAsyncOnWithUnmask :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+withAsyncOnWithUnmask :: forall a b.
+HasCallStack =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; (Async a -&gt; CharonT env m b)
+-&gt; CharonT env m b
+$cwait :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m a
+wait :: forall a. HasCallStack =&gt; Async a -&gt; CharonT env m a
+$cpoll :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m (Maybe (Either SomeException a))
+poll :: forall a.
+HasCallStack =&gt;
+Async a -&gt; CharonT env m (Maybe (Either SomeException a))
+$cwaitCatch :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m (Either SomeException a)
+waitCatch :: forall a.
+HasCallStack =&gt;
+Async a -&gt; CharonT env m (Either SomeException a)
+$ccancel :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m ()
+cancel :: forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ()
+$cuninterruptibleCancel :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m ()
+uninterruptibleCancel :: forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ()
+$ccancelWith :: forall env (m :: * -&gt; *) e a.
+(MonadAsync m, Exception e, HasCallStack) =&gt;
+Async a -&gt; e -&gt; CharonT env m ()
+cancelWith :: forall e a.
+(Exception e, HasCallStack) =&gt;
+Async a -&gt; e -&gt; CharonT env m ()
+$crace :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (Either a b)
+race :: forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (Either a b)
+$cconcurrently :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (a, b)
+concurrently :: forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m (a, b)
+$cconcurrently_ :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m ()
+concurrently_ :: forall a b.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m b -&gt; CharonT env m ()
+$cwaitAny :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, a)
+waitAny :: forall a. HasCallStack =&gt; [Async a] -&gt; CharonT env m (Async a, a)
+$cwaitAnyCatch :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+waitAnyCatch :: forall a.
+HasCallStack =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+$cwaitAnyCancel :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, a)
+waitAnyCancel :: forall a. HasCallStack =&gt; [Async a] -&gt; CharonT env m (Async a, a)
+$cwaitAnyCatchCancel :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+waitAnyCatchCancel :: forall a.
+HasCallStack =&gt;
+[Async a] -&gt; CharonT env m (Async a, Either SomeException a)
+$cwaitEither :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+waitEither :: forall a b.
+HasCallStack =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+$cwaitEitherCatch :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+waitEitherCatch :: forall a b.
+HasCallStack =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+$cwaitEitherCancel :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+waitEitherCancel :: forall a b.
+HasCallStack =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (Either a b)
+$cwaitEitherCatchCancel :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+waitEitherCatchCancel :: forall a b.
+HasCallStack =&gt;
+Async a
+-&gt; Async b
+-&gt; CharonT
+     env m (Either (Either SomeException a) (Either SomeException b))
+$cwaitEither_ :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m ()
+waitEither_ :: forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+$cwaitBoth :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (a, b)
+waitBoth :: forall a b.
+HasCallStack =&gt;
+Async a -&gt; Async b -&gt; CharonT env m (a, b)
+$casync :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+async :: forall a.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+$casyncBound :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+asyncBound :: forall a.
+HasCallStack =&gt;
+CharonT env m a -&gt; CharonT env m (Async a)
+$casyncOn :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Int -&gt; CharonT env m a -&gt; CharonT env m (Async a)
+asyncOn :: forall a.
+HasCallStack =&gt;
+Int -&gt; CharonT env m a -&gt; CharonT env m (Async a)
+$casyncWithUnmask :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+asyncWithUnmask :: forall a.
+HasCallStack =&gt;
+((forall c. CharonT env m c -&gt; CharonT env m c) -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+$casyncOnWithUnmask :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+asyncOnWithUnmask :: forall a.
+HasCallStack =&gt;
+Int
+-&gt; ((forall c. CharonT env m c -&gt; CharonT env m c)
+    -&gt; CharonT env m a)
+-&gt; CharonT env m (Async a)
+$clink :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; CharonT env m ()
+link :: forall a. HasCallStack =&gt; Async a -&gt; CharonT env m ()
+$clinkOnly :: forall env (m :: * -&gt; *) a.
+(MonadAsync m, HasCallStack) =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; CharonT env m ()
+linkOnly :: forall a.
+HasCallStack =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; CharonT env m ()
+$clink2 :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+Async a -&gt; Async b -&gt; CharonT env m ()
+link2 :: forall a b. HasCallStack =&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+$clink2Only :: forall env (m :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack) =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+link2Only :: forall a b.
+HasCallStack =&gt;
+(SomeException -&gt; Bool) -&gt; Async a -&gt; Async b -&gt; CharonT env m ()
+$cpooledMapConcurrentlyN :: forall env (m :: * -&gt; *) (t :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack, Traversable t) =&gt;
+Positive Int
+-&gt; (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+pooledMapConcurrentlyN :: forall (t :: * -&gt; *) a b.
+(HasCallStack, Traversable t) =&gt;
+Positive Int
+-&gt; (a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+$cpooledMapConcurrently :: forall env (m :: * -&gt; *) (t :: * -&gt; *) a b.
+(MonadAsync m, HasCallStack, Traversable t) =&gt;
+(a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+pooledMapConcurrently :: forall (t :: * -&gt; *) a b.
+(HasCallStack, Traversable t) =&gt;
+(a -&gt; CharonT env m b) -&gt; t a -&gt; CharonT env m (t b)
+$cpooledMapConcurrentlyN_ :: forall env (m :: * -&gt; *) (f :: * -&gt; *) a b.
+(MonadAsync m, Foldable f, HasCallStack) =&gt;
+Positive Int -&gt; (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+pooledMapConcurrentlyN_ :: forall (f :: * -&gt; *) a b.
+(Foldable f, HasCallStack) =&gt;
+Positive Int -&gt; (a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+$cpooledMapConcurrently_ :: forall env (m :: * -&gt; *) (f :: * -&gt; *) a b.
+(MonadAsync m, Foldable f, HasCallStack) =&gt;
+(a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+pooledMapConcurrently_ :: forall (f :: * -&gt; *) a b.
+(Foldable f, HasCallStack) =&gt;
+(a -&gt; CharonT env m b) -&gt; f a -&gt; CharonT env m ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-async-0.1-ef1cb19e8fbf2dc116242b18cd3b9e7b5c92122705eb34b11f5acc170f2280d5/share/doc/html/src/Effects.Concurrent.Async.html#MonadAsync"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadAsync</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>      </span><span id="local-6989586621679625103"><span class="annot"><span class="annottext">MonadThrow (CharonT env m)
+MonadThrow (CharonT env m) =&gt;
+(forall e a.
+ (HasCallStack, Exception e) =&gt;
+ CharonT env m a -&gt; (e -&gt; CharonT env m a) -&gt; CharonT env m a)
+-&gt; MonadCatch (CharonT env m)
+forall e a.
+(HasCallStack, Exception e) =&gt;
+CharonT env m a -&gt; (e -&gt; CharonT env m a) -&gt; CharonT env m a
+forall env (m :: * -&gt; *).
+MonadCatch m =&gt;
+MonadThrow (CharonT env m)
+forall env (m :: * -&gt; *) e a.
+(MonadCatch m, HasCallStack, Exception e) =&gt;
+CharonT env m a -&gt; (e -&gt; CharonT env m a) -&gt; CharonT env m a
+forall (m :: * -&gt; *).
+MonadThrow m =&gt;
+(forall e a.
+ (HasCallStack, Exception e) =&gt;
+ m a -&gt; (e -&gt; m a) -&gt; m a)
+-&gt; MonadCatch m
+$ccatch :: forall env (m :: * -&gt; *) e a.
+(MonadCatch m, HasCallStack, Exception e) =&gt;
+CharonT env m a -&gt; (e -&gt; CharonT env m a) -&gt; CharonT env m a
+catch :: forall e a.
+(HasCallStack, Exception e) =&gt;
+CharonT env m a -&gt; (e -&gt; CharonT env m a) -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadCatch</span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>      </span><span id="local-6989586621679625123"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; OsPath -&gt; CharonT env m ByteString)
+-&gt; MonadFileReader (CharonT env m)
+HasCallStack =&gt; OsPath -&gt; CharonT env m ByteString
+forall env (m :: * -&gt; *).
+MonadFileReader m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadFileReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ByteString
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; OsPath -&gt; m ByteString) -&gt; MonadFileReader m
+$creadBinaryFile :: forall env (m :: * -&gt; *).
+(MonadFileReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ByteString
+readBinaryFile :: HasCallStack =&gt; OsPath -&gt; CharonT env m ByteString
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileReader.html#MonadFileReader"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadFileReader</span></a></span></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>      </span><span id="local-6989586621679625141"><span id="local-6989586621679625152"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; OsPath -&gt; ByteString -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; ByteString -&gt; CharonT env m ())
+-&gt; MonadFileWriter (CharonT env m)
+HasCallStack =&gt; OsPath -&gt; ByteString -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+MonadFileWriter m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadFileWriter m, HasCallStack) =&gt;
+OsPath -&gt; ByteString -&gt; CharonT env m ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; OsPath -&gt; ByteString -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; ByteString -&gt; m ())
+-&gt; MonadFileWriter m
+$cwriteBinaryFile :: forall env (m :: * -&gt; *).
+(MonadFileWriter m, HasCallStack) =&gt;
+OsPath -&gt; ByteString -&gt; CharonT env m ()
+writeBinaryFile :: HasCallStack =&gt; OsPath -&gt; ByteString -&gt; CharonT env m ()
+$cappendBinaryFile :: forall env (m :: * -&gt; *).
+(MonadFileWriter m, HasCallStack) =&gt;
+OsPath -&gt; ByteString -&gt; CharonT env m ()
+appendBinaryFile :: HasCallStack =&gt; OsPath -&gt; ByteString -&gt; CharonT env m ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.FileWriter.html#MonadFileWriter"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadFileWriter</span></a></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span>      </span><span id="local-6989586621679625169"><span id="local-6989586621679625180"><span id="local-6989586621679625190"><span id="local-6989586621679625200"><span id="local-6989586621679625210"><span id="local-6989586621679625220"><span id="local-6989586621679625230"><span id="local-6989586621679625240"><span id="local-6989586621679625250"><span id="local-6989586621679625260"><span id="local-6989586621679625270"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; OsPath -&gt; IOMode -&gt; CharonT env m Handle)
+-&gt; (forall a.
+    HasCallStack =&gt;
+    OsPath -&gt; IOMode -&gt; (Handle -&gt; CharonT env m a) -&gt; CharonT env m a)
+-&gt; (HasCallStack =&gt; Handle -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; Integer -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; BufferMode -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    Handle -&gt; SeekMode -&gt; Integer -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; CharonT env m Integer)
+-&gt; (HasCallStack =&gt; Handle -&gt; Bool -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; ByteString -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    Handle -&gt; ByteString -&gt; CharonT env m ByteString)
+-&gt; MonadHandleWriter (CharonT env m)
+HasCallStack =&gt; Handle -&gt; CharonT env m Integer
+HasCallStack =&gt; Handle -&gt; CharonT env m ()
+HasCallStack =&gt; Handle -&gt; Bool -&gt; CharonT env m ()
+HasCallStack =&gt; Handle -&gt; Integer -&gt; CharonT env m ()
+HasCallStack =&gt; Handle -&gt; ByteString -&gt; CharonT env m ()
+HasCallStack =&gt; Handle -&gt; ByteString -&gt; CharonT env m ByteString
+HasCallStack =&gt; Handle -&gt; SeekMode -&gt; Integer -&gt; CharonT env m ()
+HasCallStack =&gt; Handle -&gt; BufferMode -&gt; CharonT env m ()
+HasCallStack =&gt; OsPath -&gt; IOMode -&gt; CharonT env m Handle
+forall a.
+HasCallStack =&gt;
+OsPath -&gt; IOMode -&gt; (Handle -&gt; CharonT env m a) -&gt; CharonT env m a
+forall env (m :: * -&gt; *).
+MonadHandleWriter m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; CharonT env m Integer
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; Bool -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; Integer -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; ByteString -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; ByteString -&gt; CharonT env m ByteString
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; SeekMode -&gt; Integer -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; BufferMode -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+OsPath -&gt; IOMode -&gt; CharonT env m Handle
+forall env (m :: * -&gt; *) a.
+(MonadHandleWriter m, HasCallStack) =&gt;
+OsPath -&gt; IOMode -&gt; (Handle -&gt; CharonT env m a) -&gt; CharonT env m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; OsPath -&gt; IOMode -&gt; m Handle)
+-&gt; (forall a.
+    HasCallStack =&gt;
+    OsPath -&gt; IOMode -&gt; (Handle -&gt; m a) -&gt; m a)
+-&gt; (HasCallStack =&gt; Handle -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; Integer -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; BufferMode -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; SeekMode -&gt; Integer -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; m Integer)
+-&gt; (HasCallStack =&gt; Handle -&gt; Bool -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; ByteString -&gt; m ())
+-&gt; (HasCallStack =&gt; Handle -&gt; ByteString -&gt; m ByteString)
+-&gt; MonadHandleWriter m
+$copenBinaryFile :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+OsPath -&gt; IOMode -&gt; CharonT env m Handle
+openBinaryFile :: HasCallStack =&gt; OsPath -&gt; IOMode -&gt; CharonT env m Handle
+$cwithBinaryFile :: forall env (m :: * -&gt; *) a.
+(MonadHandleWriter m, HasCallStack) =&gt;
+OsPath -&gt; IOMode -&gt; (Handle -&gt; CharonT env m a) -&gt; CharonT env m a
+withBinaryFile :: forall a.
+HasCallStack =&gt;
+OsPath -&gt; IOMode -&gt; (Handle -&gt; CharonT env m a) -&gt; CharonT env m a
+$chClose :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; CharonT env m ()
+hClose :: HasCallStack =&gt; Handle -&gt; CharonT env m ()
+$chFlush :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; CharonT env m ()
+hFlush :: HasCallStack =&gt; Handle -&gt; CharonT env m ()
+$chSetFileSize :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; Integer -&gt; CharonT env m ()
+hSetFileSize :: HasCallStack =&gt; Handle -&gt; Integer -&gt; CharonT env m ()
+$chSetBuffering :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; BufferMode -&gt; CharonT env m ()
+hSetBuffering :: HasCallStack =&gt; Handle -&gt; BufferMode -&gt; CharonT env m ()
+$chSeek :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; SeekMode -&gt; Integer -&gt; CharonT env m ()
+hSeek :: HasCallStack =&gt; Handle -&gt; SeekMode -&gt; Integer -&gt; CharonT env m ()
+$chTell :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; CharonT env m Integer
+hTell :: HasCallStack =&gt; Handle -&gt; CharonT env m Integer
+$chSetEcho :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; Bool -&gt; CharonT env m ()
+hSetEcho :: HasCallStack =&gt; Handle -&gt; Bool -&gt; CharonT env m ()
+$chPut :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; ByteString -&gt; CharonT env m ()
+hPut :: HasCallStack =&gt; Handle -&gt; ByteString -&gt; CharonT env m ()
+$chPutNonBlocking :: forall env (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; ByteString -&gt; CharonT env m ByteString
+hPutNonBlocking :: HasCallStack =&gt; Handle -&gt; ByteString -&gt; CharonT env m ByteString
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#MonadHandleWriter"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadHandleWriter</span></a></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>      </span><span id="local-6989586621679625284"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(forall a. IO a -&gt; CharonT env m a) -&gt; MonadIO (CharonT env m)
+forall a. IO a -&gt; CharonT env m a
+forall env (m :: * -&gt; *). MonadIO m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; CharonT env m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. IO a -&gt; m a) -&gt; MonadIO m
+$cliftIO :: forall env (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; CharonT env m a
+liftIO :: forall a. IO a -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadIO</span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>      </span><span id="local-6989586621679625299"><span id="local-6989586621679625310"><span id="local-6989586621679625320"><span id="local-6989586621679625330"><span id="local-6989586621679625340"><span id="local-6989586621679625350"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(forall a. HasCallStack =&gt; a -&gt; CharonT env m (IORef a))
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; CharonT env m a)
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; CharonT env m ())
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; CharonT env m ())
+-&gt; (forall a.
+    HasCallStack =&gt;
+    IORef a -&gt; (a -&gt; a) -&gt; CharonT env m ())
+-&gt; (forall a b.
+    HasCallStack =&gt;
+    IORef a -&gt; (a -&gt; (a, b)) -&gt; CharonT env m b)
+-&gt; MonadIORef (CharonT env m)
+forall a. HasCallStack =&gt; a -&gt; CharonT env m (IORef a)
+forall a. HasCallStack =&gt; IORef a -&gt; CharonT env m a
+forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; CharonT env m ()
+forall a. HasCallStack =&gt; IORef a -&gt; (a -&gt; a) -&gt; CharonT env m ()
+forall a b.
+HasCallStack =&gt;
+IORef a -&gt; (a -&gt; (a, b)) -&gt; CharonT env m b
+forall env (m :: * -&gt; *). MonadIORef m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+a -&gt; CharonT env m (IORef a)
+forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; CharonT env m a
+forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; a -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; (a -&gt; a) -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a b.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; (a -&gt; (a, b)) -&gt; CharonT env m b
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall a. HasCallStack =&gt; a -&gt; m (IORef a))
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; m a)
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; m ())
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; m ())
+-&gt; (forall a. HasCallStack =&gt; IORef a -&gt; (a -&gt; a) -&gt; m ())
+-&gt; (forall a b. HasCallStack =&gt; IORef a -&gt; (a -&gt; (a, b)) -&gt; m b)
+-&gt; MonadIORef m
+$cnewIORef :: forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+a -&gt; CharonT env m (IORef a)
+newIORef :: forall a. HasCallStack =&gt; a -&gt; CharonT env m (IORef a)
+$creadIORef :: forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; CharonT env m a
+readIORef :: forall a. HasCallStack =&gt; IORef a -&gt; CharonT env m a
+$cwriteIORef :: forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; a -&gt; CharonT env m ()
+writeIORef :: forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; CharonT env m ()
+$catomicWriteIORef :: forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; a -&gt; CharonT env m ()
+atomicWriteIORef :: forall a. HasCallStack =&gt; IORef a -&gt; a -&gt; CharonT env m ()
+$cmodifyIORef' :: forall env (m :: * -&gt; *) a.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; (a -&gt; a) -&gt; CharonT env m ()
+modifyIORef' :: forall a. HasCallStack =&gt; IORef a -&gt; (a -&gt; a) -&gt; CharonT env m ()
+$catomicModifyIORef' :: forall env (m :: * -&gt; *) a b.
+(MonadIORef m, HasCallStack) =&gt;
+IORef a -&gt; (a -&gt; (a, b)) -&gt; CharonT env m b
+atomicModifyIORef' :: forall a b.
+HasCallStack =&gt;
+IORef a -&gt; (a -&gt; (a, b)) -&gt; CharonT env m b
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-ioref-0.1-3cac930c17e584be09a56666d026afdff4ce6517720bfb8a0d4dbe602e96e94f/share/doc/html/src/Effects.IORef.html#MonadIORef"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadIORef</span></a></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-28"></span><span>      </span><span id="local-6989586621679625367"><span id="local-6989586621679625378"><span id="local-6989586621679625388"><span class="annot"><span class="annottext">MonadCatch (CharonT env m)
+MonadCatch (CharonT env m) =&gt;
+(forall b.
+ HasCallStack =&gt;
+ ((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+ -&gt; CharonT env m b)
+-&gt; (forall b.
+    HasCallStack =&gt;
+    ((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+    -&gt; CharonT env m b)
+-&gt; (forall a b c.
+    HasCallStack =&gt;
+    CharonT env m a
+    -&gt; (a -&gt; ExitCase b -&gt; CharonT env m c)
+    -&gt; (a -&gt; CharonT env m b)
+    -&gt; CharonT env m (b, c))
+-&gt; MonadMask (CharonT env m)
+forall b.
+HasCallStack =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall a b c.
+HasCallStack =&gt;
+CharonT env m a
+-&gt; (a -&gt; ExitCase b -&gt; CharonT env m c)
+-&gt; (a -&gt; CharonT env m b)
+-&gt; CharonT env m (b, c)
+forall env (m :: * -&gt; *). MonadMask m =&gt; MonadCatch (CharonT env m)
+forall env (m :: * -&gt; *) b.
+(MonadMask m, HasCallStack) =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+forall env (m :: * -&gt; *) a b c.
+(MonadMask m, HasCallStack) =&gt;
+CharonT env m a
+-&gt; (a -&gt; ExitCase b -&gt; CharonT env m c)
+-&gt; (a -&gt; CharonT env m b)
+-&gt; CharonT env m (b, c)
+forall (m :: * -&gt; *).
+MonadCatch m =&gt;
+(forall b. HasCallStack =&gt; ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall b.
+    HasCallStack =&gt;
+    ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b)
+-&gt; (forall a b c.
+    HasCallStack =&gt;
+    m a -&gt; (a -&gt; ExitCase b -&gt; m c) -&gt; (a -&gt; m b) -&gt; m (b, c))
+-&gt; MonadMask m
+$cmask :: forall env (m :: * -&gt; *) b.
+(MonadMask m, HasCallStack) =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+mask :: forall b.
+HasCallStack =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+$cuninterruptibleMask :: forall env (m :: * -&gt; *) b.
+(MonadMask m, HasCallStack) =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+uninterruptibleMask :: forall b.
+HasCallStack =&gt;
+((forall a. CharonT env m a -&gt; CharonT env m a) -&gt; CharonT env m b)
+-&gt; CharonT env m b
+$cgeneralBracket :: forall env (m :: * -&gt; *) a b c.
+(MonadMask m, HasCallStack) =&gt;
+CharonT env m a
+-&gt; (a -&gt; ExitCase b -&gt; CharonT env m c)
+-&gt; (a -&gt; CharonT env m b)
+-&gt; CharonT env m (b, c)
+generalBracket :: forall a b c.
+HasCallStack =&gt;
+CharonT env m a
+-&gt; (a -&gt; ExitCase b -&gt; CharonT env m c)
+-&gt; (a -&gt; CharonT env m b)
+-&gt; CharonT env m (b, c)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadMask</span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-29"></span><span>      </span><span id="local-6989586621679625405"><span id="local-6989586621679625416"><span id="local-6989586621679625426"><span id="local-6989586621679625436"><span id="local-6989586621679625446"><span id="local-6989586621679625456"><span id="local-6989586621679625466"><span id="local-6989586621679625476"><span id="local-6989586621679625486"><span id="local-6989586621679625496"><span id="local-6989586621679625506"><span id="local-6989586621679625516"><span id="local-6989586621679625526"><span id="local-6989586621679625536"><span id="local-6989586621679625546"><span id="local-6989586621679625556"><span id="local-6989586621679625566"><span id="local-6989586621679625576"><span id="local-6989586621679625586"><span id="local-6989586621679625596"><span id="local-6989586621679625606"><span id="local-6989586621679625616"><span id="local-6989586621679625626"><span id="local-6989586621679625636"><span id="local-6989586621679625646"><span id="local-6989586621679625656"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; XdgDirectory -&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; XdgDirectoryList -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Integer)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m (Maybe OsPath))
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt;
+    (OsPath -&gt; CharonT env m Bool)
+    -&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m (Maybe OsPath))
+-&gt; (HasCallStack =&gt;
+    (OsPath -&gt; CharonT env m Bool)
+    -&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m Permissions)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m UTCTime)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m UTCTime)
+-&gt; MonadPathReader (CharonT env m)
+HasCallStack =&gt; CharonT env m OsPath
+HasCallStack =&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+HasCallStack =&gt; OsPath -&gt; CharonT env m Bool
+HasCallStack =&gt; OsPath -&gt; CharonT env m Integer
+HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath]
+HasCallStack =&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+HasCallStack =&gt; OsPath -&gt; CharonT env m UTCTime
+HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+HasCallStack =&gt; OsPath -&gt; CharonT env m Permissions
+HasCallStack =&gt; XdgDirectoryList -&gt; CharonT env m [OsPath]
+HasCallStack =&gt; XdgDirectory -&gt; OsPath -&gt; CharonT env m OsPath
+HasCallStack =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+HasCallStack =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+forall env (m :: * -&gt; *).
+MonadPathReader m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+CharonT env m OsPath
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+[OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Bool
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Integer
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m [OsPath]
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m (Maybe OsPath)
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m UTCTime
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Permissions
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+XdgDirectoryList -&gt; CharonT env m [OsPath]
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+XdgDirectory -&gt; OsPath -&gt; CharonT env m OsPath
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; OsPath -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt; m OsPath)
+-&gt; (HasCallStack =&gt; m OsPath)
+-&gt; (HasCallStack =&gt; XdgDirectory -&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; XdgDirectoryList -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; m OsPath)
+-&gt; (HasCallStack =&gt; m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Integer)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m (Maybe OsPath))
+-&gt; (HasCallStack =&gt; OsPath -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt; [OsPath] -&gt; OsPath -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt;
+    (OsPath -&gt; m Bool) -&gt; [OsPath] -&gt; OsPath -&gt; m (Maybe OsPath))
+-&gt; (HasCallStack =&gt;
+    (OsPath -&gt; m Bool) -&gt; [OsPath] -&gt; OsPath -&gt; m [OsPath])
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Bool)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m OsPath)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m Permissions)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m UTCTime)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m UTCTime)
+-&gt; MonadPathReader m
+$clistDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m [OsPath]
+listDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath]
+$cgetDirectoryContents :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m [OsPath]
+getDirectoryContents :: HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath]
+$cgetCurrentDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+CharonT env m OsPath
+getCurrentDirectory :: HasCallStack =&gt; CharonT env m OsPath
+$cgetHomeDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+CharonT env m OsPath
+getHomeDirectory :: HasCallStack =&gt; CharonT env m OsPath
+$cgetXdgDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+XdgDirectory -&gt; OsPath -&gt; CharonT env m OsPath
+getXdgDirectory :: HasCallStack =&gt; XdgDirectory -&gt; OsPath -&gt; CharonT env m OsPath
+$cgetXdgDirectoryList :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+XdgDirectoryList -&gt; CharonT env m [OsPath]
+getXdgDirectoryList :: HasCallStack =&gt; XdgDirectoryList -&gt; CharonT env m [OsPath]
+$cgetAppUserDataDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+getAppUserDataDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+$cgetUserDocumentsDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+CharonT env m OsPath
+getUserDocumentsDirectory :: HasCallStack =&gt; CharonT env m OsPath
+$cgetTemporaryDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+CharonT env m OsPath
+getTemporaryDirectory :: HasCallStack =&gt; CharonT env m OsPath
+$cgetFileSize :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Integer
+getFileSize :: HasCallStack =&gt; OsPath -&gt; CharonT env m Integer
+$ccanonicalizePath :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+canonicalizePath :: HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+$cmakeAbsolute :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+makeAbsolute :: HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+$cmakeRelativeToCurrentDirectory :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+makeRelativeToCurrentDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+$cdoesPathExist :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Bool
+doesPathExist :: HasCallStack =&gt; OsPath -&gt; CharonT env m Bool
+$cdoesFileExist :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Bool
+doesFileExist :: HasCallStack =&gt; OsPath -&gt; CharonT env m Bool
+$cdoesDirectoryExist :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Bool
+doesDirectoryExist :: HasCallStack =&gt; OsPath -&gt; CharonT env m Bool
+$cfindExecutable :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m (Maybe OsPath)
+findExecutable :: HasCallStack =&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+$cfindExecutables :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m [OsPath]
+findExecutables :: HasCallStack =&gt; OsPath -&gt; CharonT env m [OsPath]
+$cfindExecutablesInDirectories :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+[OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+findExecutablesInDirectories :: HasCallStack =&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+$cfindFileWith :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+findFileWith :: HasCallStack =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m (Maybe OsPath)
+$cfindFilesWith :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+findFilesWith :: HasCallStack =&gt;
+(OsPath -&gt; CharonT env m Bool)
+-&gt; [OsPath] -&gt; OsPath -&gt; CharonT env m [OsPath]
+$cpathIsSymbolicLink :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Bool
+pathIsSymbolicLink :: HasCallStack =&gt; OsPath -&gt; CharonT env m Bool
+$cgetSymbolicLinkTarget :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m OsPath
+getSymbolicLinkTarget :: HasCallStack =&gt; OsPath -&gt; CharonT env m OsPath
+$cgetPermissions :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m Permissions
+getPermissions :: HasCallStack =&gt; OsPath -&gt; CharonT env m Permissions
+$cgetAccessTime :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m UTCTime
+getAccessTime :: HasCallStack =&gt; OsPath -&gt; CharonT env m UTCTime
+$cgetModificationTime :: forall env (m :: * -&gt; *).
+(MonadPathReader m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m UTCTime
+getModificationTime :: HasCallStack =&gt; OsPath -&gt; CharonT env m UTCTime
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathReader.html#MonadPathReader"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadPathReader</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-30"></span><span>      </span><span id="local-6989586621679625673"><span id="local-6989586621679625684"><span id="local-6989586621679625694"><span id="local-6989586621679625704"><span id="local-6989586621679625714"><span id="local-6989586621679625724"><span id="local-6989586621679625734"><span id="local-6989586621679625744"><span id="local-6989586621679625754"><span id="local-6989586621679625764"><span id="local-6989586621679625774"><span id="local-6989586621679625784"><span id="local-6989586621679625794"><span id="local-6989586621679625804"><span id="local-6989586621679625814"><span id="local-6989586621679625824"><span id="local-6989586621679625834"><span id="local-6989586621679625844"><span id="local-6989586621679625854"><span id="local-6989586621679625864"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Bool -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (forall a.
+    HasCallStack =&gt;
+    OsPath -&gt; CharonT env m a -&gt; CharonT env m a)
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; Permissions -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; CharonT env m ())
+-&gt; MonadPathWriter (CharonT env m)
+HasCallStack =&gt; Bool -&gt; OsPath -&gt; CharonT env m ()
+HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; CharonT env m ()
+HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+HasCallStack =&gt; OsPath -&gt; Permissions -&gt; CharonT env m ()
+forall a.
+HasCallStack =&gt;
+OsPath -&gt; CharonT env m a -&gt; CharonT env m a
+forall env (m :: * -&gt; *).
+MonadPathWriter m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+Bool -&gt; OsPath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; UTCTime -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; Permissions -&gt; CharonT env m ()
+forall env (m :: * -&gt; *) a.
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m a -&gt; CharonT env m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; Bool -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (forall a. HasCallStack =&gt; OsPath -&gt; m a -&gt; m a)
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; Permissions -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; OsPath -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; m ())
+-&gt; (HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; m ())
+-&gt; MonadPathWriter m
+$ccreateDirectory :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+createDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$ccreateDirectoryIfMissing :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+Bool -&gt; OsPath -&gt; CharonT env m ()
+createDirectoryIfMissing :: HasCallStack =&gt; Bool -&gt; OsPath -&gt; CharonT env m ()
+$cremoveDirectory :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+removeDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$cremoveDirectoryRecursive :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+removeDirectoryRecursive :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$cremovePathForcibly :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+removePathForcibly :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$crenameDirectory :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+renameDirectory :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$csetCurrentDirectory :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+setCurrentDirectory :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$cwithCurrentDirectory :: forall env (m :: * -&gt; *) a.
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m a -&gt; CharonT env m a
+withCurrentDirectory :: forall a.
+HasCallStack =&gt;
+OsPath -&gt; CharonT env m a -&gt; CharonT env m a
+$cremoveFile :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+removeFile :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$crenameFile :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+renameFile :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$crenamePath :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+renamePath :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$ccopyFile :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+copyFile :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$ccopyFileWithMetadata :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+copyFileWithMetadata :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$ccreateFileLink :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+createFileLink :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$ccreateDirectoryLink :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+createDirectoryLink :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$cremoveDirectoryLink :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; CharonT env m ()
+removeDirectoryLink :: HasCallStack =&gt; OsPath -&gt; CharonT env m ()
+$csetPermissions :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; Permissions -&gt; CharonT env m ()
+setPermissions :: HasCallStack =&gt; OsPath -&gt; Permissions -&gt; CharonT env m ()
+$ccopyPermissions :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; OsPath -&gt; CharonT env m ()
+copyPermissions :: HasCallStack =&gt; OsPath -&gt; OsPath -&gt; CharonT env m ()
+$csetAccessTime :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; UTCTime -&gt; CharonT env m ()
+setAccessTime :: HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; CharonT env m ()
+$csetModificationTime :: forall env (m :: * -&gt; *).
+(MonadPathWriter m, HasCallStack) =&gt;
+OsPath -&gt; UTCTime -&gt; CharonT env m ()
+setModificationTime :: HasCallStack =&gt; OsPath -&gt; UTCTime -&gt; CharonT env m ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.PathWriter.html#MonadPathWriter"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadPathWriter</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-31"></span><span>      </span><span id="local-6989586621679625881"><span id="local-6989586621679625892"><span id="local-6989586621679625902"><span id="local-6989586621679625912"><span id="local-6989586621679625922"><span id="local-6989586621679625932"><span id="local-6989586621679625942"><span id="local-6989586621679625952"><span id="local-6989586621679625962"><span id="local-6989586621679625972"><span id="local-6989586621679625982"><span id="local-6989586621679625992"><span id="local-6989586621679626002"><span id="local-6989586621679626012"><span id="local-6989586621679626022"><span id="local-6989586621679626032"><span id="local-6989586621679626042"><span id="local-6989586621679626052"><span id="local-6989586621679626062"><span id="local-6989586621679626072"><span id="local-6989586621679626082"><span id="local-6989586621679626092"><span id="local-6989586621679626102"><span id="local-6989586621679626112"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; FilePath -&gt; FileMode -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; FileMode -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FileMode -&gt; CharonT env m FileMode)
+-&gt; (HasCallStack =&gt;
+    FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m Bool)
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m FileStatus)
+-&gt; (HasCallStack =&gt; Fd -&gt; CharonT env m FileStatus)
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m FileStatus)
+-&gt; (HasCallStack =&gt; FilePath -&gt; FileMode -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    FilePath -&gt; FileMode -&gt; DeviceID -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m FilePath)
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; UserID -&gt; GroupID -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt;
+    FilePath -&gt; EpochTime -&gt; EpochTime -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FileOffset -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; FileOffset -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; PathVar -&gt; CharonT env m Limit)
+-&gt; (HasCallStack =&gt; Fd -&gt; PathVar -&gt; CharonT env m Limit)
+-&gt; MonadPosixCompat (CharonT env m)
+HasCallStack =&gt; FilePath -&gt; CharonT env m Bool
+HasCallStack =&gt; FilePath -&gt; CharonT env m FilePath
+HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+HasCallStack =&gt; FilePath -&gt; CharonT env m FileStatus
+HasCallStack =&gt;
+FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; CharonT env m Bool
+HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ()
+HasCallStack =&gt;
+FilePath -&gt; EpochTime -&gt; EpochTime -&gt; CharonT env m ()
+HasCallStack =&gt; FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+HasCallStack =&gt; FilePath -&gt; FileOffset -&gt; CharonT env m ()
+HasCallStack =&gt; FilePath -&gt; FileMode -&gt; CharonT env m ()
+HasCallStack =&gt;
+FilePath -&gt; FileMode -&gt; DeviceID -&gt; CharonT env m ()
+HasCallStack =&gt; FilePath -&gt; PathVar -&gt; CharonT env m Limit
+HasCallStack =&gt; Fd -&gt; CharonT env m FileStatus
+HasCallStack =&gt; Fd -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+HasCallStack =&gt; Fd -&gt; FileOffset -&gt; CharonT env m ()
+HasCallStack =&gt; Fd -&gt; FileMode -&gt; CharonT env m ()
+HasCallStack =&gt; Fd -&gt; PathVar -&gt; CharonT env m Limit
+HasCallStack =&gt; FileMode -&gt; CharonT env m FileMode
+forall env (m :: * -&gt; *).
+MonadPosixCompat m =&gt;
+Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m Bool
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m FilePath
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m FileStatus
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; CharonT env m Bool
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FilePath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; EpochTime -&gt; EpochTime -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileOffset -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileMode -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileMode -&gt; DeviceID -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; PathVar -&gt; CharonT env m Limit
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; CharonT env m FileStatus
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; FileOffset -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; FileMode -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; PathVar -&gt; CharonT env m Limit
+forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FileMode -&gt; CharonT env m FileMode
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; FilePath -&gt; FileMode -&gt; m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; FileMode -&gt; m ())
+-&gt; (HasCallStack =&gt; FileMode -&gt; m FileMode)
+-&gt; (HasCallStack =&gt; FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; m Bool)
+-&gt; (HasCallStack =&gt; FilePath -&gt; m Bool)
+-&gt; (HasCallStack =&gt; FilePath -&gt; m FileStatus)
+-&gt; (HasCallStack =&gt; Fd -&gt; m FileStatus)
+-&gt; (HasCallStack =&gt; FilePath -&gt; m FileStatus)
+-&gt; (HasCallStack =&gt; FilePath -&gt; FileMode -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FileMode -&gt; DeviceID -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; m FilePath)
+-&gt; (HasCallStack =&gt; FilePath -&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; UserID -&gt; GroupID -&gt; m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; UserID -&gt; GroupID -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; UserID -&gt; GroupID -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; EpochTime -&gt; EpochTime -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; FileOffset -&gt; m ())
+-&gt; (HasCallStack =&gt; Fd -&gt; FileOffset -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; PathVar -&gt; m Limit)
+-&gt; (HasCallStack =&gt; Fd -&gt; PathVar -&gt; m Limit)
+-&gt; MonadPosixCompat m
+$csetFileMode :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileMode -&gt; CharonT env m ()
+setFileMode :: HasCallStack =&gt; FilePath -&gt; FileMode -&gt; CharonT env m ()
+$csetFdMode :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; FileMode -&gt; CharonT env m ()
+setFdMode :: HasCallStack =&gt; Fd -&gt; FileMode -&gt; CharonT env m ()
+$csetFileCreationMask :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FileMode -&gt; CharonT env m FileMode
+setFileCreationMask :: HasCallStack =&gt; FileMode -&gt; CharonT env m FileMode
+$cfileAccess :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; CharonT env m Bool
+fileAccess :: HasCallStack =&gt;
+FilePath -&gt; Bool -&gt; Bool -&gt; Bool -&gt; CharonT env m Bool
+$cfileExist :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m Bool
+fileExist :: HasCallStack =&gt; FilePath -&gt; CharonT env m Bool
+$cgetFileStatus :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m FileStatus
+getFileStatus :: HasCallStack =&gt; FilePath -&gt; CharonT env m FileStatus
+$cgetFdStatus :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; CharonT env m FileStatus
+getFdStatus :: HasCallStack =&gt; Fd -&gt; CharonT env m FileStatus
+$cgetSymbolicLinkStatus :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m FileStatus
+getSymbolicLinkStatus :: HasCallStack =&gt; FilePath -&gt; CharonT env m FileStatus
+$ccreateNamedPipe :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileMode -&gt; CharonT env m ()
+createNamedPipe :: HasCallStack =&gt; FilePath -&gt; FileMode -&gt; CharonT env m ()
+$ccreateDevice :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileMode -&gt; DeviceID -&gt; CharonT env m ()
+createDevice :: HasCallStack =&gt;
+FilePath -&gt; FileMode -&gt; DeviceID -&gt; CharonT env m ()
+$ccreateLink :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FilePath -&gt; CharonT env m ()
+createLink :: HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ()
+$cremoveLink :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+removeLink :: HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+$ccreateSymbolicLink :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FilePath -&gt; CharonT env m ()
+createSymbolicLink :: HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ()
+$creadSymbolicLink :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m FilePath
+readSymbolicLink :: HasCallStack =&gt; FilePath -&gt; CharonT env m FilePath
+$crename :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FilePath -&gt; CharonT env m ()
+rename :: HasCallStack =&gt; FilePath -&gt; FilePath -&gt; CharonT env m ()
+$csetOwnerAndGroup :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+setOwnerAndGroup :: HasCallStack =&gt; FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+$csetFdOwnerAndGroup :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+setFdOwnerAndGroup :: HasCallStack =&gt; Fd -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+$csetSymbolicLinkOwnerAndGroup :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+setSymbolicLinkOwnerAndGroup :: HasCallStack =&gt; FilePath -&gt; UserID -&gt; GroupID -&gt; CharonT env m ()
+$csetFileTimes :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; EpochTime -&gt; EpochTime -&gt; CharonT env m ()
+setFileTimes :: HasCallStack =&gt;
+FilePath -&gt; EpochTime -&gt; EpochTime -&gt; CharonT env m ()
+$ctouchFile :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+touchFile :: HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+$csetFileSize :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; FileOffset -&gt; CharonT env m ()
+setFileSize :: HasCallStack =&gt; FilePath -&gt; FileOffset -&gt; CharonT env m ()
+$csetFdSize :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; FileOffset -&gt; CharonT env m ()
+setFdSize :: HasCallStack =&gt; Fd -&gt; FileOffset -&gt; CharonT env m ()
+$cgetPathVar :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+FilePath -&gt; PathVar -&gt; CharonT env m Limit
+getPathVar :: HasCallStack =&gt; FilePath -&gt; PathVar -&gt; CharonT env m Limit
+$cgetFdPathVar :: forall env (m :: * -&gt; *).
+(MonadPosixCompat m, HasCallStack) =&gt;
+Fd -&gt; PathVar -&gt; CharonT env m Limit
+getFdPathVar :: HasCallStack =&gt; Fd -&gt; PathVar -&gt; CharonT env m Limit
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-unix-compat-0.1-9d56e686bd87cf957ed28aa8665c62fc4afee54f74eb31f0de31da53bf4c3734/share/doc/html/src/Effects.System.PosixCompat.html#MonadPosixCompat"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadPosixCompat</span></a></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-32"></span><span>      </span><span id="local-6989586621679626125"><span id="local-6989586621679626130"><span id="local-6989586621679626134"><span class="annot"><span class="hs-identifier hs-type">MonadReader</span></span><span> </span><span class="annot"><a href="#local-6989586621679624631"><span class="hs-identifier hs-type">env</span></a></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-33"></span><span>      </span><span id="local-6989586621679626147"><span id="local-6989586621679626158"><span id="local-6989586621679626168"><span id="local-6989586621679626178"><span id="local-6989586621679626188"><span id="local-6989586621679626198"><span id="local-6989586621679626208"><span id="local-6989586621679626218"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; ByteString -&gt; CharonT env m ())
+-&gt; (HasCallStack =&gt; CharonT env m Char)
+-&gt; (HasCallStack =&gt; CharonT env m FilePath)
+-&gt; (HasCallStack =&gt; CharonT env m FilePath)
+-&gt; (HasCallStack =&gt; CharonT env m (Window Natural))
+-&gt; (HasCallStack =&gt; CharonT env m Bool)
+-&gt; MonadTerminal (CharonT env m)
+HasCallStack =&gt; CharonT env m Bool
+HasCallStack =&gt; CharonT env m Char
+HasCallStack =&gt; CharonT env m FilePath
+HasCallStack =&gt; CharonT env m (Window Natural)
+HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+HasCallStack =&gt; ByteString -&gt; CharonT env m ()
+forall env (m :: * -&gt; *). MonadTerminal m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m Bool
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m Char
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m FilePath
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m (Window Natural)
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+ByteString -&gt; CharonT env m ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; FilePath -&gt; m ())
+-&gt; (HasCallStack =&gt; ByteString -&gt; m ())
+-&gt; (HasCallStack =&gt; m Char)
+-&gt; (HasCallStack =&gt; m FilePath)
+-&gt; (HasCallStack =&gt; m FilePath)
+-&gt; (HasCallStack =&gt; m (Window Natural))
+-&gt; (HasCallStack =&gt; m Bool)
+-&gt; MonadTerminal m
+$cputStr :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+putStr :: HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+$cputStrLn :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+FilePath -&gt; CharonT env m ()
+putStrLn :: HasCallStack =&gt; FilePath -&gt; CharonT env m ()
+$cputBinary :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+ByteString -&gt; CharonT env m ()
+putBinary :: HasCallStack =&gt; ByteString -&gt; CharonT env m ()
+$cgetChar :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m Char
+getChar :: HasCallStack =&gt; CharonT env m Char
+$cgetLine :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m FilePath
+getLine :: HasCallStack =&gt; CharonT env m FilePath
+$cgetContents' :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m FilePath
+getContents' :: HasCallStack =&gt; CharonT env m FilePath
+$cgetTerminalSize :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m (Window Natural)
+getTerminalSize :: HasCallStack =&gt; CharonT env m (Window Natural)
+$csupportsPretty :: forall env (m :: * -&gt; *).
+(MonadTerminal m, HasCallStack) =&gt;
+CharonT env m Bool
+supportsPretty :: HasCallStack =&gt; CharonT env m Bool
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-terminal-0.1-e7543ffa04a83cd49297a1644b24098121a9ea2eb8dc03312d54c084a2c39a68/share/doc/html/src/Effects.System.Terminal.html#MonadTerminal"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadTerminal</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-34"></span><span>      </span><span id="local-6989586621679626237"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; CharonT env m a)
+-&gt; MonadThrow (CharonT env m)
+forall e a. (HasCallStack, Exception e) =&gt; e -&gt; CharonT env m a
+forall env (m :: * -&gt; *). MonadThrow m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; CharonT env m a
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(forall e a. (HasCallStack, Exception e) =&gt; e -&gt; m a)
+-&gt; MonadThrow m
+$cthrowM :: forall env (m :: * -&gt; *) e a.
+(MonadThrow m, HasCallStack, Exception e) =&gt;
+e -&gt; CharonT env m a
+throwM :: forall e a. (HasCallStack, Exception e) =&gt; e -&gt; CharonT env m a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var">MonadThrow</span></span></span><span class="hs-special">,</span><span>
+</span><span id="line-35"></span><span>      </span><span id="local-6989586621679626256"><span id="local-6989586621679626267"><span class="annot"><span class="annottext">Monad (CharonT env m)
+Monad (CharonT env m) =&gt;
+(HasCallStack =&gt; CharonT env m ZonedTime)
+-&gt; (HasCallStack =&gt; CharonT env m Double)
+-&gt; MonadTime (CharonT env m)
+HasCallStack =&gt; CharonT env m Double
+HasCallStack =&gt; CharonT env m ZonedTime
+forall env (m :: * -&gt; *). MonadTime m =&gt; Monad (CharonT env m)
+forall env (m :: * -&gt; *).
+(MonadTime m, HasCallStack) =&gt;
+CharonT env m Double
+forall env (m :: * -&gt; *).
+(MonadTime m, HasCallStack) =&gt;
+CharonT env m ZonedTime
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(HasCallStack =&gt; m ZonedTime)
+-&gt; (HasCallStack =&gt; m Double) -&gt; MonadTime m
+$cgetSystemZonedTime :: forall env (m :: * -&gt; *).
+(MonadTime m, HasCallStack) =&gt;
+CharonT env m ZonedTime
+getSystemZonedTime :: HasCallStack =&gt; CharonT env m ZonedTime
+$cgetMonotonicTime :: forall env (m :: * -&gt; *).
+(MonadTime m, HasCallStack) =&gt;
+CharonT env m Double
+getMonotonicTime :: HasCallStack =&gt; CharonT env m Double
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-time-0.1-823c98a264bd4dbc7f6570016b9dec1546976c4fe5abece18695d52e935fc334/share/doc/html/src/Effects.Time.html#MonadTime"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var">MonadTime</span></a></span></span></span><span>
+</span><span id="line-36"></span><span>    </span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-keyword">via</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ReaderT</span></span><span> </span><span class="annot"><a href="#local-6989586621679624631"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624632"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-40"></span><span>  </span><span id="local-6989586621679624437"><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#MonadHandleWriter"><span class="hs-identifier hs-type">MonadHandleWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624437"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-time-0.1-823c98a264bd4dbc7f6570016b9dec1546976c4fe5abece18695d52e935fc334/share/doc/html/src/Effects.Time.html#MonadTime"><span class="hs-identifier hs-type">MonadTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624437"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#MonadLogger"><span class="hs-identifier hs-type">MonadLogger</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-type">CharonT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Env.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624437"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679624437"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-43"></span><span>  </span><span id="local-6989586621679626357"><span class="annot"><span class="annottext">monadLoggerLog :: forall msg.
+ToLogStr msg =&gt;
+Loc -&gt; LogSource -&gt; LogLevel -&gt; msg -&gt; CharonT (Env m) m ()
+</span><a href="#local-6989586621679626357"><span class="hs-identifier hs-var hs-var hs-var hs-var">monadLoggerLog</span></a></span></span><span> </span><span id="local-6989586621679626359"><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679626359"><span class="hs-identifier hs-var">loc</span></a></span></span><span> </span><span id="local-6989586621679626360"><span class="annot"><span class="annottext">LogSource
+</span><a href="#local-6989586621679626360"><span class="hs-identifier hs-var">_src</span></a></span></span><span> </span><span id="local-6989586621679626361"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626361"><span class="hs-identifier hs-var">lvl</span></a></span></span><span> </span><span id="local-6989586621679626362"><span class="annot"><span class="annottext">msg
+</span><a href="#local-6989586621679626362"><span class="hs-identifier hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>    </span><span id="local-6989586621679626363"><span class="annot"><span class="annottext">Maybe (Handle, LogLevel)
+</span><a href="#local-6989586621679626363"><span class="hs-identifier hs-var">mhandle</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Env m -&gt; Maybe (Handle, LogLevel))
+-&gt; CharonT (Env m) m (Maybe (Handle, LogLevel))
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' An_AffineTraversal NoIx (Env m) (Handle, LogLevel)
+-&gt; Env m -&gt; Maybe (Handle, LogLevel)
+forall k (is :: IxList) s a.
+Is k An_AffineFold =&gt;
+Optic' k is s a -&gt; s -&gt; Maybe a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.AffineFold.html#preview"><span class="hs-identifier hs-var">preview</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+</span><span class="">#logEnv</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+-&gt; Optic
+     A_Lens
+     NoIx
+     (LogEnv m)
+     (LogEnv m)
+     (Maybe (LogFile m))
+     (Maybe (LogFile m))
+-&gt; Optic
+     A_Lens NoIx (Env m) (Env m) (Maybe (LogFile m)) (Maybe (LogFile m))
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  (LogEnv m)
+  (LogEnv m)
+  (Maybe (LogFile m))
+  (Maybe (LogFile m))
+</span><span class="">#logFile</span></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens NoIx (Env m) (Env m) (Maybe (LogFile m)) (Maybe (LogFile m))
+-&gt; Optic
+     A_Lens
+     NoIx
+     (LogFile m)
+     (LogFile m)
+     (Handle, LogLevel)
+     (Handle, LogLevel)
+-&gt; Optic' An_AffineTraversal NoIx (Env m) (Handle, LogLevel)
+forall (is :: IxList) (js :: IxList) (ks :: IxList) k k' l m s t u
+       v a b.
+(AppendIndices is js ks, JoinKinds k A_Prism k',
+ JoinKinds k' l m) =&gt;
+Optic k is s t (Maybe u) (Maybe v)
+-&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Data.Maybe.Optics.html#%25%3F"><span class="hs-operator hs-var">%?</span></a></span><span> </span><span class="annot"><span class="annottext">Optic
+  A_Lens
+  NoIx
+  (LogFile m)
+  (LogFile m)
+  (Handle, LogLevel)
+  (Handle, LogLevel)
+</span><a href="#local-6989586621679626368"><span class="hs-identifier hs-var">handleAndLevel</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe (Handle, LogLevel)
+</span><a href="#local-6989586621679626363"><span class="hs-identifier hs-var">mhandle</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">Maybe (Handle, LogLevel)
+</span><span class="hs-identifier hs-var">Nothing</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; CharonT (Env m) m ()
+forall a. a -&gt; CharonT (Env m) m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="hs-identifier hs-type">Just</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679626369"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679626369"><span class="hs-identifier hs-var">handle</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679626370"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626370"><span class="hs-identifier hs-var">logLevel</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="annottext">LogLevel
+-&gt; LogLevel -&gt; CharonT (Env m) m () -&gt; CharonT (Env m) m ()
+forall (f :: * -&gt; *).
+Applicative f =&gt;
+LogLevel -&gt; LogLevel -&gt; f () -&gt; f ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#guardLevel"><span class="hs-identifier hs-var">guardLevel</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626370"><span class="hs-identifier hs-var">logLevel</span></a></span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626361"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">(CharonT (Env m) m () -&gt; CharonT (Env m) m ())
+-&gt; CharonT (Env m) m () -&gt; CharonT (Env m) m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-49"></span><span>          </span><span id="local-6989586621679626371"><span class="annot"><span class="annottext">LogStr
+</span><a href="#local-6989586621679626371"><span class="hs-identifier hs-var">formatted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">LogFormatter -&gt; LogLevel -&gt; msg -&gt; CharonT (Env m) m LogStr
+forall (m :: * -&gt; *) msg.
+(HasCallStack, MonadLoggerNS m, MonadTime m, ToLogStr msg) =&gt;
+LogFormatter -&gt; LogLevel -&gt; msg -&gt; m LogStr
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#formatLog"><span class="hs-identifier hs-var">Logger.formatLog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Loc -&gt; LogFormatter
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#defaultLogFormatter"><span class="hs-identifier hs-var">defaultLogFormatter</span></a></span><span> </span><span class="annot"><span class="annottext">Loc
+</span><a href="#local-6989586621679626359"><span class="hs-identifier hs-var">loc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626361"><span class="hs-identifier hs-var">lvl</span></a></span><span> </span><span class="annot"><span class="annottext">msg
+</span><a href="#local-6989586621679626362"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-50"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679626373"><span class="annot"><span class="annottext">bs :: ByteString
+</span><a href="#local-6989586621679626373"><span class="hs-identifier hs-var hs-var">bs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">LogStr -&gt; ByteString
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#logStrToBs"><span class="hs-identifier hs-var">Logger.logStrToBs</span></a></span><span> </span><span class="annot"><span class="annottext">LogStr
+</span><a href="#local-6989586621679626371"><span class="hs-identifier hs-var">formatted</span></a></span><span>
+</span><span id="line-51"></span><span>          </span><span class="annot"><span class="annottext">Handle -&gt; ByteString -&gt; CharonT (Env m) m ()
+forall (m :: * -&gt; *).
+(MonadHandleWriter m, HasCallStack) =&gt;
+Handle -&gt; ByteString -&gt; m ()
+</span><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#hPut"><span class="hs-identifier hs-var">hPut</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679626369"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679626373"><span class="hs-identifier hs-var">bs</span></a></span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><a href="#local-6989586621679626368"><span class="hs-identifier hs-type">handleAndLevel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Lens.html#Lens%27"><span class="hs-identifier hs-type">Lens'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Env.html#LogFile"><span class="hs-identifier hs-type">LogFile</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624437"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Handle</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/6db4xyc3nivqvp6qrbbjc6j03f9zblbr-monad-logger-0.3.40-doc/share/doc/monad-logger-0.3.40/html/src/Control.Monad.Logger.html#LogLevel"><span class="hs-identifier hs-type">LogLevel</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>      </span><span id="local-6989586621679626368"><span class="annot"><span class="annottext">handleAndLevel :: Optic
+  A_Lens
+  NoIx
+  (LogFile m)
+  (LogFile m)
+  (Handle, LogLevel)
+  (Handle, LogLevel)
+</span><a href="#local-6989586621679626368"><span class="hs-identifier hs-var hs-var">handleAndLevel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-55"></span><span>        </span><span class="annot"><span class="annottext">(LogFile m -&gt; (Handle, LogLevel))
+-&gt; (LogFile m -&gt; (Handle, LogLevel) -&gt; LogFile m)
+-&gt; Optic
+     A_Lens
+     NoIx
+     (LogFile m)
+     (LogFile m)
+     (Handle, LogLevel)
+     (Handle, LogLevel)
+forall s a b t. (s -&gt; a) -&gt; (s -&gt; b -&gt; t) -&gt; Lens s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Lens.html#lens"><span class="hs-identifier hs-var">lens</span></a></span><span>
+</span><span id="line-56"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679626378"><span class="annot"><span class="annottext">LogFile m
+</span><a href="#local-6989586621679626378"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(LogFile m -&gt; Handle)
+-&gt; (LogFile m -&gt; LogLevel)
+-&gt; (LogFile m, LogFile m)
+-&gt; (Handle, LogLevel)
+forall a b c d. (a -&gt; b) -&gt; (c -&gt; d) -&gt; (a, c) -&gt; (b, d)
+forall (p :: * -&gt; * -&gt; *) a b c d.
+Bifunctor p =&gt;
+(a -&gt; b) -&gt; (c -&gt; d) -&gt; p a c -&gt; p b d
+</span><span class="hs-identifier hs-var">bimap</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (LogFile m) Handle -&gt; LogFile m -&gt; Handle
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (LogFile m) Handle
+</span><span class="">#handle</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (LogFile m) LogLevel -&gt; LogFile m -&gt; LogLevel
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (LogFile m) LogLevel
+</span><span class="">#logLevel</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LogFile m
+</span><a href="#local-6989586621679626378"><span class="hs-identifier hs-var">lf</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">LogFile m
+</span><a href="#local-6989586621679626378"><span class="hs-identifier hs-var">lf</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>          </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679626381"><span class="annot"><span class="annottext">LogFile m
+</span><a href="#local-6989586621679626381"><span class="hs-identifier hs-var">lf</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679626382"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679626382"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679626383"><span class="annot"><span class="annottext">LogLevel
+</span><a href="#local-6989586621679626383"><span class="hs-identifier hs-var">ll</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">LogFile m
+</span><a href="#local-6989586621679626381"><span class="hs-identifier hs-var">lf</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Charon.Runner.Env.html#%24sel%3AlogLevel%3AMkLogFile"><span class="hs-identifier hs-var">logLevel</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679626383"><span class="hs-identifier hs-type">ll</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Charon.Runner.Env.html#%24sel%3Ahandle%3AMkLogFile"><span class="hs-identifier hs-var">handle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679626382"><span class="hs-identifier hs-type">h</span></a></span><span class="hs-special">}</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">instance</span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679624531"><span class="hs-special">(</span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-fs-0.1-3501a17f5ae0a156664422d80cce2bdc213ea1c83812f6e0233089e60892c3b9/share/doc/html/src/Effects.FileSystem.HandleWriter.html#MonadHandleWriter"><span class="hs-identifier hs-type">MonadHandleWriter</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624531"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-time-0.1-823c98a264bd4dbc7f6570016b9dec1546976c4fe5abece18695d52e935fc334/share/doc/html/src/Effects.Time.html#MonadTime"><span class="hs-identifier hs-type">MonadTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624531"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="file:///home/tommy/.local/state/cabal/store/ghc-9.6.3/effects-logger-ns-0.1-b96c319398a670dedadb6001e467621e4edfb4802f21815370b7c61f112e9121/share/doc/html/src/Effects.LoggerNS.html#MonadLoggerNS"><span class="hs-identifier hs-type">MonadLoggerNS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-type">CharonT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.Env.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624531"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679624531"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679626412"><span class="annot"><span class="annottext">getNamespace :: HasCallStack =&gt; CharonT (Env m) m Namespace
+</span><a href="#local-6989586621679626412"><span class="hs-identifier hs-var hs-var hs-var hs-var">getNamespace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Env m -&gt; Namespace) -&gt; CharonT (Env m) m Namespace
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; a) -&gt; m a
+</span><span class="hs-identifier hs-var">asks</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (Env m) Namespace -&gt; Env m -&gt; Namespace
+forall k (is :: IxList) s a.
+Is k A_Getter =&gt;
+Optic' k is s a -&gt; s -&gt; a
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Getter.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+</span><span class="">#logEnv</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+-&gt; Optic A_Lens NoIx (LogEnv m) (LogEnv m) Namespace Namespace
+-&gt; Optic' A_Lens NoIx (Env m) Namespace
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx (LogEnv m) (LogEnv m) Namespace Namespace
+</span><span class="">#logNamespace</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span id="local-6989586621679626434"><span class="annot"><span class="annottext">localNamespace :: forall a.
+HasCallStack =&gt;
+(Namespace -&gt; Namespace)
+-&gt; CharonT (Env m) m a -&gt; CharonT (Env m) m a
+</span><a href="#local-6989586621679626434"><span class="hs-identifier hs-var hs-var hs-var hs-var">localNamespace</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Env m -&gt; Env m) -&gt; CharonT (Env m) m a -&gt; CharonT (Env m) m a
+forall a.
+(Env m -&gt; Env m) -&gt; CharonT (Env m) m a -&gt; CharonT (Env m) m a
+forall r (m :: * -&gt; *) a. MonadReader r m =&gt; (r -&gt; r) -&gt; m a -&gt; m a
+</span><span class="hs-identifier hs-var">local</span></span><span> </span><span class="annot"><span class="annottext">((Env m -&gt; Env m) -&gt; CharonT (Env m) m a -&gt; CharonT (Env m) m a)
+-&gt; ((Namespace -&gt; Namespace) -&gt; Env m -&gt; Env m)
+-&gt; (Namespace -&gt; Namespace)
+-&gt; CharonT (Env m) m a
+-&gt; CharonT (Env m) m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Optic' A_Lens NoIx (Env m) Namespace
+-&gt; (Namespace -&gt; Namespace) -&gt; Env m -&gt; Env m
+forall k (is :: IxList) s t a b.
+Is k A_Setter =&gt;
+Optic k is s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Setter.html#over%27"><span class="hs-identifier hs-var">over'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+</span><span class="">#logEnv</span></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx (Env m) (Env m) (LogEnv m) (LogEnv m)
+-&gt; Optic A_Lens NoIx (LogEnv m) (LogEnv m) Namespace Namespace
+-&gt; Optic' A_Lens NoIx (Env m) Namespace
+forall k l m (is :: IxList) (js :: IxList) (ks :: IxList) s t u v a
+       b.
+(JoinKinds k l m, AppendIndices is js ks) =&gt;
+Optic k is s t u v -&gt; Optic l js u v a b -&gt; Optic m ks s t a b
+</span><a href="file:///nix/store/4wakibz21ahaapk6h38p2l10j9a6z58i-optics-core-0.4.1.1-doc/share/doc/optics-core-0.4.1.1/html/src/Optics.Internal.Optic.html#%25"><span class="hs-operator hs-var">%</span></a></span><span> </span><span class="annot"><span class="annottext">Optic A_Lens NoIx (LogEnv m) (LogEnv m) Namespace Namespace
+</span><span class="">#logNamespace</span></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span class="annot"><span class="hs-comment">-- | Runs a 'CharonT' with the given @env@.</span></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679624606"><span id="local-6989586621679624607"><span id="local-6989586621679624608"><span class="annot"><a href="Charon.Runner.CharonT.html#runCharonT"><span class="hs-identifier hs-type">runCharonT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-type">CharonT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624606"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624607"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624608"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679624606"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679624607"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624608"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-68"></span><span id="runCharonT"><span class="annot"><span class="annottext">runCharonT :: forall env (m :: * -&gt; *) a. CharonT env m a -&gt; env -&gt; m a
+</span><a href="Charon.Runner.CharonT.html#runCharonT"><span class="hs-identifier hs-var hs-var">runCharonT</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Charon.Runner.CharonT.html#MkCharonT"><span class="hs-identifier hs-type">MkCharonT</span></a></span><span> </span><span id="local-6989586621679626439"><span class="annot"><span class="annottext">ReaderT env m a
+</span><a href="#local-6989586621679626439"><span class="hs-identifier hs-var">rdr</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReaderT env m a -&gt; env -&gt; m a
+forall r (m :: * -&gt; *) a. ReaderT r m a -&gt; r -&gt; m a
+</span><span class="hs-identifier hs-var">runReaderT</span></span><span> </span><span class="annot"><span class="annottext">ReaderT env m a
+</span><a href="#local-6989586621679626439"><span class="hs-identifier hs-var">rdr</span></a></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><span class="hs-comment">-- | Flipped 'runCharonT'</span></span><span>
+</span><span id="line-71"></span><span id="local-6989586621679624615"><span id="local-6989586621679624616"><span id="local-6989586621679624617"><span class="annot"><a href="Charon.Runner.CharonT.html#usingCharonT"><span class="hs-identifier hs-type">usingCharonT</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679624615"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Charon.Runner.CharonT.html#CharonT"><span class="hs-identifier hs-type">CharonT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624615"><span class="hs-identifier hs-type">env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624616"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624617"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679624616"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679624617"><span class="hs-identifier hs-type">a</span></a></span></span></span></span><span>
+</span><span id="line-72"></span><span id="usingCharonT"><span class="annot"><span class="annottext">usingCharonT :: forall env (m :: * -&gt; *) a. env -&gt; CharonT env m a -&gt; m a
+</span><a href="Charon.Runner.CharonT.html#usingCharonT"><span class="hs-identifier hs-var hs-var">usingCharonT</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(CharonT env m a -&gt; env -&gt; m a) -&gt; env -&gt; CharonT env m a -&gt; m a
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><span class="hs-identifier hs-var">flip</span></span><span> </span><span class="annot"><span class="annottext">CharonT env m a -&gt; env -&gt; m a
+forall env (m :: * -&gt; *) a. CharonT env m a -&gt; env -&gt; m a
+</span><a href="Charon.Runner.CharonT.html#runCharonT"><span class="hs-identifier hs-var">runCharonT</span></a></span><span>
+</span><span id="line-73"></span></pre></body></html>
