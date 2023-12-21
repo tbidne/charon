@@ -169,12 +169,12 @@ doesTrashExistPath trashHome = addNamespace "doesTrashExistPath" $ do
         -- Path exists; info does not -> Badly formed, throw exception
         (True, False) -> do
           $(logError) "Trash/files exists but info/ does not"
-          throwCS
+          throwM
             $ MkTrashDirInfoNotFoundE trashHome
         -- Info exists; path does not -> Badly formed, throw exception
         (False, True) -> do
           $(logError) "Trash/info exists but files/ does not"
-          throwCS
+          throwM
             $ MkTrashDirFilesNotFoundE trashHome
 
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
@@ -244,7 +244,7 @@ mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginal
 
   -- 5. If move failed, roll back info file
   moveFn `catchAny` \ex -> do
-    $(logError) ("Error moving file to trash: " <> displayExceptiont ex)
+    $(logError) ("Error moving file to trash: " <> Utils.displayExT ex)
     PW.removeFile trashInfoPath
     throwM ex
 
@@ -278,7 +278,7 @@ permDeleteFromTrash ::
   Bool ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m (Maybe SomeException)
+  m Bool
 permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace "permDeleteFromTrash" $ do
   $(logDebug) $ "Path: " <> Paths.toText pathName
   pathDatas <-
@@ -288,14 +288,14 @@ permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace
         pure pds
       SearchSingleFailure path -> do
         $(logError) $ "Single search failed: " <> Paths.toText path
-        throwCS $ MkTrashEntryNotFoundE path
+        throwM $ MkTrashEntryNotFoundE path
       SearchWildcardFailure path -> do
         $(logError) $ "Wildcard search failed: " <> Paths.toText path
-        throwCS $ MkTrashEntryWildcardNotFoundE path
+        throwM $ MkTrashEntryWildcardNotFoundE path
 
   let backend = backendArgs ^. #backend
 
-  anyExRef <- newIORef Nothing
+  anyErrorRef <- newIORef False
   let deleteFn :: PathData -> m ()
       deleteFn pathData = do
         $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
@@ -326,14 +326,15 @@ permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace
               | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
       handleEx pathData ex = do
-        writeIORef anyExRef (Just ex)
-        $(logError) (T.pack $ displayNoCS ex)
+        Utils.setRefTrue anyErrorRef
+        $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
-            [ "Error deleting path ",
-              show $ pathData ^. (#fileName % #unPathI),
-              ": ",
-              displayNoCS ex
+            [ "Error deleting path '",
+              decodeOsToFpDisplayEx $ pathData ^. (#fileName % #unPathI),
+              "': ",
+              Utils.displayEx ex,
+              "\n"
             ]
 
   -- Need our own error handling here since if we are deleting multiple
@@ -343,7 +344,7 @@ permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace
       Left ex -> handleEx pathData ex
       Right _ -> postHook pathData
 
-  readIORef anyExRef
+  readIORef anyErrorRef
   where
     deleteFn' b pd = do
       let MkPathI trashInfoPath' = getTrashInfoPath b trashHome (pd ^. #fileName)
@@ -375,19 +376,19 @@ restoreTrashToOriginal ::
   (PathData -> m ()) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
-  m (Maybe SomeException)
+  m Bool
 restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "restoreTrashToOriginal" $ do
   $(logDebug) $ "Path: " <> Paths.toText pathName
   -- 1. Get path info
   pathDatas <-
     findPathData backendArgs trashHome pathName >>= \case
       SearchSuccess pds -> pure pds
-      SearchSingleFailure path -> throwCS $ MkTrashEntryNotFoundE path
-      SearchWildcardFailure path -> throwCS $ MkTrashEntryWildcardNotFoundE path
+      SearchSingleFailure path -> throwM $ MkTrashEntryNotFoundE path
+      SearchWildcardFailure path -> throwM $ MkTrashEntryWildcardNotFoundE path
 
   let backend = backendArgs ^. #backend
 
-  someExRef <- newIORef Nothing
+  anyErrorRef <- newIORef False
   let restoreFn pd = do
         let originalPath = pd ^. #originalPath
             fileName = pd ^. #fileName
@@ -397,21 +398,22 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
         -- 2. Verify original path is empty
         exists <- PathData.Core.originalPathExists pd
         when exists
-          $ throwCS
+          $ throwM
           $ MkRestoreCollisionE fileName originalPath
 
         let pathType = pd ^. #pathType
         restoreFn' backend pathType pd
 
       handleEx pathData ex = do
-        writeIORef someExRef (Just ex)
-        $(logError) (T.pack $ displayNoCS ex)
+        Utils.setRefTrue anyErrorRef
+        $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
-            [ "Error restoring path ",
-              show $ pathData ^. (#fileName % #unPathI),
-              ": ",
-              displayNoCS ex
+            [ "Error restoring path '",
+              decodeOsToFpDisplayEx $ pathData ^. (#fileName % #unPathI),
+              "': ",
+              Utils.displayEx ex,
+              "\n"
             ]
 
   -- Need our own error handling here since if we are restoring multiple
@@ -421,7 +423,7 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
       Left ex -> handleEx pathData ex
       Right _ -> postHook pathData
 
-  readIORef someExRef
+  readIORef anyErrorRef
   where
     restoreFn' b pt pd = do
       let MkPathI trashPath' = getTrashPath trashHome (pd ^. #fileName)
@@ -472,7 +474,7 @@ findOnePathData trashHome pathName backendArgs = addNamespace "findOnePathData" 
       pathData <- case decode @pd pathName contents of
         Left err -> do
           $(logError) $ "Decode error: " <> showt contents
-          throwCS $ MkInfoDecodeE trashInfoPath contents err
+          throwM $ MkInfoDecodeE trashInfoPath contents err
         Right pd -> do
           $(logDebug) $ "Search successful: " <> showt pd
           (backendArgs ^. #toCorePathData) trashHome pd
@@ -482,7 +484,7 @@ findOnePathData trashHome pathName backendArgs = addNamespace "findOnePathData" 
       pathExists <- trashPathExists trashHome pathData
       unless pathExists $ do
         $(logError) "Path does not exist"
-        throwCS $ MkTrashEntryFileNotFoundE trashHome pathName
+        throwM $ MkTrashEntryFileNotFoundE trashHome pathName
 
       pure $ Just pathData
 

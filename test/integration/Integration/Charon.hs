@@ -20,7 +20,7 @@ import Charon.Data.Paths (PathI (MkPathI))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (↦), (∪))
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
-import Charon.Exception (TrashEntryNotFoundE)
+import Charon.Exception (SomethingWentWrong)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
 import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
@@ -207,7 +207,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTestPaths ∪ βTestPaths
 
       caughtEx <-
-        tryCS @_ @IOException
+        tryCS @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.delete (toDelete ↦ MkPathI))
 
       ex <-
@@ -304,7 +304,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE
+        tryCS @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.permDelete True toPermDelete)
 
       ex <-
@@ -396,7 +396,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        tryCS @_ @TrashEntryNotFoundE
+        tryCS @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.restore toRestore)
 
       ex <-

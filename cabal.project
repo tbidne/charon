@@ -2,7 +2,7 @@ packages: .
 
 package charon
   ghc-options:
-    -Wall -Wcompat -Werror
+    -Wall -Wcompat
     -Widentities
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
@@ -37,7 +37,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/monad-effects.git
-    tag: 487e244cb1329780413e556adc86977fdcfe50b1
+    tag: cceae3294bc0d96285cbeeb2f81de452d0b9172c
     subdir:
         lib/effects-async
         lib/effects-exceptions

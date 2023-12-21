@@ -89,7 +89,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
             toCorePathData = backendArgs ^. #toCorePathData
 
         when (actualExt /= expectedExt)
-          $ throwCS
+          $ throwM
           $ MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
 
         let path = trashInfoDir' </> p
@@ -100,7 +100,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
             fileName = FP.dropExtension $ FP.takeFileName path
             decoded = Serial.decode @pd (MkPathI fileName) contents
         case decoded of
-          Left err -> throwCS $ MkInfoDecodeE (MkPathI path) contents err
+          Left err -> throwM $ MkInfoDecodeE (MkPathI path) contents err
           Right pd -> do
             trashEntryPath <- getTrashEntryPath @_ @pd trashHome pd
             (accSeq, accSet) <- macc
@@ -115,7 +115,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
   for_ allTrashPaths $ \p -> do
     let pName = MkPathI $ FP.takeFileName p
     unless (pName `HSet.member` pathSet)
-      $ throwCS
+      $ throwM
       $ MkTrashEntryInfoNotFoundE trashHome pName
 
   pure $ MkIndex indexSeq
@@ -140,7 +140,7 @@ getTrashEntryPath trashHome pd = addNamespace "getTrashEntryPath" $ do
   lookupTrashPath trashHome pd >>= \case
     Just trashPath -> pure trashPath
     Nothing ->
-      throwCS
+      throwM
         $ MkTrashEntryFileNotFoundE trashHome filePath
   where
     filePath = pd ^. #fileName

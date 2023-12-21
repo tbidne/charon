@@ -280,6 +280,7 @@ showTextMatch (Outfixes start ins end) =
     [ T.unpack start,
       wc,
       foldl' (\acc t -> acc <> wc <> T.unpack t) "" ins,
+      wc,
       T.unpack end
     ]
 

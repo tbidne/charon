@@ -8,7 +8,7 @@ module Functional.Commands.Delete
 where
 
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Exception (DotsPathE, EmptyPathE)
+import Charon.Exception (SomethingWentWrong)
 import Data.HashSet qualified as HashSet
 import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
 import Functional.Prelude
@@ -125,9 +125,10 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureCharonExceptionLogs @IOException argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
 
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -136,8 +137,14 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Suffix "deleteUnknownError/bad file: getPathType: does not exist (path does not exist)"
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Outfixes
+          "Error deleting path"
+          ["delete/deleteUnknownError/bad file': Path not found:"]
+          "delete/deleteUnknownError/bad file'",
+        Exact ""
+      ]
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -195,9 +202,10 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, _) <- liftIO $ captureCharonExceptionLogs @IOException argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
 
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -213,8 +221,19 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Suffix "deletesSome/f4: getPathType: does not exist (path does not exist)"
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Outfixes
+          "Error deleting path"
+          ["delete/deletesSome/f3': Path not found"]
+          "delete/deletesSome/f3'",
+        Exact "",
+        Outfixes
+          "Error deleting path"
+          ["delete/deletesSome/f4': Path not found"]
+          "delete/deletesSome/f4'",
+        Exact ""
+      ]
     expectedMetadata = mkMetadata 3 3 0 15
 
 deleteEmptyError :: IO TestEnv -> TestTree
@@ -228,9 +247,10 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureCharonExceptionLogs @EmptyPathE argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
 
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -239,7 +259,11 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Attempted to delete the empty path! This is not allowed."
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Exact "Error deleting path '': Attempted to delete the empty path! This is not allowed.",
+        Exact ""
+      ]
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -257,9 +281,10 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, _) <- liftIO $ captureCharonExceptionLogs @DotsPathE argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
 
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (idxSet, metadata) <- runIndexMetadataM
@@ -268,10 +293,24 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx =
-      Outfix
-        "Attempted to delete the special path '"
-        "deleteDotsError/...'! This is not allowed."
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Outfixes
+          "Error deleting path"
+          ["delete/deleteDotsError/.': Attempted to delete the special path"]
+          "delete/deleteDotsError/.'! This is not allowed.",
+        Exact "",
+        Outfixes
+          "Error deleting path"
+          ["delete/deleteDotsError/..': Attempted to delete the special path"]
+          "delete/deleteDotsError/..'! This is not allowed.",
+        Exact "",
+        Outfixes
+          "Error deleting path"
+          ["delete/deleteDotsError/...': Attempted to delete the special path"]
+          "delete/deleteDotsError/...'! This is not allowed.",
+        Exact ""
+      ]
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty

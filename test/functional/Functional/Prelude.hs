@@ -26,6 +26,7 @@ module Functional.Prelude
     FuncEnv.captureCharonLogs,
     FuncEnv.captureCharonException,
     FuncEnv.captureCharonExceptionLogs,
+    FuncEnv.captureCharonExceptionTerminal,
 
     -- * Assertions
     assertPathsExist,

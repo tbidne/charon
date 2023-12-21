@@ -9,10 +9,9 @@ module Functional.Commands.PermDelete
 where
 
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Exception (TrashEntryNotFoundE)
+import Charon.Exception (SomethingWentWrong)
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
-import Effects.Exception (StringException)
 import Functional.Prelude
 
 tests :: IO TestEnv -> TestTree
@@ -182,10 +181,11 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- PERMANENT DELETE
     permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
-    (ex, _) <- liftIO $ captureCharonExceptionLogs @TrashEntryNotFoundE permDelArgList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong permDelArgList
 
     -- assert exception
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
@@ -193,7 +193,11 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     delExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Suffix "No entry for 'bad file'"
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Exact "Error permanently deleting path 'bad file': No entry for 'bad file'",
+        Exact ""
+      ]
 
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -235,9 +239,10 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelArgList <-
       withSrArgsM
         ("perm-delete" : filesTryPermDelete ++ ["-f"])
-    (ex, _) <- captureCharonExceptionLogs @TrashEntryNotFoundE permDelArgList
+    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong permDelArgList
 
     assertMatch expectedEx ex
+    assertMatches expectedTerm term
 
     -- trash structure assertions
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
@@ -245,7 +250,14 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Suffix "No entry for 'f4'"
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Exact "Error permanently deleting path 'f3': No entry for 'f3'",
+        Exact "",
+        Exact "Error permanently deleting path 'f4': No entry for 'f4'",
+        Exact ""
+      ]
+
     delExpectedMetadata = mkMetadata 3 3 0 15
 
     permDelExpectedIdxSet = HashSet.empty
@@ -416,7 +428,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
     -- delete will fail. This is how this test works.
     permDelArgList <- withSrArgsM ["perm-delete", "foo**bar", "*g*", "-f"]
-    runCharonException @StringException permDelArgList
+    runCharonException @SomeException permDelArgList
 
     -- file assertions
     -- 1. Everything still gone from original location

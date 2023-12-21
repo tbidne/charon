@@ -2,7 +2,10 @@
 
 -- | Provides exceptions used by Charon.
 module Charon.Exception
-  ( -- * Trash
+  ( -- * General
+    SomethingWentWrong (..),
+
+    -- * Trash
 
     -- ** Entries
 
@@ -15,17 +18,22 @@ module Charon.Exception
     TrashEntryInfoNotFoundE (..),
     TrashEntryInfoBadExtE (..),
 
-    -- * Misc
-    RenameDuplicateE (..),
-    RestoreCollisionE (..),
-    RootE (..),
-    EmptyPathE (..),
+    -- * Illegal paths
     DotsPathE (..),
+    EmptyPathE (..),
+    RootE (..),
+
+    -- * Trash name deriving
     FileNameEmptyE (..),
+    RenameDuplicateE (..),
     UniquePathNotPrefixE (..),
-    InfoDecodeE (..),
-    EmptySearchResults (..),
+
+    -- * Misc
     BackendDetectE (..),
+    EmptySearchResults (..),
+    InfoDecodeE (..),
+    PathNotFound (..),
+    RestoreCollisionE (..),
   )
 where
 
@@ -47,12 +55,26 @@ import Charon.Prelude
 import GHC.Exts (IsList (toList))
 import System.OsPath (encodeUtf)
 
--- REVIEW: Consider making some (all?) of these IOException. This would be
--- less structured, but it would match most of the exceptions thrown by our
--- deps (e.g. directory).
+-- NOTE: [Callstacks]
 --
--- If we did this, we would have to make sure tests check the type/message
--- to ensure we're throwing the correct one.
+-- Callstacks are useful for diagnosing __unknown__ problems, but they are
+-- fairly noisy, so they are nice to avoid when the problem is fully
+-- understood. For example, if someone tries to delete an unknown path, the
+-- error message alone is perfectly descriptive; no one is helped by
+-- attaching a monstrously long exception. Thus we have arrived at the
+-- following design:
+--
+-- 1. We do not need callstacks for exceptions explicitly thrown by Charon.
+--    These are all self-explanatory, so we can easily figure out what went
+--    wrong.
+--
+-- 2. Exceptions thrown by dependencies (i.e. ones that "got through") should
+--    have callstacks attached by default, removing them on a case-by-case
+--    basis.
+--
+-- To achieve this, we only use throwCS on possibly unknown exceptions
+-- (catchAny), and we use exceptions' displayCSNoMatch function to explicitly
+-- opt-out of callstacks for our exceptions.
 
 -- | Could not rename file due to duplicate names.
 newtype RenameDuplicateE = MkRenameDuplicateE (PathI TrashEntryPath)
@@ -269,3 +291,24 @@ instance Exception EmptySearchResults where
       [ "Search for paths failed: ",
         Paths.showPaths $ toList (useq ^. #seq)
       ]
+
+-- | General exception for a missing path.
+newtype PathNotFound = MkPathNotFound OsPath
+  deriving stock (Show)
+
+instance Exception PathNotFound where
+  displayException (MkPathNotFound p) =
+    mconcat
+      [ "Path not found: '",
+        decodeOsToFpDisplayEx p,
+        "'"
+      ]
+
+-- | General error for something going wrong. Used as the final "overall"
+-- error for when some code can catch multiple exceptions.
+data SomethingWentWrong = MkSomethingWentWrong
+
+deriving stock instance Show SomethingWentWrong
+
+instance Exception SomethingWentWrong where
+  displayException _ = "Something went wrong."

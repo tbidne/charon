@@ -61,7 +61,6 @@ import Charon.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
 import Charon.Utils qualified as U
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
-import Data.Text qualified as T
 import Effects.FileSystem.HandleWriter (withBinaryFile)
 import Effects.FileSystem.PathReader (getXdgData, getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
@@ -132,7 +131,7 @@ runCmd cmd =
 
     logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do
-      $(logError) (T.pack $ displayNoCS ex)
+      $(logError) (U.displayExT ex)
       throwCS ex
 
 withEnv ::

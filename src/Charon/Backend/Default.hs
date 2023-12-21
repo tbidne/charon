@@ -60,7 +60,6 @@ import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
-import Data.Text qualified as T
 import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
@@ -126,21 +125,22 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
 
   void Trash.createTrash
 
-  someExRef <- newIORef Nothing
+  anyErrorRef <- newIORef False
   currTime <- MkTimestamp <$> getSystemTime
 
   let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
 
       handleEx p ex = do
-        $(logError) (T.pack $ displayNoCS ex)
+        $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
             [ "Error deleting path '",
               decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
-              displayNoCS ex
+              Utils.displayEx ex,
+              "\n"
             ]
-        writeIORef someExRef (Just ex)
+        Utils.setRefTrue anyErrorRef
 
   -- move paths to trash
   for_ paths $ \p -> do
@@ -148,7 +148,7 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
       Left ex -> handleEx p ex
       Right pd -> postHook pd
 
-  Utils.throwIfEx someExRef
+  Utils.throwIfTrue anyErrorRef
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -207,25 +207,26 @@ permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePo
   $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
   trashHome <- asks getTrashHome
 
-  someExRef <- newIORef Nothing
+  anyErrorRef <- newIORef False
 
   -- permanently delete paths
   addNamespace "deleting" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfJust someExRef)
+    (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfTrue anyErrorRef)
       `catchAnyCS` \ex -> do
-        $(logError) (T.pack $ displayNoCS ex)
+        $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
             [ "Error permanently deleting path '",
               decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
-              displayNoCS ex
+              Utils.displayEx ex,
+              "\n"
             ]
         -- in case Trash.permDeleteFromTrash throws an exception
-        writeIORef someExRef (Just ex)
+        Utils.setRefTrue anyErrorRef
 
-  Utils.throwIfEx someExRef
+  Utils.throwIfTrue anyErrorRef
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -378,24 +379,25 @@ restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
   $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
   trashHome <- asks getTrashHome
 
-  someExRef <- newIORef Nothing
+  anyErrorRef <- newIORef False
 
   -- move trash paths back to original location
   addNamespace "restoring" $ for_ paths $ \p ->
     -- Record error if any occurred
-    (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfJust someExRef)
+    (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfTrue anyErrorRef)
       `catchAnyCS` \ex -> do
-        $(logError) (T.pack $ displayNoCS ex)
+        $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
             [ "Error restoring path '",
               decodeOsToFpDisplayEx $ p ^. #unPathI,
               "': ",
-              displayNoCS ex
+              Utils.displayEx ex,
+              "\n"
             ]
-        writeIORef someExRef (Just ex)
+        Utils.setRefTrue anyErrorRef
 
-  Utils.throwIfEx someExRef
+  Utils.throwIfTrue anyErrorRef
 
 -- | Empties the trash.
 emptyTrash ::

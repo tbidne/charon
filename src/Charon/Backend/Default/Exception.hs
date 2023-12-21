@@ -1,11 +1,14 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 -- | Exceptions specific to the default trash backend.
 module Charon.Backend.Default.Exception
   ( TrashDirFilesNotFoundE (..),
     TrashDirInfoNotFoundE (..),
+    pathFiles,
+    pathInfo,
   )
 where
 
-import Charon.Backend.Default.Utils qualified as Default.Utils
 import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex
@@ -27,7 +30,7 @@ instance Exception TrashDirFilesNotFoundE where
         "manually creating the directory or resetting everything (i.e. charon empty -f)."
       ]
     where
-      files = th </> Default.Utils.pathFiles
+      files = th </> pathFiles
 
 -- | Trash info dir not found error.
 newtype TrashDirInfoNotFoundE = MkTrashDirInfoNotFoundE (PathI TrashHome)
@@ -42,4 +45,10 @@ instance Exception TrashDirInfoNotFoundE where
         "manually creating the directory or resetting everything (i.e. charon empty -f)."
       ]
     where
-      info = th </> Default.Utils.pathInfo
+      info = th </> pathInfo
+
+pathFiles :: OsPath
+pathFiles = [osp|files|]
+
+pathInfo :: OsPath
+pathInfo = [osp|info|]

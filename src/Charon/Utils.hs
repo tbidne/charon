@@ -4,7 +4,7 @@
 -- | Provides internal utility functions
 module Charon.Utils
   ( -- * FAM combinators
-    throwIfEx,
+    throwIfTrue,
     whenM,
 
     -- * Text
@@ -30,15 +30,24 @@ module Charon.Utils
     readLogLevel,
     logLevelStrings,
 
+    -- * Paths
+    getPathType,
+
     -- * PathSize
     getPathSize,
     getPathSizeIgnoreDirSize,
     getSymLinkSize,
 
+    -- * Exceptions
+    displayEx,
+    displayExT,
+    noCallstacks,
+
     -- * Misc
     filterSeqM,
     renderPretty,
-    setRefIfJust,
+    setRefTrue,
+    setRefIfTrue,
     noBuffering,
     getAllFiles,
     localTimeToMillis,
@@ -46,6 +55,26 @@ module Charon.Utils
   )
 where
 
+import Charon.Backend.Default.Exception (TrashDirFilesNotFoundE, TrashDirInfoNotFoundE)
+import Charon.Exception
+  ( BackendDetectE,
+    DotsPathE,
+    EmptyPathE,
+    EmptySearchResults,
+    FileNameEmptyE,
+    InfoDecodeE,
+    PathNotFound (MkPathNotFound),
+    RenameDuplicateE,
+    RestoreCollisionE,
+    RootE,
+    SomethingWentWrong (MkSomethingWentWrong),
+    TrashEntryFileNotFoundE,
+    TrashEntryInfoBadExtE,
+    TrashEntryInfoNotFoundE,
+    TrashEntryNotFoundE,
+    TrashEntryWildcardNotFoundE,
+    UniquePathNotPrefixE,
+  )
 import Charon.Prelude
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
@@ -65,6 +94,8 @@ import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime, UTCTime)
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
+import Effects.Exception (ExceptionProxy (MkExceptionProxy))
+import Effects.Exception qualified as Ex
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.System.PosixCompat qualified as Posix
@@ -198,21 +229,23 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
 
 -- | Sets the ioref if the maybe is non-empty.
-setRefIfJust :: (MonadIORef m) => IORef (Maybe a) -> Maybe a -> m ()
-setRefIfJust _ Nothing = pure ()
-setRefIfJust ref x@(Just _) = writeIORef ref x
+setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
+setRefIfTrue _ False = pure ()
+setRefIfTrue ref True = setRefTrue ref
 
--- | Throws the exception if it exists in the ref.
-throwIfEx ::
+setRefTrue :: (MonadIORef m) => IORef Bool -> m ()
+setRefTrue ref = writeIORef ref True
+
+throwIfTrue ::
   ( MonadIORef m,
     MonadThrow m
   ) =>
-  IORef (Maybe SomeException) ->
+  IORef Bool ->
   m ()
-throwIfEx ref =
+throwIfTrue ref =
   readIORef ref >>= \case
-    Nothing -> pure ()
-    Just ex -> throwCS ex
+    False -> pure ()
+    True -> throwM MkSomethingWentWrong
 
 -- | Breaks a bytestring on the first '='. The '=' is removed from the second
 -- element.
@@ -350,15 +383,8 @@ getAllFiles ::
   m [OsPath]
 getAllFiles fp = addNamespace "getAllFiles" $ do
   $(logTrace) $ "Retrieving files for: " <> decodeOsToFpDisplayExT fp
-  -- NOTE: [getPathType]
-  --
-  -- It would be nice to switch this from PathReader's getPathType to
-  -- PosixCompact's, as the latter is faster (fewer IO calls). Alas, the latter
-  -- is also much harder to mock, which we unfortunately rely on in some tests.
-  --
-  -- If we figure out how to mock it (or make the tests realer), we can then
-  -- swap it.
-  PR.getPathType fp >>= \case
+  -- see NOTE: [getPathType]
+  getPathType fp >>= \case
     PathTypeSymbolicLink -> pure [fp]
     PathTypeFile -> pure [fp]
     PathTypeOther -> pure [fp]
@@ -416,3 +442,53 @@ getSymLinkSize =
   fmap (afromInteger . fromIntegral . PFiles.fileSize)
     . Posix.getSymbolicLinkStatus
     <=< decodeOsToFpThrowM
+
+-- | Retrieves the path type. Used so we can wrap with a custom exception,
+-- for the purpose of ignoring callstacks.
+getPathType ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m
+  ) =>
+  OsPath ->
+  m PathType
+getPathType p =
+  -- NOTE: [getPathType]
+  --
+  -- It would be nice to switch this from PathReader's getPathType to
+  -- PosixCompact's, as the latter is faster (fewer IO calls). Alas, the latter
+  -- is also much harder to mock, which we unfortunately rely on in some tests.
+  --
+  -- If we figure out how to mock it (or make the tests realer), we can then
+  -- swap it.
+  PR.getPathType p `catchCS` \(_ :: IOException) -> throwM $ MkPathNotFound p
+
+displayEx :: (Exception e) => e -> String
+displayEx = Ex.displayCSNoMatch noCallstacks
+
+displayExT :: (Exception e) => e -> Text
+displayExT = T.pack . displayEx
+
+-- see NOTE: [Callstacks]
+noCallstacks :: [ExceptionProxy]
+noCallstacks =
+  [ MkExceptionProxy $ Proxy @BackendDetectE,
+    MkExceptionProxy $ Proxy @DotsPathE,
+    MkExceptionProxy $ Proxy @EmptyPathE,
+    MkExceptionProxy $ Proxy @EmptySearchResults,
+    MkExceptionProxy $ Proxy @FileNameEmptyE,
+    MkExceptionProxy $ Proxy @InfoDecodeE,
+    MkExceptionProxy $ Proxy @PathNotFound,
+    MkExceptionProxy $ Proxy @RenameDuplicateE,
+    MkExceptionProxy $ Proxy @RestoreCollisionE,
+    MkExceptionProxy $ Proxy @RootE,
+    MkExceptionProxy $ Proxy @SomethingWentWrong,
+    MkExceptionProxy $ Proxy @TrashDirFilesNotFoundE,
+    MkExceptionProxy $ Proxy @TrashDirInfoNotFoundE,
+    MkExceptionProxy $ Proxy @TrashEntryNotFoundE,
+    MkExceptionProxy $ Proxy @TrashEntryWildcardNotFoundE,
+    MkExceptionProxy $ Proxy @TrashEntryFileNotFoundE,
+    MkExceptionProxy $ Proxy @TrashEntryInfoNotFoundE,
+    MkExceptionProxy $ Proxy @TrashEntryInfoBadExtE,
+    MkExceptionProxy $ Proxy @UniquePathNotPrefixE
+  ]

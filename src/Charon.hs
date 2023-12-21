@@ -353,15 +353,15 @@ merge dest = addNamespace "merge" $ do
       case backend of
         BackendCbor ->
           Cbor.isCbor dest >>= \case
-            Just False -> throwCS $ MkBackendDetectE BackendCbor
+            Just False -> throwM $ MkBackendDetectE BackendCbor
             _ -> addNamespace "cbor" $ Cbor.merge src' dest'
         BackendFdo ->
           Fdo.isFdo dest >>= \case
-            Just False -> throwCS $ MkBackendDetectE BackendFdo
+            Just False -> throwM $ MkBackendDetectE BackendFdo
             _ -> addNamespace "fdo" $ Fdo.merge src' dest'
         BackendJson ->
           Json.isJson dest >>= \case
-            Just False -> throwCS $ MkBackendDetectE BackendJson
+            Just False -> throwM $ MkBackendDetectE BackendJson
             _ -> addNamespace "json" $ Json.merge src' dest'
 
 initalLog ::

@@ -8,7 +8,7 @@ where
 
 import Charon.Backend.Data (Backend)
 import Charon.Backend.Data qualified as Backend
-import Charon.Exception (RootE)
+import Charon.Exception (SomethingWentWrong)
 import Data.Text qualified as T
 import Integration.Prelude
 
@@ -39,9 +39,9 @@ testRoot b =
 
 deletesRootError :: Backend -> String -> TestTree
 deletesRootError b r = testCase ("delete '" <> r <> "'") $ do
-  (ex, terminal, deletedPaths) <- captureCharonIntExceptionPure @RootE argList
+  (ex, terminal, deletedPaths) <- captureCharonIntExceptionPure @SomethingWentWrong argList
 
-  "Attempted to delete root! This is not allowed." @=? ex
+  "Something went wrong." @=? ex
   assertMatch expected (T.strip terminal)
   "[]" @=? deletedPaths
   where

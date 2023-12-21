@@ -30,6 +30,7 @@ module Functional.Prelude.FuncEnv
     captureCharonLogs,
     captureCharonException,
     captureCharonExceptionLogs,
+    captureCharonExceptionTerminal,
 
     -- * Misc
     mkPathDataSetM,
@@ -347,7 +348,7 @@ captureCharonLogs argList = liftIO $ do
 runCharonException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
 runCharonException = void . captureCharonExceptionLogs @e
 
--- | Runs charon and captures a thrown exception and logs.
+-- | Runs charon and captures a thrown exception.
 captureCharonException ::
   forall e m.
   (Exception e, MonadIO m) =>
@@ -363,7 +364,29 @@ captureCharonExceptionLogs ::
   -- Args.
   [String] ->
   m (Text, [Text])
-captureCharonExceptionLogs argList = liftIO $ do
+captureCharonExceptionLogs =
+  fmap (\(ex, _, ls) -> (ex, ls))
+    . captureCharonExceptionTerminalLogs @e
+
+-- | Runs charon and captures a thrown exception and terminal.
+captureCharonExceptionTerminal ::
+  forall e m.
+  (Exception e, MonadIO m) =>
+  -- Args.
+  [String] ->
+  m (Text, [Text])
+captureCharonExceptionTerminal =
+  fmap (\(ex, term, _) -> (ex, term))
+    . captureCharonExceptionTerminalLogs @e
+
+-- | Runs charon and captures a thrown exception and logs.
+captureCharonExceptionTerminalLogs ::
+  forall e m.
+  (Exception e, MonadIO m) =>
+  -- Args.
+  [String] ->
+  m (Text, [Text], [Text])
+captureCharonExceptionTerminalLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
@@ -378,8 +401,9 @@ captureCharonExceptionLogs argList = liftIO $ do
             error
               "captureCharonExceptionLogs: Expected exception, received none"
           Left ex -> do
+            term <- T.lines <$> readIORef terminalRef
             logs <- T.lines <$> readIORef logsRef
-            pure (T.pack (displayException ex), logs)
+            pure (T.pack (displayException ex), term, logs)
 
   runCatch
     `catchAny` \ex -> do

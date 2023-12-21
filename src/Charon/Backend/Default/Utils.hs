@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Charon.Backend.Default.Utils
   ( -- * Trash paths
@@ -8,8 +9,8 @@ module Charon.Backend.Default.Utils
     getTrashPath,
 
     -- * Paths
-    pathFiles,
-    pathInfo,
+    Default.Ex.pathFiles,
+    Default.Ex.pathInfo,
 
     -- * Misc
     getPathInfo,
@@ -19,6 +20,7 @@ module Charon.Backend.Default.Utils
   )
 where
 
+import Charon.Backend.Default.Exception qualified as Default.Ex
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths
   ( PathI (MkPathI),
@@ -97,7 +99,7 @@ getPathInfo trashHome origPath = addNamespace "getPathInfo" $ do
   -- see NOTE: [getPathType]
   (uniqName,origAbsolute,)
     . MkPathTypeW
-    <$> Paths.applyPathI PR.getPathType origAbsolute
+    <$> Paths.applyPathI U.getPathType origAbsolute
 
 mkAbsoluteAndGetName ::
   ( HasCallStack,
@@ -133,7 +135,7 @@ mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
   isEmpty <- Paths.applyPathI (fmap null . decodeOsToFpThrowM) fileName
   when isEmpty $ do
     $(logError) "Decoded filename is empty"
-    throwCS $ MkFileNameEmptyE origPath
+    throwM $ MkFileNameEmptyE origPath
 
   pure (origAbsoluteNoSlash, fileName)
 
@@ -183,7 +185,7 @@ mkUniqPath fp = do
     go :: (HasCallStack) => Word16 -> m (PathI TrashEntryPath)
     go !counter
       | counter == maxBound =
-          throwCS $ MkRenameDuplicateE fp
+          throwM $ MkRenameDuplicateE fp
       | otherwise = do
           counterStr <- mkSuffix counter
           let fp' = Paths.liftPathI' (<> counterStr) fp
@@ -206,7 +208,7 @@ throwIfNotPrefix origName newName = do
 
   unless
     (origNameStr `L.isPrefixOf` newNameStr)
-    (throwCS $ MkUniquePathNotPrefixE origName newName)
+    (throwM $ MkUniquePathNotPrefixE origName newName)
 
 throwIfIllegal ::
   ( HasCallStack,
@@ -216,9 +218,9 @@ throwIfIllegal ::
   PathI TrashEntryOriginalPath ->
   m ()
 throwIfIllegal p = addNamespace "throwIfIllegal" $ do
-  U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwCS MkRootE
-  U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwCS MkEmptyPathE
-  U.whenM (Paths.isDots p) $ $(logError) "Path is dots!" *> throwCS (MkDotsPathE p)
+  U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwM MkRootE
+  U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwM MkEmptyPathE
+  U.whenM (Paths.isDots p) $ $(logError) "Path is dots!" *> throwM (MkDotsPathE p)
 
 -- | Parses a ByteString like:
 --
@@ -286,7 +288,7 @@ pathDataToType ::
   PathI TrashHome ->
   a ->
   m PathTypeW
-pathDataToType trashHome pd = MkPathTypeW <$> PR.getPathType path
+pathDataToType trashHome pd = MkPathTypeW <$> U.getPathType path
   where
     -- see NOTE: [getPathType]
     MkPathI path = getTrashPath trashHome (pd ^. #fileName)

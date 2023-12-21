@@ -156,6 +156,7 @@ executable charon
   build-depends:
     , base
     , charon
+    , effects-exceptions
 
   hs-source-dirs:     app
   ghc-options:        -threaded -with-rtsopts=-N
@@ -260,7 +261,6 @@ test-suite functional
     , algebra-simple
     , base
     , charon
-    , effects-exceptions
     , effects-fs
     , effects-logger-ns
     , effects-terminal
