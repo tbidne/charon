@@ -3,8 +3,8 @@ cradle:
     - path: "./src"
       component: "lib:charon"
 
-    - path: "./lib/file-utils"
-      component: "charon:lib:file-utils"
+    - path: "./lib/test-utils"
+      component: "charon:lib:test-utils"
 
     - path: "./app/Main.hs"
       component: "charon:exe:charon"

@@ -34,12 +34,12 @@ makeFieldLabelsNoPrefix ''Metadata
 empty :: Metadata
 empty = MkMetadata 0 0 zero zero
 
-instance Pretty Metadata where
-  pretty stats = vsep strs <+> line
+instance Display Metadata where
+  displayBuilder stats = vsep strs <+> line
     where
       strs =
-        [ "Entries:     " <+> pretty (stats ^. #numEntries),
-          "Total Files: " <+> pretty (stats ^. #numFiles),
-          "Log size:    " <+> pretty (U.formatBytes $ stats ^. #logSize),
-          "Size:        " <+> pretty (U.formatBytes $ stats ^. #size)
+        [ "Entries:     " <+> displayBuilder (show $ stats ^. #numEntries),
+          "Total Files: " <+> displayBuilder (show $ stats ^. #numFiles),
+          "Log size:    " <+> displayBuilder (U.formatBytes $ stats ^. #logSize),
+          "Size:        " <+> displayBuilder (U.formatBytes $ stats ^. #size)
         ]

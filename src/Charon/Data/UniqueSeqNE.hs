@@ -27,8 +27,8 @@ module Charon.Data.UniqueSeqNE
     (↦),
 
     -- * Display
-    displayShow,
-    display,
+    displayUSeqNEShow,
+    displayUSeqNE,
   )
 where
 
@@ -115,11 +115,11 @@ insertSeq' seqIns y (seq, set)
   | Internal.notHSetMember y set = (seqIns y seq, HSet.insert y set)
   | otherwise = (seq, set)
 
-displayShow :: (Show a) => UniqueSeqNE a -> Text
-displayShow = display (T.pack . show)
+displayUSeqNEShow :: (Show a) => UniqueSeqNE a -> Text
+displayUSeqNEShow = displayUSeqNE (T.pack . show)
 
-display :: (a -> Text) -> UniqueSeqNE a -> Text
-display toText =
+displayUSeqNE :: (a -> Text) -> UniqueSeqNE a -> Text
+displayUSeqNE toText =
   T.intercalate ","
     . fmap toText
     . toList

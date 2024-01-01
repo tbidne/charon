@@ -12,6 +12,12 @@ module Charon.Prelude
     displayExceptiont,
     decodeOsToFpDisplayExT,
 
+    -- * Display Utils
+    (<+>),
+    vsep,
+    punctuate,
+    line,
+
     -- * Optics
     packed,
     unpacked,
@@ -60,7 +66,7 @@ import Data.Char as X (Char)
 import Data.Either as X (Either (Left, Right), either)
 import Data.Eq as X (Eq ((/=), (==)))
 import Data.Foldable as X
-  ( Foldable (foldMap', foldl', foldr, length),
+  ( Foldable (foldMap', foldl', foldr, foldr1, length),
     for_,
     null,
     sequenceA_,
@@ -89,11 +95,13 @@ import Data.Sequence.NonEmpty as X (NESeq ((:<||), (:||>)))
 import Data.String as X (IsString (fromString), String)
 import Data.Text as X (Text)
 import Data.Text qualified as T
+import Data.Text.Display as X (Display (displayBuilder), display)
 import Data.Traversable as X (traverse)
 import Data.Tuple as X (curry, fst, uncurry)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
 #endif
+import Data.Text.Lazy.Builder (Builder)
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
 import Effects.Concurrent.Async as X (MonadAsync)
@@ -269,15 +277,6 @@ import Optics.TH as X
     noPrefixFieldLabels,
   )
 import PathSize as X (findLargestPaths)
-import Prettyprinter as X
-  ( Doc,
-    Pretty (pretty),
-    layoutCompact,
-    line,
-    vsep,
-    (<+>),
-  )
-import Prettyprinter.Render.Text as X (renderStrict)
 import System.IO as X
   ( BufferMode (NoBuffering),
     FilePath,
@@ -342,3 +341,23 @@ doesAnyPathNotExist = fmap not . doesAnyPathExist
 
 decodeOsToFpDisplayExT :: OsPath -> Text
 decodeOsToFpDisplayExT = T.pack . decodeOsToFpDisplayEx
+
+vsep :: [Builder] -> Builder
+vsep = concatWith (\x y -> x <> line <> y)
+
+punctuate :: Builder -> [Builder] -> [Builder]
+punctuate _ [] = []
+punctuate _ [x] = [x]
+punctuate p (x : xs) = x <> p : punctuate p xs
+
+(<+>) :: Builder -> Builder -> Builder
+x <+> y = x <> " " <> y
+
+line :: Builder
+line = "\n"
+
+-- vendored from prettyprinter, for text's Builder
+concatWith :: (Foldable t) => (Builder -> Builder -> Builder) -> t Builder -> Builder
+concatWith f ds
+  | null ds = mempty
+  | otherwise = foldr1 f ds

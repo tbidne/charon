@@ -120,7 +120,7 @@ deletePostHook ::
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
+  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
   void Trash.createTrash
@@ -204,7 +204,7 @@ permDeletePostHook ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
+  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
   anyErrorRef <- newIORef False
@@ -376,7 +376,7 @@ restorePostHook ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.display Paths.toText paths
+  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
   anyErrorRef <- newIORef False

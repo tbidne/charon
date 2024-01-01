@@ -49,16 +49,16 @@ data PathData = UnsafePathData
 
 makeFieldLabelsNoPrefix ''PathData
 
-instance Pretty PathData where
-  pretty pd = vsep strs
+instance Display PathData where
+  displayBuilder pd = vsep strs
     where
       strs = zipWith (flip ($)) headerNames labelFn
       labelFn =
-        [ \x -> x <> ":     " <+> pretty (displayPath $ pd ^. #fileName % #unPathI),
-          \x -> x <> ": " <+> pretty (displayPath $ pd ^. #originalPath % #unPathI),
-          \x -> x <> ":     " <+> pretty (pd ^. #pathType),
-          \x -> x <> ":     " <+> pretty (U.normalizedFormat $ pd ^. #size),
-          \x -> x <> ":  " <+> pretty (pd ^. #created)
+        [ \x -> x <> ":     " <+> displayBuilder (displayPath $ pd ^. #fileName % #unPathI),
+          \x -> x <> ": " <+> displayBuilder (displayPath $ pd ^. #originalPath % #unPathI),
+          \x -> x <> ":     " <+> displayBuilder (pd ^. #pathType),
+          \x -> x <> ":     " <+> displayBuilder (U.normalizedFormat $ pd ^. #size),
+          \x -> x <> ":  " <+> displayBuilder (pd ^. #created)
         ]
 
       displayPath = T.pack . decodeOsToFpDisplayEx

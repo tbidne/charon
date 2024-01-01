@@ -246,7 +246,7 @@ printMetadata ::
   m ()
 printMetadata = Charon.getMetadata >>= prettyDel
 
-prettyDel :: (Pretty a, MonadTerminal m) => a -> m ()
+prettyDel :: (Display a, MonadTerminal m) => a -> m ()
 prettyDel = putTextLn . U.renderPretty
 
 -- | If the argument is given, returns it. Otherwise searches for the default

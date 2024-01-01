@@ -40,8 +40,8 @@ newtype Timestamp = MkTimestamp
 
 makeFieldLabelsNoPrefix ''Timestamp
 
-instance Pretty Timestamp where
-  pretty = fromString . formatLocalTimeSpace . view #unTimestamp
+instance Display Timestamp where
+  displayBuilder = fromString . formatLocalTimeSpace . view #unTimestamp
 
 instance Serialise Timestamp where
   encode (MkTimestamp (LocalTime (ModifiedJulianDay d) (TimeOfDay h m s))) =

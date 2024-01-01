@@ -24,8 +24,8 @@ module Charon.Data.UniqueSeq
     (↦),
 
     -- * Display
-    displayShow,
-    display,
+    displayUSeqShow,
+    displayUSeq,
   )
 where
 
@@ -66,11 +66,11 @@ fromSet set = UnsafeUniqueSeq seq set
   where
     seq = foldr (flip (:|>)) Seq.empty set
 
-displayShow :: (Show a) => UniqueSeq a -> Text
-displayShow = display (T.pack . show)
+displayUSeqShow :: (Show a) => UniqueSeq a -> Text
+displayUSeqShow = displayUSeq (T.pack . show)
 
-display :: (a -> Text) -> UniqueSeq a -> Text
-display toText =
+displayUSeq :: (a -> Text) -> UniqueSeq a -> Text
+displayUSeq toText =
   T.intercalate ","
     . fmap toText
     . toList

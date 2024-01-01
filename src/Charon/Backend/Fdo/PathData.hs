@@ -28,6 +28,7 @@ import Charon.Data.Paths
         TrashHome
       ),
   )
+import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp (Timestamp)
 import Charon.Prelude
 import Charon.Utils qualified as U
@@ -170,7 +171,11 @@ toCorePathDataDirectorySizes dsizeMap trashHome pd = addNamespace "toCorePathDat
           -- directorysizes does not include the directory itself, so we have
           -- to add it back
           pure $ MkBytes dirSize .+. entry ^. #size
-        Nothing -> Utils.getPathSize path
+        Nothing -> do
+          $(logWarn)
+            $ "Directory not found in directorysizes, calculating directly: "
+            <> Paths.toText (pd ^. #fileName)
+          Utils.getPathSize path
     PathTypeSymbolicLink -> Utils.getSymLinkSize path
 
   pure

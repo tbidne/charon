@@ -120,10 +120,10 @@ library
     , optparse-applicative  >=0.15      && <0.19
     , path-size             ^>=0.1
     , pretty-terminal       ^>=0.1.0.0
-    , prettyprinter         ^>=1.7.1
     , serialise             ^>=0.2.6.0
     , si-bytes              ^>=0.1
     , text                  >=1.2.4.0   && <2.1
+    , text-display          >=0.0.3.0   && <0.6
     , time                  >=1.9.3     && <1.14
     , toml-reader           >=0.2.0.0   && <0.3
     , unix-compat           >=0.6       && <0.8

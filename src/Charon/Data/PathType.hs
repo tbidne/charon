@@ -39,11 +39,11 @@ instance Hashable PathTypeW where
   hashWithSalt int (MkPathTypeW PathTypeSymbolicLink) = hashWithSalt @Int int 3
   hashWithSalt int (MkPathTypeW PathTypeOther) = hashWithSalt @Int int 4
 
-instance Pretty PathTypeW where
-  pretty (MkPathTypeW PathTypeFile) = "File"
-  pretty (MkPathTypeW PathTypeDirectory) = "Directory"
-  pretty (MkPathTypeW PathTypeSymbolicLink) = "Symlink"
-  pretty (MkPathTypeW PathTypeOther) = "Other"
+instance Display PathTypeW where
+  displayBuilder (MkPathTypeW PathTypeFile) = "File"
+  displayBuilder (MkPathTypeW PathTypeDirectory) = "Directory"
+  displayBuilder (MkPathTypeW PathTypeSymbolicLink) = "Symlink"
+  displayBuilder (MkPathTypeW PathTypeOther) = "Other"
 
 instance ToJSON PathTypeW where
   toJSON (MkPathTypeW PathTypeFile) = "f"

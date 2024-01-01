@@ -81,7 +81,7 @@ import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bytes (FromInteger (afromInteger))
 import Data.Bytes qualified as Bytes
-import Data.Bytes.Class.Wrapper (Unwrapper (Unwrapped))
+import Data.Bytes.Class.RawNumeric (RawNumeric (Raw))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes.Formatting.Base (BaseFormatter)
 import Data.Bytes.Size (Sized)
@@ -126,10 +126,10 @@ normalizedFormat =
 
 -- | Formats the bytes.
 formatBytes ::
-  ( BaseFormatter (Unwrapped a) ~ FloatingFormatter,
-    PrintfArg (Unwrapped a),
+  ( BaseFormatter (Raw a) ~ FloatingFormatter,
+    PrintfArg (Raw a),
     Sized a,
-    Unwrapper a
+    RawNumeric a
   ) =>
   a ->
   Text
@@ -180,12 +180,9 @@ merge ::
   a
 merge f sLens tLens s t = (s ^. sLens) `f` (t ^. tLens)
 
--- | Renders via pretty instance.
-renderPretty :: (Pretty a) => a -> Text
-renderPretty =
-  renderStrict
-    . layoutCompact
-    . pretty
+-- | Renders via Display instance.
+renderPretty :: (Display a) => a -> Text
+renderPretty = display
 
 -- | @matchesWildcards matchStr toMatch@ returns true if @toMatch@ "matches"
 -- the @matchStr@, where unescaped asterisks in @matchStr@ are interpreted
