@@ -12,7 +12,16 @@ where
 import Charon.Data.Index (Index (MkIndex), Sort (Name, Size))
 import Charon.Data.Index qualified as Index
 import Charon.Data.PathData (PathData (UnsafePathData))
-import Charon.Data.PathData.Formatting (ColFormat (ColFormatFixed, ColFormatMax), Coloring (ColoringOff, ColoringOn), PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular), _FormatTabular)
+import Charon.Data.PathData.Formatting
+  ( ColFormat (ColFormatFixed, ColFormatMax),
+    Coloring (ColoringOff, ColoringOn),
+    PathDataFormat
+      ( FormatMultiline,
+        FormatSingleline,
+        FormatTabular
+      ),
+    _FormatTabular,
+  )
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.Timestamp (Timestamp, fromText)
