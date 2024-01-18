@@ -43,11 +43,11 @@ import Test.Utils qualified as TestUtils
 -- ώ (974)
 --
 -- These are distinct code points, yet are normalized to the same "\969\769".
--- This means, say, doesFileExist on one will return true for the other.
+-- This means, say, doesFileExist on one will return the same as the other.
 --
--- This violates the tests here, as we are trying to conjure unique paths.
--- Thus we need to only generate paths whose normalization differ, at least
--- on OSX.
+-- This violates the tests here, as we were assuming unique utf-8 sequences
+-- would mean unique paths. Thus we need to generate paths whose
+-- normalizations differ, at least on OSX.
 --
 -- Should we do anything more e.g. update Charon to somehow take normalization
 -- into account? It is tempting to say yes, yet consider the following two
@@ -63,6 +63,17 @@ import Test.Utils qualified as TestUtils
 -- strategy. But there doesn't seem to be any point to doing this, as info
 -- files are not guaranteed to be match the original file anyway (i.e. real
 -- duplicates).
+--
+-- We could warn users when they try to delete two different byte sequences
+-- whose normalizations coincide, but this requires more thought e.g.
+--
+--   1. When do we check? Every time a user hands us paths, or just e.g. delete?
+--   2. Do we have different behavior / warnings for different Os's?
+--   3. What do we do if a user tries to restore a path p1 by typing p2 s.t.
+--      p2 /= p1 but norm p2 == norm p1? Right now we do nothing i.e. lookup
+--      will fail.
+--
+-- For now we do not do anything except fix the tests and make a note of it.
 
 type PathWithType = (OsPath, PathTypeW)
 
@@ -80,7 +91,7 @@ fpToNormedFp = MkNormedFp . TNormalize.normalize NFD . T.pack
 normedFpToFp :: NormedFp -> FilePath
 normedFpToFp = T.unpack . view #unNormedFilePath
 
--- | Holds all generated path data used for our tests.
+-- | Holds all generated path data used for our int tests.
 data PathIntData = MkPathIntData
   { -- | Encoded FilePath.
     osPath :: OsPath,
@@ -135,6 +146,7 @@ genFileName asciiOnly = do
       <$> Gen.element
         [ PathTypeFile,
           PathTypeDirectory,
+          PathTypeOther,
           PathTypeSymbolicLink
         ]
 
@@ -154,6 +166,7 @@ genFileNameNoDupes asciiOnly paths = do
       <$> Gen.element
         [ PathTypeFile,
           PathTypeDirectory,
+          PathTypeOther,
           PathTypeSymbolicLink
         ]
 
