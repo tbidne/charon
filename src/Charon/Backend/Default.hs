@@ -301,6 +301,9 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
             $(logTrace) "Log does not exist"
             pure (afromRational 0)
 
+      -- TODO: Utils.getAllFiles is unfortunately expensive for many files
+      -- (e.g. ~10s for 120,000 files). Maybe PosixCompat can help?
+
       -- Summed size
       allFiles <- Utils.getAllFiles trashPathsDir
       let allSizes = foldl' (\acc (pd, _) -> (pd ^. #size) .+. acc) zero index
