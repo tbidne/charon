@@ -9,6 +9,7 @@ import Integration.AsciiOnly (AsciiOnly)
 import Integration.Charon qualified as Charon
 import Integration.Commands.Delete qualified as Delete
 import Integration.Prelude
+import Integration.Utils qualified as IntUtils
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import Test.Tasty qualified as T
 import Test.Tasty.Options (OptionDescription (Option))
@@ -27,7 +28,8 @@ main = do
           testGroup
             "Root Tests"
             [ Delete.tests
-            ]
+            ],
+          IntUtils.tests
         ]
   where
     ingredients =

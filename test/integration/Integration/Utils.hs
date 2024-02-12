@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -15,6 +16,12 @@ module Integration.Utils
     genFileNameSet,
     gen2FileNameSets,
     gen3FileNameSets,
+
+    -- * Helpers
+    mkPathIntData,
+
+    -- * Tests
+    tests,
   )
 where
 
@@ -74,6 +81,14 @@ import Test.Utils qualified as TestUtils
 --      will fail.
 --
 -- For now we do not do anything except fix the tests and make a note of it.
+--
+-- UPDATE 2024-02-13: Apparently, the above normalization is __still__ not
+-- enough (good lord apple). OSX also considers some paths equal even if their
+-- normalizations do not agree. Which ones? Who knows! Trying to find
+-- reliable info has proven difficult.
+--
+-- In the meantime, we make our normalization logic even stronger (on OSX)
+-- by including case folding.
 
 type PathWithType = (OsPath, PathTypeW)
 
@@ -86,7 +101,16 @@ newtype NormedFp = MkNormedFp {unNormedFilePath :: Text}
 makeFieldLabelsNoPrefix ''NormedFp
 
 fpToNormedFp :: FilePath -> NormedFp
+#if OSX
+-- Include case folding because e.g. OSX considers the paths
+-- U+1c81 (ᲁ) and U+0434 (д) equal despite their normalizations differing.
+-- Thankfully these share the same case folding.
+--
+-- REVIEW: Does the order of caseFold and normalization matter (probably...)?
+fpToNormedFp = MkNormedFp . T.toCaseFold . TNormalize.normalize NFD . T.pack
+#else
 fpToNormedFp = MkNormedFp . TNormalize.normalize NFD . T.pack
+#endif
 
 normedFpToFp :: NormedFp -> FilePath
 normedFpToFp = T.unpack . view #unNormedFilePath
@@ -186,3 +210,31 @@ mkPathIntData pt fp =
       filePath = fp,
       normed = fpToNormedFp fp
     }
+
+tests :: TestTree
+tests =
+  testGroup
+    "Integration.Utils"
+    $ testNormalizedEq
+    : osxTests
+
+testNormalizedEq :: TestTree
+testNormalizedEq = testCase "Equal normalization => Eq" $ do
+  --        U+1F7D: ώ             U+03CE: ώ
+  normalize "\8061" @=? normalize "\974"
+
+osxTests :: [TestTree]
+#if OSX
+osxTests = [ testCaseFoldingEq ]
+
+testCaseFoldingEq :: TestTree
+testCaseFoldingEq = testCase "Equal case folding => Eq" $ do
+  --        U+1c81: ᲁ             U+0434: д
+  normalize "\7297" @=? normalize "\1076"
+
+#else
+osxTests = []
+#endif
+
+normalize :: FilePath -> PathIntData
+normalize = mkPathIntData (MkPathTypeW PathTypeFile)
