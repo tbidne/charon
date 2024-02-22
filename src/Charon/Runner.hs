@@ -46,14 +46,9 @@ import Charon.Runner.Command
   )
 import Charon.Runner.Command.List (ListCmdP2)
 import Charon.Runner.Env
-  ( Env (MkEnv, backend, trashHome),
-    LogEnv (MkLogEnv),
-    LogFile (MkLogFile),
-    handle,
-    logEnv,
-    logFile,
-    logLevel,
-    logNamespace,
+  ( Env (MkEnv, backend, logEnv, trashHome),
+    LogEnv (MkLogEnv, logFile, logNamespace),
+    LogFile (MkLogFile, handle, logLevel),
   )
 import Charon.Runner.FileSizeMode (FileSizeMode (..))
 import Charon.Runner.FileSizeMode qualified as FileSizeMode

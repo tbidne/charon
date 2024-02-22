@@ -54,7 +54,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: 95cf3dfdc19cad49393d4c66159fb734b6645b1f
+    tag: 2ca5e37a1d9db376a81ee951ec8b954ee1159c20
 
 source-repository-package
     type: git

@@ -3,7 +3,7 @@ name:               charon
 version:            0.1
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC ==9.4.7 || ==9.6.3
+tested-with:        GHC ==9.4.7 || ==9.6.3 || ==9.8.1
 copyright:          2022-2023 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
@@ -98,9 +98,9 @@ library
   build-depends:
     , aeson                 >=2.0       && <2.3
     , algebra-simple        ^>=0.1
-    , base                  >=4.17.0.0  && <4.19
+    , base                  >=4.17.0.0  && <4.20
     , bytestring            >=0.11.1.0  && <0.13
-    , containers            ^>=0.6.3.1
+    , containers            >=0.6.3.1   && <0.8
     , deepseq               >=1.4.6.0   && <1.6
     , effects-async         ^>=0.1
     , effects-exceptions    ^>=0.1
@@ -111,7 +111,7 @@ library
     , effects-terminal      ^>=0.1
     , effects-time          ^>=0.1
     , effects-unix-compat   ^>=0.1
-    , filepath              ^>=1.4.2.1
+    , filepath              >=1.4.2.1   && <1.6
     , hashable              ^>=1.4.0.2
     , mtl                   >=2.2.1     && <2.4
     , nonempty-containers   >=0.3.4.2   && <0.4
@@ -122,7 +122,7 @@ library
     , pretty-terminal       ^>=0.1.0.0
     , serialise             ^>=0.2.6.0
     , si-bytes              ^>=0.1
-    , text                  >=1.2.4.0   && <2.1
+    , text                  >=1.2.4.0   && <2.2
     , text-display          >=0.0.3.0   && <0.6
     , time                  >=1.9.3     && <1.14
     , toml-reader           >=0.2.0.0   && <0.3
@@ -193,7 +193,7 @@ test-suite unit
     , nonempty-containers
     , pretty-simple         >=4.0.0.0  && <4.2
     , random                ^>=1.2.1.1
-    , tasty                 >=1.1.0.3  && <1.5
+    , tasty                 >=1.1.0.3  && <1.6
     , tasty-golden          ^>=2.3.1.1
     , tasty-hedgehog        >=1.2.0.0  && <1.5
     , tasty-hunit           >=0.9      && <0.11

@@ -19,6 +19,7 @@ jobs:
         ghc:
           - "9.4.7"
           - "9.6.3"
+          - "9.8.1"
         platform:
           - os: "macos-latest"
             set-env: "export"

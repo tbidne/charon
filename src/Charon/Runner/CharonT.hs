@@ -7,7 +7,7 @@ module Charon.Runner.CharonT
 where
 
 import Charon.Prelude
-import Charon.Runner.Env (Env, LogFile, handle, logLevel)
+import Charon.Runner.Env (Env, LogFile)
 import Effects.LoggerNS (defaultLogFormatter, guardLevel)
 import Effects.LoggerNS qualified as Logger
 
@@ -50,11 +50,9 @@ instance
           let bs = Logger.logStrToBs formatted
           hPut handle bs
     where
-      handleAndLevel :: Lens' (LogFile m) (Handle, LogLevel)
+      handleAndLevel :: Getter (LogFile m) (Handle, LogLevel)
       handleAndLevel =
-        lens
-          (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
-          (\lf (h, ll) -> lf {logLevel = ll, handle = h})
+        to (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
 
 instance
   (MonadHandleWriter m, MonadTime m) =>
