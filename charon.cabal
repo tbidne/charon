@@ -9,12 +9,14 @@ author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
 homepage:           https://github.com/tbidne/charon/
 bug-reports:        https://github.com/tbidne/charon/issues
-synopsis:           Template
-description:        Template
-category:           Template
-extra-source-files:
-  CHANGELOG.md
-  README.md
+synopsis:           Charon is a cross-platform cli trash tool
+description:
+  Charon is a cross-platform cli trash tool that includes
+  integration with the Free Desktop trash spec.
+
+category:           CLI Tools
+extra-source-files: README.md
+extra-doc-files:    CHANGELOG.md
 
 source-repository head
   type:     git
@@ -141,8 +143,8 @@ library test-utils
     , base
     , charon
     , effects-fs
-    , hedgehog
-    , tasty-hunit
+    , hedgehog              >=1.0.2 && <1.5
+    , tasty-hunit           >=0.9   && <0.11
     , text
     , unordered-containers
 
@@ -189,14 +191,14 @@ test-suite unit
     , effects-logger-ns
     , effects-terminal
     , filepath
-    , hedgehog              >=1.0.2    && <1.5
+    , hedgehog
     , nonempty-containers
     , pretty-simple         >=4.0.0.0  && <4.2
     , random                ^>=1.2.1.1
     , tasty                 >=1.1.0.3  && <1.6
     , tasty-golden          ^>=2.3.1.1
     , tasty-hedgehog        >=1.2.0.0  && <1.5
-    , tasty-hunit           >=0.9      && <0.11
+    , tasty-hunit
     , test-utils
     , text
     , time
