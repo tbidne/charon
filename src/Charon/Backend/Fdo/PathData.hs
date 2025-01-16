@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | Provides 'PathData' for use with the FreeDesktopOrg backend.
 module Charon.Backend.Fdo.PathData
@@ -38,7 +39,6 @@ import Data.HashMap.Strict qualified as HMap
 import Data.HashSet qualified as Set
 import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (ASemigroup ((.+.)))
-import Numeric.Literal.Integer (FromInteger (afromInteger))
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -120,7 +120,7 @@ toCorePathData ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   PathI TrashHome ->
@@ -149,6 +149,7 @@ toCorePathDataDirectorySizes ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadTerminal m
   ) =>
@@ -161,8 +162,8 @@ toCorePathDataDirectorySizes dsizeMap trashHome pd = addNamespace "toCorePathDat
   pathType <- Default.Utils.pathDataToType trashHome pd
 
   size <- case pathType ^. #unPathTypeW of
-    PathTypeFile -> afromInteger <$> PR.getFileSize path
-    PathTypeOther -> afromInteger <$> PR.getFileSize path
+    PathTypeFile -> fromℤ <$> PR.getFileSize path
+    PathTypeOther -> fromℤ <$> PR.getFileSize path
     PathTypeDirectory -> do
       name <- Fdo.Utils.percentEncodeFileName pd
       case HMap.lookup name dsizeMap of

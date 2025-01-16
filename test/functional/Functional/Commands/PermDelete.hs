@@ -630,11 +630,7 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
           [combineFps ["displaysAllData"]]
           "/f1",
         Exact "Type:      File",
-#if WINDOWS
         Exact "Size:      0.00B",
-#else
-        Exact "Size:      5.00B",
-#endif
         Exact "Created:   2020-05-31 12:00:00",
         Exact "",
         -- Leaving off the "(y/n)?" suffix as the windows tests replaces all

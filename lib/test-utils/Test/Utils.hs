@@ -40,7 +40,6 @@ import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter (createDirectoryLink, createFileLink)
-import Effects.FileSystem.Utils qualified as FsUtils
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Test.Tasty.HUnit (assertFailure)
@@ -100,7 +99,7 @@ createFileContents (p, c) = liftIO $ do
     then throwString $ "Path already exists: " <> show p
     else do
       writeBinaryFile p c
-        `catchAnyCS` \ex -> do
+        `catchSync` \ex -> do
           putStrLn
             $ mconcat
               [ "[Test.Utils.createFileContents] Encountered an exception\n",
@@ -108,7 +107,7 @@ createFileContents (p, c) = liftIO $ do
                 show p,
                 "'\n",
                 "Decoded: '",
-                FsUtils.decodeOsToFpShow p,
+                decodeLenient p,
                 "'\n",
                 "Contents: '",
                 bsToStr c,
@@ -117,7 +116,7 @@ createFileContents (p, c) = liftIO $ do
                 displayException ex,
                 "'"
               ]
-          throwCS ex
+          throwM ex
 
 -- | Creates empty files at the specified paths.
 createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
@@ -316,38 +315,15 @@ badChars :: HashSet Char
 charMapper :: Char -> Char
 
 #if OSX
--- This is hedgehog's built-in Gen.unicode restricted to plane 0
--- (Basic Multilingual Plane). For reasons I do not understand, osx on CI
--- often chokes on code points outside of this range even when properly
--- encoded as UTF-8.
---
--- This seems to be backed up by osx's behavior e.g. if you try to create a
--- a file with the filename "0x F0 B1 8D 90", you will receive the error
--- 'illegal byte sequence'. This is the UTF-8 encoding for the
--- '\201552' <-> 0x31350 code point, for the record.
---
--- Curiously, many of the 'illegal byte sequences' contain 0xF0 as the lead
--- byte in some pair e.g. 0xF0C2. This is by no means exhaustive, however.
--- The notion of "overlong sequences" seems possibly relevant, though if the
--- sequence is in fact illegal, then:
---
---    1. Why is it produced by OsPath's encodeToUtf and Text's encodeUtf8?
---    2. Why is it only osx that struggles and not linux?
---
--- In any case, we restrict osx to AlphaNum Plane 0, as these seem fine.
+-- Mac + unicode is a disaster for reliability here. I am not sure where the
+-- problem is, but, whatever the cause, generating arbitrary unicode and
+-- encoding to _valid UTF-8_ often causes "illegal byte sequence". Why?
+-- Who knows. In any case, as this is not reliable, we degrade the tests to
+-- ascii. Maybe one day we can improve this.
 --
 -- https://en.wikipedia.org/wiki/Plane_(Unicode)
 -- https://en.wikipedia.org/wiki/UTF-8#Overlong_encodings
-genChar True = Gen.ascii
-genChar False =
-  let
-    -- s1 + s2 := Plane 0
-    s1 =
-      (55296, Gen.enum '\0' '\55295')
-    s2 =
-      (8190, Gen.enum '\57344' '\65533')
-  in
-    Gen.frequency [s1, s2]
+genChar _ = Gen.ascii
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 

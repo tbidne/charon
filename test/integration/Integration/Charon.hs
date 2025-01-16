@@ -16,6 +16,7 @@ import Charon.Backend.Data (Backend)
 import Charon.Backend.Data qualified as Backend.Data
 import Charon.Data.PathData (PathData)
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
+import Charon.Data.PathType qualified as PathType
 import Charon.Data.Paths (PathI (MkPathI))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (↦), (∪))
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
@@ -31,7 +32,6 @@ import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import Effects.LoggerNS (Namespace, defaultLogFormatter)
 import Effects.LoggerNS qualified as Logger
 import GHC.IsList (IsList (toList))
@@ -79,10 +79,15 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       MonadPathWriter,
       MonadPosixCompat,
       MonadReader IntEnv,
+      MonadThread,
       MonadThrow,
       MonadTime
     )
     via (CharonT IntEnv IO)
+
+#if !WINDOWS
+deriving newtype instance MonadPosix IntIO
+#endif
 
 instance MonadLogger IntIO where
   monadLoggerLog loc _ lvl msg = do
@@ -109,7 +114,7 @@ usingIntIO env rdr = do
   -- Therefore we catch any exceptions here, print out any relevant data,
   -- then use Hedgehog's failure to die.
   result <-
-    usingIntIONoCatch env rdr `catchAny` \ex -> do
+    usingIntIONoCatch env rdr `catchSync` \ex -> do
       printLogs
       annotate $ displayException ex
       failure
@@ -207,7 +212,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTestPaths ∪ βTestPaths
 
       caughtEx <-
-        tryCS @_ @SomethingWentWrong
+        try @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.delete (toDelete ↦ MkPathI))
 
       ex <-
@@ -304,7 +309,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        tryCS @_ @SomethingWentWrong
+        try @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.permDelete True toPermDelete)
 
       ex <-
@@ -396,7 +401,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        tryCS @_ @SomethingWentWrong
+        try @_ @SomethingWentWrong
           $ usingIntIONoCatch env (Charon.restore toRestore)
 
       ex <-
@@ -559,7 +564,7 @@ setupDir dir paths = do
           PathTypeOther -> createFileContents (p, "")
         assertPathsExist (fmap (view _1) paths')
 
-  action `catchAny` \ex -> do
+  action `catchSync` \ex -> do
     annotate $ displayException ex
     failure
   where
@@ -590,7 +595,7 @@ countFiles :: UniqueSeqNE PathWithType -> Int
 countFiles = length . filter isNotDir . toList . NESeq.toSeq . view #seq
   where
     isNotDir :: PathWithType -> Bool
-    isNotDir = not . is (_2 % #unPathTypeW % _PathTypeDirectory)
+    isNotDir (_, pt) = not $ PathType.isDirectory pt
 
 getIndex :: IntEnv -> PropertyT IO (Seq PathData)
 getIndex env = fmap (view _1) . view #unIndex <$> usingIntIO env Charon.getIndex

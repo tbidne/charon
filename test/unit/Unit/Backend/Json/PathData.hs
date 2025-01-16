@@ -16,7 +16,7 @@ import Charon.Data.Timestamp qualified as Timestamp
 import Data.Fixed (Fixed (MkFixed))
 import Data.Text.Lazy qualified as TL
 import Data.Time (LocalTime (LocalTime), TimeOfDay (TimeOfDay))
-import Effects.FileSystem.Utils (unsafeEncodeFpToOs)
+import FileSystem.OsPath (unsafeEncodeValid)
 import GHC.Real ((^))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -119,7 +119,7 @@ genPathData =
     genSize = MkBytes <$> Gen.integral (Range.exponential 1 1_000_000)
 
 toPathI :: FilePath -> PathI i
-toPathI = MkPathI . unsafeEncodeFpToOs
+toPathI = MkPathI . unsafeEncodeValid
 
 genPathChar :: Gen Char
 genPathChar = TestUtils.genPathChar False

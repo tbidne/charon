@@ -39,6 +39,7 @@ import Charon.Prelude
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
+import FileSystem.OsPath qualified as OsPath
 import System.OsPath qualified as FP
 
 -- | Types of filepaths used in Charon.
@@ -91,14 +92,14 @@ instance Serial (PathI i) where
 
   encode =
     bimap displayException (encodeUtf8 . T.pack)
-      . decodeOsToFp
+      . OsPath.decode
       . view #unPathI
 
   decode _ bs = case TEnc.decodeUtf8' bs of
     Left ex -> Left $ displayException ex
     Right t ->
       bimap displayException MkPathI
-        . encodeFpToOs
+        . encodeValid
         . T.unpack
         $ t
 
@@ -159,7 +160,7 @@ infixl 5 //>
 --- whitespace (e.g. " "), and that is fine.
 isEmpty :: (MonadThrow m) => PathI i -> m Bool
 isEmpty (MkPathI p) = do
-  s <- decodeOsToFpThrowM p
+  s <- OsPath.decodeThrowM p
   -- NOTE: This is NOT redundant as the typical OsPath creation functions
   -- e.g. encodeUtf do NOT check for empty (or other invariants). We need to
   -- use the 'isValid' check instead.
@@ -177,14 +178,14 @@ isRoot = isRoot' . view #unPathI
 isRoot' :: (MonadThrow m) => OsPath -> m Bool
 #if WINDOWS
 isRoot' p = do
-  fp <- decodeOsToFpThrowM p
+  fp <- OsPath.decodeThrowM p
   pure $ f . T.unpack . T.strip . T.pack $ fp
   where
     f (_ : ':' : rest) = null rest || rest == "\\" || rest == "\\\\"
     f _ = False
 #else
 isRoot' p = do
-  fp <- decodeOsToFpThrowM p
+  fp <- OsPath.decodeThrowM p
   pure $ (== "/") . T.strip . T.pack $ fp
 #endif
 
@@ -193,7 +194,7 @@ isRoot' p = do
 isDots :: (MonadThrow m) => PathI i -> m Bool
 isDots (MkPathI p) = do
   let p' = FP.takeFileName p
-  fp <- decodeOsToFpThrowM p'
+  fp <- OsPath.decodeThrowM p'
   pure $ isDots' . T.unpack . T.strip . T.pack $ fp
   where
     isDots' fp = L.all (== '.') fp && not (null fp)
@@ -207,7 +208,7 @@ showPaths = L.intercalate ", " . fmap (show . view #unPathI)
 
 -- | 'PathI' to 'String'. Attempts decoding for nicer display.
 toString :: PathI i -> String
-toString (MkPathI p) = decodeOsToFpDisplayEx p
+toString (MkPathI p) = decodeDisplayEx p
 
 -- | 'PathI' to 'Text' via 'toString'.
 toText :: PathI i -> Text

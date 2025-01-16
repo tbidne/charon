@@ -14,8 +14,7 @@ tests :: IO TestEnv -> TestTree
 tests testEnv =
   testGroup
     "Convert Command"
-    ( (`convertsBackend` testEnv') <$> [minBound .. maxBound]
-    )
+    ((`convertsBackend` testEnv') <$> [minBound .. maxBound])
   where
     testEnv' = appendTestDir "convert" <$> testEnv
 

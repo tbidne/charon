@@ -50,7 +50,6 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import Numeric.Literal.Integer (FromInteger (afromInteger))
 import System.OsPath (encodeUtf)
 import System.OsPath qualified as FP
 import Unit.Prelude
@@ -79,7 +78,7 @@ tests =
                   PathData.fileName = pd ^. #fileName,
                   PathData.originalPath = pd ^. #originalPath,
                   PathData.created = pd ^. #created,
-                  PathData.size = afromInteger 5
+                  PathData.size = fromℤ 5
                 },
           fromCorePathData = \pd ->
             Fdo.PathData.UnsafePathData
@@ -113,10 +112,15 @@ newtype PathDataT a = MkPathDataT (ReaderT TestEnv IO a)
       MonadIORef,
       MonadPosixCompat,
       MonadReader TestEnv,
+      MonadThread,
       MonadThrow,
       MonadTime
     )
     via ReaderT TestEnv IO
+
+#if !WINDOWS
+deriving newtype instance MonadPosix PathDataT
+#endif
 
 runPathDataT :: BackendArgs PathDataT pd -> PathDataT a -> IO (Text, a)
 runPathDataT backendArgs (MkPathDataT x) = do
@@ -133,7 +137,7 @@ runPathDataTLogs b (MkPathDataT x) = do
 
   result <-
     runReaderT x (MkTestEnv ref (b ^. #backend) logsRef "")
-      `catchAny` \ex -> do
+      `catchSync` \ex -> do
         putStrLn "LOGS"
         readIORef logsRef >>= putStrLn . T.unpack
         putStrLn ""
@@ -153,6 +157,7 @@ instance MonadLogger PathDataT where
         MkLogFormatter
           { newline = True,
             locStrategy = LocStable l,
+            threadLabel = False,
             timezone = False
           }
 
@@ -224,11 +229,11 @@ instance MonadFileWriter PathDataT where
 
 -- No real IO!!!
 instance MonadTerminal PathDataT where
-  -- HACK: [MonadPosixCompat exception]
+  -- HACK: [MonadPosixC exception]
   --
   -- Some of our tests throw (and catch) a path exception in
   -- Charon.Utils.getPathSizeConfig because the path does not actually exist.
-  -- The failure is because MonadPosixCompat is not mocked
+  -- The failure is because MonadPosixC is not mocked
   -- (see NOTE: [getPathType]).
   --
   -- This does not effect the test as the exception is caught, but it clutters
@@ -268,7 +273,7 @@ mvTrash ::
   BackendArgs PathDataT pd ->
   TestTree
 mvTrash backendArgs = testCase "mvOriginalToTrash success" $ do
-  -- see HACK: [MonadPosixCompat exception]
+  -- see HACK: [MonadPosixC exception]
   (result, _) <- runPathDataTLogs backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts fooPath)
   windowsify "renamed \"home/path/to/foo\" to \"test/unit/.trash/files/foo\"" @=? T.unpack result
   where
@@ -284,7 +289,7 @@ mvTrashWhitespace ::
   BackendArgs PathDataT pd ->
   TestTree
 mvTrashWhitespace backendArgs = testCase "mvOriginalToTrash whitespace success" $ do
-  -- see HACK: [MonadPosixCompat exception]
+  -- see HACK: [MonadPosixC exception]
   (result, _) <- runPathDataTLogs backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts (MkPathI [osp| |]))
   windowsify "renamed \"home/ \" to \"test/unit/.trash/files/ \"" @=? T.unpack result
 
@@ -299,7 +304,7 @@ mvTrashRootError ::
   TestTree
 mvTrashRootError backendArgs = testCase desc $ do
   eformatted <-
-    tryCS @_ @RootE
+    try @_ @RootE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts rootDir)
   case eformatted of
     Right result ->
@@ -331,7 +336,7 @@ mvTrashEmptyError backendArgs = testCase desc $ do
   -- case an empty string somehow gets through.
   empty <- encodeUtf ""
   eformatted <-
-    tryCS @_ @EmptyPathE
+    try @_ @EmptyPathE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts (MkPathI empty))
   case eformatted of
     Right result ->
@@ -351,7 +356,7 @@ mvTrashDotError ::
   TestTree
 mvTrashDotError backendArgs = testCase desc $ do
   eformatted <-
-    tryCS @_ @DotsPathE
+    try @_ @DotsPathE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
   case eformatted of
     Right result ->
@@ -372,7 +377,7 @@ mvTrashDotsError ::
   TestTree
 mvTrashDotsError backendArgs = testCase desc $ do
   eformatted <-
-    tryCS @_ @DotsPathE
+    try @_ @DotsPathE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
   case eformatted of
     Right result ->
@@ -393,7 +398,7 @@ mvTrashDotsEndError ::
   TestTree
 mvTrashDotsEndError backendArgs = testCase desc $ do
   eformatted <-
-    tryCS @_ @DotsPathE
+    try @_ @DotsPathE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
   case eformatted of
     Right result ->
@@ -430,7 +435,7 @@ deriveEmptyErrorWindows backendArgs = testCase desc $ do
   -- see NOTE: [QuasiQuoter Validation]
   empty <- encodeUtf "\\"
   eformatted <-
-    tryCS @_ @FileNameEmptyE
+    try @_ @FileNameEmptyE
       $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts (MkPathI empty))
   case eformatted of
     Right result ->

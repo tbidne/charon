@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
@@ -8,14 +9,15 @@ import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryOriginalPath, TrashHome),
   )
+import Data.Char qualified as Ch
 import Data.HashSet qualified as Set
 import Data.List qualified as L
+import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
-import Effects.FileSystem.Utils qualified as FS.Utils
+import FileSystem.OsPath qualified as OsPath
 import GHC.Real (Integral (mod))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import System.FilePath qualified as FP
 import System.Random qualified as R
 import Unit.Prelude
 
@@ -39,7 +41,8 @@ getPathInfoTests =
   testGroup
     "getPathInfo"
     [ testPathSlash,
-      testDuplicate
+      testDuplicate,
+      testTrailingWhitespace
     ]
 
 testPathSlash :: TestTree
@@ -50,8 +53,8 @@ testPathSlash = testCase "Retrieves name from path ending in a /" $ do
   MkPathI [osp|path|] @=? resultFileName
   PathTypeDirectory @=? resultPathType ^. #unPathTypeW
 
-  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
 
   let errMsg =
         mconcat
@@ -67,8 +70,8 @@ testPathSlash = testCase "Retrieves name from path ending in a /" $ do
   -- suffix check rather than equality.
   assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI $ pathSeparator </> [osp|some|] </> [osp|path|] <> pathSeparator
-    expectedOrigPath = pathSeparator </> [osp|some|] </> [osp|path|]
+    slashPath = MkPathI [ospPathSep|/some/path/|]
+    expectedOrigPath = [ospPathSep|/some/path|]
 
 testDuplicate :: TestTree
 testDuplicate = testCase "Renames duplicate" $ do
@@ -78,8 +81,8 @@ testDuplicate = testCase "Renames duplicate" $ do
   MkPathI [osp|duplicate (1)|] @=? resultFileName
   PathTypeFile @=? resultPathType ^. #unPathTypeW
 
-  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
 
   let errMsg =
         mconcat
@@ -92,9 +95,45 @@ testDuplicate = testCase "Renames duplicate" $ do
 
   assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI $ pathSeparator </> [osp|a|] </> [osp|duplicate|]
-    expectedOrigPath = pathSeparator </> [osp|a|] </> [osp|duplicate|]
+    slashPath = MkPathI [ospPathSep|/a/duplicate|]
+    expectedOrigPath = [ospPathSep|/a/duplicate|]
 
+{- ORMOLU_DISABLE -}
+
+testTrailingWhitespace :: TestTree
+testTrailingWhitespace = testCase desc $ do
+  (resultFileName, resultOrigPath, resultPathType) <-
+    runTestIO $ Utils.getPathInfo trashHome testPathI
+
+  MkPathI expected @=? resultFileName
+  PathTypeFile @=? resultPathType ^. #unPathTypeW
+
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM expected
+
+  let errMsg =
+        mconcat
+          [ "Expected '",
+            expectedOrigPathStr,
+            "' to be a suffix of '",
+            resultOrigPathStr,
+            ","
+          ]
+
+  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
+  where
+    testOsPath = [ospPathSep|/some whitespace   |]
+    testPathI = MkPathI testOsPath
+
+#if WINDOWS
+    desc = "Strips trailing whitespace (windows)"
+    expected = [ospPathSep|some whitespace|]
+#else
+    desc = "Preserves trailing whitespace (unix)"
+    expected = [ospPathSep|some whitespace   |]
+#endif
+
+{- ORMOLU_ENABLE -}
 newtype TestIO a = MkTestIO (IO a)
   deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
 
@@ -108,50 +147,41 @@ instance MonadLoggerNS TestIO where
 instance MonadPathReader TestIO where
   makeAbsolute = liftIO . makeAbsolute
   doesPathExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    e1Str <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
+    e1Str <- OsPath.decodeThrowM expected
 
     pure $ e1Str `L.isSuffixOf` pathStr
     where
-      expected =
-        pathSeparator
-          </> [osp|home|]
-          </> [osp|trash|]
-          </> [osp|files|]
-          </> [osp|duplicate|]
+      expected = [ospPathSep|/home/trash/files/duplicate|]
 
   doesDirectoryExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    expectedStr <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
+    expectedStr <- OsPath.decodeThrowM expected
 
     pure $ expectedStr `L.isSuffixOf` pathStr
     where
-      expected =
-        pathSeparator
-          </> [osp|some|]
-          </> [osp|path|]
+      expected = [ospPathSep|/some/path|]
 
   doesFileExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    expectedStr <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
 
-    pure $ expectedStr `L.isSuffixOf` pathStr
+    pure $ L.any (`L.isSuffixOf` pathStr) expecteds
     where
-      expected =
-        pathSeparator
-          </> [osp|a|]
-          </> [osp|duplicate|]
+      expecteds =
+        OsPath.unsafeDecode
+          <$> [ [ospPathSep|/a/duplicate|],
+                -- unix vs. windows (windows trims whitespace apparently)
+                [ospPathSep|/some whitespace|],
+                [ospPathSep|/some whitespace   |]
+              ]
 
   pathIsSymbolicLink = liftIO . pathIsSymbolicLink
-
-pathSeparator :: OsPath
-pathSeparator = FS.Utils.unsafeEncodeFpToValidOs [FP.pathSeparator]
 
 runTestIO :: TestIO a -> IO a
 runTestIO (MkTestIO io) = io
 
 trashHome :: PathI TrashHome
-trashHome = MkPathI $ pathSeparator </> [osp|home|] </> [osp|trash|]
+trashHome = MkPathI $ [ospPathSep|/home/trash|]
 
 props :: TestTree
 props =
@@ -169,8 +199,8 @@ getPathTypePreservesBaseFileName =
 
       annotateShow r
 
-      fileName' <- liftIO $ FS.Utils.decodeOsToFpThrowM fileName
-      uniqueFileName' <- liftIO $ FS.Utils.decodeOsToFpThrowM uniqueFileName
+      fileName' <- liftIO $ OsPath.decodeThrowM fileName
+      uniqueFileName' <- liftIO $ OsPath.decodeThrowM uniqueFileName
 
       assert $ fileName' `L.isPrefixOf` uniqueFileName'
   where
@@ -182,7 +212,7 @@ newtype RandIO a = MkRandIO (IO a)
 
 runRandIO :: (MonadIO m, MonadCatch m, MonadTest m) => RandIO a -> m a
 runRandIO (MkRandIO io) = do
-  liftIO io `catchAny` \ex -> do
+  liftIO io `catchSync` \ex -> do
     annotate $ displayException ex
     failure
 
@@ -205,19 +235,33 @@ getR3 = do
   x <- R.randomRIO @Int (1, 3)
   pure $ x == 0 `mod` 3
 
-genPath :: Gen (PathI TrashEntryOriginalPath)
-genPath = MkPathI . FS.Utils.unsafeEncodeFpToOs <$> genString
+genPath :: (HasCallStack) => Gen (PathI TrashEntryOriginalPath)
+genPath = MkPathI . OsPath.unsafeEncode <$> genString
 
 genString :: Gen String
-genString = Gen.string (Range.linear 1 100) genPathChar
+genString =
+  Gen.filter badString $ Gen.string (Range.linear 1 100) genPathChar
+  where
+    badString = not . null . strip
+
+    strip =
+      T.unpack
+        . T.strip
+        . T.pack
 
 genPathChar :: Gen Char
-genPathChar = Gen.filter isGoodChar Gen.unicode
+genPathChar = Gen.filter isGoodChar Gen.ascii
   where
-    isGoodChar = not . flip Set.member (Set.fromList badChars)
+    isGoodChar = not . isBadChar
+
+    isBadChar c =
+      Ch.isControl c
+        || Ch.isSpace c
+        || (flip Set.member (Set.fromList badChars) $ c)
+
     badChars =
-      [ '\NUL',
-        '/',
+      [ '/',
         '.',
-        '\\' -- windows
+        '\\', -- windows
+        ':'
       ]

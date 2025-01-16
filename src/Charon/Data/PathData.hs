@@ -23,7 +23,6 @@ import Charon.Data.Timestamp (Timestamp)
 import Charon.Prelude
 import Charon.Utils qualified as U
 import Data.Text qualified as T
-import Effects.FileSystem.PathReader (_PathTypeDirectory)
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 
@@ -61,7 +60,7 @@ instance Display PathData where
           \x -> x <> ":  " <+> displayBuilder (pd ^. #created)
         ]
 
-      displayPath = T.pack . decodeOsToFpDisplayEx
+      displayPath = T.pack . decodeDisplayEx
 
 -- | Header names.
 headerNames :: (IsList a, IsString (Exts.Item a)) => a
@@ -80,4 +79,6 @@ originalPathExists pd =
   PathType.existsFn (pd ^. #pathType) (pd ^. (#originalPath % #unPathI))
 
 isDirectory :: PathData -> Bool
-isDirectory = is (#pathType % #unPathTypeW % _PathTypeDirectory)
+isDirectory pd = case pd ^. #pathType % #unPathTypeW of
+  PathTypeDirectory -> True
+  _ -> False

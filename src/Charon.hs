@@ -60,7 +60,7 @@ delete ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -89,7 +89,7 @@ permDelete ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadLoggerNS m,
     MonadReader env m,
     MonadTerminal m,
@@ -118,6 +118,7 @@ getIndex ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -142,6 +143,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -170,7 +172,7 @@ restore ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -198,7 +200,7 @@ emptyTrash ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -224,6 +226,7 @@ convert ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
@@ -263,8 +266,8 @@ convert dest = addNamespace "convert" $ do
           newTrashTmp = MkPathI newTrashTmpRaw
 
       fromRosettaFn newTrashTmp rosetta
-        `catchAny` \ex -> do
-          PW.removeDirectoryRecursiveIfExists newTrashTmpRaw
+        `catchSync` \ex -> do
+          PW.removeDirectoryRecursiveIfExists_ newTrashTmpRaw
           $(logError) $ "Exception writing rosetta: " <> displayExceptiont ex
           throwM ex
 
@@ -272,7 +275,7 @@ convert dest = addNamespace "convert" $ do
       oldTrashTmpRaw <- Utils.getRandomTmpFile [osp|tmp_trash_old|]
 
       renameDirectory trashHome' oldTrashTmpRaw
-        `catchAny` \ex -> do
+        `catchSync` \ex -> do
           let msg =
                 mconcat
                   [ "Exception moving old trash dir:\n",
@@ -286,7 +289,7 @@ convert dest = addNamespace "convert" $ do
 
       -- 4. Move newTrashTmp -> trash
       renameDirectory newTrashTmpRaw trashHome'
-        `catchAny` \ex -> do
+        `catchSync` \ex -> do
           let msg =
                 mconcat
                   [ "Exception moving new trash dir:\n",
@@ -339,9 +342,9 @@ merge dest = addNamespace "merge" $ do
       let msg =
             mconcat
               [ "Source path ",
-                decodeOsToFpDisplayEx $ src' ^. #unPathI,
+                decodeDisplayEx $ src' ^. #unPathI,
                 " is the same as dest path ",
-                decodeOsToFpDisplayEx $ dest' ^. #unPathI,
+                decodeDisplayEx $ dest' ^. #unPathI,
                 ". Nothing to do."
               ]
       $(logInfo) $ T.pack msg

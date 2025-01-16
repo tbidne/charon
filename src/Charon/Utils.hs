@@ -55,7 +55,10 @@ module Charon.Utils
   )
 where
 
-import Charon.Backend.Default.Exception (TrashDirFilesNotFoundE, TrashDirInfoNotFoundE)
+import Charon.Backend.Default.Exception
+  ( TrashDirFilesNotFoundE,
+    TrashDirInfoNotFoundE,
+  )
 import Charon.Exception
   ( BackendDetectE,
     DotsPathE,
@@ -76,10 +79,13 @@ import Charon.Exception
     UniquePathNotPrefixE,
   )
 import Charon.Prelude
+import Control.Exception (Exception (toException), SomeException (SomeException))
+import Control.Exception.Annotation.Utils (ExceptionProxy (MkExceptionProxy))
+import Control.Exception.Annotation.Utils qualified as AnnUtils
+import Control.Exception.Utils (TextException)
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Lazy qualified as BSL
-import Data.Bytes (FromInteger (afromInteger))
 import Data.Bytes qualified as Bytes
 import Data.Bytes.Class.RawNumeric (RawNumeric (Raw))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
@@ -94,12 +100,11 @@ import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime, UTCTime)
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
-import Effects.Exception (ExceptionProxy (MkExceptionProxy))
-import Effects.Exception qualified as Ex
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.System.PosixCompat qualified as Posix
 import Effects.Time (MonadTime (getMonotonicTime))
+import FileSystem.OsPath qualified as OsPath
 import PathSize
   ( PathSizeResult
       ( PathSizeFailure,
@@ -315,7 +320,7 @@ getPathSize ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   OsPath ->
@@ -328,7 +333,7 @@ getPathSizeIgnoreDirSize ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   OsPath ->
@@ -343,7 +348,7 @@ getPathSizeConfig ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   PathSize.Config ->
@@ -353,7 +358,7 @@ getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
   fmap (MkBytes @B)
     $ PathSize.pathSizeRecursiveConfig config path
     >>= \case
-      PathSizeSuccess n -> pure n
+      PathSizeSuccess n -> pure $ fromℤ n
       PathSizePartial errs n -> do
         -- We received a value but had some errors.
         putStrLn "Encountered errors retrieving size."
@@ -361,7 +366,7 @@ getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
           let errMsg = T.pack $ displayException e
           putTextLn errMsg
           $(logWarn) errMsg
-        pure n
+        pure $ fromℤ n
       PathSizeFailure errs -> do
         putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
         for_ errs $ \e -> do
@@ -379,7 +384,7 @@ getAllFiles ::
   OsPath ->
   m [OsPath]
 getAllFiles fp = addNamespace "getAllFiles" $ do
-  $(logTrace) $ "Retrieving files for: " <> decodeOsToFpDisplayExT fp
+  $(logTrace) $ "Retrieving files for: " <> decodeDisplayExT fp
   -- see NOTE: [getPathType]
   getPathType fp >>= \case
     PathTypeSymbolicLink -> pure [fp]
@@ -420,11 +425,11 @@ getRandomTmpFile prefix = addNamespace "getRandomTmpFile" $ do
   -- Is getMonotonicTimeNSec less likely to have collisions than
   -- getMonotonicTime? If so, consider switching. We can also add a random
   -- number if we are feeling paranoid.
-  timeStr <- encodeFpToOsThrowM . show =<< getMonotonicTime
+  timeStr <- OsPath.encodeValidThrowM . show =<< getMonotonicTime
   tmpDir <- PR.getTemporaryDirectory
 
   let tmpFile = tmpDir </> prefix <> [osp|_|] <> timeStr
-  $(logDebug) $ "Generated temp file: " <> decodeOsToFpDisplayExT tmpFile
+  $(logDebug) $ "Generated temp file: " <> decodeDisplayExT tmpFile
 
   pure tmpFile
 
@@ -436,9 +441,9 @@ getSymLinkSize ::
   OsPath ->
   m (Bytes B Natural)
 getSymLinkSize =
-  fmap (afromInteger . fromIntegral . PFiles.fileSize)
+  fmap (fromℤ . fromIntegral . PFiles.fileSize)
     . Posix.getSymbolicLinkStatus
-    <=< decodeOsToFpThrowM
+    <=< OsPath.decodeThrowM
 
 -- | Retrieves the path type. Used so we can wrap with a custom exception,
 -- for the purpose of ignoring callstacks.
@@ -458,10 +463,14 @@ getPathType p =
   --
   -- If we figure out how to mock it (or make the tests realer), we can then
   -- swap it.
-  PR.getPathType p `catchCS` \(_ :: IOException) -> throwM $ MkPathNotFound p
+  PR.getPathType p `catch` \(_ :: IOException) -> throwM $ MkPathNotFound p
 
 displayEx :: (Exception e) => e -> String
-displayEx = Ex.displayCSNoMatch noCallstacks
+displayEx ex =
+  if AnnUtils.matchesException noCallstacks ex
+    then case toException ex of
+      SomeException innerEx -> displayException innerEx
+    else displayException ex
 
 displayExT :: (Exception e) => e -> Text
 displayExT = T.pack . displayEx
@@ -469,23 +478,24 @@ displayExT = T.pack . displayEx
 -- see NOTE: [Callstacks]
 noCallstacks :: [ExceptionProxy]
 noCallstacks =
-  [ MkExceptionProxy $ Proxy @BackendDetectE,
-    MkExceptionProxy $ Proxy @DotsPathE,
-    MkExceptionProxy $ Proxy @EmptyPathE,
-    MkExceptionProxy $ Proxy @EmptySearchResults,
-    MkExceptionProxy $ Proxy @FileNameEmptyE,
-    MkExceptionProxy $ Proxy @InfoDecodeE,
-    MkExceptionProxy $ Proxy @PathNotFound,
-    MkExceptionProxy $ Proxy @RenameDuplicateE,
-    MkExceptionProxy $ Proxy @RestoreCollisionE,
-    MkExceptionProxy $ Proxy @RootE,
-    MkExceptionProxy $ Proxy @SomethingWentWrong,
-    MkExceptionProxy $ Proxy @TrashDirFilesNotFoundE,
-    MkExceptionProxy $ Proxy @TrashDirInfoNotFoundE,
-    MkExceptionProxy $ Proxy @TrashEntryNotFoundE,
-    MkExceptionProxy $ Proxy @TrashEntryWildcardNotFoundE,
-    MkExceptionProxy $ Proxy @TrashEntryFileNotFoundE,
-    MkExceptionProxy $ Proxy @TrashEntryInfoNotFoundE,
-    MkExceptionProxy $ Proxy @TrashEntryInfoBadExtE,
-    MkExceptionProxy $ Proxy @UniquePathNotPrefixE
+  [ MkExceptionProxy @BackendDetectE,
+    MkExceptionProxy @DotsPathE,
+    MkExceptionProxy @EmptyPathE,
+    MkExceptionProxy @EmptySearchResults,
+    MkExceptionProxy @FileNameEmptyE,
+    MkExceptionProxy @InfoDecodeE,
+    MkExceptionProxy @PathNotFound,
+    MkExceptionProxy @RenameDuplicateE,
+    MkExceptionProxy @RestoreCollisionE,
+    MkExceptionProxy @RootE,
+    MkExceptionProxy @SomethingWentWrong,
+    MkExceptionProxy @TextException,
+    MkExceptionProxy @TrashDirFilesNotFoundE,
+    MkExceptionProxy @TrashDirInfoNotFoundE,
+    MkExceptionProxy @TrashEntryNotFoundE,
+    MkExceptionProxy @TrashEntryWildcardNotFoundE,
+    MkExceptionProxy @TrashEntryFileNotFoundE,
+    MkExceptionProxy @TrashEntryInfoNotFoundE,
+    MkExceptionProxy @TrashEntryInfoBadExtE,
+    MkExceptionProxy @UniquePathNotPrefixE
   ]

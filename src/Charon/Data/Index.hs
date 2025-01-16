@@ -44,6 +44,7 @@ import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
 import Effects.System.Terminal qualified as Term
+import FileSystem.OsPath qualified as OsPath
 import GHC.Real (RealFrac (floor))
 import System.Console.Pretty (Color (Blue, Green, Magenta))
 
@@ -213,7 +214,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
       pathLen :: PathI i -> m Natural
       pathLen (MkPathI p) = do
-        p' <- decodeOsToFpThrowM p
+        p' <- OsPath.decodeThrowM p
         pure $ fromIntegral $ length p'
 
       -- Map the format to its strategy
@@ -278,21 +279,21 @@ mkDynamicLen tMax cMin cMax dLen =
             pure (max (tMax - dLen) cMin)
           else -- 3. Requested dLen > tMax. We are going to wrap regardless,
           -- so use cMin.
-          do
-            $(logWarn)
-              $ mconcat
-                [ "Requested other length (",
-                  showt dLen,
-                  ") > calculated terminal space (",
-                  showt tMax,
-                  "). Falling back to minimum len: ",
-                  showt cMin
-                ]
-            pure cMin
+            do
+              $(logWarn)
+                $ mconcat
+                  [ "Requested other length (",
+                    showt dLen,
+                    ") > calculated terminal space (",
+                    showt tMax,
+                    "). Falling back to minimum len: ",
+                    showt cMin
+                  ]
+              pure cMin
 
 getTerminalLen :: (MonadCatch m, MonadLoggerNS m, MonadTerminal m) => m Natural
 getTerminalLen = addNamespace "getTerminalLen" $ do
-  tryAny getTerminalWidth >>= \case
+  trySync getTerminalWidth >>= \case
     Right w -> pure w
     Left err -> do
       $(logWarn)

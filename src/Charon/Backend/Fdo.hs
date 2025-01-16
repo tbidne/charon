@@ -80,10 +80,8 @@ import Effects.FileSystem.PathWriter
     TargetName (TargetNameDest),
   )
 import Effects.FileSystem.PathWriter qualified as PW
-import Effects.System.PosixCompat (_PathTypeDirectory)
 import GHC.Exts (IsList (toList))
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
-import Numeric.Literal.Integer (FromInteger (afromInteger))
 import System.OsPath qualified as OsP
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
@@ -104,7 +102,7 @@ delete ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -114,7 +112,7 @@ delete ::
 delete paths = do
   let appendDirectorySize :: (Fdo.PathData.PathData, PathTypeW, PathI TrashEntryPath) -> m ()
       appendDirectorySize (pd, pathType, MkPathI newPath) = addNamespace "appendDirectorySize"
-        $ when (is (#unPathTypeW % _PathTypeDirectory) pathType)
+        $ when (PathType.isDirectory pathType)
         $ do
           -- In FDO's directorysizes spec, the listed size does not include
           -- the directory itself. That is, while getPathSize calculates
@@ -162,7 +160,7 @@ permDelete ::
     MonadPathWriter m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -186,6 +184,7 @@ getIndex ::
     MonadPathReader m,
     MonadLoggerNS m,
     MonadReader env m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadTerminal m
   ) =>
@@ -215,6 +214,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -243,7 +243,7 @@ restore ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -267,7 +267,7 @@ emptyTrash ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -302,10 +302,10 @@ merge src dest = addNamespace "merge" $ do
   PW.renameFile directorySizesPath tmpDirSizesPath
 
   PW.copyDirectoryRecursiveConfig config src' dest'
-    `catchAnyCS` \ex -> do
+    `catchSync` \ex -> do
       PW.renameFile tmpDirSizesPath directorySizesPath
       $(logError) $ "Error merging directories: " <> displayExceptiont ex
-      throwCS ex
+      throwM ex
 
   -- If we reach here then we know the copy succeeded, hence src and dest
   -- have no clashes. Thus it is safe to combine the directorysizes
@@ -328,6 +328,7 @@ toRosetta ::
     MonadLoggerNS m,
     MonadFileReader m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -381,9 +382,9 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
     let msg =
           mconcat
             [ "Copying '",
-              decodeOsToFpDisplayExT oldTrashPath,
+              decodeDisplayExT oldTrashPath,
               "' to '",
-              decodeOsToFpDisplayExT newTrashPath
+              decodeDisplayExT newTrashPath
             ]
     $(logDebug) msg
 
@@ -463,7 +464,7 @@ isFdo ::
 isFdo trashHome@(MkPathI th) = addNamespace "isFdo" $ do
   exists <-
     Default.Trash.doesTrashExistPath trashHome
-      `catchAnyCS` \_ -> pure False
+      `catchSync` \_ -> pure False
   if exists
     then do
       let directorysizesPath = th </> [osp|directorysizes|]
@@ -483,7 +484,7 @@ isFdo trashHome@(MkPathI th) = addNamespace "isFdo" $ do
             -- Trash dir has at least one file: iff ext matches fdo.
             (f : _) -> do
               let ext = OsP.takeExtension f
-              $(logTrace) $ "Found file with extension " <> decodeOsToFpDisplayExT ext
+              $(logTrace) $ "Found file with extension " <> decodeDisplayExT ext
               pure $ Just $ Backend.backendExt BackendFdo == ext
     else do
       -- Trash does not exist or it is not a well-formed fdo backend: Definitely
@@ -519,4 +520,4 @@ sizeMinusDir size@(MkBytes sz) path = addNamespace "sizeMinusDir" $ do
                 " bytes). Clamping to 0."
               ]
       $(logWarn) msg
-      pure $ afromInteger 0
+      pure $ fromℤ 0

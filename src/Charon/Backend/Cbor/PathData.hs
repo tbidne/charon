@@ -29,6 +29,7 @@ import Charon.Utils qualified as Utils
 import Codec.Serialise qualified as Serialise
 import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
+import FileSystem.OsPath qualified as OsPath
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -60,7 +61,7 @@ toPathData ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   Timestamp ->
@@ -87,7 +88,7 @@ instance Serial PathData where
 
   encode :: PathData -> Either String ByteString
   encode (UnsafePathData pathType _ (MkPathI opath) ts (MkBytes sz)) =
-    case decodeOsToFp opath of
+    case OsPath.decode opath of
       Right opath' -> pure $ BSL.toStrict $ Serialise.serialise (pathType, opath', ts, sz)
       Left ex -> Left $ displayException ex
 
@@ -95,7 +96,7 @@ instance Serial PathData where
   decode name bs = do
     (pathType, opath, created, size) <- first show $ Serialise.deserialiseOrFail (BSL.fromStrict bs)
 
-    case encodeFpToOs opath of
+    case OsPath.encodeValid opath of
       Right opath' ->
         Right
           $ UnsafePathData

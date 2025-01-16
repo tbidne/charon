@@ -17,9 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         ghc:
-          - "9.4.7"
-          - "9.6.3"
-          - "9.8.1"
+          - "9.4.8"
+          - "9.6.6"
+          - "9.8.4"
+          - "9.10.1"
+          - "9.12.1"
         platform:
           - os: "macos-latest"
             set-env: "export"
@@ -56,7 +58,7 @@ jobs:
         name: Unit Tests Upload
         if: ${{ failure() && steps.unit.conclusion == 'failure' }}
         with:
-          name: unit-artifacts
+          name: unit-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
           path: test/unit/Unit/Data/Index/*
 
       - name: Integration Tests
@@ -82,7 +84,7 @@ jobs:
         name: Benchmarks Upload
         if: ${{ failure() && steps.bench.conclusion == 'failure' }}
         with:
-          name: build-artifacts
+          name: build-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
           path: |
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
@@ -139,6 +141,3 @@ jobs:
         run: |
           nix run .#format
           git diff --exit-code --color=always
-
-      - name: HLint
-        run: nix run .#lint

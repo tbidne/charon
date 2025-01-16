@@ -100,21 +100,24 @@ library
   build-depends:
     , aeson                 >=2.0       && <2.3
     , algebra-simple        ^>=0.1
-    , base                  >=4.17.0.0  && <4.20
+    , base                  >=4.17.0.0  && <4.22
     , bytestring            >=0.11.1.0  && <0.13
     , containers            >=0.6.3.1   && <0.8
     , deepseq               >=1.4.6.0   && <1.6
     , effects-async         ^>=0.1
-    , effects-exceptions    ^>=0.1
     , effects-fs            ^>=0.1
     , effects-ioref         ^>=0.1
     , effects-logger-ns     ^>=0.1
     , effects-optparse      ^>=0.1
     , effects-terminal      ^>=0.1
+    , effects-thread        ^>=0.1
     , effects-time          ^>=0.1
     , effects-unix-compat   ^>=0.1
+    , exception-utils       ^>=0.1
+    , exceptions            ^>=0.10.4
     , filepath              >=1.4.2.1   && <1.6
-    , hashable              ^>=1.4.0.2
+    , fs-utils              ^>=0.1
+    , hashable              >=1.4.0.2   && <1.6
     , mtl                   >=2.2.1     && <2.4
     , nonempty-containers   >=0.3.4.2   && <0.4
     , optics-core           ^>=0.4
@@ -125,13 +128,16 @@ library
     , serialise             ^>=0.2.6.0
     , si-bytes              ^>=0.1
     , text                  >=1.2.4.0   && <2.2
-    , text-display          >=0.0.3.0   && <0.6
-    , time                  >=1.9.3     && <1.14
+    , text-display          >=0.0.3.0   && <1.1
+    , time                  >=1.9.3     && <1.15
     , toml-reader           >=0.2.0.0   && <0.3
     , unix-compat           >=0.6       && <0.8
     , unordered-containers  ^>=0.2.14.0
     , uri-bytestring        ^>=0.3.3.1
     , vector                >=0.12.3.0  && <0.14
+
+  if !os(windows)
+    build-depends: effects-unix ^>=0.1
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -143,7 +149,7 @@ library test-utils
     , base
     , charon
     , effects-fs
-    , hedgehog              >=1.0.2 && <1.5
+    , hedgehog              >=1.0.2 && <1.6
     , tasty-hunit           >=0.9   && <0.11
     , text
     , unordered-containers
@@ -158,7 +164,7 @@ executable charon
   build-depends:
     , base
     , charon
-    , effects-exceptions
+    , exception-utils
 
   hs-source-dirs:     app
   ghc-options:        -threaded -with-rtsopts=-N
@@ -194,7 +200,7 @@ test-suite unit
     , hedgehog
     , nonempty-containers
     , pretty-simple         >=4.0.0.0  && <4.2
-    , random                ^>=1.2.1.1
+    , random                >=1.2.1.1  && <1.4
     , tasty                 >=1.1.0.3  && <1.6
     , tasty-golden          ^>=2.3.1.1
     , tasty-hedgehog        >=1.2.0.0  && <1.5
@@ -260,7 +266,6 @@ test-suite functional
     Functional.Prelude.FuncEnv
 
   build-depends:
-    , algebra-simple
     , base
     , charon
     , effects-fs
@@ -293,7 +298,7 @@ benchmark benchmarks
     , charon
     , effects-fs
     , env-guard
-    , tasty-bench  ^>=0.3
+    , tasty-bench  >=0.3 && <0.5
     , test-utils
 
   ghc-options:      -Wno-unused-packages

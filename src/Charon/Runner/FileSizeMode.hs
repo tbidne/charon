@@ -22,7 +22,7 @@ data FileSizeMode
   deriving stock (Eq, Show)
 
 defaultSizeMode :: FileSizeMode
-defaultSizeMode = FileSizeModeDelete $ Bytes.convert Proxy fiftyMb
+defaultSizeMode = FileSizeModeDelete $ Bytes.convert_ fiftyMb
   where
     fiftyMb = MkBytes @M 50
 
@@ -40,7 +40,7 @@ parseFileSizeMode txt = do
 parseByteText :: Text -> Either Text (Bytes B Natural)
 parseByteText txt =
   case Bytes.parse @(SomeSize Natural) txt of
-    Right b -> Right $ Bytes.convert (Proxy @B) b
+    Right b -> Right $ Bytes.convert_ @_ @B b
     Left _ -> case Bytes.parse @(SomeSize Double) txt of
-      Right b -> Right (truncate <$> Bytes.convert (Proxy @B) b)
+      Right b -> Right (truncate <$> Bytes.convert_ @_ @B b)
       Left err -> Left err

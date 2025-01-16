@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -105,6 +106,10 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
     )
     via (ReaderT env IO)
 
+#if !WINDOWS
+deriving newtype instance MonadPosix (IntPure env)
+#endif
+
 instance MonadTerminal (IntPure IntPureEnv) where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
   getChar = pure 'y'
@@ -168,7 +173,7 @@ captureCharonIntExceptionPure argList = do
   (toml, cmd) <- getConfig
   env <- mkIntPureEnv toml terminalRef deletedPathsRef
 
-  result <- tryCS @_ @e $ runIntPure (Runner.runCmd cmd) env
+  result <- try @_ @e $ runIntPure (Runner.runCmd cmd) env
 
   case result of
     Right _ ->

@@ -64,7 +64,6 @@ import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
 import Numeric.Algebra.Additive.ASemigroup (ASemigroup ((.+.)))
-import Numeric.Literal.Rational (FromRational (afromRational))
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -135,7 +134,7 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
         putStrLn
           $ mconcat
             [ "Error deleting path '",
-              decodeOsToFpDisplayEx $ p ^. #unPathI,
+              decodeDisplayEx $ p ^. #unPathI,
               "': ",
               Utils.displayEx ex,
               "\n"
@@ -144,7 +143,7 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
 
   -- move paths to trash
   for_ paths $ \p -> do
-    tryAnyCS (deleteAction p) >>= \case
+    trySync (deleteAction p) >>= \case
       Left ex -> handleEx p ex
       Right pd -> postHook pd
 
@@ -213,12 +212,12 @@ permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePo
   addNamespace "deleting" $ for_ paths $ \p ->
     -- Record error if any occurred
     (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfTrue anyErrorRef)
-      `catchAnyCS` \ex -> do
+      `catchSync` \ex -> do
         $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
             [ "Error permanently deleting path '",
-              decodeOsToFpDisplayEx $ p ^. #unPathI,
+              decodeDisplayEx $ p ^. #unPathI,
               "': ",
               Utils.displayEx ex,
               "\n"
@@ -299,7 +298,7 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
           then Bytes.normalize . toDouble . MkBytes @B <$> getFileSize logPath
           else do
             $(logTrace) "Log does not exist"
-            pure (afromRational 0)
+            pure (fromℚ 0)
 
       -- TODO: Utils.getAllFiles is unfortunately expensive for many files
       -- (e.g. ~10s for 120,000 files). Maybe PosixCompat can help?
@@ -388,12 +387,12 @@ restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
   addNamespace "restoring" $ for_ paths $ \p ->
     -- Record error if any occurred
     (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfTrue anyErrorRef)
-      `catchAnyCS` \ex -> do
+      `catchSync` \ex -> do
         $(logError) (Utils.displayExT ex)
         putStrLn
           $ mconcat
             [ "Error restoring path '",
-              decodeOsToFpDisplayEx $ p ^. #unPathI,
+              decodeDisplayEx $ p ^. #unPathI,
               "': ",
               Utils.displayEx ex,
               "\n"
