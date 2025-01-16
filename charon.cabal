@@ -4,7 +4,7 @@ version:            0.1
 license:            MIT
 license-file:       LICENSE
 tested-with:        GHC ==9.4.7 || ==9.6.3 || ==9.8.1
-copyright:          2022-2023 Thomas Bidne
+copyright:          2022-2025 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
 homepage:           https://github.com/tbidne/charon/
