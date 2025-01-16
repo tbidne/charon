@@ -52,7 +52,7 @@ jobs:
         run: |
           cabal test unit --test-options '--hedgehog-tests ${{ matrix.platform.unit-trials }}'
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         name: Unit Tests Upload
         if: ${{ failure() && steps.unit.conclusion == 'failure' }}
         with:
@@ -78,7 +78,7 @@ jobs:
             --fail-if-slower 50
             --fail-if-faster 50'
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         name: Benchmarks Upload
         if: ${{ failure() && steps.bench.conclusion == 'failure' }}
         with:
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup nix
-        uses: cachix/install-nix-action@v25
+        uses: cachix/install-nix-action@v30
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           nix_path: nixpkgs=channel:nixos-unstable
@@ -130,7 +130,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup nix
-        uses: cachix/install-nix-action@v25
+        uses: cachix/install-nix-action@v30
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           nix_path: nixpkgs=channel:nixos-unstable
