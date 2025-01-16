@@ -43,6 +43,7 @@ import Charon.Prelude
 import Charon.Utils qualified as U
 import Data.Char qualified as Ch
 import Data.Text qualified as T
+import FileSystem.OsPath qualified as OsPath
 import System.Console.Pretty (Color)
 import System.Console.Pretty qualified as CPretty
 
@@ -145,7 +146,7 @@ sortCreated = mapOrd (view #created)
 
 -- | Sorts by the name.
 sortName :: PathData -> PathData -> Ordering
-sortName pd1 pd2 = case liftA2 (,) (decodeOsToFp p1) (decodeOsToFp p2) of
+sortName pd1 pd2 = case liftA2 (,) (OsPath.decode p1) (OsPath.decode p2) of
   -- NOTE: Decoding to string is the default ordering. If for some reason this
   -- fails, fall back to OsPaths' ordering.
   Right (s1, s2) -> mapOrd (fmap Ch.toLower) s1 s2
@@ -176,7 +177,7 @@ formatSingleline' f pd =
     $ mconcat
       [ Timestamp.toTextSpace $ pd ^. #created,
         " ",
-        T.pack $ decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI
+        T.pack $ decodeDisplayEx $ pd ^. #originalPath % #unPathI
       ]
 
 formatTabularHeader :: Natural -> Natural -> Text
@@ -239,9 +240,9 @@ formatTabularRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
 formatTabularRow' f nameLen origLen pd =
   f
     $ mconcat
-      [ fixLen' nameLen (decodeOsToFpDisplayEx $ pd ^. #fileName % #unPathI),
+      [ fixLen' nameLen (decodeDisplayEx $ pd ^. #fileName % #unPathI),
         sep,
-        fixLen' origLen (decodeOsToFpDisplayEx $ pd ^. #originalPath % #unPathI),
+        fixLen' origLen (decodeDisplayEx $ pd ^. #originalPath % #unPathI),
         sep,
         paddedType (pd ^. (#pathType % #unPathTypeW)),
         sep,

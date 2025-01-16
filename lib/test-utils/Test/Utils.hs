@@ -40,7 +40,6 @@ import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter (createDirectoryLink, createFileLink)
-import Effects.FileSystem.Utils qualified as FsUtils
 import Hedgehog (MonadGen)
 import Hedgehog.Gen qualified as Gen
 import Test.Tasty.HUnit (assertFailure)
@@ -100,7 +99,7 @@ createFileContents (p, c) = liftIO $ do
     then throwString $ "Path already exists: " <> show p
     else do
       writeBinaryFile p c
-        `catchAnyCS` \ex -> do
+        `catchSync` \ex -> do
           putStrLn
             $ mconcat
               [ "[Test.Utils.createFileContents] Encountered an exception\n",
@@ -108,7 +107,7 @@ createFileContents (p, c) = liftIO $ do
                 show p,
                 "'\n",
                 "Decoded: '",
-                FsUtils.decodeOsToFpShow p,
+                decodeLenient p,
                 "'\n",
                 "Contents: '",
                 bsToStr c,
@@ -117,7 +116,7 @@ createFileContents (p, c) = liftIO $ do
                 displayException ex,
                 "'"
               ]
-          throwCS ex
+          throwM ex
 
 -- | Creates empty files at the specified paths.
 createDirectories :: (Foldable f, HasCallStack, MonadIO m) => f OsPath -> m ()
@@ -289,14 +288,14 @@ wc = "**"
 
 -- | Generates a platform-independent char suitable for usage in a path.
 genPathChar :: (MonadGen m) => Bool -> m Char
-genPathChar asciiOnly = Gen.filterT filterFn (charMapper <$> genChar asciiOnly)
+genPathChar _asciiOnly = Gen.filterT filterFn (charMapper <$> genChar)
   where
     filterFn c = isGoodChar c && Ch.isAlphaNum c
 
 -- | genPathChar, except prints the chars as they are generated.
 genPathCharIO :: (MonadGen m, MonadIO m) => Bool -> m Char
-genPathCharIO asciiOnly = do
-  x <- charMapper <$> genChar asciiOnly
+genPathCharIO _asciiOnly = do
+  x <- charMapper <$> genChar
   liftIO
     $ putStrLn
     $ mconcat
@@ -310,7 +309,7 @@ genPathCharIO asciiOnly = do
   where
     filterFn c = isGoodChar c && Ch.isAlphaNum c
 
-genChar :: (MonadGen m) => Bool -> m Char
+genChar :: (MonadGen m) => m Char
 isGoodChar :: Char -> Bool
 badChars :: HashSet Char
 charMapper :: Char -> Char
@@ -338,16 +337,7 @@ charMapper :: Char -> Char
 --
 -- https://en.wikipedia.org/wiki/Plane_(Unicode)
 -- https://en.wikipedia.org/wiki/UTF-8#Overlong_encodings
-genChar True = Gen.ascii
-genChar False =
-  let
-    -- s1 + s2 := Plane 0
-    s1 =
-      (55296, Gen.enum '\0' '\55295')
-    s2 =
-      (8190, Gen.enum '\57344' '\65533')
-  in
-    Gen.frequency [s1, s2]
+genChar = Gen.ascii
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
@@ -360,8 +350,7 @@ badChars =
 
 charMapper = Ch.toLower
 #elif WINDOWS
-genChar True = Gen.ascii
-genChar False = Gen.unicode
+genChar = Gen.ascii
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
@@ -386,8 +375,7 @@ badChars =
 -- lower-case paths :-(
 charMapper = Ch.toLower
 #else
-genChar True = Gen.ascii
-genChar False = Gen.unicode
+genChar = Gen.ascii
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 

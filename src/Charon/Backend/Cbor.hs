@@ -70,7 +70,7 @@ delete ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -93,7 +93,7 @@ permDelete ::
     MonadPathWriter m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   Bool ->
@@ -113,7 +113,7 @@ getIndex ::
     MonadPathReader m,
     MonadLoggerNS m,
     MonadReader env m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   m Index
@@ -136,7 +136,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -156,7 +156,7 @@ restore ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -176,7 +176,7 @@ emptyTrash ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -206,7 +206,7 @@ toRosetta ::
     MonadLoggerNS m,
     MonadFileReader m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -258,9 +258,9 @@ fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
     let msg =
           mconcat
             [ "Copying '",
-              decodeOsToFpDisplayExT oldTrashPath,
+              decodeDisplayExT oldTrashPath,
               "' to '",
-              decodeOsToFpDisplayExT newTrashPath
+              decodeDisplayExT newTrashPath
             ]
     $(logDebug) msg
 
@@ -295,7 +295,7 @@ isCbor trashHome@(MkPathI th) = addNamespace "isCbor" $ do
   $(logTrace) "In isCbor"
   exists <-
     Default.Trash.doesTrashExistPath trashHome
-      `catchAnyCS` \_ -> pure False
+      `catchSync` \_ -> pure False
   if exists
     then do
       let directorysizesPath = th </> [osp|directorysizes|]
@@ -315,7 +315,7 @@ isCbor trashHome@(MkPathI th) = addNamespace "isCbor" $ do
             -- Trash dir has at least one file: iff ext matches cbor.
             (f : _) -> do
               let ext = OsP.takeExtension f
-              $(logTrace) $ "Found file with extension " <> decodeOsToFpDisplayExT ext
+              $(logTrace) $ "Found file with extension " <> decodeDisplayExT ext
               pure $ Just $ Backend.backendExt BackendCbor == ext
     else do
       -- Trash does not exist or it is not a well-formed cbor backend: Definitely

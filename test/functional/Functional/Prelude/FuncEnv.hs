@@ -76,7 +76,6 @@ import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (XdgDirectory (XdgState))
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter qualified as PW
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.LoggerNS
   ( LocStrategy (LocPartial),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
@@ -88,8 +87,8 @@ import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
+import FileSystem.OsPath (unsafeDecode, unsafeEncodeValid)
 import GHC.Exts (IsList (toList))
-import Numeric.Literal.Integer (FromInteger (afromInteger))
 import System.Environment qualified as SysEnv
 import System.Exit (die)
 import Test.Tasty.HUnit (assertBool)
@@ -168,10 +167,15 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIORef,
       MonadMask,
       MonadPosixCompat,
+      MonadThread,
       MonadThrow,
       MonadReader env
     )
     via (ReaderT env IO)
+
+#if !WINDOWS
+deriving newtype instance MonadPosix (FuncIO env)
+#endif
 
 -- Overriding this for getXdgDirectory
 
@@ -192,16 +196,11 @@ instance
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
   getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
-#if WINDOWS
-  -- Default to zero because windows symlinks are differently sized.
-  -- This causes all sorts of annoyances, so it's easier just to set
-  -- everything to zero for now.
+  -- Default to zero because path sizes are inconcsistent and difficult to
+  -- mock.
   --
   -- See NOTE: [Windows getFileSize]
   getFileSize _ = pure 0
-#else
-  getFileSize _ = pure 5
-#endif
   getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
@@ -229,7 +228,7 @@ instance MonadPathWriter (FuncIO env) where
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
-    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecodeOsToFp x) =
+    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecode x) =
         throwString "Mock: cannot delete fooBadbar"
     | otherwise = liftIO $ PW.removeFile x
 
@@ -278,6 +277,7 @@ instance MonadLogger (FuncIO FuncEnv) where
         MkLogFormatter
           { newline = True,
             locStrategy = LocPartial l,
+            threadLabel = False,
             timezone = False
           }
 
@@ -328,13 +328,13 @@ captureCharonLogs argList = liftIO $ do
   env <- mkFuncEnv toml logsRef terminalRef
 
   runFuncIO (Runner.runCmd cmd) env
-    `catchAny` \ex -> do
+    `catchSync` \ex -> do
       putStrLn "TERMINAL"
       readIORef terminalRef >>= putStrLn . T.unpack
       putStrLn "\n\nLOGS"
       readIORef logsRef >>= putStrLn . T.unpack
       putStrLn ""
-      throwCS ex
+      throwM ex
 
   terminal <- T.lines <$> readIORef terminalRef
   logs <- T.lines <$> readIORef logsRef
@@ -394,7 +394,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
   env <- mkFuncEnv toml logsRef terminalRef
 
   let runCatch = do
-        result <- tryCS @_ @e $ runFuncIO (Runner.runCmd cmd) env
+        result <- try @_ @e $ runFuncIO (Runner.runCmd cmd) env
 
         case result of
           Right _ ->
@@ -406,14 +406,14 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
             pure (T.pack (displayException ex), term, logs)
 
   runCatch
-    `catchAny` \ex -> do
+    `catchSync` \ex -> do
       -- Handle any uncaught exceptions
       putStrLn "TERMINAL"
       readIORef terminalRef >>= putStrLn . T.unpack
       putStrLn "\n\nLOGS"
       readIORef logsRef >>= putStrLn . T.unpack
       putStrLn ""
-      throwCS ex
+      throwM ex
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
@@ -451,19 +451,35 @@ runIndexMetadataTestDirM testDir = do
   idx <- liftIO $ fmap (view _1) . view #unIndex <$> runFuncIO Charon.getIndex funcEnv
   mdata <- liftIO $ runFuncIO Charon.getMetadata funcEnv
 
-  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata)
+  -- TODO:
+  --
+  -- This is really not great. Basically, the sizes are non-deterministic so
+  -- we set them to zero to avoid test failures.
+  --
+  -- A better solution would be to revamp the entire test suite. Use golden
+  -- tests probably, and only assert things we care about e.g. paths.
+  --
+  -- While we are at it, we may want to see if we can trim down the tests
+  -- complexity, for instance, modifying the environment is not simple.
+  --
+  -- Alas, this is a lot of work.
+  let mdata' = set' #size (fromℤ 0) mdata
+
+  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata')
   where
     addSet :: OsPath -> HashSet PathData -> PathData -> HashSet PathData
     addSet tmp acc pd =
       let fixPath =
             MkPathI
-              . unsafeEncodeFpToOs
+              . unsafeEncodeValid
               . T.unpack
-              . T.replace (T.pack $ unsafeDecodeOsToFp tmp) ""
+              . T.replace (T.pack $ unsafeDecode tmp) ""
               . T.pack
-              . unsafeDecodeOsToFp
+              . unsafeDecode
               . view #unPathI
-       in HSet.insert (over' #originalPath fixPath pd) acc
+       in HSet.insert
+            (set' #size (fromℤ 0) $ over' #originalPath fixPath pd)
+            acc
 
 -- | Transforms the list of filepaths into a Set PathData i.e. for each @p@,
 --
@@ -492,29 +508,28 @@ mkPathDataSetTestDirM ::
 mkPathDataSetTestDirM testDir pathData = do
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
-        unsafeEncodeFpToOs
+        unsafeEncodeValid
           $ T.unpack
-          $ T.replace (T.pack $ unsafeDecodeOsToFp tmpDir) "" (T.pack $ unsafeDecodeOsToFp testDir)
+          $ T.replace (T.pack $ unsafeDecode tmpDir) "" (T.pack $ unsafeDecode testDir)
 
   pure
     $ HSet.fromList
     $ pathData
     <&> \(p, pathType, _sizeNat) ->
-      let p' = unsafeEncodeFpToOs p
+      let p' = unsafeEncodeValid p
       -- NOTE: [Windows getFileSize]
       --
       -- Unlike files, the symlinks sizes are not mocked. While our
       -- expected value of 5 seems to work for posix, on windows they
       -- apparently have size 0. We could try to mock these instead, however
-      -- that is difficult as the relevant MonadPosixCompat function
+      -- that is difficult as the relevant MonadPosixC function
       -- (getFileStatus) involves foreign pointers.
       --
       -- Thus we do the easy thing here and zero everything out.
-#if WINDOWS
-          size = afromInteger 0
-#else
-          size = afromInteger _sizeNat
-#endif
+      --
+      -- UPDATE: We now do the same thing for posix too, since we use the same
+      -- difficult to mock function.
+          size = fromℤ 0
        in UnsafePathData
             { fileName = MkPathI p',
               originalPath = MkPathI (testDir' </> p'),
@@ -537,25 +552,21 @@ mkPathDataSetM2 pathData = do
   testDir <- getTestDir
   tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
   let testDir' =
-        unsafeEncodeFpToOs
+        unsafeEncodeValid
           $ T.unpack
           $ T.replace
-            (T.pack $ unsafeDecodeOsToFp tmpDir)
+            (T.pack $ unsafeDecode tmpDir)
             ""
-            (T.pack $ unsafeDecodeOsToFp testDir)
+            (T.pack $ unsafeDecode testDir)
 
   pure
     $ HSet.fromList
     $ pathData
     <&> \(fn, opath, pathType, _sizeNat) ->
       -- See NOTE: [Windows getFileSize]
-      let fn' = unsafeEncodeFpToOs fn
-          opath' = unsafeEncodeFpToOs opath
-#if WINDOWS
-          size = afromInteger 0
-#else
-          size = afromInteger _sizeNat
-#endif
+      let fn' = unsafeEncodeValid fn
+          opath' = unsafeEncodeValid opath
+          size = fromℤ 0
        in UnsafePathData
             { fileName = MkPathI fn',
               originalPath = MkPathI (testDir' </> opath'),

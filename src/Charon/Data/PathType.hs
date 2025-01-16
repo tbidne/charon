@@ -8,6 +8,7 @@ module Charon.Data.PathType
     existsFn,
     renameFn,
     copyPath,
+    isDirectory,
   )
 where
 
@@ -145,3 +146,7 @@ copyPath (MkPathTypeW PathTypeDirectory) old _ newDir =
           targetName = TargetNameSrc
         }
 copyPath (MkPathTypeW PathTypeOther) old newName _ = PW.copyFileWithMetadata old newName
+
+isDirectory :: PathTypeW -> Bool
+isDirectory (MkPathTypeW PathTypeDirectory) = True
+isDirectory _ = False

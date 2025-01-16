@@ -10,7 +10,7 @@ where
 import Charon.Data.Metadata qualified as Metadata
 import Charon.Exception (SomethingWentWrong)
 import Data.HashSet qualified as HashSet
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
+import FileSystem.OsPath (unsafeDecode)
 import Functional.Prelude
 
 -- TODO: It would be nice if we could verify that the original location
@@ -46,7 +46,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     -- setup
     createFiles [f1]
     assertPathsExist [f1]
-    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp f1]
+    argList <- withSrArgsM ["delete", unsafeDecode f1]
 
     liftIO $ runCharon argList
 
@@ -120,7 +120,7 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     testDir <- getTestDir
     let file = testDir </>! "bad file"
 
-    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp file]
+    argList <- withSrArgsM ["delete", unsafeDecode file]
 
     -- setup
     clearDirectory testDir
@@ -156,7 +156,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     testDir <- getTestDir
     let file = testDir </>! "f1"
 
-    argList <- withSrArgsM ["delete", unsafeDecodeOsToFp file]
+    argList <- withSrArgsM ["delete", unsafeDecode file]
 
     -- setup
     clearDirectory testDir
@@ -276,7 +276,7 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     let dots = [[osp|.|], [osp|..|], [osp|...|]]
         files = (testDir </>) <$> dots
 
-    argList <- withSrArgsM $ "delete" : (unsafeDecodeOsToFp <$> files)
+    argList <- withSrArgsM $ "delete" : (unsafeDecode <$> files)
 
     -- setup
     clearDirectory testDir

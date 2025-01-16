@@ -17,6 +17,7 @@ import Charon.Runner.Command (CommandP2)
 import Charon.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import Charon.Runner.Phase (advancePhase)
 import Charon.Utils qualified as U
+import FileSystem.OsPath qualified as OsPath
 import TOML
   ( DecodeTOML (),
     getFieldOpt,
@@ -56,7 +57,7 @@ instance DecodeTOML TomlConfig where
         case mh of
           Nothing -> pure Nothing
           Just h ->
-            case encodeFpToOs h of
+            case OsPath.encodeValid h of
               Right p -> pure $ Just $ MkPathI p
               Left ex -> fail $ "Could not encode trash-home: " <> displayException ex
       decodeBackend = getFieldOptWith tomlDecoder "backend"

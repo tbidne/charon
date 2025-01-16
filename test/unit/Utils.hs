@@ -55,9 +55,9 @@ assertSameOrder = go HSet.empty
             -- rest of the expected list.
               go found es (a : as)
             else -- Original value e is not a duplicate -> failure.
-            do
-              annotate "Non-duplicate missing from new list"
-              annotateShow e
-              failure
+              do
+                annotate "Non-duplicate missing from new list"
+                annotateShow e
+                failure
       where
         found' = HSet.insert a found

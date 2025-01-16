@@ -7,6 +7,7 @@ import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Text qualified as T
+import FileSystem.OsPath qualified as OsPath
 
 percentEncodeFileName ::
   forall m pd k.
@@ -18,7 +19,7 @@ percentEncodeFileName ::
   pd ->
   m ByteString
 percentEncodeFileName pd =
-  percentEncode <$> decodeOsToFpThrowM fileName
+  percentEncode <$> OsPath.decodeThrowM fileName
   where
     percentEncode = Utils.percentEncode . encodeUtf8 . T.pack
     MkPathI fileName = view #fileName pd

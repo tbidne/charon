@@ -10,7 +10,7 @@ module Charon.Prelude
     bsToStrLenient,
     showt,
     displayExceptiont,
-    decodeOsToFpDisplayExT,
+    decodeDisplayExT,
 
     -- * Display Utils
     (<+>),
@@ -39,6 +39,14 @@ import Control.Applicative as X
     (*>),
   )
 import Control.DeepSeq as X (NFData)
+import Control.Exception as X (IOException)
+import Control.Exception.Utils as X
+  ( catchSync,
+    exitFailure,
+    throwString,
+    throwText,
+    trySync,
+  )
 import Control.Monad as X
   ( Monad ((>>=)),
     join,
@@ -48,6 +56,18 @@ import Control.Monad as X
     (<=<),
     (=<<),
     (>=>),
+  )
+import Control.Monad.Catch as X
+  ( Exception (displayException),
+    MonadCatch,
+    MonadMask,
+    MonadThrow,
+    SomeException,
+    bracket,
+    catch,
+    finally,
+    throwM,
+    try,
   )
 import Control.Monad.Fail as X (MonadFail (fail))
 import Control.Monad.IO.Class as X (MonadIO (liftIO))
@@ -105,32 +125,7 @@ import Data.Text.Lazy.Builder (Builder)
 import Data.Vector as X (Vector)
 import Data.Word as X (Word16, Word8)
 import Effects.Concurrent.Async as X (MonadAsync)
-import Effects.Exception as X
-  ( Exception (displayException),
-    ExceptionCS (MkExceptionCS),
-    ExitCode (ExitFailure, ExitSuccess),
-    IOException,
-    MonadCatch,
-    MonadMask,
-    MonadThrow,
-    SomeException,
-    addCS,
-    bracket,
-    catch,
-    catchAny,
-    catchAnyCS,
-    catchCS,
-    displayNoCS,
-    exitFailure,
-    finally,
-    throwCS,
-    throwM,
-    throwString,
-    try,
-    tryAny,
-    tryAnyCS,
-    tryCS,
-  )
+import Effects.Concurrent.Thread as X (MonadThread)
 import Effects.FileSystem.FileReader as X
   ( MonadFileReader (readBinaryFile),
     decodeUtf8,
@@ -178,17 +173,6 @@ import Effects.FileSystem.PathWriter as X
         renameFile
       ),
   )
-import Effects.FileSystem.Utils as X
-  ( OsPath,
-    decodeOsToFp,
-    decodeOsToFpDisplayEx,
-    decodeOsToFpThrowM,
-    encodeFpToOs,
-    encodeFpToOsThrowM,
-    osp,
-    (<.>),
-    (</>),
-  )
 import Effects.IORef as X
   ( IORef,
     MonadIORef,
@@ -212,6 +196,9 @@ import Effects.LoggerNS as X
     logWarn,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
+#if !WINDOWS
+import Effects.System.Posix as X (MonadPosix)
+#endif
 import Effects.System.PosixCompat as X (MonadPosixCompat)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
@@ -219,6 +206,17 @@ import Effects.System.Terminal as X
     putTextLn,
   )
 import Effects.Time as X (MonadTime)
+import FileSystem.OsPath as X
+  ( OsPath,
+    decodeDisplayEx,
+    decodeLenient,
+    encodeValid,
+    encodeValidThrowM,
+    osp,
+    ospPathSep,
+    (<.>),
+    (</>),
+  )
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
 import GHC.Float as X (Double)
@@ -233,6 +231,8 @@ import GHC.Stack as X
     callStack,
     prettyCallStack,
   )
+import Numeric.Convert.Integer as X (FromInteger, fromℤ, toℤ)
+import Numeric.Convert.Rational as X (FromRational, fromℚ)
 import Optics.Core as X
   ( A_Getter,
     A_Lens,
@@ -277,6 +277,8 @@ import Optics.TH as X
     noPrefixFieldLabels,
   )
 import PathSize as X (findLargestPaths)
+import PathSize.Utils as X (MonadPosixC)
+import System.Exit as X (ExitCode (ExitFailure, ExitSuccess))
 import System.IO as X
   ( BufferMode (NoBuffering),
     FilePath,
@@ -339,8 +341,8 @@ doesAnyPathNotExist ::
   m Bool
 doesAnyPathNotExist = fmap not . doesAnyPathExist
 
-decodeOsToFpDisplayExT :: OsPath -> Text
-decodeOsToFpDisplayExT = T.pack . decodeOsToFpDisplayEx
+decodeDisplayExT :: OsPath -> Text
+decodeDisplayExT = T.pack . decodeDisplayEx
 
 vsep :: [Builder] -> Builder
 vsep = concatWith (\x y -> x <> line <> y)

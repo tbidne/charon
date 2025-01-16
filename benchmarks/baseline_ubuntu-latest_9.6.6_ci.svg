@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="172" width="960.0" font-size="16" font-family="sans-serif" stroke-width="2">
+<g transform="translate(10.0 0)">
+<g fill="hsl(0, 100%, 40%)">
+<text y="22">Read Index.1,000</text>
+<text y="22" x="887.031852897082" text-anchor="end">2.91 μs</text>
+</g>
+<g>
+<title>2.91 μs ± 174 ns</title>
+<rect y="28" rx="5" height="22" width="887.031852897082" fill="hsl(0, 100%, 80%)" stroke="hsl(0, 100%, 55%)" />
+<g stroke="hsl(0, 100%, 40%)"><line x1="834.063705794164" x2="940.0" y1="39" y2="39" />
+<line x1="834.063705794164" x2="834.063705794164" y1="33" y2="45" />
+<line x1="940.0" x2="940.0" y1="33" y2="45" />
+</g>
+</g>
+<g fill="hsl(120, 100%, 40%)">
+<text y="77">Read Index.10,000</text>
+<text y="77" x="858.2809624769334" text-anchor="end">2.82 μs</text>
+</g>
+<g>
+<title>2.82 μs ± 174 ns</title>
+<rect y="83" rx="5" height="22" width="858.2809624769334" fill="hsl(120, 100%, 80%)" stroke="hsl(120, 100%, 55%)" />
+<g stroke="hsl(120, 100%, 40%)"><line x1="805.37252456717" x2="911.1894003866968" y1="94" y2="94" />
+<line x1="805.37252456717" x2="805.37252456717" y1="88" y2="100" />
+<line x1="911.1894003866968" x2="911.1894003866968" y1="88" y2="100" />
+</g>
+</g>
+<g fill="hsl(240, 100%, 40%)">
+<text y="132">Read Index.100,000</text>
+<text y="132" x="881.6306080265178" text-anchor="end">2.89 μs</text>
+</g>
+<g>
+<title>2.89 μs ± 173 ns</title>
+<rect y="138" rx="5" height="22" width="881.6306080265178" fill="hsl(240, 100%, 80%)" stroke="hsl(240, 100%, 55%)" />
+<g stroke="hsl(240, 100%, 40%)"><line x1="828.9463842298246" x2="934.3148318232111" y1="149" y2="149" />
+<line x1="828.9463842298246" x2="828.9463842298246" y1="143" y2="155" />
+<line x1="934.3148318232111" x2="934.3148318232111" y1="143" y2="155" />
+</g>
+</g>
+</g>
+</svg>

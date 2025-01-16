@@ -11,7 +11,7 @@ import Charon.Data.Paths
 import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
-import Effects.FileSystem.Utils qualified as FS.Utils
+import FileSystem.OsPath qualified as OsPath
 import GHC.Real (Integral (mod))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
@@ -50,8 +50,8 @@ testPathSlash = testCase "Retrieves name from path ending in a /" $ do
   MkPathI [osp|path|] @=? resultFileName
   PathTypeDirectory @=? resultPathType ^. #unPathTypeW
 
-  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
 
   let errMsg =
         mconcat
@@ -78,8 +78,8 @@ testDuplicate = testCase "Renames duplicate" $ do
   MkPathI [osp|duplicate (1)|] @=? resultFileName
   PathTypeFile @=? resultPathType ^. #unPathTypeW
 
-  resultOrigPathStr <- decodeOsToFpThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- decodeOsToFpThrowM expectedOrigPath
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
 
   let errMsg =
         mconcat
@@ -108,8 +108,8 @@ instance MonadLoggerNS TestIO where
 instance MonadPathReader TestIO where
   makeAbsolute = liftIO . makeAbsolute
   doesPathExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    e1Str <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
+    e1Str <- OsPath.decodeThrowM expected
 
     pure $ e1Str `L.isSuffixOf` pathStr
     where
@@ -121,8 +121,8 @@ instance MonadPathReader TestIO where
           </> [osp|duplicate|]
 
   doesDirectoryExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    expectedStr <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
+    expectedStr <- OsPath.decodeThrowM expected
 
     pure $ expectedStr `L.isSuffixOf` pathStr
     where
@@ -132,8 +132,8 @@ instance MonadPathReader TestIO where
           </> [osp|path|]
 
   doesFileExist path = do
-    pathStr <- decodeOsToFpThrowM path
-    expectedStr <- decodeOsToFpThrowM expected
+    pathStr <- OsPath.decodeThrowM path
+    expectedStr <- OsPath.decodeThrowM expected
 
     pure $ expectedStr `L.isSuffixOf` pathStr
     where
@@ -145,7 +145,7 @@ instance MonadPathReader TestIO where
   pathIsSymbolicLink = liftIO . pathIsSymbolicLink
 
 pathSeparator :: OsPath
-pathSeparator = FS.Utils.unsafeEncodeFpToValidOs [FP.pathSeparator]
+pathSeparator = OsPath.unsafeEncodeValid [FP.pathSeparator]
 
 runTestIO :: TestIO a -> IO a
 runTestIO (MkTestIO io) = io
@@ -169,8 +169,8 @@ getPathTypePreservesBaseFileName =
 
       annotateShow r
 
-      fileName' <- liftIO $ FS.Utils.decodeOsToFpThrowM fileName
-      uniqueFileName' <- liftIO $ FS.Utils.decodeOsToFpThrowM uniqueFileName
+      fileName' <- liftIO $ OsPath.decodeThrowM fileName
+      uniqueFileName' <- liftIO $ OsPath.decodeThrowM uniqueFileName
 
       assert $ fileName' `L.isPrefixOf` uniqueFileName'
   where
@@ -182,7 +182,7 @@ newtype RandIO a = MkRandIO (IO a)
 
 runRandIO :: (MonadIO m, MonadCatch m, MonadTest m) => RandIO a -> m a
 runRandIO (MkRandIO io) = do
-  liftIO io `catchAny` \ex -> do
+  liftIO io `catchSync` \ex -> do
     annotate $ displayException ex
     failure
 
@@ -205,18 +205,20 @@ getR3 = do
   x <- R.randomRIO @Int (1, 3)
   pure $ x == 0 `mod` 3
 
-genPath :: Gen (PathI TrashEntryOriginalPath)
-genPath = MkPathI . FS.Utils.unsafeEncodeFpToOs <$> genString
+genPath :: (HasCallStack) => Gen (PathI TrashEntryOriginalPath)
+genPath = MkPathI . OsPath.unsafeEncode <$> genString
 
 genString :: Gen String
-genString = Gen.string (Range.linear 1 100) genPathChar
+genString =
+  Gen.filter (not . null) $ Gen.string (Range.linear 1 100) genPathChar
 
 genPathChar :: Gen Char
-genPathChar = Gen.filter isGoodChar Gen.unicode
+genPathChar = Gen.filter isGoodChar Gen.ascii
   where
     isGoodChar = not . flip Set.member (Set.fromList badChars)
     badChars =
       [ '\NUL',
+        '\SOH',
         '/',
         '.',
         '\\' -- windows

@@ -10,7 +10,7 @@ where
 import Charon.Data.Metadata qualified as Metadata
 import Charon.Exception (SomethingWentWrong)
 import Data.HashSet qualified as HashSet
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp)
+import FileSystem.OsPath (unsafeDecode)
 import Functional.Prelude
 
 tests :: IO TestEnv -> TestTree
@@ -263,7 +263,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     createFiles [f1, f2, f3]
 
     -- delete twice
-    runCharon (delArgList <> (unsafeDecodeOsToFp <$> [f2, f3]))
+    runCharon (delArgList <> (unsafeDecode <$> [f2, f3]))
     createFiles [f1]
     runCharon delArgList
 

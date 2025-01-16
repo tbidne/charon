@@ -71,15 +71,14 @@ import Charon.Data.PathType as X (PathTypeW (MkPathTypeW))
 import Charon.Prelude as X
 import Data.HashSet qualified as HSet
 import Data.Text.Lazy qualified as TL
-import Effects.FileSystem.Utils
-  ( unsafeDecodeOsToFp,
-    unsafeEncodeFpToOs,
+import FileSystem.OsPath
+  ( combineFilePaths,
+    unsafeDecode,
+    unsafeEncodeValid,
     (</>!),
   )
-import Effects.FileSystem.Utils qualified as FsUtils
 import Functional.Prelude.FuncEnv (TestEnv, TestM, (@=?))
 import Functional.Prelude.FuncEnv qualified as FuncEnv
-import Numeric.Literal.Integer as X (FromInteger (afromInteger))
 import Test.Tasty as X (TestTree, testGroup)
 import Test.Tasty.HUnit as X
   ( assertBool,
@@ -168,14 +167,14 @@ withSrArgsTestDirM testDir as = do
 
   let backend = env ^. #backend
       trashDir = testDir </> (env ^. #trashDir)
-  pure $ ["-t", unsafeDecodeOsToFp trashDir, "-b", Backend.backendName backend] ++ as
+  pure $ ["-t", unsafeDecode trashDir, "-b", Backend.backendName backend] ++ as
 
 -- | Prepends the given arguments with the trash directory and backend,
 -- according to the environment i.e.
 --
 -- @trashDir == <testRoot>\/<testDir>-<backend>\/<trashDir>@
 withSrArgsPathsM :: [String] -> [OsPath] -> TestM [String]
-withSrArgsPathsM as paths = withSrArgsM (as ++ (unsafeDecodeOsToFp <$> paths))
+withSrArgsPathsM as paths = withSrArgsM (as ++ (unsafeDecode <$> paths))
 
 -- | Appends the given string to the testDir and creates the current full
 -- testDir according to 'FuncEnv.getTestDir'.
@@ -187,7 +186,7 @@ appendTestDirM d m = local (appendTestDir d) $ do
 
 -- | Appends to the testDir.
 appendTestDir :: String -> TestEnv -> TestEnv
-appendTestDir d = over' #testDir (</> unsafeEncodeFpToOs d)
+appendTestDir d = over' #testDir (</> unsafeEncodeValid d)
 
 foldFilePaths :: [FilePath] -> FilePath
 foldFilePaths = foldFilePathsAcc ""
@@ -196,7 +195,7 @@ foldFilePathsAcc :: FilePath -> [FilePath] -> FilePath
 foldFilePathsAcc = foldl' cfp
 
 cfp :: FilePath -> FilePath -> FilePath
-cfp = FsUtils.combineFilePaths
+cfp = combineFilePaths
 
 {- ORMOLU_DISABLE -}
 
@@ -206,13 +205,8 @@ mkMetadata numEntries numFiles _logSize _size =
   MkMetadata
     { numEntries,
       numFiles,
-#if WINDOWS
-      logSize = afromInteger 0,
-      size = afromInteger 0
-#else
-      logSize = afromInteger _logSize,
-      size = afromInteger _size
-#endif
+      logSize = fromℤ 0,
+      size = fromℤ 0
     }
 
 {- ORMOLU_ENABLE -}

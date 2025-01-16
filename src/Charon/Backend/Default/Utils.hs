@@ -50,7 +50,7 @@ import Data.HashMap.Strict qualified as Map
 import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Effects.FileSystem.PathReader qualified as PR
-import Effects.FileSystem.Utils qualified as FsUtils
+import FileSystem.OsPath qualified as OsPath
 import System.OsPath qualified as FP
 
 -- | Retrieves the trash path dir.
@@ -132,7 +132,7 @@ mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
   $(logDebug) $ "File name: '" <> Paths.toText fileName <> "'"
 
   -- Paranoia check for previous bug: check that derived name is not empty.
-  isEmpty <- Paths.applyPathI (fmap null . decodeOsToFpThrowM) fileName
+  isEmpty <- Paths.applyPathI (fmap null . OsPath.decodeThrowM) fileName
   when isEmpty $ do
     $(logError) "Decoded filename is empty"
     throwM $ MkFileNameEmptyE origPath
@@ -193,7 +193,7 @@ mkUniqPath fp = do
           if b
             then go (counter + 1)
             else pure fp'
-    mkSuffix i = FsUtils.encodeFpToOsThrowM $ " (" <> show i <> ")"
+    mkSuffix i = OsPath.encodeValidThrowM $ " (" <> show i <> ")"
 
 throwIfNotPrefix ::
   ( HasCallStack,
@@ -203,8 +203,8 @@ throwIfNotPrefix ::
   PathI TrashEntryFileName ->
   m ()
 throwIfNotPrefix origName newName = do
-  origNameStr <- Paths.applyPathI decodeOsToFpThrowM origName
-  newNameStr <- Paths.applyPathI decodeOsToFpThrowM newName
+  origNameStr <- Paths.applyPathI OsPath.decodeThrowM origName
+  newNameStr <- Paths.applyPathI OsPath.decodeThrowM newName
 
   unless
     (origNameStr `L.isPrefixOf` newNameStr)

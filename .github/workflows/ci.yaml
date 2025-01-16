@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - update
 
   pull_request:
     branches:
@@ -17,9 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         ghc:
-          - "9.4.7"
-          - "9.6.3"
-          - "9.8.1"
+          - "9.4.8"
+          - "9.6.6"
+          - "9.8.4"
+          - "9.10.1"
+          - "9.12.1"
         platform:
           - os: "macos-latest"
             set-env: "export"
@@ -139,6 +142,3 @@ jobs:
         run: |
           nix run .#format
           git diff --exit-code --color=always
-
-      - name: HLint
-        run: nix run .#lint

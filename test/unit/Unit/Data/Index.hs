@@ -27,15 +27,16 @@ import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.Timestamp (Timestamp, fromText)
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Runner.Command.List
+import Charon.Utils qualified as U
 import Data.List qualified as L
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
-import Effects.FileSystem.Utils (unsafeDecodeOsToFp, unsafeEncodeFpToOs)
 import Effects.System.Terminal
   ( MonadTerminal (getTerminalSize),
     Window (Window, height, width),
   )
-import Numeric.Literal.Integer (FromInteger (afromInteger))
+import FileSystem.OsPath (unsafeDecode, unsafeEncodeValid)
 import System.OsPath qualified as FP
 import Unit.Prelude
 
@@ -244,6 +245,10 @@ newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
     )
     via ReaderT TestEnv IO
 
+#if !WINDOWS
+deriving newtype instance MonadPosix ConfigIO
+#endif
+
 instance MonadPathReader ConfigIO where
   listDirectory _ = pure []
   pathIsSymbolicLink _ = pure False
@@ -259,7 +264,7 @@ instance MonadPathReader ConfigIO where
       | name == [osp|f|] -> pure 13_070_000
       | name == [osp|z|] -> pure 200_120
       | name == [osp|d|] -> pure 55_000_000_000_000_000_000_000_000_000
-      | name == unsafeEncodeFpToOs (L.replicate 50 'b') -> pure 10
+      | name == unsafeEncodeValid (L.replicate 50 'b') -> pure 10
       | otherwise -> error $ "getFileSize: " <> show p
     where
       name = FP.takeFileName p
@@ -279,7 +284,7 @@ instance MonadTerminal ConfigIO where
       pure
         $ Window
           { height = 50,
-            width = n
+            width = fromIntegral n
           }
   putStr = liftIO . putStr
 
@@ -325,14 +330,14 @@ testFormatTabularAutoApprox = testGoldenFormat desc fileName mkIdx formatTabular
         [ UnsafePathData
             (MkPathTypeW PathTypeFile)
             (MkPathI [osp|foo|])
-            (MkPathI $ unsafeEncodeFpToOs $ L.replicate 80 'f')
-            (afromInteger 70)
+            (MkPathI $ unsafeEncodeValid $ L.replicate 80 'f')
+            (fromℤ 70)
             ts,
           UnsafePathData
             (MkPathTypeW PathTypeFile)
-            (MkPathI $ unsafeEncodeFpToOs $ L.replicate 50 'b')
+            (MkPathI $ unsafeEncodeValid $ L.replicate 50 'b')
             (MkPathI [osp|bar|])
-            (afromInteger 10)
+            (fromℤ 10)
             ts
         ]
 
@@ -347,7 +352,7 @@ formatTabularAutoFail :: TestTree
 formatTabularAutoFail = testCase desc $ do
   let idx = MkIndex []
   eformatted <-
-    tryAnyCS
+    trySync
       $ runConfigIO
         (Index.formatIndex (MkListCmd formatTabularAuto Name False) idx)
         53
@@ -357,14 +362,13 @@ formatTabularAutoFail = testCase desc $ do
         $ "Expected exception, received result: "
         <> show result
     Left ex ->
-      assertBool (displayException ex) (expected `L.isPrefixOf` displayException ex)
+      assertBool (T.unpack $ U.displayExT ex) (expected `T.isPrefixOf` U.displayExT ex)
   where
     desc = "Auto tabular throws error for small terminal width"
     expected =
       mconcat
-        [ "Control.Exception.Safe.throwString called with:\n\nTerminal width (53)",
-          " is less than minimum width (54) for automatic tabular display. ",
-          "Perhaps try multiline."
+        [ "Terminal width (53) is less than minimum width (54) for automatic ",
+          "tabular display. Perhaps try multiline."
         ]
 
 -- Tests tabular w/ max options
@@ -461,37 +465,37 @@ mkIndex = do
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|foo|])
         (MkPathI [osp|/path/foo|])
-        (afromInteger 70)
+        (fromℤ 70)
         ts,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|bazzz|])
         (MkPathI [osp|/path/bar/bazzz|])
-        (afromInteger 5_000)
+        (fromℤ 5_000)
         ts,
       UnsafePathData
         (MkPathTypeW PathTypeDirectory)
         (MkPathI [osp|dir|])
         (MkPathI [osp|/some/really/really/long/dir|])
-        (afromInteger 20_230)
+        (fromℤ 20_230)
         ts,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|f|])
         (MkPathI [osp|/foo/path/f|])
-        (afromInteger 13_070_000)
+        (fromℤ 13_070_000)
         ts,
       UnsafePathData
         (MkPathTypeW PathTypeDirectory)
         (MkPathI [osp|d|])
         (MkPathI [osp|/d|])
-        (afromInteger 5_000_000_000_000_000_000_000_000_000)
+        (fromℤ 5_000_000_000_000_000_000_000_000_000)
         ts,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|z|])
         (MkPathI [osp|/z|])
-        (afromInteger 200_120)
+        (fromℤ 200_120)
         ts
     ]
   where
@@ -567,7 +571,7 @@ testGolden
   style
   sortFn
   rev
-  termWidth = goldenVsFile desc (unsafeDecodeOsToFp gpath) (unsafeDecodeOsToFp apath) $ do
+  termWidth = goldenVsFile desc (unsafeDecode gpath) (unsafeDecode apath) $ do
     idx <- mkIdx
     let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
     formatted <- runConfigIO fmt termWidth

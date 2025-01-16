@@ -25,7 +25,7 @@ instance Exception TrashDirFilesNotFoundE where
   displayException (MkTrashDirFilesNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash files directory was not found at '",
-        decodeOsToFpDisplayEx files,
+        decodeDisplayEx files,
         "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. charon empty -f)."
       ]
@@ -40,7 +40,7 @@ instance Exception TrashDirInfoNotFoundE where
   displayException (MkTrashDirInfoNotFoundE (MkPathI th)) =
     mconcat
       [ "The trash info directory was not found at '",
-        decodeOsToFpDisplayEx info,
+        decodeDisplayEx info,
         "' despite the trash home existing. This can be fixed by ",
         "manually creating the directory or resetting everything (i.e. charon empty -f)."
       ]

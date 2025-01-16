@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | This modules provides an executable for running charon.
 module Charon.Runner
@@ -75,8 +76,10 @@ runCharon ::
     MonadOptparse m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadTerminal m,
+    MonadThread m,
     MonadTime m
   ) =>
   m ()
@@ -101,6 +104,7 @@ runCmd ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
@@ -112,7 +116,7 @@ runCmd cmd =
   -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
   -- This is what we want, as it similar to what we will get once GHC
   -- natively supports exceptions with callstacks.
-  runCmd' cmd `catchCS` logEx
+  runCmd' cmd `catch` logEx
   where
     runCmd' = \case
       Delete paths -> Charon.delete paths
@@ -127,7 +131,7 @@ runCmd cmd =
     logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do
       $(logError) (U.displayExT ex)
-      throwCS ex
+      throwM ex
 
 withEnv ::
   ( HasCallStack,
@@ -203,7 +207,7 @@ getConfiguration = do
       contents <- readFileUtf8ThrowM fp
       case TOML.decode contents of
         Right cfg -> pure cfg
-        Left tomlErr -> throwCS tomlErr
+        Left tomlErr -> throwM tomlErr
 
 printIndex ::
   ( HasBackend env,
@@ -214,6 +218,7 @@ printIndex ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -234,6 +239,7 @@ printMetadata ::
     MonadFileReader m,
     MonadLoggerNS m,
     MonadPathReader m,
+    MonadPosixC m,
     MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
@@ -312,7 +318,7 @@ handleLogSize logFile msizeMode = do
     sizeWarning warnSize fp fileSize =
       mconcat
         [ "Warning: log dir ",
-          decodeOsToFpDisplayExT fp,
+          decodeDisplayExT fp,
           " has size: ",
           formatBytes fileSize,
           ", but specified threshold is: ",

@@ -3,12 +3,10 @@ module Main (main) where
 
 import Charon.Runner (runCharon)
 import Charon.Utils qualified as Utils
-import Effects.Exception qualified as Ex
+import Control.Exception.Annotation.Utils qualified as AnnUtils
 
 main :: IO ()
 main = do
-  Ex.setUncaughtExceptionDisplayCSNoMatch
-    Utils.noCallstacks
-    (putStrLn . ("\n" <>))
+  AnnUtils.setIgnoreKnownCallStackHandler Utils.noCallstacks
 
   runCharon

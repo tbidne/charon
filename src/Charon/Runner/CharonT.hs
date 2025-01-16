@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- | Provides the 'CharonT' type for running Charon.
 module Charon.Runner.CharonT
   ( CharonT (MkCharonT),
@@ -31,13 +33,18 @@ newtype CharonT env m a = MkCharonT (ReaderT env m a)
       MonadPosixCompat,
       MonadReader env,
       MonadTerminal,
+      MonadThread,
       MonadThrow,
       MonadTime
     )
     via (ReaderT env m)
 
+#if !WINDOWS
+deriving newtype instance (MonadPosix m) => MonadPosix (CharonT env m)
+#endif
+
 instance
-  (MonadHandleWriter m, MonadTime m) =>
+  (MonadHandleWriter m, MonadThread m, MonadTime m) =>
   MonadLogger (CharonT (Env m) m)
   where
   monadLoggerLog loc _src lvl msg = do
@@ -55,7 +62,7 @@ instance
         to (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
 
 instance
-  (MonadHandleWriter m, MonadTime m) =>
+  (MonadHandleWriter m, MonadThread m, MonadTime m) =>
   MonadLoggerNS (CharonT (Env m) m)
   where
   getNamespace = asks (view (#logEnv % #logNamespace))

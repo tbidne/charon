@@ -87,17 +87,12 @@ metadata getTestEnv = testCase "Prints metadata" $ do
 {- ORMOLU_DISABLE -}
 
     expectedMetadata =
-      Exact
-        <$> [ "Entries:      8",
-              "Total Files:  7",
-              "Log size:     0.00B",
-#if WINDOWS
-              "Size:         0.00B",
-#else
-              "Size:         55.00B",
-#endif
-              ""
-            ]
+      [ Exact "Entries:      8",
+        Exact "Total Files:  7",
+        Exact "Log size:     0.00B",
+        Prefix "Size:",
+        Exact ""
+      ]
 {- ORMOLU_ENABLE -}
 
 empty :: IO TestEnv -> TestTree

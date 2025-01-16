@@ -75,6 +75,7 @@ import Effects.FileSystem.PathWriter
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
 import Effects.System.Terminal qualified as Term
+import FileSystem.OsPath qualified as OsPath
 
 -- | Creates the trash directory if it does not exist.
 createTrash ::
@@ -243,7 +244,7 @@ mvOriginalToTrash backendArgs trashHome currTime path = addNamespace "mvOriginal
       moveFn = PathType.renameFn pathType opath trashPath
 
   -- 5. If move failed, roll back info file
-  moveFn `catchAny` \ex -> do
+  moveFn `catchSync` \ex -> do
     $(logError) ("Error moving file to trash: " <> Utils.displayExT ex)
     PW.removeFile trashInfoPath
     throwM ex
@@ -331,7 +332,7 @@ permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace
         putStrLn
           $ mconcat
             [ "Error deleting path '",
-              decodeOsToFpDisplayEx $ pathData ^. (#fileName % #unPathI),
+              decodeDisplayEx $ pathData ^. (#fileName % #unPathI),
               "': ",
               Utils.displayEx ex,
               "\n"
@@ -340,7 +341,7 @@ permDeleteFromTrash backendArgs postHook force trashHome pathName = addNamespace
   -- Need our own error handling here since if we are deleting multiple
   -- wildcard matches we want success/failure to be independent.
   for_ pathDatas $ \pathData ->
-    tryAnyCS (deleteFn pathData) >>= \case
+    trySync (deleteFn pathData) >>= \case
       Left ex -> handleEx pathData ex
       Right _ -> postHook pathData
 
@@ -410,7 +411,7 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
         putStrLn
           $ mconcat
             [ "Error restoring path '",
-              decodeOsToFpDisplayEx $ pathData ^. (#fileName % #unPathI),
+              decodeDisplayEx $ pathData ^. (#fileName % #unPathI),
               "': ",
               Utils.displayEx ex,
               "\n"
@@ -419,7 +420,7 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
   -- Need our own error handling here since if we are restoring multiple
   -- wildcard matches we want success/failure to be independent.
   for_ pathDatas $ \pathData ->
-    tryAnyCS (restoreFn pathData) >>= \case
+    trySync (restoreFn pathData) >>= \case
       Left ex -> handleEx pathData ex
       Right _ -> postHook pathData
 
@@ -432,7 +433,7 @@ restoreTrashToOriginal backendArgs postHook trashHome pathName = addNamespace "r
       -- 3. Attempt restore
       let original = pd ^. #originalPath % #unPathI
       PathType.renameFn pt trashPath' original
-      $(logInfo) $ "Restored: " <> decodeOsToFpDisplayExT original
+      $(logInfo) $ "Restored: " <> decodeDisplayExT original
 
       -- 4. Delete info
       --
@@ -510,12 +511,12 @@ findManyPathData backendArgs trashHome pathName = addNamespace "findManyPathData
   index <- fmap (view _1) . view #unIndex <$> Default.Index.readIndexTrashHome backendArgs trashHome
   $(logDebug) $ "Index: " <> showt index
 
-  pathNameText <- T.pack <$> decodeOsToFpThrowM (pathName ^. #unPathI)
+  pathNameText <- T.pack <$> OsPath.decodeThrowM (pathName ^. #unPathI)
 
   Utils.filterSeqM (pdMatchesWildcard pathNameText) index
   where
     pdMatchesWildcard pathNameText' pd = do
-      fp <- decodeOsToFpThrowM (pd ^. (#fileName % #unPathI))
+      fp <- OsPath.decodeThrowM (pd ^. (#fileName % #unPathI))
       let fpTxt = T.pack fp
           matches = Utils.matchesWildcards pathNameText' fpTxt
 
@@ -553,7 +554,7 @@ findPathData ::
 findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "findPathData" $ do
   $(logDebug) $ "Searching for: " <> Paths.toText pathName
 
-  pathNameStr <- decodeOsToFpThrowM pathName'
+  pathNameStr <- OsPath.decodeThrowM pathName'
   let pathNameTxt = T.pack pathNameStr
 
   if
@@ -574,7 +575,7 @@ findPathData backendArgs trashHome pathName@(MkPathI pathName') = addNamespace "
               "'. Treating as the literal *."
             ]
         let literal = T.replace "\\*" "*" pathNameTxt
-        literalPath <- encodeFpToOsThrowM $ T.unpack literal
+        literalPath <- OsPath.encodeValidThrowM $ T.unpack literal
         findOnePathData trashHome (MkPathI literalPath) backendArgs <&> \case
           Nothing -> SearchSingleFailure pathName
           Just pd -> SearchSuccess (pd :<|| Seq.empty)

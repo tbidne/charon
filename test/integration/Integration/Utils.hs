@@ -31,7 +31,7 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Data.Text qualified as T
 import Data.Text.Normalize (NormalizationMode (NFD))
 import Data.Text.Normalize qualified as TNormalize
-import Effects.FileSystem.Utils qualified as FsUtils
+import FileSystem.OsPath qualified as OsPath
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
@@ -205,7 +205,7 @@ genFileNameNoDupes asciiOnly paths = do
 mkPathIntData :: PathTypeW -> FilePath -> PathIntData
 mkPathIntData pt fp =
   MkPathIntData
-    { osPath = FsUtils.unsafeEncodeFpToValidOs fp,
+    { osPath = OsPath.unsafeEncodeValid fp,
       pathType = pt,
       filePath = fp,
       normed = fpToNormedFp fp

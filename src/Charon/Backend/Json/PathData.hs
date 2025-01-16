@@ -35,6 +35,7 @@ import Data.Aeson
   )
 import Data.Aeson qualified as Asn
 import Data.ByteString.Lazy qualified as BSL
+import FileSystem.OsPath qualified as OsPath
 
 -- | Data for an Fdo path. Maintains an invariant that the original path is not
 -- the root nor is it empty.
@@ -66,7 +67,7 @@ toPathData ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadTerminal m
   ) =>
   Timestamp ->
@@ -120,7 +121,7 @@ instance Serial PathData where
     bimap
       displayException
       (BSL.toStrict . Asn.encode . MkPathDataJSON . (pathType,,ts,sz))
-      (decodeOsToFp opath)
+      (OsPath.decode opath)
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
@@ -129,7 +130,7 @@ instance Serial PathData where
     bimap
       displayException
       (\opath -> UnsafePathData pathType name (MkPathI opath) ts (MkBytes sz))
-      (encodeFpToOs opathStr)
+      (OsPath.encodeValid opathStr)
 
 toCorePathData :: PathData -> PathData.PathData
 toCorePathData pd =

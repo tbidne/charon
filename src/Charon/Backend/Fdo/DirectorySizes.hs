@@ -196,7 +196,7 @@ writeDirectorySizesTrashHome trashHome directorySizes = addNamespace "writeDirec
   FW.writeBinaryFile tmpFile encoded
 
   PW.renameFile tmpFile directorySizesPath
-    `catchAnyCS` \ex -> do
+    `catchSync` \ex -> do
       $(logError) $ "Error renaming directorysizes: " <> displayExceptiont ex
       PW.removeFile tmpFile
 

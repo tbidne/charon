@@ -72,8 +72,8 @@ import System.OsPath (encodeUtf)
 --    have callstacks attached by default, removing them on a case-by-case
 --    basis.
 --
--- To achieve this, we only use throwCS on possibly unknown exceptions
--- (catchAny), and we use exceptions' displayCSNoMatch function to explicitly
+-- To achieve this, we only use throwM on possibly unknown exceptions
+-- (catchSync), and we use exceptions' displayCSNoMatch function to explicitly
 -- opt-out of callstacks for our exceptions.
 
 -- | Could not rename file due to duplicate names.
@@ -84,7 +84,7 @@ instance Exception RenameDuplicateE where
   displayException (MkRenameDuplicateE n) =
     mconcat
       [ "Failed renaming duplicate file: '",
-        decodeOsToFpDisplayEx $ n ^. #unPathI,
+        decodeDisplayEx $ n ^. #unPathI,
         "'"
       ]
 
@@ -99,7 +99,7 @@ instance Exception TrashEntryNotFoundE where
   displayException (MkTrashEntryNotFoundE name) =
     mconcat
       [ "No entry for '",
-        decodeOsToFpDisplayEx $ name ^. #unPathI,
+        decodeDisplayEx $ name ^. #unPathI,
         "'"
       ]
 
@@ -112,7 +112,7 @@ instance Exception TrashEntryWildcardNotFoundE where
   displayException (MkTrashEntryWildcardNotFoundE name) =
     mconcat
       [ "No entries found for wildcard search '",
-        decodeOsToFpDisplayEx $ name ^. #unPathI,
+        decodeDisplayEx $ name ^. #unPathI,
         "'"
       ]
 
@@ -127,9 +127,9 @@ instance Exception TrashEntryFileNotFoundE where
   displayException (MkTrashEntryFileNotFoundE (MkPathI thome) name) =
     mconcat
       [ "The file '",
-        decodeOsToFpDisplayEx $ name ^. #unPathI,
+        decodeDisplayEx $ name ^. #unPathI,
         "' was not found in the trash '",
-        decodeOsToFpDisplayEx thome,
+        decodeDisplayEx thome,
         "' despite being listed in the index. This can be ",
         "fixed by manually deleting the info file or deleting everything ",
         "(i.e. charon empty -f)."
@@ -146,9 +146,9 @@ instance Exception TrashEntryInfoNotFoundE where
   displayException (MkTrashEntryInfoNotFoundE (MkPathI thome) (MkPathI name)) =
     mconcat
       [ "The file '",
-        decodeOsToFpDisplayEx nameExt,
+        decodeDisplayEx nameExt,
         "' was not found in the trash '",
-        decodeOsToFpDisplayEx thome,
+        decodeDisplayEx thome,
         "' index despite existing in the trash itself. This can be fixed by ",
         "manually deleting the entry or deleting everything ",
         "(i.e. charon empty -f)."
@@ -172,11 +172,11 @@ instance Exception TrashEntryInfoBadExtE where
   displayException (MkTrashEntryInfoBadExtE name actualExt expectedExt) =
     mconcat
       [ "The trash index file '",
-        decodeOsToFpDisplayEx $ name ^. #unPathI,
+        decodeDisplayEx $ name ^. #unPathI,
         "' has an unexpected file extension: '",
-        decodeOsToFpDisplayEx actualExt,
+        decodeDisplayEx actualExt,
         "'. Expected '",
-        decodeOsToFpDisplayEx expectedExt,
+        decodeDisplayEx expectedExt,
         "'"
       ]
 
@@ -203,9 +203,9 @@ instance Exception RestoreCollisionE where
   displayException (MkRestoreCollisionE n o) =
     mconcat
       [ "Cannot restore the trash file '",
-        decodeOsToFpDisplayEx $ n ^. #unPathI,
+        decodeDisplayEx $ n ^. #unPathI,
         "' as one exists at the original location: '",
-        decodeOsToFpDisplayEx $ o ^. #unPathI,
+        decodeDisplayEx $ o ^. #unPathI,
         "'"
       ]
 
@@ -231,7 +231,7 @@ instance Exception DotsPathE where
   displayException (MkDotsPathE p) =
     mconcat
       [ "Attempted to delete the special path '",
-        decodeOsToFpDisplayEx $ p ^. #unPathI,
+        decodeDisplayEx $ p ^. #unPathI,
         "'! This is not allowed."
       ]
 
@@ -243,7 +243,7 @@ instance Exception FileNameEmptyE where
   displayException (MkFileNameEmptyE p) =
     mconcat
       [ "Derived empty file name from the path '",
-        decodeOsToFpDisplayEx $ p ^. #unPathI,
+        decodeDisplayEx $ p ^. #unPathI,
         "'"
       ]
 
@@ -259,9 +259,9 @@ instance Exception UniquePathNotPrefixE where
   displayException (MkUniquePathNotPrefixE origName newName) =
     mconcat
       [ "Original path name '",
-        decodeOsToFpDisplayEx $ origName ^. #unPathI,
+        decodeDisplayEx $ origName ^. #unPathI,
         "' is not a prefix of the new unique name '",
-        decodeOsToFpDisplayEx $ newName ^. #unPathI,
+        decodeDisplayEx $ newName ^. #unPathI,
         "'"
       ]
 
@@ -273,7 +273,7 @@ instance Exception InfoDecodeE where
   displayException (MkInfoDecodeE path bs err) =
     mconcat
       [ "Could not decode file '",
-        decodeOsToFpDisplayEx $ path ^. #unPathI,
+        decodeDisplayEx $ path ^. #unPathI,
         "' with contents:\n",
         bsToStrLenient bs,
         "\nError: ",
@@ -300,7 +300,7 @@ instance Exception PathNotFound where
   displayException (MkPathNotFound p) =
     mconcat
       [ "Path not found: '",
-        decodeOsToFpDisplayEx p,
+        decodeDisplayEx p,
         "'"
       ]
 

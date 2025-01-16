@@ -18,7 +18,7 @@ import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
   )
-import Effects.FileSystem.Utils ((</>!))
+import FileSystem.OsPath ((</>!))
 
 -- | Index reading benchmarks.
 benchmarks :: OsPath -> Benchmark
