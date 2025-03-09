@@ -8,8 +8,10 @@ import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryOriginalPath, TrashHome),
   )
+import Data.Char qualified as Ch
 import Data.HashSet qualified as Set
 import Data.List qualified as L
+import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import FileSystem.OsPath qualified as OsPath
 import GHC.Real (Integral (mod))
@@ -210,16 +212,26 @@ genPath = MkPathI . OsPath.unsafeEncode <$> genString
 
 genString :: Gen String
 genString =
-  Gen.filter (not . null) $ Gen.string (Range.linear 1 100) genPathChar
+  Gen.filter badString $ Gen.string (Range.linear 1 100) genPathChar
+  where
+    badString = not . null . strip
+
+    strip =
+      T.unpack
+        . T.strip
+        . T.pack
 
 genPathChar :: Gen Char
 genPathChar = Gen.filter isGoodChar Gen.ascii
   where
-    isGoodChar = not . flip Set.member (Set.fromList badChars)
+    isGoodChar = not . isBadChar
+
+    isBadChar c =
+      Ch.isControl c
+        || (flip Set.member (Set.fromList badChars) $ c)
+
     badChars =
-      [ '\NUL',
-        '\SOH',
-        '/',
+      [ '/',
         '.',
         '\\' -- windows
       ]

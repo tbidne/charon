@@ -288,14 +288,14 @@ wc = "**"
 
 -- | Generates a platform-independent char suitable for usage in a path.
 genPathChar :: (MonadGen m) => Bool -> m Char
-genPathChar _asciiOnly = Gen.filterT filterFn (charMapper <$> genChar)
+genPathChar asciiOnly = Gen.filterT filterFn (charMapper <$> genChar asciiOnly)
   where
     filterFn c = isGoodChar c && Ch.isAlphaNum c
 
 -- | genPathChar, except prints the chars as they are generated.
 genPathCharIO :: (MonadGen m, MonadIO m) => Bool -> m Char
-genPathCharIO _asciiOnly = do
-  x <- charMapper <$> genChar
+genPathCharIO asciiOnly = do
+  x <- charMapper <$> genChar asciiOnly
   liftIO
     $ putStrLn
     $ mconcat
@@ -309,7 +309,7 @@ genPathCharIO _asciiOnly = do
   where
     filterFn c = isGoodChar c && Ch.isAlphaNum c
 
-genChar :: (MonadGen m) => m Char
+genChar :: (MonadGen m) => Bool -> m Char
 isGoodChar :: Char -> Bool
 badChars :: HashSet Char
 charMapper :: Char -> Char
@@ -337,7 +337,16 @@ charMapper :: Char -> Char
 --
 -- https://en.wikipedia.org/wiki/Plane_(Unicode)
 -- https://en.wikipedia.org/wiki/UTF-8#Overlong_encodings
-genChar = Gen.ascii
+genChar True = Gen.ascii
+genChar False =
+  let
+    -- s1 + s2 := Plane 0
+    s1 =
+      (55296, Gen.enum '\0' '\55295')
+    s2 =
+      (8190, Gen.enum '\57344' '\65533')
+  in
+    Gen.frequency [s1, s2]
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
@@ -350,7 +359,8 @@ badChars =
 
 charMapper = Ch.toLower
 #elif WINDOWS
-genChar = Gen.ascii
+genChar True = Gen.ascii
+genChar False = Gen.unicode
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
@@ -375,7 +385,8 @@ badChars =
 -- lower-case paths :-(
 charMapper = Ch.toLower
 #else
-genChar = Gen.ascii
+genChar True = Gen.ascii
+genChar False = Gen.unicode
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
