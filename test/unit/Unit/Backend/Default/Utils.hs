@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
@@ -97,16 +98,18 @@ testDuplicate = testCase "Renames duplicate" $ do
     slashPath = MkPathI [ospPathSep|/a/duplicate|]
     expectedOrigPath = [ospPathSep|/a/duplicate|]
 
+{- ORMOLU_DISABLE -}
+
 testTrailingWhitespace :: TestTree
-testTrailingWhitespace = testCase "Preserves trailing whitespace" $ do
+testTrailingWhitespace = testCase desc $ do
   (resultFileName, resultOrigPath, resultPathType) <-
     runTestIO $ Utils.getPathInfo trashHome testPathI
 
-  MkPathI [osp|some whitespace   |] @=? resultFileName
+  MkPathI expected @=? resultFileName
   PathTypeFile @=? resultPathType ^. #unPathTypeW
 
   resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- OsPath.decodeThrowM testOsPath
+  expectedOrigPathStr <- OsPath.decodeThrowM expected
 
   let errMsg =
         mconcat
@@ -122,6 +125,15 @@ testTrailingWhitespace = testCase "Preserves trailing whitespace" $ do
     testOsPath = [ospPathSep|/some whitespace   |]
     testPathI = MkPathI testOsPath
 
+#if WINDOWS
+    desc = "Strips trailing whitespace (windows)"
+    expected = [ospPathSep|some whitespace|]
+#else
+    desc = "Preserves trailing whitespace (unix)"
+    expected = [ospPathSep|some whitespace   |]
+#endif
+
+{- ORMOLU_ENABLE -}
 newtype TestIO a = MkTestIO (IO a)
   deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
 
@@ -158,6 +170,8 @@ instance MonadPathReader TestIO where
       expecteds =
         OsPath.unsafeDecode
           <$> [ [ospPathSep|/a/duplicate|],
+                -- unix vs. windows (windows trims whitespace apparently)
+                [ospPathSep|/some whitespace|],
                 [ospPathSep|/some whitespace   |]
               ]
 
@@ -242,10 +256,12 @@ genPathChar = Gen.filter isGoodChar Gen.ascii
 
     isBadChar c =
       Ch.isControl c
+        || Ch.isSpace c
         || (flip Set.member (Set.fromList badChars) $ c)
 
     badChars =
       [ '/',
         '.',
-        '\\' -- windows
+        '\\', -- windows
+        ':'
       ]

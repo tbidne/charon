@@ -338,15 +338,7 @@ charMapper :: Char -> Char
 -- https://en.wikipedia.org/wiki/Plane_(Unicode)
 -- https://en.wikipedia.org/wiki/UTF-8#Overlong_encodings
 genChar True = Gen.ascii
-genChar False =
-  let
-    -- s1 + s2 := Plane 0
-    s1 =
-      (55296, Gen.enum '\0' '\55295')
-    s2 =
-      (8190, Gen.enum '\57344' '\65533')
-  in
-    Gen.frequency [s1, s2]
+genChar False = Gen.ascii
 
 isGoodChar c = (not . Ch.isControl) c && not (Set.member c badChars)
 
