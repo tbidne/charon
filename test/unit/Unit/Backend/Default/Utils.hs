@@ -17,7 +17,6 @@ import FileSystem.OsPath qualified as OsPath
 import GHC.Real (Integral (mod))
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
-import System.FilePath qualified as FP
 import System.Random qualified as R
 import Unit.Prelude
 
@@ -41,7 +40,8 @@ getPathInfoTests =
   testGroup
     "getPathInfo"
     [ testPathSlash,
-      testDuplicate
+      testDuplicate,
+      testTrailingWhitespace
     ]
 
 testPathSlash :: TestTree
@@ -69,8 +69,8 @@ testPathSlash = testCase "Retrieves name from path ending in a /" $ do
   -- suffix check rather than equality.
   assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI $ pathSeparator </> [osp|some|] </> [osp|path|] <> pathSeparator
-    expectedOrigPath = pathSeparator </> [osp|some|] </> [osp|path|]
+    slashPath = MkPathI [ospPathSep|/some/path/|]
+    expectedOrigPath = [ospPathSep|/some/path|]
 
 testDuplicate :: TestTree
 testDuplicate = testCase "Renames duplicate" $ do
@@ -94,8 +94,33 @@ testDuplicate = testCase "Renames duplicate" $ do
 
   assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
   where
-    slashPath = MkPathI $ pathSeparator </> [osp|a|] </> [osp|duplicate|]
-    expectedOrigPath = pathSeparator </> [osp|a|] </> [osp|duplicate|]
+    slashPath = MkPathI [ospPathSep|/a/duplicate|]
+    expectedOrigPath = [ospPathSep|/a/duplicate|]
+
+testTrailingWhitespace :: TestTree
+testTrailingWhitespace = testCase "Preserves trailing whitespace" $ do
+  (resultFileName, resultOrigPath, resultPathType) <-
+    runTestIO $ Utils.getPathInfo trashHome testPathI
+
+  MkPathI [osp|some whitespace   |] @=? resultFileName
+  PathTypeFile @=? resultPathType ^. #unPathTypeW
+
+  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
+  expectedOrigPathStr <- OsPath.decodeThrowM testOsPath
+
+  let errMsg =
+        mconcat
+          [ "Expected '",
+            expectedOrigPathStr,
+            "' to be a suffix of '",
+            resultOrigPathStr,
+            ","
+          ]
+
+  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
+  where
+    testOsPath = [ospPathSep|/some whitespace   |]
+    testPathI = MkPathI testOsPath
 
 newtype TestIO a = MkTestIO (IO a)
   deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
@@ -115,12 +140,7 @@ instance MonadPathReader TestIO where
 
     pure $ e1Str `L.isSuffixOf` pathStr
     where
-      expected =
-        pathSeparator
-          </> [osp|home|]
-          </> [osp|trash|]
-          </> [osp|files|]
-          </> [osp|duplicate|]
+      expected = [ospPathSep|/home/trash/files/duplicate|]
 
   doesDirectoryExist path = do
     pathStr <- OsPath.decodeThrowM path
@@ -128,32 +148,26 @@ instance MonadPathReader TestIO where
 
     pure $ expectedStr `L.isSuffixOf` pathStr
     where
-      expected =
-        pathSeparator
-          </> [osp|some|]
-          </> [osp|path|]
+      expected = [ospPathSep|/some/path|]
 
   doesFileExist path = do
     pathStr <- OsPath.decodeThrowM path
-    expectedStr <- OsPath.decodeThrowM expected
 
-    pure $ expectedStr `L.isSuffixOf` pathStr
+    pure $ L.any (`L.isSuffixOf` pathStr) expecteds
     where
-      expected =
-        pathSeparator
-          </> [osp|a|]
-          </> [osp|duplicate|]
+      expecteds =
+        OsPath.unsafeDecode
+          <$> [ [ospPathSep|/a/duplicate|],
+                [ospPathSep|/some whitespace   |]
+              ]
 
   pathIsSymbolicLink = liftIO . pathIsSymbolicLink
-
-pathSeparator :: OsPath
-pathSeparator = OsPath.unsafeEncodeValid [FP.pathSeparator]
 
 runTestIO :: TestIO a -> IO a
 runTestIO (MkTestIO io) = io
 
 trashHome :: PathI TrashHome
-trashHome = MkPathI $ pathSeparator </> [osp|home|] </> [osp|trash|]
+trashHome = MkPathI $ [ospPathSep|/home/trash|]
 
 props :: TestTree
 props =

@@ -59,7 +59,7 @@ jobs:
         name: Unit Tests Upload
         if: ${{ failure() && steps.unit.conclusion == 'failure' }}
         with:
-          name: unit-artifacts
+          name: unit-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
           path: test/unit/Unit/Data/Index/*
 
       - name: Integration Tests
@@ -85,7 +85,7 @@ jobs:
         name: Benchmarks Upload
         if: ${{ failure() && steps.bench.conclusion == 'failure' }}
         with:
-          name: build-artifacts
+          name: build-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
           path: |
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
