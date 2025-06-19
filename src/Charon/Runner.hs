@@ -77,7 +77,6 @@ runCharon ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadTerminal m,
     MonadThread m,
     MonadTime m
@@ -105,7 +104,6 @@ runCmd ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -219,7 +217,6 @@ printIndex ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -240,7 +237,6 @@ printMetadata ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>

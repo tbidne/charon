@@ -103,7 +103,6 @@ import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
-import Effects.System.PosixCompat qualified as Posix
 import Effects.Time (MonadTime (getMonotonicTime))
 import FileSystem.OsPath qualified as OsPath
 import PathSize
@@ -115,6 +114,7 @@ import PathSize
   )
 import PathSize qualified
 import PathSize.Data.Config qualified as PathSize.Config
+import PathSize.Utils qualified
 import System.IO qualified as IO
 import System.PosixCompat.Files qualified as PFiles
 import Text.Printf (PrintfArg)
@@ -436,15 +436,14 @@ getRandomTmpFile prefix = addNamespace "getRandomTmpFile" $ do
 
 getSymLinkSize ::
   ( HasCallStack,
-    MonadPosixCompat m,
+    MonadPosixC m,
     MonadThrow m
   ) =>
   OsPath ->
   m (Bytes B Natural)
 getSymLinkSize =
   fmap (fromℤ . fromIntegral . PFiles.fileSize)
-    . Posix.getSymbolicLinkStatus
-    <=< OsPath.decodeThrowM
+    . PathSize.Utils.getFileStatus
 
 -- | Retrieves the path type. Used so we can wrap with a custom exception,
 -- for the purpose of ignoring callstacks.

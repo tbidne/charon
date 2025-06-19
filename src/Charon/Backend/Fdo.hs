@@ -185,7 +185,6 @@ getIndex ::
     MonadLoggerNS m,
     MonadReader env m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadTerminal m
   ) =>
   m Index
@@ -215,7 +214,6 @@ getMetadata ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -329,7 +327,6 @@ toRosetta ::
     MonadFileReader m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>

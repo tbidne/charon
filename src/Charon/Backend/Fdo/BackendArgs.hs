@@ -44,7 +44,6 @@ backendArgsDirectorySizes ::
     MonadCatch m,
     MonadLoggerNS m,
     MonadPathReader m,
-    MonadPosixCompat m,
     MonadPosixC m,
     MonadTerminal m
   ) =>

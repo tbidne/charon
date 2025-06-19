@@ -150,7 +150,6 @@ toCorePathDataDirectorySizes ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadTerminal m
   ) =>
   HashMap ByteString DirectorySizesEntry ->

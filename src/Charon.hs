@@ -119,7 +119,6 @@ getIndex ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -144,7 +143,6 @@ getMetadata ::
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -227,7 +225,6 @@ convert ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadPosixCompat m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
