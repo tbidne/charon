@@ -33,7 +33,7 @@ import Charon.Prelude
 import Data.HashSet qualified as HSet
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
-import System.OsPath qualified as FP
+import System.OsPath qualified as OsP
 
 type Acc = (Seq (PathData, PathI TrashEntryPath), HashSet (PathI TrashEntryFileName))
 
@@ -84,7 +84,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
 
   let seqify :: OsPath -> m Acc -> m Acc
       seqify p macc = do
-        let actualExt = FP.takeExtension p
+        let actualExt = OsP.takeExtension p
             expectedExt = Backend.Data.backendExt (backendArgs ^. #backend)
             toCorePathData = backendArgs ^. #toCorePathData
 
@@ -97,7 +97,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
 
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix
-            fileName = FP.dropExtension $ FP.takeFileName path
+            fileName = OsP.dropExtension $ OsP.takeFileName path
             decoded = Serial.decode @pd (MkPathI fileName) contents
         case decoded of
           Left err -> throwM $ MkInfoDecodeE (MkPathI path) contents err
@@ -113,7 +113,7 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
   allTrashPaths <- listDirectory trashPathsDir'
   $(logDebug) ("Paths: " <> T.intercalate ", " (decodeDisplayExT <$> allTrashPaths))
   for_ allTrashPaths $ \p -> do
-    let pName = MkPathI $ FP.takeFileName p
+    let pName = MkPathI $ OsP.takeFileName p
     unless (pName `HSet.member` pathSet)
       $ throwM
       $ MkTrashEntryInfoNotFoundE trashHome pName

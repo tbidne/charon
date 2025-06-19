@@ -64,7 +64,7 @@ import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Effects.FileSystem.PathReader qualified as PR
 import FileSystem.OsPath qualified as OsPath
-import System.OsPath qualified as FP
+import System.OsPath qualified as OsP
 
 -- | Retrieves the trash path dir.
 getTrashPathDir :: PathI TrashHome -> PathI TrashDirFiles
@@ -135,13 +135,13 @@ mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
   -- Have to dropTrailingPathSeparator here because a trailing slash will
   -- make takeFileName give us the wrong path. We also need this so that
   -- later lookups succeed (requires string equality)
-  let origAbsoluteNoSlash = Paths.liftPathI' FP.dropTrailingPathSeparator origAbsolute
+  let origAbsoluteNoSlash = Paths.liftPathI' OsP.dropTrailingPathSeparator origAbsolute
 
   -- Need to get the file name here because fp could refer to an
   -- absolute path. In this case, </> returns the 2nd arg which is absolutely
   -- not what we want.
   let fileName :: PathI TrashEntryFileName
-      fileName = Paths.liftPathI FP.takeFileName origAbsoluteNoSlash
+      fileName = Paths.liftPathI OsP.takeFileName origAbsoluteNoSlash
   $(logDebug) $ "File name: '" <> Paths.toText fileName <> "'"
 
   -- Paranoia check for previous bug: check that derived name is not empty.
@@ -165,7 +165,7 @@ mkUniqName trashHome fileName = addNamespace "getUniqueName" $ do
   uniqPath <- mkUniqPath (getTrashPath trashHome fileName)
   $(logDebug) $ "Unique path: '" <> Paths.toText uniqPath <> "'"
 
-  let uniqName = Paths.liftPathI (FP.takeFileName . FP.dropTrailingPathSeparator) uniqPath
+  let uniqName = Paths.liftPathI (OsP.takeFileName . OsP.dropTrailingPathSeparator) uniqPath
   $(logDebug) $ "Unique name: '" <> Paths.toText uniqName <> "'"
 
   -- Paranoia check for previous bug: check that derived unique name is suffix

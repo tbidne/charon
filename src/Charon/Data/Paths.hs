@@ -41,7 +41,7 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import FileSystem.OsPath qualified as OsPath
-import System.OsPath qualified as FP
+import System.OsPath qualified as OsP
 import System.OsString qualified as OsStr
 
 -- | Types of filepaths used in Charon.
@@ -199,7 +199,7 @@ isRoot' p = do
 -- @/path/to/dots/..@.
 isDots :: (MonadThrow m) => PathI i -> m Bool
 isDots (MkPathI p) = do
-  let p' = FP.takeFileName p
+  let p' = OsP.takeFileName p
   fp <- OsPath.decodeThrowM p'
   pure $ isDots' . T.unpack . T.strip . T.pack $ fp
   where
