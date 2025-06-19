@@ -31,6 +31,7 @@ tests testEnv =
         deleteDotsError testEnv'
       ]
     ++ pathologicalTests testEnv'
+    ++ osTests testEnv'
   where
     testEnv' = appendTestDir "delete" <$> testEnv
 
@@ -417,3 +418,62 @@ deletesPathological2 getTestEnv = testCase "Deletes pathological files 2" $ do
     assertFdoDirectorySizesM []
   where
     expectedMetadata = mkMetadata 3 3 0 15
+
+osTests :: IO TestEnv -> [TestTree]
+
+#if POSIX
+
+osTests testEnv = [deleteTildePathError testEnv]
+
+deleteTildePathError :: IO TestEnv -> TestTree
+deleteTildePathError getTestEnv = testCase "Deletes tilde prints error" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deleteTildePathError" $ do
+    testDir <- getTestDir
+    let tildes = [[osp|~|], [osp|~/foo/|], [osp|./path/~/foo|]]
+        files = (testDir </>) <$> tildes
+
+    argList <- withSrArgsM $ "delete" : (unsafeDecode <$> files)
+
+    -- setup
+    clearDirectory testDir
+
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+
+    assertMatch expectedEx ex
+    assertMatches expectedTerm term
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+    assertFdoDirectorySizesM []
+  where
+    expectedEx = Exact "Something went wrong."
+    expectedTerm =
+      [ Outfixes
+          "Error deleting path"
+          ["delete/deleteTildePathError/~': Attempted to delete path with a tilde! This is not allowed"]
+          "",
+        Exact "",
+        Outfixes
+          "Error deleting path"
+          ["delete/deleteTildePathError/~/foo/': Attempted to delete path with a tilde! This is not allowed"]
+          "",
+        Exact "",
+        Outfixes
+          "Error deleting path"
+          ["delete/deleteTildePathError/./path/~/foo': Attempted to delete path with a tilde! This is not allowed"]
+          "",
+        Exact ""
+      ]
+
+    expectedIdxSet = HashSet.fromList []
+    expectedMetadata = Metadata.empty
+
+#else
+
+osTests _ = []
+
+#endif

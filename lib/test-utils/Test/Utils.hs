@@ -331,7 +331,8 @@ badChars =
   Set.fromList
     [ '/',
       '.',
-      ':'
+      ':',
+      '~'
     ]
 
 charMapper = Ch.toLower
@@ -371,7 +372,8 @@ badChars =
   Set.fromList
     [ '/',
       '.',
-      '*'
+      '*',
+      '~'
     ]
 
 charMapper = id

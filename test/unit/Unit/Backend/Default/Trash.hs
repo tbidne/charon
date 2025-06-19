@@ -38,7 +38,7 @@ import Charon.Env (HasBackend)
 #if WINDOWS
 import Charon.Exception (DotsPathE, EmptyPathE, FileNameEmptyE, RootE)
 #else
-import Charon.Exception (DotsPathE, EmptyPathE, RootE)
+import Charon.Exception (DotsPathE, EmptyPathE, RootE, TildePathE)
 #endif
 import Data.List qualified as L
 import Data.Text qualified as T
@@ -446,7 +446,28 @@ deriveEmptyErrorWindows backendArgs = testCase desc $ do
 
 #else
 
-osTests _ = [ ]
+osTests backendArgs = [ mvTrashTildePathError backendArgs]
+
+mvTrashTildePathError ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+mvTrashTildePathError backendArgs = testCase desc $ do
+  eformatted <-
+    try @_ @TildePathE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete path with a tilde! This is not allowed: /path/with/~/tilde/" @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for tilde original path"
+    dotDir = MkPathI [osp|/path/with/~/tilde/|]
 
 #endif
 

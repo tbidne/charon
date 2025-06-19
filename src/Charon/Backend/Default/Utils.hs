@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -35,6 +36,17 @@ import Charon.Data.Paths
     (<//>),
   )
 import Charon.Data.Paths qualified as Paths
+#if POSIX
+import Charon.Exception
+  ( DotsPathE (MkDotsPathE),
+    EmptyPathE (MkEmptyPathE),
+    FileNameEmptyE (MkFileNameEmptyE),
+    RenameDuplicateE (MkRenameDuplicateE),
+    RootE (MkRootE),
+    TildePathE (MkTildePathE),
+    UniquePathNotPrefixE (MkUniquePathNotPrefixE),
+  )
+#else
 import Charon.Exception
   ( DotsPathE (MkDotsPathE),
     EmptyPathE (MkEmptyPathE),
@@ -43,6 +55,7 @@ import Charon.Exception
     RootE (MkRootE),
     UniquePathNotPrefixE (MkUniquePathNotPrefixE),
   )
+#endif
 import Charon.Prelude
 import Charon.Utils qualified as U
 import Data.ByteString.Char8 qualified as C8
@@ -210,6 +223,8 @@ throwIfNotPrefix origName newName = do
     (origNameStr `L.isPrefixOf` newNameStr)
     (throwM $ MkUniquePathNotPrefixE origName newName)
 
+{- ORMOLU_DISABLE -}
+
 throwIfIllegal ::
   ( HasCallStack,
     MonadLoggerNS m,
@@ -218,9 +233,17 @@ throwIfIllegal ::
   PathI TrashEntryOriginalPath ->
   m ()
 throwIfIllegal p = addNamespace "throwIfIllegal" $ do
+#if POSIX
+  when (Paths.containsTilde p) $ do
+    let ex = MkTildePathE p
+    $(logError) $ U.displayExT ex
+    throwM $ MkTildePathE p
+#endif
   U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwM MkRootE
   U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwM MkEmptyPathE
   U.whenM (Paths.isDots p) $ $(logError) "Path is dots!" *> throwM (MkDotsPathE p)
+
+{- ORMOLU_ENABLE -}
 
 -- | Parses a ByteString like:
 --

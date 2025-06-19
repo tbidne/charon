@@ -12,6 +12,7 @@ module Charon.Data.Paths
     -- * Functions
 
     -- ** Specific
+    containsTilde,
     isEmpty,
     isRoot,
     isRoot',
@@ -41,6 +42,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import FileSystem.OsPath qualified as OsPath
 import System.OsPath qualified as FP
+import System.OsString qualified as OsStr
 
 -- | Types of filepaths used in Charon.
 data PathIndex
@@ -153,6 +155,10 @@ infixl 5 <//
 (//>) = flip (<//)
 
 infixl 5 //>
+
+-- | Returns true if the path contains a tilde (~).
+containsTilde :: PathI i -> Bool
+containsTilde (MkPathI p) = OsStr.elem (OsStr.unsafeFromChar '~') p
 
 --- | Returns true if the paths is empty. Note that whitespace is __not__
 --- considered empty as we are trying to prevent deleting "" (which gets

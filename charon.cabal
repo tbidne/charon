@@ -40,11 +40,14 @@ common common-lang
     StrictData
     TypeFamilies
 
-  if os(osx)
-    cpp-options: -DOSX
-
   if os(windows)
     cpp-options: -DWINDOWS
+
+  elif os(osx)
+    cpp-options: -DOSX -DPOSIX
+
+  else
+    cpp-options: -DLINUX -DPOSIX
 
 library
   import:           common-lang
@@ -115,7 +118,7 @@ library
     , effects-unix-compat   ^>=0.1
     , exception-utils       ^>=0.1
     , exceptions            ^>=0.10.4
-    , filepath              >=1.4.2.1   && <1.6
+    , filepath              >=1.5       && <1.6
     , fs-utils              ^>=0.1
     , hashable              >=1.4.0.2   && <1.6
     , mtl                   >=2.2.1     && <2.4
@@ -123,6 +126,7 @@ library
     , optics-core           ^>=0.4
     , optics-th             ^>=0.4
     , optparse-applicative  >=0.15      && <0.19
+    , os-string             ^>=2.0.1
     , path-size             ^>=0.1
     , pretty-terminal       ^>=0.1.0.0
     , serialise             ^>=0.2.6.0

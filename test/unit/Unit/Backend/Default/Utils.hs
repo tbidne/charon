@@ -263,5 +263,6 @@ genPathChar = Gen.filter isGoodChar Gen.ascii
       [ '/',
         '.',
         '\\', -- windows
-        ':'
+        ':',
+        '~'
       ]

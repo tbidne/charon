@@ -22,6 +22,7 @@ module Charon.Exception
     DotsPathE (..),
     EmptyPathE (..),
     RootE (..),
+    TildePathE (..),
 
     -- * Trash name deriving
     FileNameEmptyE (..),
@@ -207,6 +208,17 @@ instance Exception RestoreCollisionE where
         "' as one exists at the original location: '",
         decodeDisplayEx $ o ^. #unPathI,
         "'"
+      ]
+
+-- | Exception for paths with a tilde.
+newtype TildePathE = MkTildePathE (PathI TrashEntryOriginalPath)
+  deriving stock (Show)
+
+instance Exception TildePathE where
+  displayException (MkTildePathE p) =
+    mconcat
+      [ "Attempted to delete path with a tilde! This is not allowed: ",
+        decodeDisplayEx $ p ^. #unPathI
       ]
 
 -- | Exception for deleting the root.
