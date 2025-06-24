@@ -132,6 +132,7 @@ library
     , serialise             ^>=0.2.6.0
     , si-bytes              ^>=0.1
     , text                  >=1.2.4.0   && <2.2
+    , text-builder-linear   ^>=0.1.3
     , text-display          >=0.0.3.0   && <1.1
     , time                  >=1.9.3     && <1.15
     , toml-reader           >=0.2.0.0   && <0.3
