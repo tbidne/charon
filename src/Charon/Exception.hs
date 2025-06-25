@@ -2,10 +2,7 @@
 
 -- | Provides exceptions used by Charon.
 module Charon.Exception
-  ( -- * General
-    SomethingWentWrong (..),
-
-    -- * Trash
+  ( -- * Trash
 
     -- ** Entries
 
@@ -315,12 +312,3 @@ instance Exception PathNotFound where
         decodeDisplayEx p,
         "'"
       ]
-
--- | General error for something going wrong. Used as the final "overall"
--- error for when some code can catch multiple exceptions.
-data SomethingWentWrong = MkSomethingWentWrong
-
-deriving stock instance Show SomethingWentWrong
-
-instance Exception SomethingWentWrong where
-  displayException _ = "Something went wrong."

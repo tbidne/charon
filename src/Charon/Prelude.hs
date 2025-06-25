@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 -- | Custom prelude.
@@ -17,6 +19,9 @@ module Charon.Prelude
     vsep,
     punctuate,
     line,
+
+    -- * Debug
+    todo,
 
     -- * Optics
     packed,
@@ -219,6 +224,8 @@ import FileSystem.OsPath as X
   )
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
+import GHC.Exception (errorCallWithCallStackException)
+import GHC.Exts (RuntimeRep, TYPE, raise#)
 import GHC.Float as X (Double)
 import GHC.Generics as X (Generic)
 import GHC.Integer as X (Integer)
@@ -363,3 +370,8 @@ concatWith :: (Foldable t) => (Builder -> Builder -> Builder) -> t Builder -> Bu
 concatWith f ds
   | null ds = mempty
   | otherwise = foldr1 f ds
+
+-- | Placeholder for unwritten code.
+todo :: forall {r :: RuntimeRep} (a :: TYPE r). (HasCallStack) => a
+todo = raise# (errorCallWithCallStackException "Prelude.todo: not yet implemented" ?callStack)
+{-# WARNING todo "todo remains in code" #-}

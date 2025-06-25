@@ -9,6 +9,10 @@ module Charon.Data.Paths
     PathI (..),
     PathIndex (..),
 
+    -- ** Raw
+    RawPathI (..),
+    fromRaw,
+
     -- * Functions
 
     -- ** Specific
@@ -23,6 +27,7 @@ module Charon.Data.Paths
     -- ** General
     -- $general
     showPaths,
+    renderPath,
     reindex,
     (<//>),
     (<//),
@@ -40,6 +45,7 @@ import Charon.Prelude
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
+import Effects.FileSystem.PathReader qualified as PR
 import FileSystem.OsPath qualified as OsPath
 import System.OsPath qualified as OsP
 import System.OsString qualified as OsStr
@@ -78,6 +84,25 @@ newtype PathI (i :: PathIndex) = MkPathI
   deriving anyclass (Hashable, NFData)
 
 makeFieldLabelsNoPrefix ''PathI
+
+-- | 'PathI' before any invariant checking e.g. tilde expansion.
+type RawPathI :: PathIndex -> Type
+newtype RawPathI (i :: PathIndex) = MkRawPathI
+  { unRawPathI :: OsPath
+  }
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (Hashable, NFData)
+
+makeFieldLabelsNoPrefix ''RawPathI
+
+fromRaw ::
+  ( HasCallStack,
+    MonadPathReader m,
+    MonadThrow m
+  ) =>
+  RawPathI i ->
+  m (PathI i)
+fromRaw (MkRawPathI r) = MkPathI <$> PR.expandTilde r
 
 -- TODO: If we have a total way to encode 'OsPath -> ByteString' then we can
 -- make encode total, which will improve several type signatures. Technically
@@ -211,6 +236,9 @@ isDots (MkPathI p) = do
 -- "one, two"
 showPaths :: [PathI a] -> String
 showPaths = L.intercalate ", " . fmap (show . view #unPathI)
+
+renderPath :: PathI i -> Text
+renderPath = T.pack . decodeLenient . view #unPathI
 
 -- | 'PathI' to 'String'. Attempts decoding for nicer display.
 toString :: PathI i -> String

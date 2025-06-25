@@ -4,7 +4,6 @@
 -- | Provides internal utility functions
 module Charon.Utils
   ( -- * FAM combinators
-    throwIfTrue,
     whenM,
 
     -- * Text
@@ -43,11 +42,12 @@ module Charon.Utils
     displayExT,
     noCallstacks,
 
+    -- * Printing
+    displayList,
+
     -- * Misc
     filterSeqM,
     renderPretty,
-    setRefTrue,
-    setRefIfTrue,
     noBuffering,
     getAllFiles,
     localTimeToMillis,
@@ -70,7 +70,6 @@ import Charon.Exception
     RenameDuplicateE,
     RestoreCollisionE,
     RootE,
-    SomethingWentWrong (MkSomethingWentWrong),
     TildePathE,
     TrashEntryFileNotFoundE,
     TrashEntryInfoBadExtE,
@@ -93,6 +92,7 @@ import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes.Formatting.Base (BaseFormatter)
 import Data.Bytes.Size (Sized)
 import Data.Char qualified as Ch
+import Data.Foldable qualified as F
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Data.Text.Internal (Text (Text))
@@ -104,6 +104,7 @@ import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.Time (MonadTime (getMonotonicTime))
+import FileSystem.OsPath (TildeException)
 import FileSystem.OsPath qualified as OsPath
 import PathSize
   ( PathSizeResult
@@ -230,25 +231,6 @@ stripInfix p@(Text _arr _off plen) t@(Text arr off len) =
   case TIS.indices p t of
     [] -> Nothing
     (x : _) -> Just (TI.text arr off x, TI.text arr (x + off + plen) (len - plen - x))
-
--- | Sets the ioref if the maybe is non-empty.
-setRefIfTrue :: (MonadIORef m) => IORef Bool -> Bool -> m ()
-setRefIfTrue _ False = pure ()
-setRefIfTrue ref True = setRefTrue ref
-
-setRefTrue :: (MonadIORef m) => IORef Bool -> m ()
-setRefTrue ref = writeIORef ref True
-
-throwIfTrue ::
-  ( MonadIORef m,
-    MonadThrow m
-  ) =>
-  IORef Bool ->
-  m ()
-throwIfTrue ref =
-  readIORef ref >>= \case
-    False -> pure ()
-    True -> throwM MkSomethingWentWrong
 
 -- | Breaks a bytestring on the first '='. The '=' is removed from the second
 -- element.
@@ -488,8 +470,10 @@ noCallstacks =
     MkExceptionProxy @RenameDuplicateE,
     MkExceptionProxy @RestoreCollisionE,
     MkExceptionProxy @RootE,
-    MkExceptionProxy @SomethingWentWrong,
     MkExceptionProxy @TextException,
+    -- TildeException comes from fs-utils, for reading paths at the CLI.
+    MkExceptionProxy @TildeException,
+    -- TildePathE defined here, for anything that slips through.
     MkExceptionProxy @TildePathE,
     MkExceptionProxy @TrashDirFilesNotFoundE,
     MkExceptionProxy @TrashDirInfoNotFoundE,
@@ -500,3 +484,16 @@ noCallstacks =
     MkExceptionProxy @TrashEntryInfoBadExtE,
     MkExceptionProxy @UniquePathNotPrefixE
   ]
+
+displayList :: (Foldable f) => (a -> Text) -> f a -> Text
+displayList toText xs =
+  mconcat
+    [ F.foldMap go xs,
+      "\n"
+    ]
+  where
+    go x =
+      mconcat
+        [ "\n - ",
+          toText x
+        ]

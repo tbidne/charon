@@ -60,6 +60,7 @@ import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
+import Data.Sequence qualified as Seq
 import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
@@ -124,30 +125,32 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
 
   void Trash.createTrash
 
-  anyErrorRef <- newIORef False
   currTime <- MkTimestamp <$> getSystemTime
 
   let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
 
-      handleEx p ex = do
-        $(logError) (Utils.displayExT ex)
-        putStrLn
-          $ mconcat
-            [ "Error deleting path '",
-              decodeDisplayEx $ p ^. #unPathI,
-              "': ",
-              Utils.displayEx ex,
-              "\n"
-            ]
-        Utils.setRefTrue anyErrorRef
+  deletedPathsRef <- newIORef Seq.Empty
 
   -- move paths to trash
-  for_ paths $ \p -> do
-    trySync (deleteAction p) >>= \case
-      Left ex -> handleEx p ex
-      Right pd -> postHook pd
+  eResult <- trySync $ for_ paths $ \p -> do
+    pd <- deleteAction p
+    modifyIORef' deletedPathsRef (:|> p)
+    postHook pd
 
-  Utils.throwIfTrue anyErrorRef
+  deletedPaths <- readIORef deletedPathsRef
+
+  unless (null deletedPaths) $ do
+    let msg = Utils.displayList Paths.renderPath deletedPaths
+
+    putTextLn
+      $ mconcat
+        [ "Deleted paths:",
+          msg
+        ]
+
+  case eResult of
+    Right _ -> pure ()
+    Left ex -> throwM ex
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -206,26 +209,34 @@ permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePo
   $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
-  anyErrorRef <- newIORef False
+  deletedPathsRef <- newIORef Seq.Empty
 
   -- permanently delete paths
-  addNamespace "deleting" $ for_ paths $ \p ->
-    -- Record error if any occurred
-    (Trash.permDeleteFromTrash backendArgs postHook force trashHome p >>= Utils.setRefIfTrue anyErrorRef)
-      `catchSync` \ex -> do
-        $(logError) (Utils.displayExT ex)
-        putStrLn
-          $ mconcat
-            [ "Error permanently deleting path '",
-              decodeDisplayEx $ p ^. #unPathI,
-              "': ",
-              Utils.displayEx ex,
-              "\n"
-            ]
-        -- in case Trash.permDeleteFromTrash throws an exception
-        Utils.setRefTrue anyErrorRef
+  addNamespace "deleting" $ do
+    let deleteAction =
+          Trash.permDeleteFromTrash
+            backendArgs
+            postHook
+            force
+            deletedPathsRef
+            trashHome
 
-  Utils.throwIfTrue anyErrorRef
+    eResult <- trySync $ for_ paths deleteAction
+
+    deletedPaths <- readIORef deletedPathsRef
+
+    unless (null deletedPaths) $ do
+      let msg = Utils.displayList Paths.renderPath deletedPaths
+
+      putTextLn
+        $ mconcat
+          [ "Permanently deleted paths:",
+            msg
+          ]
+
+    case eResult of
+      Right _ -> pure ()
+      Left ex -> throwM ex
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -381,25 +392,33 @@ restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
   $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
-  anyErrorRef <- newIORef False
+  restoredPathsRef <- newIORef Seq.Empty
 
   -- move trash paths back to original location
-  addNamespace "restoring" $ for_ paths $ \p ->
-    -- Record error if any occurred
-    (Trash.restoreTrashToOriginal backendArgs postHook trashHome p >>= Utils.setRefIfTrue anyErrorRef)
-      `catchSync` \ex -> do
-        $(logError) (Utils.displayExT ex)
-        putStrLn
-          $ mconcat
-            [ "Error restoring path '",
-              decodeDisplayEx $ p ^. #unPathI,
-              "': ",
-              Utils.displayEx ex,
-              "\n"
-            ]
-        Utils.setRefTrue anyErrorRef
+  addNamespace "restoring" $ do
+    let restoreAction =
+          Trash.restoreTrashToOriginal
+            backendArgs
+            postHook
+            restoredPathsRef
+            trashHome
 
-  Utils.throwIfTrue anyErrorRef
+    eResult <- trySync $ for_ paths restoreAction
+
+    restoredPaths <- readIORef restoredPathsRef
+
+    unless (null restoredPaths) $ do
+      let msg = Utils.displayList Paths.renderPath restoredPaths
+
+      putTextLn
+        $ mconcat
+          [ "Restored paths:",
+            msg
+          ]
+
+    case eResult of
+      Right _ -> pure ()
+      Left ex -> throwM ex
 
 -- | Empties the trash.
 emptyTrash ::

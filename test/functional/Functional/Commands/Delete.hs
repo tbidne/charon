@@ -8,9 +8,12 @@ module Functional.Commands.Delete
 where
 
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Exception (SomethingWentWrong)
+import Charon.Exception (DotsPathE, EmptyPathE, PathNotFound)
 import Data.HashSet qualified as HashSet
-import FileSystem.OsPath (unsafeDecode)
+#if POSIX
+import FileSystem.OsPath (TildeException)
+#endif
+import FileSystem.OsPath qualified as OsP
 import Functional.Prelude
 
 -- TODO: It would be nice if we could verify that the original location
@@ -21,7 +24,7 @@ import Functional.Prelude
 tests :: IO TestEnv -> TestTree
 tests testEnv =
   testGroup
-    "Delete Command"
+    "Delete d Command"
     $ [ deletesOne testEnv',
         deletesMany testEnv',
         deleteUnknownError testEnv',
@@ -47,7 +50,7 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     -- setup
     createFiles [f1]
     assertPathsExist [f1]
-    argList <- withSrArgsM ["delete", unsafeDecode f1]
+    argList <- withSrArgsM ["delete", OsP.unsafeDecode f1]
 
     liftIO $ runCharon argList
 
@@ -121,12 +124,12 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     testDir <- getTestDir
     let file = testDir </>! "bad file"
 
-    argList <- withSrArgsM ["delete", unsafeDecode file]
+    argList <- withSrArgsM ["delete", OsP.unsafeDecode file]
 
     -- setup
     clearDirectory testDir
 
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @PathNotFound argList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -138,14 +141,8 @@ deleteUnknownError getTestEnv = testCase "Deletes unknown prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Outfixes
-          "Error deleting path"
-          ["delete/deleteUnknownError/bad file': Path not found:"]
-          "delete/deleteUnknownError/bad file'",
-        Exact ""
-      ]
+    expectedEx = Outfixes "Path not found:" [] "delete/deleteUnknownError/bad file'"
+    expectedTerm = []
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -157,7 +154,7 @@ deleteDuplicateFile getTestEnv = testCase "Deletes duplicate file" $ do
     testDir <- getTestDir
     let file = testDir </>! "f1"
 
-    argList <- withSrArgsM ["delete", unsafeDecode file]
+    argList <- withSrArgsM ["delete", OsP.unsafeDecode file]
 
     -- setup
     clearDirectory testDir
@@ -203,7 +200,7 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     createFiles realFiles
     assertPathsExist realFiles
 
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @PathNotFound argList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -214,28 +211,21 @@ deletesSome getTestEnv = testCase "Deletes some files with errors" $ do
     expectedIdxSet <-
       mkPathDataSetM
         [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f5", PathTypeFile, 5)
+          ("f2", PathTypeFile, 5)
         ]
 
     assertSetEq expectedIdxSet idxSet
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
+    expectedEx = Outfixes "Path not found:" [] "delete/deletesSome/f3'"
     expectedTerm =
-      [ Outfixes
-          "Error deleting path"
-          ["delete/deletesSome/f3': Path not found"]
-          "delete/deletesSome/f3'",
-        Exact "",
-        Outfixes
-          "Error deleting path"
-          ["delete/deletesSome/f4': Path not found"]
-          "delete/deletesSome/f4'",
+      [ Exact "Deleted paths:",
+        Outfixes "- " [] "delete/deletesSome/f1",
+        Outfixes "- " [] "delete/deletesSome/f2",
         Exact ""
       ]
-    expectedMetadata = mkMetadata 3 3 0 15
+    expectedMetadata = mkMetadata 2 2 0 10
 
 deleteEmptyError :: IO TestEnv -> TestTree
 deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
@@ -248,7 +238,7 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
     -- setup
     clearDirectory testDir
 
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @EmptyPathE argList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -260,11 +250,8 @@ deleteEmptyError getTestEnv = testCase "Deletes empty prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Exact "Error deleting path '': Attempted to delete the empty path! This is not allowed.",
-        Exact ""
-      ]
+    expectedEx = Exact "Attempted to delete the empty path! This is not allowed."
+    expectedTerm = []
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -277,12 +264,12 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     let dots = [[osp|.|], [osp|..|], [osp|...|]]
         files = (testDir </>) <$> dots
 
-    argList <- withSrArgsM $ "delete" : (unsafeDecode <$> files)
+    argList <- withSrArgsM $ "delete" : (OsP.unsafeDecode <$> files)
 
     -- setup
     clearDirectory testDir
 
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @DotsPathE argList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -294,24 +281,13 @@ deleteDotsError getTestEnv = testCase "Deletes dots prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
+    expectedEx =
+      Outfixes
+        "Attempted to delete the special path"
+        []
+        ".'! This is not allowed."
     expectedTerm =
-      [ Outfixes
-          "Error deleting path"
-          ["delete/deleteDotsError/.': Attempted to delete the special path"]
-          "delete/deleteDotsError/.'! This is not allowed.",
-        Exact "",
-        Outfixes
-          "Error deleting path"
-          ["delete/deleteDotsError/..': Attempted to delete the special path"]
-          "delete/deleteDotsError/..'! This is not allowed.",
-        Exact "",
-        Outfixes
-          "Error deleting path"
-          ["delete/deleteDotsError/...': Attempted to delete the special path"]
-          "delete/deleteDotsError/...'! This is not allowed.",
-        Exact ""
-      ]
+      []
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty
@@ -430,15 +406,15 @@ deleteTildePathError getTestEnv = testCase "Deletes tilde prints error" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deleteTildePathError" $ do
     testDir <- getTestDir
-    let tildes = [[osp|~|], [osp|~/foo/|], [osp|./path/~/foo|]]
+    let tildes = [[osp|~|], [osp|~/foo/|], [osp|./path/~/foo|], [osp|good|]]
         files = (testDir </>) <$> tildes
 
-    argList <- withSrArgsM $ "delete" : (unsafeDecode <$> files)
+    argList <- withSrArgsM $ "delete" : (OsP.unsafeDecode <$> files)
 
     -- setup
     clearDirectory testDir
 
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong argList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @TildeException argList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -450,24 +426,12 @@ deleteTildePathError getTestEnv = testCase "Deletes tilde prints error" $ do
     liftIO $ expectedMetadata @=? metadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Outfixes
-          "Error deleting path"
-          ["delete/deleteTildePathError/~': Attempted to delete path with a tilde! This is not allowed"]
-          "",
-        Exact "",
-        Outfixes
-          "Error deleting path"
-          ["delete/deleteTildePathError/~/foo/': Attempted to delete path with a tilde! This is not allowed"]
-          "",
-        Exact "",
-        Outfixes
-          "Error deleting path"
-          ["delete/deleteTildePathError/./path/~/foo': Attempted to delete path with a tilde! This is not allowed"]
-          "",
-        Exact ""
-      ]
+    expectedEx =
+      Outfixes
+        "Unexpected tilde in OsPath:"
+        []
+        "delete/deleteTildePathError/~"
+    expectedTerm = []
 
     expectedIdxSet = HashSet.fromList []
     expectedMetadata = Metadata.empty

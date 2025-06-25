@@ -21,7 +21,7 @@ import Charon.Data.Paths (PathI (MkPathI))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (↦), (∪))
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
-import Charon.Exception (SomethingWentWrong)
+import Charon.Exception (PathNotFound, TrashEntryNotFoundE)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
 import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
@@ -198,7 +198,6 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let (_, αTest, αTestPaths) = mkPaths testDir α
           (_, _, βTestPaths) = mkPaths testDir β
 
-          -- αTest = toTestDir α
           trashDir = testDir </> [osp|.trash|]
       env <- liftIO $ mkEnv backend trashDir
 
@@ -212,7 +211,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       let toDelete = αTestPaths ∪ βTestPaths
 
       caughtEx <-
-        try @_ @SomethingWentWrong
+        try @_ @PathNotFound
           $ usingIntIONoCatch env (Charon.delete (toDelete ↦ MkPathI))
 
       ex <-
@@ -223,9 +222,9 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       annotateShow ex
 
-      -- should have printed exactly 1 message for each bad filename
+      -- should have printed exactly 1 message, since we fail fast
       termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
-      length termLogs === length β
+      length termLogs === 1
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -309,7 +308,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toPermDelete
 
       caughtEx <-
-        try @_ @SomethingWentWrong
+        try @_ @TrashEntryNotFoundE
           $ usingIntIONoCatch env (Charon.permDelete True toPermDelete)
 
       ex <-
@@ -401,7 +400,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotateShow toRestore
 
       caughtEx <-
-        try @_ @SomethingWentWrong
+        try @_ @TrashEntryNotFoundE
           $ usingIntIONoCatch env (Charon.restore toRestore)
 
       ex <-

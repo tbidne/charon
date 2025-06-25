@@ -7,6 +7,8 @@ module Charon.Runner.Command
     Command (..),
     CommandP1,
     CommandP2,
+    advancePhaseCmd,
+    CmdPathF,
 
     -- * Optics
     _Delete,
@@ -26,37 +28,96 @@ import Charon.Data.Paths
         TrashEntryOriginalPath,
         TrashHome
       ),
+    RawPathI,
+    fromRaw,
   )
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Prelude
 import Charon.Runner.Command.List (ListCmd)
-import Charon.Runner.Phase (AdvancePhase (..), Phase (..))
+import Charon.Runner.Phase
+  ( AdvancePhase (advancePhase),
+    Phase (Phase1, Phase2),
+  )
 
-instance AdvancePhase (Command Phase1) where
-  type NextPhase (Command Phase1) = Command Phase2
+advancePhaseCmd ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m,
+    MonadTerminal m
+  ) =>
+  Command Phase1 ->
+  m (Command Phase2)
+advancePhaseCmd (Delete paths) = Delete <$> fromRawSet paths
+advancePhaseCmd (PermDelete force paths) = PermDelete force <$> fromRawSet paths
+advancePhaseCmd (Empty b) = pure (Empty b)
+advancePhaseCmd (Restore paths) = Restore <$> fromRawSet paths
+advancePhaseCmd Metadata = pure Metadata
+advancePhaseCmd (List cfg) = pure $ List $ advancePhase cfg
+advancePhaseCmd (Convert dest) = pure $ Convert dest
+advancePhaseCmd (Merge dest) = Merge <$> fromRaw dest
 
-  advancePhase (Delete paths) = Delete paths
-  advancePhase (PermDelete force paths) = PermDelete force paths
-  advancePhase (Empty b) = Empty b
-  advancePhase (Restore paths) = Restore paths
-  advancePhase Metadata = Metadata
-  advancePhase (List cfg) = List $ advancePhase cfg
-  advancePhase (Convert dest) = Convert dest
-  advancePhase (Merge dest) = Merge dest
+fromRawSet ::
+  ( HasCallStack,
+    MonadCatch m,
+    MonadPathReader m,
+    MonadTerminal m
+  ) =>
+  UniqueSeqNE (RawPathI i) ->
+  m (UniqueSeqNE (PathI i))
+fromRawSet =
+  fmap USeqNE.unsafeFromFoldable
+    . traverse fromRaw
+    . USeqNE.toNonEmpty
+
+{-(paths, errs) <- (\f -> F.foldlM f (Seq.Empty, Seq.Empty) ys) $ \(ws, es) y -> do
+  trySync (fromRaw y) <&> \case
+    Left ex -> (ws, es :|> (y, ex))
+    Right w -> (ws :|> w, es)
+
+case errs of
+  Seq.Empty -> pure ()
+  es@(_ :<| _) -> do
+    let f :: (RawPathI i, SomeException) -> Text
+        f (rp, ex) =
+          mconcat
+            [ "\n - '",
+              T.pack $ decodeLenient $ rp ^. #unRawPathI,
+              "': ",
+              T.pack $ Utils.displayEx ex
+            ]
+        msg =
+          mconcat
+            [ "Encountered errors parsing the efollowing paths:",
+              F.foldMap f es,
+              "\n"
+            ]
+    putTextLn msg
+
+case paths of
+  Seq.Empty -> throwText $ "No paths left after filtering bad ones."
+  zs@(_ :<| _) -> pure $ USeqNE.unsafeFromFoldable zs
+where
+  ys = USeqNE.toNonEmpty xs-}
+
+type CmdPathF :: Phase -> PathIndex -> Type
+type family CmdPathF p i where
+  CmdPathF Phase1 i = RawPathI i
+  CmdPathF Phase2 i = PathI i
 
 -- | Action to run.
 type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
-    Delete (UniqueSeqNE (PathI TrashEntryOriginalPath))
+    Delete (UniqueSeqNE (CmdPathF s TrashEntryOriginalPath))
   | -- | Permanently deletes a path from the trash.
     PermDelete
       Bool
-      (UniqueSeqNE (PathI TrashEntryFileName))
+      (UniqueSeqNE (CmdPathF s TrashEntryFileName))
   | -- | Empties the trash.
     Empty Bool
   | -- | Restores a path.
-    Restore (UniqueSeqNE (PathI TrashEntryFileName))
+    Restore (UniqueSeqNE (CmdPathF s TrashEntryFileName))
   | -- | List all trash contents.
     List (ListCmd s)
   | -- | Prints trash metadata.
@@ -64,7 +125,7 @@ data Command s
   | -- | Converts backend files.
     Convert Backend
   | -- | Merges trash home directories.
-    Merge (PathI TrashHome)
+    Merge (CmdPathF s TrashHome)
 
 makePrisms ''Command
 

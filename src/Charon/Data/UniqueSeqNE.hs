@@ -5,6 +5,7 @@ module Charon.Data.UniqueSeqNE
     -- * Creation
     singleton,
     fromNonEmpty,
+    unsafeFromFoldable,
     unsafefromUniqueSeq,
 
     -- * Elimination
@@ -32,6 +33,7 @@ module Charon.Data.UniqueSeqNE
   )
 where
 
+import Charon.Data.UniqueSeq qualified as USeq
 import Charon.Data.UniqueSeq.Internal (UniqueSeq (UnsafeUniqueSeq))
 import Charon.Data.UniqueSeqNE.Internal
   ( UniqueSeqNE
@@ -78,6 +80,9 @@ map f (UnsafeUniqueSeqNE (x :<|| seq) _) = UnsafeUniqueSeqNE (f x :<|| newSeq) n
       | otherwise = (accSeq, accSet)
       where
         y = f z
+
+unsafeFromFoldable :: (Foldable f, Hashable a) => f a -> UniqueSeqNE a
+unsafeFromFoldable = unsafefromUniqueSeq . USeq.fromFoldable
 
 -- When building a UniqueSeqNE from some ordered Foldable, we want to
 -- preserve order. Because we are dealing with NonEmpty, we hold onto the

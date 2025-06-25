@@ -8,7 +8,7 @@ module Functional.Commands.Restore
 where
 
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Exception (SomethingWentWrong)
+import Charon.Exception (RestoreCollisionE, TrashEntryNotFoundE)
 import Data.HashSet qualified as HashSet
 import FileSystem.OsPath (unsafeDecode)
 import Functional.Prelude
@@ -181,7 +181,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "bad file"]
-    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong restoreArgList
+    (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -192,11 +192,8 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     delExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Exact "Error restoring path 'bad file': No entry for 'bad file'",
-        Exact ""
-      ]
+    expectedEx = Exact "No entry for 'bad file'"
+    expectedTerm = []
 
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -226,7 +223,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1"]
-    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong restoreArgList
+    (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -237,13 +234,11 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     delExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Outfix
-          "Error restoring path 'f1': Cannot restore the trash file 'f1' as one exists at the original location: '"
-          "restore/restoreCollisionError/f1'",
-        Exact ""
-      ]
+    expectedEx =
+      Outfix
+        "Cannot restore the trash file 'f1' as one exists at the original location"
+        "restore/restoreCollisionError/f1'"
+    expectedTerm = []
 
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -282,7 +277,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
-    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong restoreArgList
+    (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
@@ -291,6 +286,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     restoreExpectedIdxSet <-
       mkPathDataSetM2
         [ ("f1 (1)", "f1", PathTypeFile, 5),
+          ("f2", "f2", PathTypeFile, 5),
           ("f3", "f3", PathTypeFile, 5)
         ]
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
@@ -299,16 +295,18 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     assertFdoDirectorySizesM []
   where
     desc = "Restore simultaneous collision prints error"
-    expectedEx = Exact "Something went wrong."
+    expectedEx =
+      Outfix
+        "Cannot restore the trash file 'f1 (1)' as one exists at the original location"
+        "estore/restoreSimultaneousCollisionError/f1'"
     expectedTerm =
-      [ Outfix
-          "Error restoring path 'f1 (1)': Cannot restore the trash file 'f1 (1)' as one exists at the original location: '"
-          "restore/restoreSimultaneousCollisionError/f1'",
+      [ Exact "Restored paths:",
+        Outfix "- " "restore/restoreSimultaneousCollisionError/f1",
         Exact ""
       ]
 
     delExpectedMetadata = mkMetadata 4 4 0 20
-    restoreExpectedMetadata = mkMetadata 2 2 0 10
+    restoreExpectedMetadata = mkMetadata 3 3 0 15
 
 restoresSome :: IO TestEnv -> TestTree
 restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
@@ -345,33 +343,33 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
 
     -- RESTORE
     restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
-    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong restoreArgList
+    (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
     assertPathsDoNotExist ((testDir </>!) <$> ["f3", "f4"])
-    assertPathsExist ((testDir </>!) <$> ["f1", "f2", "f5"])
+    assertPathsExist ((testDir </>!) <$> ["f1", "f2"])
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
 
     -- trash structure assertions
+    restoreExpectedIdxSet <- mkPathDataSetM [("f5", PathTypeFile, 5)]
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
+    expectedEx = Exact "No entry for 'f3'"
     expectedTerm =
-      [ Exact "Error restoring path 'f3': No entry for 'f3'",
-        Exact "",
-        Exact "Error restoring path 'f4': No entry for 'f4'",
+      [ Exact "Restored paths:",
+        Outfixes "- " [] "restore/restoresSome/f1",
+        Outfixes "- " [] "restore/restoresSome/f2",
         Exact ""
       ]
 
     delExpectedMetadata = mkMetadata 3 3 0 15
 
-    restoreExpectedIdxSet = HashSet.empty
-    restoreExpectedMetadata = Metadata.empty
+    restoreExpectedMetadata = mkMetadata 1 1 0 5
 
 restoresWildcards :: IO TestEnv -> TestTree
 restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $ do
@@ -443,8 +441,27 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
   usingReaderT testEnv $ appendTestDirM "restoresSomeWildcards" $ do
     testDir <- getTestDir
 
-    let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
-        testFiles = (testDir </>!) <$> files
+    let filesToRestore =
+          [ "h1",
+            "h2",
+            "h3",
+            "1h",
+            "2h",
+            "3h",
+            "fooAbar"
+          ]
+        otherFiles =
+          [ "fooBadbar",
+            "fooXbar",
+            "g1",
+            "g2",
+            "g3",
+            "1g",
+            "2g",
+            "3g"
+          ]
+        testFilesToRestore = (testDir </>!) <$> filesToRestore
+        testFiles = (testDir </>!) <$> filesToRestore <> otherFiles
 
     delArgList <- withSrArgsPathsM ["delete"] testFiles
 
@@ -460,7 +477,13 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ ("foobar", PathTypeFile, 5),
+        [ ("h1", PathTypeFile, 5),
+          ("h2", PathTypeFile, 5),
+          ("h3", PathTypeFile, 5),
+          ("1h", PathTypeFile, 5),
+          ("2h", PathTypeFile, 5),
+          ("3h", PathTypeFile, 5),
+          ("fooAbar", PathTypeFile, 5),
           ("fooBadbar", PathTypeFile, 5),
           ("fooXbar", PathTypeFile, 5),
           ("g1", PathTypeFile, 5),
@@ -477,27 +500,35 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
 
     -- RESTORE
 
-    -- We want a collision to force an error; everything should be restored
-    -- from trash but fooBadBar
+    -- We want a collision to force an error
     createFiles [testDir </>! "fooBadbar"]
 
-    restoreArgList <- withSrArgsM ["restore", "foo**bar", "*g*"]
-    runCharonException @SomethingWentWrong restoreArgList
+    restoreArgList <- withSrArgsM ["restore", "*h*", "foo**bar", "*g*"]
+    runCharonException @RestoreCollisionE restoreArgList
 
     -- file assertions
-    -- 1. Everything restored but fooBarBar but that is because it already exists
-    -- at original location, so everything should be there
-    assertPathsExist testFiles
+    -- 1. Every restore attempt before fooBarBar should succeed.
+    assertPathsExist testFilesToRestore
 
     -- trash structure assertions
-    restoreExpectedIdxSet <- mkPathDataSetM [("fooBadbar", PathTypeFile, 5)]
+    restoreExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("fooBadbar", PathTypeFile, 5),
+          ("fooXbar", PathTypeFile, 5),
+          ("g1", PathTypeFile, 5),
+          ("g2", PathTypeFile, 5),
+          ("g3", PathTypeFile, 5),
+          ("1g", PathTypeFile, 5),
+          ("2g", PathTypeFile, 5),
+          ("3g", PathTypeFile, 5)
+        ]
     (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
     assertSetEq restoreExpectedIdxSet restoreIdxSet
     restoreExpectedMetadata @=? restoreMetadata
     assertFdoDirectorySizesM []
   where
-    delExpectedMetadata = mkMetadata 9 9 0 45
-    restoreExpectedMetadata = mkMetadata 1 1 0 5
+    delExpectedMetadata = mkMetadata 15 15 0 75
+    restoreExpectedMetadata = mkMetadata 8 8 0 40
 
 -- Wildcard literals are not valid in windows paths
 

@@ -9,7 +9,7 @@ module Functional.Commands.PermDelete
 where
 
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Exception (SomethingWentWrong)
+import Charon.Exception (TrashEntryNotFoundE)
 import Data.HashSet qualified as HashSet
 import Data.Text qualified as T
 import Functional.Prelude
@@ -181,7 +181,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
 
     -- PERMANENT DELETE
     permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @SomethingWentWrong permDelArgList
+    (ex, term) <- liftIO $ captureCharonExceptionTerminal @TrashEntryNotFoundE permDelArgList
 
     -- assert exception
     assertMatch expectedEx ex
@@ -193,11 +193,8 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     delExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
-    expectedTerm =
-      [ Exact "Error permanently deleting path 'bad file': No entry for 'bad file'",
-        Exact ""
-      ]
+    expectedEx = Exact "No entry for 'bad file'"
+    expectedTerm = []
 
     delExpectedMetadata = mkMetadata 1 1 0 5
 
@@ -239,29 +236,29 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     permDelArgList <-
       withSrArgsM
         ("perm-delete" : filesTryPermDelete ++ ["-f"])
-    (ex, term) <- captureCharonExceptionTerminal @SomethingWentWrong permDelArgList
+    (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE permDelArgList
 
     assertMatch expectedEx ex
     assertMatches expectedTerm term
 
     -- trash structure assertions
+    permDelExpectedIdxSet <- mkPathDataSetM [("f5", PathTypeFile, 5)]
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    expectedEx = Exact "Something went wrong."
+    expectedEx = Exact "No entry for 'f3'"
     expectedTerm =
-      [ Exact "Error permanently deleting path 'f3': No entry for 'f3'",
-        Exact "",
-        Exact "Error permanently deleting path 'f4': No entry for 'f4'",
+      [ Exact "Permanently deleted paths:",
+        Exact "- f1",
+        Exact "- f2",
         Exact ""
       ]
 
     delExpectedMetadata = mkMetadata 3 3 0 15
 
-    permDelExpectedIdxSet = HashSet.empty
-    permDelExpectedMetadata = Metadata.empty
+    permDelExpectedMetadata = mkMetadata 1 1 0 5
 
 deletesNoForce :: IO TestEnv -> TestTree
 deletesNoForce getTestEnv = testCase "Permanently deletes several paths without --force" $ do
@@ -390,7 +387,25 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "deletesSomeWildcards" $ do
     testDir <- getTestDir
-    let files = ["foobar", "fooBadbar", "fooXbar", "g1", "g2", "g3", "1g", "2g", "3g"]
+    -- Want something that comes alphabetically before fooBadBar (fooAbar), to
+    -- test partial delete.
+    let files =
+          [ "h1",
+            "h2",
+            "h3",
+            "1h",
+            "2h",
+            "3h",
+            "fooAbar",
+            "fooBadbar",
+            "fooXbar",
+            "g1",
+            "g2",
+            "g3",
+            "1g",
+            "2g",
+            "3g"
+          ]
         testFiles = (testDir </>!) <$> files
 
     delArgList <- withSrArgsPathsM ["delete"] testFiles
@@ -407,7 +422,13 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     -- trash structure assertions
     delExpectedIdxSet <-
       mkPathDataSetM
-        [ ("foobar", PathTypeFile, 5),
+        [ ("h1", PathTypeFile, 5),
+          ("h2", PathTypeFile, 5),
+          ("h3", PathTypeFile, 5),
+          ("1h", PathTypeFile, 5),
+          ("2h", PathTypeFile, 5),
+          ("3h", PathTypeFile, 5),
+          ("fooAbar", PathTypeFile, 5),
           ("fooBadbar", PathTypeFile, 5),
           ("fooXbar", PathTypeFile, 5),
           ("g1", PathTypeFile, 5),
@@ -427,7 +448,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
 
     -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
     -- delete will fail. This is how this test works.
-    permDelArgList <- withSrArgsM ["perm-delete", "foo**bar", "*g*", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "*h*", "foo**bar", "*g*", "-f"]
     runCharonException @SomeException permDelArgList
 
     -- file assertions
@@ -435,14 +456,25 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
     assertPathsDoNotExist testFiles
 
     -- trash structure assertions
-    permDelExpectedIdxSet <- mkPathDataSetM [("fooBadbar", PathTypeFile, 5)]
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("fooBadbar", PathTypeFile, 5),
+          ("fooXbar", PathTypeFile, 5),
+          ("g1", PathTypeFile, 5),
+          ("g2", PathTypeFile, 5),
+          ("g3", PathTypeFile, 5),
+          ("1g", PathTypeFile, 5),
+          ("2g", PathTypeFile, 5),
+          ("3g", PathTypeFile, 5)
+        ]
+
     (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
     assertSetEq permDelExpectedIdxSet permDelIdxSet
     permDelExpectedMetadata @=? permDelMetadata
     assertFdoDirectorySizesM []
   where
-    delExpectedMetadata = mkMetadata 9 9 0 45
-    permDelExpectedMetadata = mkMetadata 1 1 0 5
+    delExpectedMetadata = mkMetadata 15 15 0 75
+    permDelExpectedMetadata = mkMetadata 8 8 0 40
 
 -- Wildcard literals are not valid in windows paths
 
@@ -636,6 +668,9 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         -- Leaving off the "(y/n)?" suffix as the windows tests replaces all
         -- backslashes with forward slashes.
         Prefix "Permanently delete",
+        Exact "",
+        Exact "Permanently deleted paths:",
+        Exact "- f1",
         Exact ""
       ]
 

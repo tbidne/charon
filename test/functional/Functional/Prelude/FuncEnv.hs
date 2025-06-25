@@ -66,7 +66,7 @@ import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude
 import Charon.Runner qualified as Runner
-import Charon.Runner.Toml (TomlConfig)
+import Charon.Runner.Toml (TomlConfigP2)
 import Charon.Utils qualified as Utils
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
@@ -288,7 +288,7 @@ instance MonadLoggerNS (FuncIO FuncEnv) where
 runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
-mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfig -> IORef Text -> IORef Text -> m FuncEnv
+mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfigP2 -> IORef Text -> IORef Text -> m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- liftIO getTrashHome'
   charStream <- liftIO $ newIORef altAnswers
@@ -390,30 +390,32 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
-  (toml, cmd) <- getConfig
-  env <- mkFuncEnv toml logsRef terminalRef
+  try @_ @e getConfig >>= \case
+    Left ex -> pure (T.pack (displayException ex), [], [])
+    Right (toml, cmd) -> do
+      env <- mkFuncEnv toml logsRef terminalRef
 
-  let runCatch = do
-        result <- try @_ @e $ runFuncIO (Runner.runCmd cmd) env
+      let runCatch = do
+            result <- try @_ @e $ runFuncIO (Runner.runCmd cmd) env
 
-        case result of
-          Right _ ->
-            error
-              "captureCharonExceptionLogs: Expected exception, received none"
-          Left ex -> do
-            term <- T.lines <$> readIORef terminalRef
-            logs <- T.lines <$> readIORef logsRef
-            pure (T.pack (displayException ex), term, logs)
+            case result of
+              Right _ ->
+                error
+                  "captureCharonExceptionLogs: Expected exception, received none"
+              Left ex -> do
+                term <- T.lines <$> readIORef terminalRef
+                logs <- T.lines <$> readIORef logsRef
+                pure (T.pack (displayException ex), term, logs)
 
-  runCatch
-    `catchSync` \ex -> do
-      -- Handle any uncaught exceptions
-      putStrLn "TERMINAL"
-      readIORef terminalRef >>= putStrLn . T.unpack
-      putStrLn "\n\nLOGS"
-      readIORef logsRef >>= putStrLn . T.unpack
-      putStrLn ""
-      throwM ex
+      runCatch
+        `catchSync` \ex -> do
+          -- Handle any uncaught exceptions
+          putStrLn "TERMINAL"
+          readIORef terminalRef >>= putStrLn . T.unpack
+          putStrLn "\n\nLOGS"
+          readIORef logsRef >>= putStrLn . T.unpack
+          putStrLn ""
+          throwM ex
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration

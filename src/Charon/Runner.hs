@@ -53,7 +53,7 @@ import Charon.Runner.Env
   )
 import Charon.Runner.FileSizeMode (FileSizeMode (..))
 import Charon.Runner.FileSizeMode qualified as FileSizeMode
-import Charon.Runner.Toml (TomlConfig, defaultTomlConfig, mergeConfigs)
+import Charon.Runner.Toml (TomlConfigP2, defaultTomlConfig, mergeConfigs)
 import Charon.Utils qualified as U
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
@@ -139,7 +139,7 @@ withEnv ::
     MonadPathWriter m,
     MonadTerminal m
   ) =>
-  TomlConfig ->
+  TomlConfigP2 ->
   (Env m -> m a) ->
   m a
 withEnv mergedConfig onEnv = do
@@ -171,12 +171,13 @@ withEnv mergedConfig onEnv = do
 -- the CLI's value will be used.
 getConfiguration ::
   ( HasCallStack,
+    MonadCatch m,
     MonadFileReader m,
     MonadOptparse m,
     MonadPathReader m,
-    MonadThrow m
+    MonadTerminal m
   ) =>
-  m (TomlConfig, CommandP2)
+  m (TomlConfigP2, CommandP2)
 getConfiguration = do
   -- get CLI args
   args <- getArgs
@@ -199,7 +200,7 @@ getConfiguration = do
     TomlNone -> pure defaultTomlConfig
 
   -- merge shared CLI and toml values
-  pure $ mergeConfigs args tomlConfig
+  mergeConfigs args tomlConfig
   where
     readConfig fp = do
       contents <- readFileUtf8ThrowM fp

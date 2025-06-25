@@ -23,7 +23,7 @@ import Charon.Data.Paths (PathI, PathIndex (TrashHome))
 import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude as X
 import Charon.Runner qualified as Runner
-import Charon.Runner.Toml (TomlConfig)
+import Charon.Runner.Toml (TomlConfigP2)
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
@@ -192,7 +192,7 @@ captureCharonIntExceptionPure argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-mkIntPureEnv :: TomlConfig -> IORef Text -> IORef [OsPath] -> IO IntPureEnv
+mkIntPureEnv :: TomlConfigP2 -> IORef Text -> IORef [OsPath] -> IO IntPureEnv
 mkIntPureEnv toml terminalRef deletedPathsRef = do
   trashHome <- getTrashHome'
   pure

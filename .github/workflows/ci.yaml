@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - tilde
 
   pull_request:
     branches:

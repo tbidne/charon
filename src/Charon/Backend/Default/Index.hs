@@ -118,7 +118,10 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
       $ throwM
       $ MkTrashEntryInfoNotFoundE trashHome pName
 
-  pure $ MkIndex indexSeq
+  -- NOTE: Determinism increases predictability and some tests currently rely
+  -- on this. If the performance is poor, consider removing this.
+  let sorted = Seq.sortOn (view (_1 % #fileName)) indexSeq
+  pure $ MkIndex sorted
   where
     MkPathI trashPathsDir' = Default.Utils.getTrashPathDir trashHome
     MkPathI trashInfoDir' = Default.Utils.getTrashInfoDir trashHome

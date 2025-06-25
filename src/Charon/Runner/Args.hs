@@ -17,7 +17,7 @@ import Charon.Data.PathData.Formatting
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
   )
 import Charon.Data.PathData.Formatting qualified as PathData
-import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
+import Charon.Data.Paths (PathIndex (TrashHome), RawPathI (MkRawPathI))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Prelude
@@ -97,7 +97,7 @@ data Args = MkArgs
     -- | Whether to warn/delete for large log files.
     logSizeMode :: Maybe FileSizeMode,
     -- | Path to trash home.
-    trashHome :: !(Maybe (PathI TrashHome)),
+    trashHome :: !(Maybe (RawPathI TrashHome)),
     -- | Command to run.
     command :: CommandP1
   }
@@ -435,11 +435,11 @@ forceParser =
   where
     helpTxt = "If enabled, will not ask before deleting path(s)."
 
-trashParser :: Parser (Maybe (PathI TrashHome))
+trashParser :: Parser (Maybe (RawPathI TrashHome))
 trashParser =
   A.optional
     $ OA.option
-      (fmap MkPathI osPath)
+      (fmap MkRawPathI osPath)
     $ mconcat
       [ OA.long "trash-home",
         OA.short 't',
@@ -454,10 +454,10 @@ trashParser =
           "e.g. ~/.local/share/charon."
         ]
 
-trashDestParser :: Parser (PathI TrashHome)
+trashDestParser :: Parser (RawPathI TrashHome)
 trashDestParser =
   OA.option
-    (fmap MkPathI osPath)
+    (fmap MkRawPathI osPath)
     $ mconcat
       [ OA.long "dest",
         OA.short 'd',
@@ -481,7 +481,7 @@ logLevelParser =
             ]
       ]
 
-pathsParser :: Parser (UniqueSeqNE (PathI i))
+pathsParser :: Parser (UniqueSeqNE (RawPathI i))
 pathsParser =
   -- NOTE: _should_ be safe because OA.some only succeeds for non-zero input.
   -- We do this rather than using NonEmpty's some1 because otherwise the CLI
@@ -493,7 +493,7 @@ pathsParser =
   -- not valid windows paths, hence will fail any validation checks.
   UniqueSeqNE.fromNonEmpty
     . unsafeNE
-    <$> OA.some (OA.argument (fmap MkPathI osPath) (OA.metavar "PATHS..."))
+    <$> OA.some (OA.argument (fmap MkRawPathI osPath) (OA.metavar "PATHS..."))
 
 logSizeModeParser :: Parser (Maybe FileSizeMode)
 logSizeModeParser =
