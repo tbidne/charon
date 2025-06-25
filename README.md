@@ -411,15 +411,12 @@ If you have never built a haskell program before, [Cabal](#cabal) is probably th
 
 ### Prerequisites
 
+* [`cabal 2.4+`](https://www.haskell.org/cabal/download.html)
+* [`ghc 9.4 - 9.12`](https://gitlab.haskell.org/ghc/ghc/-/wikis/GHC%20Status)
+
 * [`ghcup`](https://www.haskell.org/ghcup/)
 
-Using `ghcup`, install `cabal 2.4+` and one of:
-
-- `ghc 9.4`
-- `ghc 9.6`
-- `ghc 9.8`
-- `ghc 9.10`
-- `ghc 9.12`
+The easiest way to install these is generally [`ghcup`](https://www.haskell.org/ghcup/).
 
 ### Build Charon
 
