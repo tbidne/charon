@@ -102,6 +102,14 @@
               {
                 path = hlib.dontCheck prev.path_0_9_6;
                 serialise = hlib.doJailbreak prev.serialise;
+
+                gitrev-typed = (
+                  final.callHackageDirect {
+                    pkg = "gitrev-typed";
+                    ver = "0.1";
+                    sha256 = "sha256-s7LEekR7NLe3CNhD/8uChnh50eGfaArrrtc5hoCtJ1A=";
+                  } { }
+                );
               }
               // nix-hs-utils.mkLibs inputs final [
                 "algebra-simple"
@@ -134,6 +142,14 @@
               inherit compiler pkgs returnShellEnv;
               name = "charon";
               root = ./.;
+
+              modifier =
+                drv:
+                drv.overrideAttrs (oldAttrs: {
+                  CHARON_HASH = "${self.rev or self.dirtyRev}";
+                  CHARON_MODIFIED = "${builtins.toString self.lastModified}";
+                  CHARON_SHORT_HASH = "${self.shortRev or self.dirtyShortRev}";
+                });
 
               # TODO: Once hlint is back to working with our GHC we can
               # use nix-hs-utils.mkDevTools ++ webDeps.

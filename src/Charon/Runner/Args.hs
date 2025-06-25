@@ -21,6 +21,7 @@ import Charon.Data.Paths (PathIndex (TrashHome), RawPathI (MkRawPathI))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Prelude
+import Charon.Runner.Args.TH qualified as TH
 import Charon.Runner.Command
   ( Command
       ( Convert,
@@ -44,8 +45,9 @@ import Charon.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import Charon.Utils qualified as Utils
 import Control.Applicative qualified as A
 import Data.List qualified as L
-import Data.Version (Version (versionBranch))
+import Data.Version (showVersion)
 import Effects.Optparse (osPath)
+import FileSystem.OsString qualified as OsString
 import Options.Applicative
   ( CommandFields,
     InfoMod,
@@ -70,7 +72,17 @@ import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
 import Options.Applicative.Types (ArgPolicy (Intersperse))
 import Paths_charon qualified as Paths
+import System.Info qualified as Info
 import Text.Read qualified as TR
+
+data VersionInfo = MkVersionInfo
+  { gitCommitDate :: OsString,
+    ghc :: String,
+    gitHash :: OsString,
+    gitShortHash :: OsString
+  }
+
+makeFieldLabelsNoPrefix ''VersionInfo
 
 -- | Toml path config.
 data TomlConfigPath
@@ -122,7 +134,7 @@ parserInfoArgs =
     }
   where
     headerTxt = Just "Charon: A tool for deleting files to a trash directory."
-    footerTxt = Just $ fromString versNum
+    footerTxt = Just $ fromString versShort
     desc =
       Chunk.paragraph
         $ mconcat
@@ -145,10 +157,7 @@ argsParser =
     <*> commandParser
 
 version :: Parser (a -> a)
-version = OA.infoOption versNum (OA.long "version")
-
-versNum :: String
-versNum = "Version: " <> L.intercalate "." (show <$> versionBranch Paths.version)
+version = OA.infoOption versLong (OA.long "version")
 
 backendParser :: Parser (Maybe Backend)
 backendParser =
@@ -518,6 +527,37 @@ logSizeModeParser =
 
 mkCommand :: String -> Parser a -> InfoMod a -> Mod CommandFields a
 mkCommand cmdTxt parser helpTxt = OA.command cmdTxt (OA.info parser helpTxt)
+
+versShort :: String
+versShort =
+  mconcat
+    [ "Version: ",
+      showVersion Paths.version,
+      " (",
+      OsString.decodeLenient $ versionInfo ^. #gitShortHash,
+      ")"
+    ]
+
+versLong :: String
+versLong =
+  L.intercalate
+    "\n"
+    [ "Charon: " <> showVersion Paths.version,
+      " - Git revision: " <> OsString.decodeLenient (versionInfo ^. #gitHash),
+      " - Commit date:  " <> OsString.decodeLenient (versionInfo ^. #gitCommitDate),
+      " - GHC version:  " <> versionInfo ^. #ghc
+    ]
+
+versionInfo :: VersionInfo
+versionInfo =
+  MkVersionInfo
+    { gitCommitDate = d,
+      ghc = showVersion Info.compilerVersion,
+      gitHash = h,
+      gitShortHash = sh
+    }
+  where
+    (d, h, sh) = $$TH.gitData
 
 unsafeNE :: (HasCallStack) => [a] -> NonEmpty a
 unsafeNE [] = error "Args: Empty list given to unsafeNE"

@@ -220,6 +220,10 @@ import FileSystem.OsPath as X
     (<.>),
     (</>),
   )
+import FileSystem.OsString as X
+  ( OsString,
+    osstr,
+  )
 import GHC.Enum as X (Bounded (maxBound, minBound), Enum (toEnum))
 import GHC.Err as X (error, undefined)
 import GHC.Exception (errorCallWithCallStackException)
