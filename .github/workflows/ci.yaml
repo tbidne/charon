@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - gitrev
 
   pull_request:
     branches:
