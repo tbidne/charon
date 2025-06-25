@@ -70,36 +70,6 @@ fromRawSet =
     . traverse fromRaw
     . USeqNE.toNonEmpty
 
-{-(paths, errs) <- (\f -> F.foldlM f (Seq.Empty, Seq.Empty) ys) $ \(ws, es) y -> do
-  trySync (fromRaw y) <&> \case
-    Left ex -> (ws, es :|> (y, ex))
-    Right w -> (ws :|> w, es)
-
-case errs of
-  Seq.Empty -> pure ()
-  es@(_ :<| _) -> do
-    let f :: (RawPathI i, SomeException) -> Text
-        f (rp, ex) =
-          mconcat
-            [ "\n - '",
-              T.pack $ decodeLenient $ rp ^. #unRawPathI,
-              "': ",
-              T.pack $ Utils.displayEx ex
-            ]
-        msg =
-          mconcat
-            [ "Encountered errors parsing the efollowing paths:",
-              F.foldMap f es,
-              "\n"
-            ]
-    putTextLn msg
-
-case paths of
-  Seq.Empty -> throwText $ "No paths left after filtering bad ones."
-  zs@(_ :<| _) -> pure $ USeqNE.unsafeFromFoldable zs
-where
-  ys = USeqNE.toNonEmpty xs-}
-
 type CmdPathF :: Phase -> PathIndex -> Type
 type family CmdPathF p i where
   CmdPathF Phase1 i = RawPathI i
