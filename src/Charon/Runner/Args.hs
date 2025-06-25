@@ -157,7 +157,7 @@ argsParser =
     <*> commandParser
 
 version :: Parser (a -> a)
-version = OA.infoOption versLong (OA.long "version")
+version = OA.infoOption versLong (OA.long "version" <> OA.short 'v' <> OA.hidden)
 
 backendParser :: Parser (Maybe Backend)
 backendParser =
