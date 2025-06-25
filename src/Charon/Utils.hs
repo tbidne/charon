@@ -153,7 +153,6 @@ readLogLevel "error" = pure $ Just LevelError
 readLogLevel "warn" = pure $ Just LevelWarn
 readLogLevel "info" = pure $ Just LevelInfo
 readLogLevel "debug" = pure $ Just LevelDebug
-readLogLevel "trace" = pure $ Just levelTrace
 readLogLevel other =
   fail
     $ mconcat
@@ -165,7 +164,7 @@ readLogLevel other =
 
 -- | String description of possible log levels parsed by 'readLogLevel'.
 logLevelStrings :: String
-logLevelStrings = "(none|fatal|error|warn|info|debug|trace)"
+logLevelStrings = "(none|fatal|error|warn|info|debug)"
 
 -- | Merge two fields using the 'Alternative' instance.
 mergeAlt ::
@@ -361,13 +360,11 @@ getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
 getAllFiles ::
   ( HasCallStack,
     MonadCatch m,
-    MonadLoggerNS m,
     MonadPathReader m
   ) =>
   OsPath ->
   m [OsPath]
-getAllFiles fp = addNamespace "getAllFiles" $ do
-  $(logTrace) $ "Retrieving files for: " <> decodeDisplayExT fp
+getAllFiles fp = do
   -- see NOTE: [getPathType]
   getPathType fp >>= \case
     PathTypeSymbolicLink -> pure [fp]

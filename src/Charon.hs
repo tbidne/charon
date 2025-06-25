@@ -68,7 +68,7 @@ delete ::
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = addNamespace "delete" $ do
-  initalLog "In delete"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.delete paths
@@ -99,7 +99,7 @@ permDelete ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete force paths = addNamespace "permDelete" $ do
-  initalLog "In permDelete"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.permDelete force paths
@@ -124,7 +124,7 @@ getIndex ::
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
-  initalLog "In getIndex"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" Cbor.getIndex
@@ -148,7 +148,7 @@ getMetadata ::
   ) =>
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
-  initalLog "In getMetadata"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" Cbor.getMetadata
@@ -178,7 +178,7 @@ restore ::
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore paths = addNamespace "restore" $ do
-  initalLog "In restore"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.restore paths
@@ -205,7 +205,7 @@ emptyTrash ::
   Bool ->
   m ()
 emptyTrash force = addNamespace "emptyTrash" $ do
-  initalLog "In emptyTrash"
+  initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash force
@@ -232,7 +232,7 @@ convert ::
   Backend ->
   m ()
 convert dest = addNamespace "convert" $ do
-  initalLog "In convert"
+  initalLog
 
   (MkPathI trashHome') <- asks getTrashHome
 
@@ -325,7 +325,7 @@ merge ::
   PathI TrashHome ->
   m ()
 merge dest = addNamespace "merge" $ do
-  initalLog "In merge"
+  initalLog
 
   src <- asks getTrashHome
 
@@ -369,8 +369,6 @@ initalLog ::
     MonadLoggerNS m,
     MonadReader env m
   ) =>
-  Text ->
   m ()
-initalLog start = do
-  $(logTrace) start
+initalLog =
   asks getTrashHome >>= \th -> $(logDebug) ("TrashHome: " <> Paths.toText th)

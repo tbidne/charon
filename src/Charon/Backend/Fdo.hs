@@ -189,13 +189,11 @@ getIndex ::
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
-  $(logTrace) "In getIndex"
-
   trashHome <- asks getTrashHome
 
   Default.Trash.doesTrashExist >>= \case
     False -> do
-      $(logTrace) "Trash does not exist."
+      $(logDebug) "Trash does not exist."
       pure Index.empty
     True -> do
       MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome trashHome
@@ -219,8 +217,6 @@ getMetadata ::
   ) =>
   m Metadata
 getMetadata = addNamespace "getMetadata" $ do
-  $(logTrace) "In getMetadata"
-
   MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizes
   let dirSizesMap = HMap.fromList $ fmap (\e -> (e ^. #fileName, e)) (toList directorySizes)
       backendArgs' = BackendArgs.backendArgsDirectorySizes dirSizesMap
@@ -290,7 +286,6 @@ merge ::
   PathI TrashHome ->
   m ()
 merge src dest = addNamespace "merge" $ do
-  $(logTrace) "In merge"
   srcDirectorySizes <- DirectorySizes.readDirectorySizesTrashHome src
   destDirectorySizes <- DirectorySizes.readDirectorySizesTrashHome dest
   directorySizesPath <- DirectorySizes.getDirectorySizesPath
@@ -332,8 +327,6 @@ toRosetta ::
   ) =>
   m Rosetta
 toRosetta = addNamespace "toRosetta" $ do
-  $(logTrace) "In toRosetta"
-
   index <- getIndex
   $(logDebug) ("Index: " <> showt index)
 
@@ -360,7 +353,6 @@ fromRosetta ::
   Rosetta ->
   m ()
 fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
-  $(logTrace) "In fromRosetta"
   $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
 
   -- create tmp trash
@@ -470,23 +462,23 @@ isFdo trashHome@(MkPathI th) = addNamespace "isFdo" $ do
       if isDefinitelyFdo
         then do
           -- Trash dir contains directorysizes (fdo): Definitely true.
-          $(logTrace) "Found fdo"
+          $(logDebug) "Found fdo"
           pure (Just True)
         else do
           PR.listDirectory trashPath >>= \case
             -- Trash dir is well-formed but contains no files: Maybe.
             [] -> do
-              $(logTrace) "Trash dir is well-formed but empty: Maybe"
+              $(logDebug) "Trash dir is well-formed but empty: Maybe"
               pure Nothing
             -- Trash dir has at least one file: iff ext matches fdo.
             (f : _) -> do
               let ext = OsP.takeExtension f
-              $(logTrace) $ "Found file with extension " <> decodeDisplayExT ext
+              $(logDebug) $ "Found file with extension " <> decodeDisplayExT ext
               pure $ Just $ Backend.backendExt BackendFdo == ext
     else do
       -- Trash does not exist or it is not a well-formed fdo backend: Definitely
       -- false.
-      $(logTrace) "Unknown, not fdo"
+      $(logDebug) "Unknown, not fdo"
       pure $ Just False
   where
     MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome

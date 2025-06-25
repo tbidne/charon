@@ -97,7 +97,7 @@ createTrashDir ::
   PathI TrashHome ->
   m (PathI TrashDirFiles, PathI TrashDirInfo)
 createTrashDir trashHome = addNamespace "createTrashDir" $ do
-  $(logTrace) "Creating trash if it does not exist"
+  $(logDebug) "Creating trash if it does not exist"
 
   let trashPathDir = Default.Utils.getTrashPathDir trashHome
       trashInfoDir = Default.Utils.getTrashInfoDir trashHome
@@ -152,7 +152,7 @@ doesTrashExistPath trashHome = addNamespace "doesTrashExistPath" $ do
   homeExists <- doesDirectoryExist (trashHome ^. #unPathI)
   if not homeExists
     then do
-      $(logTrace) "Trash does not exist"
+      $(logDebug) "Trash does not exist"
       pure False
     else do
       pathExists <- doesDirectoryExist trashPathDir'
@@ -161,11 +161,11 @@ doesTrashExistPath trashHome = addNamespace "doesTrashExistPath" $ do
       case (pathExists, infoExists) of
         -- Everything exists -> true
         (True, True) -> do
-          $(logTrace) "Trash exists"
+          $(logDebug) "Trash exists"
           pure True
         -- Info and Path both do not exist -> false
         (False, False) -> do
-          $(logTrace) "Trash/ exists but info/ and files/ do not"
+          $(logDebug) "Trash/ exists but info/ and files/ do not"
           pure False
         -- Path exists; info does not -> Badly formed, throw exception
         (True, False) -> do
@@ -599,7 +599,6 @@ mergeTrashDirs ::
   PathI TrashHome ->
   m ()
 mergeTrashDirs (MkPathI src) (MkPathI dest) = addNamespace "mergeTrashDirs" $ do
-  $(logTrace) "Merging attempt"
   WDir.copyDirectoryRecursiveConfig config src dest
   $(logInfo) "Merge successful"
   where

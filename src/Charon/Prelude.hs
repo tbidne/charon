@@ -192,12 +192,10 @@ import Effects.LoggerNS as X
     MonadLoggerNS (getNamespace, localNamespace),
     addNamespace,
     levelFatal,
-    levelTrace,
     logDebug,
     logError,
     logFatal,
     logInfo,
-    logTrace,
     logWarn,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))

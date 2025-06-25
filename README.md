@@ -47,7 +47,7 @@
 Charon: A tool for deleting files to a trash directory.
 
 Usage: charon [-c|--config (none|PATH)] [-b|--backend (cbor|fdo|json)]
-              [--log-level (none|fatal|error|warn|info|debug|trace)]
+              [--log-level (none|fatal|error|warn|info|debug)]
               [--log-size-mode (warn SIZE | delete SIZE)] [-t|--trash-home PATH]
               [--version] COMMAND
 
@@ -70,7 +70,7 @@ Available options:
                            - fdo: Compatible with FreeDesktop.org.
                            - json: Inspectable.
 
-  --log-level (none|fatal|error|warn|info|debug|trace)
+  --log-level (none|fatal|error|warn|info|debug)
                            The file level in which to log. Defaults to none.
                            Logs are written to the XDG state directory e.g.
                            ~/.local/state/charon.

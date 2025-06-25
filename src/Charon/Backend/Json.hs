@@ -118,11 +118,9 @@ getIndex ::
   ) =>
   m Index
 getIndex = addNamespace "getIndex" $ do
-  $(logTrace) "In getIndex"
-
   Default.Trash.doesTrashExist >>= \case
     False -> do
-      $(logTrace) "Trash does not exist."
+      $(logDebug) "Trash does not exist."
       pure Index.empty
     True -> Default.Index.readIndex backendArgs
 
@@ -211,8 +209,6 @@ toRosetta ::
   ) =>
   m Rosetta
 toRosetta = addNamespace "toRosetta" $ do
-  $(logTrace) "In toRosetta"
-
   index <- getIndex
   $(logDebug) ("Index: " <> showt index)
 
@@ -238,7 +234,6 @@ fromRosetta ::
   Rosetta ->
   m ()
 fromRosetta tmpDir rosetta = addNamespace "fromRosetta" $ do
-  $(logTrace) "In fromRosetta"
   $(logDebug) ("Temp dir: " <> Paths.toText tmpDir)
 
   -- create tmp trash
@@ -302,23 +297,23 @@ isJson trashHome@(MkPathI th) = addNamespace "isJson" $ do
       if isDefinitelyFdo
         then do
           -- Trash dir contains directorysizes (fdo): Definitely false.
-          $(logTrace) "Found fdo"
+          $(logDebug) "Found fdo"
           pure (Just False)
         else do
           PR.listDirectory trashPath >>= \case
             -- Trash dir is well-formed but contains no files: Maybe.
             [] -> do
-              $(logTrace) "Trash dir is well-formed but empty: Maybe"
+              $(logDebug) "Trash dir is well-formed but empty: Maybe"
               pure Nothing
             -- Trash dir has at least one file: iff ext matches json.
             (f : _) -> do
               let ext = OsP.takeExtension f
-              $(logTrace) $ "Found file with extension " <> decodeDisplayExT ext
+              $(logDebug) $ "Found file with extension " <> decodeDisplayExT ext
               pure $ Just $ Backend.backendExt BackendJson == ext
     else do
       -- Trash does not exist or it is not a well-formed json backend: Definitely
       -- false.
-      $(logTrace) "Unknown, not json"
+      $(logDebug) "Unknown, not json"
       pure $ Just False
   where
     MkPathI trashPath = Default.Utils.getTrashInfoDir trashHome

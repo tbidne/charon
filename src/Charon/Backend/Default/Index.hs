@@ -93,7 +93,6 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
           $ MkTrashEntryInfoBadExtE (MkPathI p) actualExt expectedExt
 
         let path = trashInfoDir' </> p
-        $(logDebug) ("Path: " <> decodeDisplayExT path)
 
         contents <- readBinaryFile path
         let -- NOTE: We want the name without the suffix

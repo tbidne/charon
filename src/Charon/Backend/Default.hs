@@ -260,7 +260,7 @@ getIndex backendArgs = addNamespace "getIndex" $ do
   Trash.doesTrashExist >>= \case
     True -> Default.Index.readIndex backendArgs
     False -> do
-      $(logTrace) "Trash does not exist."
+      $(logDebug) "Trash does not exist."
       pure Index.empty
 
 -- | Retrieves metadata for the trash directory.
@@ -281,7 +281,6 @@ getMetadata ::
   BackendArgs m pd ->
   m Metadata
 getMetadata backendArgs = addNamespace "getMetadata" $ do
-  $(logTrace) "In getMetadata"
   trashHome <- asks getTrashHome
   trashLog <- Env.getTrashLog
 
@@ -289,7 +288,7 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
 
   Trash.doesTrashExist >>= \case
     False -> do
-      $(logTrace) "Trash does not exist."
+      $(logDebug) "Trash does not exist."
       pure Metadata.empty
     True -> do
       -- Index size
@@ -308,7 +307,7 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
         if logExists
           then Bytes.normalize . toDouble . MkBytes @B <$> getFileSize logPath
           else do
-            $(logTrace) "Log does not exist"
+            $(logDebug) "Log does not exist"
             pure (fromℚ 0)
 
       -- TODO: Utils.getAllFiles is unfortunately expensive for many files
@@ -442,18 +441,17 @@ emptyTrash ::
   Bool ->
   m ()
 emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
-  $(logTrace) "In emptyTrash"
   trashHome@(MkPathI th) <- asks getTrashHome
 
   exists <- doesDirectoryExist th
   if not exists
     then do
-      $(logTrace) "Trash home does not exist."
+      $(logDebug) "Trash home does not exist."
       putTextLn $ Paths.toText trashHome <> " is empty."
     else
       if force
         then do
-          $(logTrace) "Force on; deleting entire trash."
+          $(logDebug) "Force on; deleting entire trash."
           removeDirectoryRecursive th
           void Trash.createTrash
         else do
@@ -465,12 +463,12 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
           c <- Ch.toLower <$> Term.getChar
           if
             | c == 'y' -> do
-                $(logTrace) "Deleting contents."
+                $(logDebug) "Deleting contents."
                 removeDirectoryRecursive th
                 void Trash.createTrash
                 putStrLn ""
             | c == 'n' -> do
-                $(logTrace) "Not deleting contents."
+                $(logDebug) "Not deleting contents."
                 putStrLn ""
             | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
 
