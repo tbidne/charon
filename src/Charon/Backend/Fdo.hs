@@ -69,6 +69,7 @@ import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Prelude
+import Charon.Runner.Command (Force, NoPrompt)
 import Charon.Utils qualified as Utils
 import Data.HashMap.Strict qualified as HMap
 import Data.Sequence qualified as Seq
@@ -163,7 +164,7 @@ permDelete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  Bool ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete =
@@ -233,6 +234,7 @@ restore ::
     MonadIORef m,
     MonadFileReader m,
     MonadFileWriter m,
+    MonadHandleWriter m,
     MonadLoggerNS m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -241,6 +243,8 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
+  Force ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore =
@@ -264,7 +268,7 @@ emptyTrash ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  Bool ->
+  NoPrompt ->
   m ()
 emptyTrash = Default.emptyTrash BackendArgs.backendArgs
 

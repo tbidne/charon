@@ -57,6 +57,7 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
+import Charon.Runner.Command (Force, NoPrompt)
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
@@ -174,7 +175,7 @@ permDelete ::
     Show pd
   ) =>
   BackendArgs m pd ->
-  Bool ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete backendArgs = permDeletePostHook backendArgs (const $ pure ())
@@ -202,7 +203,7 @@ permDeletePostHook ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
-  Bool ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDeletePostHook backendArgs postHook noPrompt paths = addNamespace "permDeletePostHook" $ do
@@ -349,6 +350,7 @@ restore ::
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
+    MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
@@ -359,6 +361,8 @@ restore ::
     Show pd
   ) =>
   BackendArgs m pd ->
+  Force ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore backendArgs = restorePostHook backendArgs (const $ pure ())
@@ -374,6 +378,7 @@ restorePostHook ::
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
+    MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
@@ -385,9 +390,11 @@ restorePostHook ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
+  Force ->
+  NoPrompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
+restorePostHook backendArgs postHook force noPrompt paths = addNamespace "restorePostHook" $ do
   $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
@@ -399,6 +406,8 @@ restorePostHook backendArgs postHook paths = addNamespace "restorePostHook" $ do
           Trash.restoreTrashToOriginal
             backendArgs
             postHook
+            force
+            noPrompt
             restoredPathsRef
             trashHome
 
@@ -438,7 +447,7 @@ emptyTrash ::
     Serial pd
   ) =>
   BackendArgs m pd ->
-  Bool ->
+  NoPrompt ->
   m ()
 emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
   trashHome@(MkPathI th) <- asks getTrashHome
@@ -449,7 +458,7 @@ emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
       $(logDebug) "Trash home does not exist."
       putTextLn $ Paths.toText trashHome <> " is empty."
     else
-      if noPrompt
+      if noPrompt ^. #unNoPrompt
         then do
           $(logDebug) "--no-prompt on; deleting entire trash."
           removeDirectoryRecursive th

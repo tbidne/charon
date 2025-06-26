@@ -120,7 +120,7 @@ runCmd cmd =
       Delete paths -> Charon.delete paths
       PermDelete noPrompt strategy -> Charon.permDelete noPrompt strategy
       Empty noPrompt -> Charon.emptyTrash noPrompt
-      Restore strategy -> Charon.restore strategy
+      Restore params -> Charon.restore params
       List listCmd -> printIndex listCmd
       Metadata -> printMetadata
       Convert dest -> Charon.convert dest

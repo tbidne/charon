@@ -34,6 +34,9 @@ import Charon.Runner.Command
         Restore
       ),
     CommandP1,
+    Force (MkForce),
+    NoPrompt (MkNoPrompt),
+    RestoreParams (MkRestoreParams, force, noPrompt, strategy),
   )
 import Charon.Runner.Command.List
   ( ListCmd (MkListCmd),
@@ -295,7 +298,17 @@ commandParser =
     delParser = Delete <$> pathsParser
     permDelParser = PermDelete <$> noPromptParser <*> ((,) <$> indicesParser <*> mPathsParser)
     emptyParser = Empty <$> noPromptParser
-    restoreParser = Restore <$> ((,) <$> indicesParser <*> mPathsParser)
+    restoreParser =
+      Restore <$> do
+        force <- forceParser
+        noPrompt <- noPromptParser
+        strategy <- ((,) <$> indicesParser <*> mPathsParser)
+        pure
+          $ MkRestoreParams
+            { force,
+              noPrompt,
+              strategy
+            }
     listParser =
       fmap List
         $ MkListCmd
@@ -316,6 +329,7 @@ indicesParser =
   OA.switch
     $ mconcat
       [ OA.long "indices",
+        OA.short 'i',
         mkHelp
           $ mconcat
             [ "If active, allows deleting by index instead of trash name. ",
@@ -473,15 +487,27 @@ reverseSortParser =
   where
     helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
 
-noPromptParser :: Parser Bool
+forceParser :: Parser Force
+forceParser =
+  fmap MkForce
+    <$> OA.switch
+    $ mconcat
+      [ OA.long "force",
+        mkHelp helpTxt
+      ]
+  where
+    helpTxt = "If enabled, will forcibly overwrite restored path(s)."
+
+noPromptParser :: Parser NoPrompt
 noPromptParser =
-  OA.switch
+  fmap MkNoPrompt
+    <$> OA.switch
     $ mconcat
       [ OA.long "no-prompt",
         mkHelp helpTxt
       ]
   where
-    helpTxt = "If enabled, will not ask before deleting path(s)."
+    helpTxt = "If enabled, will not ask before deleting/restoring path(s)."
 
 trashParser :: Parser (Maybe (RawPathI TrashHome))
 trashParser =

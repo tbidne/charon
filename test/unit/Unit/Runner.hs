@@ -19,6 +19,7 @@ import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
   ( IndicesPathsStrategy (PathsStrategy),
+    NoPrompt (MkNoPrompt),
     _Delete,
     _Empty,
     _List,
@@ -87,7 +88,7 @@ permDelete = testCase "Parses perm delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (False, expectedUSeq) @=? cmd ^? _PermDelete
+  Just (MkNoPrompt False, expectedUSeq) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -100,7 +101,7 @@ permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (True, expectedUSeq) @=? cmd ^? _PermDelete
+  Just (MkNoPrompt True, expectedUSeq) @=? cmd ^? _PermDelete
   where
     argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -113,7 +114,7 @@ emptyTrash = testCase "Parses empty" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just False @=? cmd ^? _Empty
+  Just False @=? cmd ^? _Empty % #unNoPrompt
   where
     argList = ["empty", "-c", "none"]
 
@@ -122,7 +123,7 @@ emptyTrashNoPrompt = testCase "Parses empty with --no-prompt" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just True @=? cmd ^? _Empty
+  Just True @=? cmd ^? _Empty % #unNoPrompt
   where
     argList = ["empty", "--no-prompt", "-c", "none"]
 
@@ -131,7 +132,7 @@ restore = testCase "Parses restore" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just expectedUSeq @=? cmd ^? (_Restore % _PathsStrategy)
+  Just expectedUSeq @=? cmd ^? (_Restore % #strategy % _PathsStrategy)
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -175,7 +176,11 @@ listNonDefaults = testCase "List non-default args" $ do
       ]
     defList =
       MkListCmd
-        { format = FormatTabular ColoringOn (Just $ ColFormatFixed 80) (Just $ ColFormatFixed 100),
+        { format =
+            FormatTabular
+              ColoringOn
+              (Just $ ColFormatFixed 80)
+              (Just $ ColFormatFixed 100),
           sort = Name,
           revSort = False
         }

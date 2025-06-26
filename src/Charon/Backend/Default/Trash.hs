@@ -63,6 +63,7 @@ import Charon.Exception
     TrashEntryWildcardNotFoundE (MkTrashEntryWildcardNotFoundE),
   )
 import Charon.Prelude
+import Charon.Runner.Command (Force, NoPrompt)
 import Charon.Utils qualified as Utils
 import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
@@ -280,7 +281,7 @@ permDeleteFromTrash ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
-  Bool ->
+  NoPrompt ->
   IORef (Seq (PathI TrashEntryFileName)) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
@@ -309,7 +310,7 @@ permDeleteFromTrash
         deleteFn :: PathData -> m ()
         deleteFn pathData = do
           $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
-          if noPrompt
+          if noPrompt ^. #unNoPrompt
             then -- NOTE: Technically don't need the pathdata if noPrompt is on, since we have
             -- the path and can just delete it. Nevertheless, we retrieve the pathData
             -- so that noPrompt does not change the semantics i.e. can only delete
@@ -360,6 +361,7 @@ restoreTrashToOriginal ::
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
+    MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
@@ -370,6 +372,8 @@ restoreTrashToOriginal ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
+  Force ->
+  NoPrompt ->
   IORef (Seq (PathI TrashEntryOriginalPath)) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
@@ -377,6 +381,8 @@ restoreTrashToOriginal ::
 restoreTrashToOriginal
   backendArgs
   postHook
+  force
+  noPrompt
   restoredPathsRef
   trashHome
   pathName = addNamespace "restoreTrashToOriginal" $ do
@@ -388,21 +394,14 @@ restoreTrashToOriginal
         SearchSingleFailure path -> throwM $ MkTrashEntryNotFoundE path
         SearchWildcardFailure path -> throwM $ MkTrashEntryWildcardNotFoundE path
 
-    let backend = backendArgs ^. #backend
-        restoreFn pd = do
-          let originalPath = pd ^. #originalPath
-              fileName = pd ^. #fileName
+    let restoreFn pd = do
+          let fileName = pd ^. #fileName
 
           $(logDebug) ("Restoring: " <> Paths.toText fileName)
 
-          -- 2. Verify original path is empty
-          exists <- PathData.Core.originalPathExists pd
-          when exists
-            $ throwM
-            $ MkRestoreCollisionE fileName originalPath
-
-          let pathType = pd ^. #pathType
-          restoreFn' backend pathType pd
+          if noPrompt ^. #unNoPrompt
+            then restoreNoPrompt pd
+            else restorePrompt pd
 
     -- Need our own error handling here since if we are restoring multiple
     -- wildcard matches we want success/failure to be independent.
@@ -410,6 +409,77 @@ restoreTrashToOriginal
       restoreFn pathData
       postHook pathData
     where
+      backend = backendArgs ^. #backend
+
+      -- NOTE: The restore(prompt|noPrompt) functions potentially ask the
+      -- user to confirm. The overwrite(Ask|Force|Throw) functions handle
+      -- collisions and call the actual restore function.
+
+      -- 1. No --no-prompt. Ask before restoring paths.
+      restorePrompt pd = do
+        Utils.noBuffering
+
+        let pdStr = Utils.renderPretty pd
+
+        putTextLn pdStr
+        putStr "\nRestore (y/n)? "
+        c <- Ch.toLower <$> Term.getChar
+        if
+          | c == 'y' -> do
+              if force ^. #unForce
+                then
+                  -- 2.1. --force: Do not ask for overwrites.
+                  overwriteForce pd *> putStrLn "\n"
+                else
+                  -- 2.2. No --force: Ask for overwrites.
+                  overwriteAsk pd *> putStrLn "\n"
+          | c == 'n' -> putStrLn "\n"
+          | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+
+      -- 2. --no-prompt: Do not prompt before restoring, or before overwrites.
+      restoreNoPrompt pd = do
+        if force ^. #unForce
+          then
+            -- 2.1. --force: overwrite paths without asking.
+            restoreFn' backend (pd ^. #pathType) pd
+          else
+            -- 2.2. No --force: throw on overwrites.
+            overwriteThrow pd
+
+      -- Asks the user if we want to overwrite collisions.
+      overwriteAsk pd = do
+        let pathType = pd ^. #pathType
+        exists <- PathData.Core.originalPathExists pd
+        if exists
+          then do
+            Utils.noBuffering
+
+            let msg = "\nPath exists at original. Overwrite (y/n)? "
+            putStr msg
+            c <- Ch.toLower <$> Term.getChar
+            if
+              | c == 'y' -> restoreFn' backend pathType pd *> putStrLn "\n"
+              | c == 'n' -> putStrLn "\n"
+              | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+          else restoreFn' backend pathType pd
+
+      -- Collisions throw exception.
+      overwriteThrow pd = do
+        let originalPath = pd ^. #originalPath
+            fileName = pd ^. #fileName
+        exists <- PathData.Core.originalPathExists pd
+        when exists
+          $ throwM
+          $ MkRestoreCollisionE fileName originalPath
+        restoreFn' backend (pd ^. #pathType) pd
+
+      -- Overwrites forcibly.
+      overwriteForce pd = do
+        exists <- PathData.Core.originalPathExists pd
+        when exists $ PathType.deleteFn (pd ^. #pathType) (pd ^. #originalPath % #unPathI)
+        restoreFn' backend (pd ^. #pathType) pd
+
+      -- Low level restore function.
       restoreFn' b pt pd = do
         let MkPathI trashPath' = getTrashPath trashHome (pd ^. #fileName)
             MkPathI trashInfoPath' = getTrashInfoPath b trashHome (pd ^. #fileName)

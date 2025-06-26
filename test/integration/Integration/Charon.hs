@@ -17,13 +17,18 @@ import Charon.Backend.Data qualified as Backend.Data
 import Charon.Data.PathData (PathData)
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.PathType qualified as PathType
-import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (↦), (∪))
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Exception (PathNotFound, TrashEntryNotFoundE)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
-import Charon.Runner.Command (IndicesPathsStrategy (PathsStrategy))
+import Charon.Runner.Command
+  ( Force (MkForce),
+    IndicesPathsStrategy (PathsStrategy),
+    NoPrompt (MkNoPrompt),
+    RestoreParams (MkRestoreParams),
+  )
 import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
@@ -264,7 +269,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- permanently delete files
       let toPermDelete = αNames ↦ MkPathI
-      usingIntIO env $ Charon.permDelete True (PathsStrategy toPermDelete)
+      usingIntIO env $ charonPermDelete toPermDelete
 
       -- get index
       index <- getIndex env
@@ -310,7 +315,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       caughtEx <-
         try @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (Charon.permDelete True $ PathsStrategy toPermDelete)
+          $ usingIntIONoCatch env (charonPermDelete toPermDelete)
 
       ex <-
         either
@@ -357,7 +362,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- restore files
       let toRestore = αNames ↦ MkPathI
-      usingIntIO env $ Charon.restore (PathsStrategy toRestore)
+      usingIntIO env $ charonRestore toRestore
 
       -- get index
       index <- getIndex env
@@ -402,7 +407,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       caughtEx <-
         try @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (Charon.restore $ PathsStrategy toRestore)
+          $ usingIntIONoCatch env (charonRestore toRestore)
 
       ex <-
         either
@@ -425,6 +430,15 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       annotate "Assert lookup"
   where
     desc = "Some trash entries are restored, others error"
+
+charonPermDelete :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
+charonPermDelete = Charon.permDelete (MkNoPrompt True) . PathsStrategy
+
+charonRestore :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
+charonRestore =
+  Charon.restore
+    . MkRestoreParams (MkForce False) (MkNoPrompt True)
+    . PathsStrategy
 
 emptyTrash :: Backend -> IO OsPath -> TestTree
 emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
@@ -451,7 +465,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTestPaths
 
       -- empty trash
-      usingIntIO env $ Charon.emptyTrash True
+      usingIntIO env $ Charon.emptyTrash (MkNoPrompt True)
 
       -- get index
       index <- getIndex env

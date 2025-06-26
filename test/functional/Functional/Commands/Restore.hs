@@ -62,7 +62,7 @@ restoreOne getTestEnv = testCase "Restores a single file" $ do
 
     -- RESTORE
 
-    restoreArgList <- withSrArgsM ["restore", "f1"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
     runCharon restoreArgList
 
     -- file assertions
@@ -130,7 +130,7 @@ restoreMany getTestEnv = testCase "Restores several paths" $ do
     -- RESTORE
 
     -- do not restore f2
-    restoreArgList <- withSrArgsM ["restore", "f1", "f3", "dir1", "dir2", "file-link"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f3", "dir1", "dir2", "file-link"]
     runCharon restoreArgList
 
     -- trash structure assertions
@@ -204,7 +204,7 @@ restoreIndices getTestEnv = testCase "Restores with --indices" $ do
     let modEnv = set' #strLine "2-3 5 7-8"
 
     -- do not restore f2
-    restoreArgList <- withSrArgsM ["restore", "--indices"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
     runCharonEnv modEnv restoreArgList
 
     -- trash structure assertions
@@ -255,7 +255,7 @@ restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
     assertFdoDirectorySizesM []
 
     -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "bad file"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "bad file"]
     (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
 
     assertMatch expectedEx ex
@@ -297,7 +297,7 @@ restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ d
     assertFdoDirectorySizesM []
 
     -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "f1"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
     (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
@@ -351,7 +351,7 @@ restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
     assertFdoDirectorySizesM []
 
     -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "f1", "f1 (1)", "f2"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f1 (1)", "f2"]
     (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
 
     assertMatch expectedEx ex
@@ -417,7 +417,7 @@ restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
     assertFdoDirectorySizesM []
 
     -- RESTORE
-    restoreArgList <- withSrArgsM ("restore" : filesTryRestore)
+    restoreArgList <- withSrArgsM ("restore" : "--no-prompt" : filesTryRestore)
     (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
 
     -- file assertions
@@ -489,7 +489,7 @@ restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $
     -- RESTORE
 
     -- leave g alone
-    restoreArgList <- withSrArgsM ["restore", "*f*"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*f*"]
     runCharon restoreArgList
 
     -- trash structure assertions
@@ -578,7 +578,7 @@ restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" 
     -- We want a collision to force an error
     createFiles [testDir </>! "fooBadbar"]
 
-    restoreArgList <- withSrArgsM ["restore", "*h*", "foo**bar", "*g*"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*h*", "foo**bar", "*g*"]
     runCharonException @RestoreCollisionE restoreArgList
 
     -- file assertions
@@ -653,7 +653,7 @@ restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal 
     -- RESTORE
 
     -- leave f alone
-    restoreArgList <- withSrArgsM ["restore", "\\*"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "\\*"]
     runCharon restoreArgList
 
     -- trash structure assertions
@@ -711,7 +711,7 @@ restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
 
     -- RESTORE
 
-    restoreArgList <- withSrArgsM ["restore", "y\\*xx*"]
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "y\\*xx*"]
     runCharon restoreArgList
 
     -- file assertions

@@ -43,7 +43,10 @@ import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
 import Charon.Runner.Command
   ( IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
+    NoPrompt,
+    RestoreParams,
   )
+import Charon.Runner.Phase (Phase (Phase2))
 import Charon.Utils qualified as Utils
 import Data.Foldable1 qualified as F1
 import Data.Sequence qualified as Seq
@@ -106,7 +109,7 @@ permDelete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  Bool ->
+  NoPrompt ->
   IndicesPathsStrategy ->
   m ()
 permDelete noPrompt strategy = addNamespace "permDelete" $ do
@@ -181,6 +184,7 @@ restore ::
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
+    MonadHandleWriter m,
     MonadIORef m,
     MonadLoggerNS m,
     MonadPathReader m,
@@ -190,19 +194,22 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  IndicesPathsStrategy ->
+  RestoreParams Phase2 ->
   m ()
-restore strategy = addNamespace "restore" $ do
+restore params = addNamespace "restore" $ do
   initalLog
 
   (name, idxFn, restoreFn) <-
     asks @env @m getBackend <&> \case
-      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore)
-      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore)
-      BackendJson -> ("json", Json.getIndex, Json.restore)
+      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore force noPrompt)
+      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force noPrompt)
+      BackendJson -> ("json", Json.getIndex, Json.restore force noPrompt)
 
-  paths <- getIndexedPaths strategy idxFn
+  paths <- getIndexedPaths (params ^. #strategy) idxFn
   addNamespace name $ restoreFn paths
+  where
+    force = params ^. #force
+    noPrompt = params ^. #noPrompt
 
 -- | Empties the trash.
 emptyTrash ::
@@ -221,7 +228,7 @@ emptyTrash ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  Bool ->
+  NoPrompt ->
   m ()
 emptyTrash noPrompt = addNamespace "emptyTrash" $ do
   initalLog

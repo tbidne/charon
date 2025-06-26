@@ -175,7 +175,7 @@ $ charon delete foo bar baz
 **Usage:**
 
 ```
-Usage: charon perm-delete [--no-prompt] [--indices] [PATHS...]
+Usage: charon perm-delete [--no-prompt] [-i|--indices] [PATHS...]
 
   Permanently deletes path(s) from the trash. Can use wildcards to match trash
   paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
@@ -184,9 +184,10 @@ Usage: charon perm-delete [--no-prompt] [--indices] [PATHS...]
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before deleting path(s).
+  --no-prompt              If enabled, will not ask before deleting/restoring
+                           path(s).
 
-  --indices                If active, allows deleting by index instead of trash
+  -i,--indices             If active, allows deleting by index instead of trash
                            name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
@@ -218,7 +219,8 @@ Usage: charon empty [--no-prompt]
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before deleting path(s).
+  --no-prompt              If enabled, will not ask before deleting/restoring
+                           path(s).
 
   -h,--help                Show this help text
 ```
@@ -243,7 +245,7 @@ Permanently delete all contents (y/n)?
 **Usage:**
 
 ```
-Usage: charon restore [--indices] [PATHS...]
+Usage: charon restore [--force] [--no-prompt] [-i|--indices] [PATHS...]
 
   Restores the trash path(s) to their original location. Can use wildcards to
   match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
@@ -252,7 +254,12 @@ Usage: charon restore [--indices] [PATHS...]
 
 
 Available options:
-  --indices                If active, allows deleting by index instead of trash
+  --force                  If enabled, will forcibly overwrite restored path(s).
+
+  --no-prompt              If enabled, will not ask before deleting/restoring
+                           path(s).
+
+  -i,--indices             If active, allows deleting by index instead of trash
                            name. Incompatible with explicit paths.
 
   -h,--help                Show this help text

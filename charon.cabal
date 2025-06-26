@@ -24,6 +24,7 @@ source-repository head
 
 common common-lang
   default-extensions:
+    ApplicativeDo
     DataKinds
     DefaultSignatures
     DeriveAnyClass
