@@ -18,7 +18,8 @@ import Charon.Data.PathData.Formatting
     PathDataFormat
       ( FormatMultiline,
         FormatSingleline,
-        FormatTabular
+        FormatTabular,
+        FormatTabularSimple
       ),
     _FormatTabular,
   )
@@ -38,6 +39,7 @@ import Effects.System.Terminal
   )
 import FileSystem.OsPath (unsafeDecode, unsafeEncodeValid)
 import System.OsPath qualified as FP
+import Test.Utils qualified as TestUtils
 import Unit.Prelude
 
 tests :: TestTree
@@ -52,6 +54,7 @@ formattingTests =
     "Formatting"
     [ multilineTests,
       singlelineTests,
+      tabularSimpleTests,
       tabularFixedTests,
       tabularAutoTests,
       tabularMaxTests,
@@ -77,6 +80,17 @@ singlelineTests =
       testFormatSingleline3,
       testFormatSingleline4,
       testFormatSinglelineColor
+    ]
+
+tabularSimpleTests :: TestTree
+tabularSimpleTests =
+  testGroup
+    "Tabular Simple"
+    [ testFormatTabularSimple1,
+      testFormatTabularSimple2,
+      testFormatTabularSimple3,
+      testFormatTabularSimple4,
+      testFormatTabularSimpleColor
     ]
 
 -- Tests w/ fixed format lengths, basically verifying the other args like
@@ -170,6 +184,51 @@ testFormatSinglelineColor =
     "Singleline, size, desc, color"
     [osp|single-size-desc-color|]
     (FormatSingleline ColoringOn)
+    Size
+    True
+
+testFormatTabularSimple1 :: TestTree
+testFormatTabularSimple1 =
+  testGoldenFormatParams
+    "TabularSimple, name, asc"
+    [osp|tabular-simple-name-asc|]
+    (FormatTabularSimple ColoringOff)
+    Name
+    False
+
+testFormatTabularSimple2 :: TestTree
+testFormatTabularSimple2 =
+  testGoldenFormatParams
+    "TabularSimple, name, desc"
+    [osp|tabular-simple-name-desc|]
+    (FormatTabularSimple ColoringOff)
+    Name
+    True
+
+testFormatTabularSimple3 :: TestTree
+testFormatTabularSimple3 =
+  testGoldenFormatParams
+    "TabularSimple, size, asc"
+    [osp|tabular-simple-size-asc|]
+    (FormatTabularSimple ColoringOff)
+    Size
+    False
+
+testFormatTabularSimple4 :: TestTree
+testFormatTabularSimple4 =
+  testGoldenFormatParams
+    "TabularSimple, size, desc"
+    [osp|tabular-simple-size-desc|]
+    (FormatTabularSimple ColoringOff)
+    Size
+    True
+
+testFormatTabularSimpleColor :: TestTree
+testFormatTabularSimpleColor =
+  testGoldenFormatParams
+    "TabularSimple, size, desc, color"
+    [osp|tabular-simple-size-desc-color|]
+    (FormatTabularSimple ColoringOn)
     Size
     True
 
@@ -571,11 +630,15 @@ testGolden
   style
   sortFn
   rev
-  termWidth = goldenVsFile desc (unsafeDecode gpath) (unsafeDecode apath) $ do
-    idx <- mkIdx
-    let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
-    formatted <- runConfigIO fmt termWidth
-    writeBinaryFile apath (toBS formatted)
+  termWidth = TestUtils.goldenDiffCustom
+    desc
+    (unsafeDecode gpath)
+    (unsafeDecode apath)
+    $ do
+      idx <- mkIdx
+      let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
+      formatted <- runConfigIO fmt termWidth
+      writeBinaryFile apath (toBS formatted)
     where
       (gpath, apath) = mkGoldenPaths fileName
 

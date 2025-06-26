@@ -16,11 +16,23 @@ module Charon.Data.PathData.Formatting
     sortFn,
 
     -- * Format functions
+
+    -- ** Tabular
     formatTabularHeader,
     formatTabularHeaderColor,
     formatTabularRow,
     formatTabularRowColor,
+
+    -- ** Tabular simple
+    formatTabularSimpleHeader,
+    formatTabularSimpleHeaderColor,
+    formatTabularSimpleRow,
+    formatTabularSimpleRowColor,
+
+    -- ** Multiline
     formatMultiline,
+
+    -- ** Singular
     formatSingleline,
     formatSinglelineColor,
 
@@ -90,6 +102,7 @@ data PathDataFormat
     FormatMultiline
   | -- | Formats all fields on the same line.
     FormatTabular Coloring (Maybe ColFormat) (Maybe ColFormat)
+  | FormatTabularSimple Coloring
   | -- | Formats each entry on a single line, no table.
     FormatSingleline Coloring
   deriving stock (Eq, Show)
@@ -207,6 +220,46 @@ formatTabularHeader' f nameLen origLen =
     -- extra 12 is from the separators
     totalLen = nameLen + origLen + reservedLineLen
     titleLen = T.replicate (fromIntegral totalLen) "-"
+
+formatTabularSimpleHeader :: Natural -> Natural -> Text
+formatTabularSimpleHeader = formatTabularSimpleHeader' id
+
+formatTabularSimpleHeaderColor :: Color -> Natural -> Natural -> Text
+formatTabularSimpleHeaderColor = formatTabularSimpleHeader' . CPretty.color
+
+formatTabularSimpleHeader' :: (Text -> Text) -> Natural -> Natural -> Text
+formatTabularSimpleHeader' f idxLen origLen =
+  f
+    $ mconcat
+      [ fixLen idxLen "Index",
+        sep,
+        fixLen formatCreatedLen "Created",
+        sep,
+        -- No need to pad the length here as this is the last column
+        "Original",
+        "\n",
+        titleLen
+      ]
+  where
+    totalLen = idxLen + formatCreatedLen + origLen + 6
+    titleLen = T.replicate (fromIntegral totalLen) "-"
+
+formatTabularSimpleRow :: Natural -> Natural -> PathData -> Text
+formatTabularSimpleRow x = formatTabularSimpleRow' id x
+
+formatTabularSimpleRowColor :: Color -> Natural -> Natural -> PathData -> Text
+formatTabularSimpleRowColor c x = formatTabularSimpleRow' (CPretty.color c) x
+
+formatTabularSimpleRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
+formatTabularSimpleRow' f idxLen idx pd =
+  f
+    $ mconcat
+      [ fixLen idxLen (showt idx),
+        sep,
+        Timestamp.toTextSpace $ pd ^. #created,
+        sep,
+        T.pack $ decodeDisplayEx $ pd ^. #originalPath % #unPathI
+      ]
 
 -- | For tabular formatting, this is the necessary width for the fixed
 -- columns:

@@ -32,6 +32,9 @@ pattern MkUniqueSeqNE seq set <- UnsafeUniqueSeqNE seq set
 instance Foldable UniqueSeqNE where
   foldr f x (UnsafeUniqueSeqNE seq _) = foldr f x seq
 
+instance Foldable1 UniqueSeqNE where
+  foldMap1 f (UnsafeUniqueSeqNE seq _) = foldMap1 f seq
+
 instance (Hashable a) => Semigroup (UniqueSeqNE a) where
   (<>) = union
 

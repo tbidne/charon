@@ -3,9 +3,7 @@
 -- | Prelude for unit test suite.
 module Unit.Prelude
   ( module X,
-    TextMatch,
     assertFalse,
-    assertMatches,
     getDefaultTrash,
   )
 where
@@ -27,7 +25,6 @@ import Hedgehog as X
     (===),
   )
 import Test.Tasty as X (TestTree, askOption, testGroup)
-import Test.Tasty.Golden as X (goldenVsFile)
 import Test.Tasty.HUnit as X
   ( assertBool,
     assertEqual,
@@ -36,7 +33,7 @@ import Test.Tasty.HUnit as X
     (@=?),
   )
 import Test.Tasty.Hedgehog as X (testPropertyNamed)
-import Test.Utils (TextMatch, assertMatches)
+import Test.Utils as X (TextMatch, assertMatches, goldenDiffCustom)
 
 getDefaultTrash :: IO OsPath
 getDefaultTrash = (</> [osp|.trash|]) <$> getHomeDirectory

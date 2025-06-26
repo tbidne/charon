@@ -293,9 +293,9 @@ commandParser =
     mergeTxt = mkCmdDescNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     delParser = Delete <$> pathsParser
-    permDelParser = PermDelete <$> forceParser <*> pathsParser
+    permDelParser = PermDelete <$> forceParser <*> ((,) <$> indicesParser <*> mPathsParser)
     emptyParser = Empty <$> forceParser
-    restoreParser = Restore <$> pathsParser
+    restoreParser = Restore <$> ((,) <$> indicesParser <*> mPathsParser)
     listParser =
       fmap List
         $ MkListCmd
@@ -311,13 +311,25 @@ commandParser =
     convertParser = Convert <$> backendDestParser
     mergeParser = Merge <$> trashDestParser
 
+indicesParser :: Parser Bool
+indicesParser =
+  OA.switch
+    $ mconcat
+      [ OA.long "indices",
+        mkHelp
+          $ mconcat
+            [ "If active, allows deleting by index instead of trash name. ",
+              "Incompatible with explicit paths."
+            ]
+      ]
+
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =
   A.optional
     $ OA.option (OA.str >>= parseListFormat)
     $ mconcat
       [ OA.long "format",
-        OA.metavar "(m[ulti] | s[ingle] | t[abular])",
+        OA.metavar "(m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))",
         OA.helpDoc helpTxt
       ]
   where
@@ -330,12 +342,40 @@ listFormatStyleParser =
           single,
           Just Pretty.hardline,
           tabular,
+          Just Pretty.hardline,
+          tabularSimple,
           Just Pretty.hardline
         ]
     intro = toMDoc "Formatting options."
-    tabular = Just Pretty.hardline <> toMDoc "- tabular: The default. Prints a table that tries to intelligently size the table based on available terminal width and filename / original path lengths."
-    multi = Just Pretty.hardline <> toMDoc "- multi: Prints each entry across multiple lines."
-    single = Just Pretty.hardline <> toMDoc "- single: Compact, prints each entry across a single lines"
+    tabular =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc
+            $ mconcat
+              [ "- tabular: The default. Prints a table that tries to ",
+                "intelligently size the table based on available terminal ",
+                "width and filename / original path lengths."
+              ]
+        ]
+    tabularSimple =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc
+            $ mconcat
+              [ "- tabular-simple: Simple table that does no resizing. Prints ",
+                "the table with indices."
+              ]
+        ]
+    multi =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc "- multi: Prints each entry across multiple lines."
+        ]
+    single =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc "- single: Compact, prints each entry across a single lines"
+        ]
     toMDoc = Chunk.unChunk . Chunk.paragraph
 
 nameTruncParser :: Parser (Maybe ColFormat)
@@ -489,6 +529,9 @@ logLevelParser =
               "written to the XDG state directory e.g. ~/.local/state/charon."
             ]
       ]
+
+mPathsParser :: Parser (Maybe (UniqueSeqNE (RawPathI i)))
+mPathsParser = A.optional pathsParser
 
 pathsParser :: Parser (UniqueSeqNE (RawPathI i))
 pathsParser =

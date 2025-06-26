@@ -17,13 +17,16 @@ module Functional.Prelude
 
     -- ** Runners
     FuncEnv.runCharon,
+    FuncEnv.runCharonEnv,
     FuncEnv.runCharonException,
     FuncEnv.runIndexMetadataM,
     FuncEnv.runIndexMetadataTestDirM,
 
     -- ** Data capture
     FuncEnv.captureCharon,
+    FuncEnv.captureCharonEnv,
     FuncEnv.captureCharonLogs,
+    FuncEnv.captureCharonEnvLogs,
     FuncEnv.captureCharonException,
     FuncEnv.captureCharonExceptionLogs,
     FuncEnv.captureCharonExceptionTerminal,

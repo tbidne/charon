@@ -339,13 +339,13 @@ permDeleteFromTrash
     -- wildcard matches we want success/failure to be independent.
     for_ pathDatas $ \pathData -> do
       deleteFn pathData
-      modifyIORef' deletedPathsRef (:|> pathData ^. #fileName)
       postHook pathData
     where
       deleteFn' b pd = do
         let MkPathI trashInfoPath' = getTrashInfoPath b trashHome (pd ^. #fileName)
 
         deleteFileName trashHome pd
+        modifyIORef' deletedPathsRef (:|> pd ^. #fileName)
         $(logInfo) ("Permanently deleted: " <> showt pd)
         PW.removeFile trashInfoPath'
 
@@ -408,7 +408,6 @@ restoreTrashToOriginal
     -- wildcard matches we want success/failure to be independent.
     for_ pathDatas $ \pathData -> do
       restoreFn pathData
-      modifyIORef' restoredPathsRef (:|> pathData ^. #originalPath)
       postHook pathData
     where
       restoreFn' b pt pd = do
@@ -418,6 +417,7 @@ restoreTrashToOriginal
         -- 3. Attempt restore
         let original = pd ^. #originalPath % #unPathI
         PathType.renameFn pt trashPath' original
+        modifyIORef' restoredPathsRef (:|> pd ^. #originalPath)
         $(logInfo) $ "Restored: " <> decodeDisplayExT original
 
         -- 4. Delete info

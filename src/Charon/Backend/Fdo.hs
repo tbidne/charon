@@ -72,7 +72,6 @@ import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.HashMap.Strict qualified as HMap
 import Data.Sequence qualified as Seq
-import Data.Traversable (for)
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig, overwrite, targetName),

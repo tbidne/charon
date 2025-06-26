@@ -27,19 +27,30 @@ import Charon.Backend.Data qualified as Backend.Data
 import Charon.Backend.Fdo qualified as Fdo
 import Charon.Backend.Json qualified as Json
 import Charon.Data.Index (Index)
+import Charon.Data.Index qualified as Index
 import Charon.Data.Metadata (Metadata)
+import Charon.Data.PathData (PathData)
+import Charon.Data.PathData.Formatting (Coloring (ColoringDetect))
 import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
   )
 import Charon.Data.Paths qualified as Paths
-import Charon.Data.UniqueSeqNE (UniqueSeqNE)
+import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∈))
+import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
+import Charon.Runner.Command
+  ( IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
+  )
 import Charon.Utils qualified as Utils
+import Data.Foldable1 qualified as F1
+import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter qualified as PW
+import Effects.System.Terminal qualified as Term
+import Text.Read qualified as TR
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
 -- one is rethrown.
@@ -96,15 +107,19 @@ permDelete ::
     MonadTime m
   ) =>
   Bool ->
-  UniqueSeqNE (PathI TrashEntryFileName) ->
+  IndicesPathsStrategy ->
   m ()
-permDelete force paths = addNamespace "permDelete" $ do
+permDelete force strategy = addNamespace "permDelete" $ do
   initalLog
-  asks getBackend
-    >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.permDelete force paths
-      BackendFdo -> addNamespace "fdo" $ Fdo.permDelete force paths
-      BackendJson -> addNamespace "json" $ Json.permDelete force paths
+
+  (name, idxFn, delFn) <-
+    asks @env @m getBackend <&> \case
+      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.permDelete)
+      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.permDelete)
+      BackendJson -> ("json", Json.getIndex, Json.permDelete)
+
+  paths <- getIndexedPaths strategy idxFn
+  addNamespace name $ delFn force paths
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -175,15 +190,19 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeqNE (PathI TrashEntryFileName) ->
+  IndicesPathsStrategy ->
   m ()
-restore paths = addNamespace "restore" $ do
+restore strategy = addNamespace "restore" $ do
   initalLog
-  asks getBackend
-    >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.restore paths
-      BackendFdo -> addNamespace "fdo" $ Fdo.restore paths
-      BackendJson -> addNamespace "json" $ Json.restore paths
+
+  (name, idxFn, restoreFn) <-
+    asks @env @m getBackend <&> \case
+      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore)
+      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore)
+      BackendJson -> ("json", Json.getIndex, Json.restore)
+
+  paths <- getIndexedPaths strategy idxFn
+  addNamespace name $ restoreFn paths
 
 -- | Empties the trash.
 emptyTrash ::
@@ -372,3 +391,89 @@ initalLog ::
   m ()
 initalLog =
   asks getTrashHome >>= \th -> $(logDebug) ("TrashHome: " <> Paths.toText th)
+
+-- | Retrieves trash entries based on user index input.
+getIndexedPaths ::
+  forall m.
+  ( HasCallStack,
+    MonadTerminal m,
+    MonadThrow m
+  ) =>
+  IndicesPathsStrategy ->
+  -- | Function to retrieve trash index.
+  m Index ->
+  -- | Trash entries corresponding to user indices.
+  m (UniqueSeqNE (PathI TrashEntryFileName))
+getIndexedPaths (PathsStrategy paths) _ = pure paths
+getIndexedPaths IndicesStrategy idxFn = do
+  index <- idxFn
+
+  -- Sort index by original path.
+  let trashIndexSeq =
+        Seq.sortOn (view #originalPath)
+          . fmap (view _1)
+          . view #unIndex
+          $ index
+
+  -- Format the index. We use the lower-level singlelineNoSort so that we
+  -- ensure we have the same sorting as above i.e. we need the indexes
+  -- to line up.
+  coloring <- Index.getColoring ColoringDetect
+  let formatted = Index.tabularSimpleNoSort coloring trashIndexSeq
+  putTextLn formatted
+
+  putTextLn "\nPlease enter a list of space-separated indices to delete."
+  putTextLn "For example: 1 3 5-12 15\n"
+  txtIndices <-
+    T.words <$> Term.getTextLine >>= \case
+      [] -> throwText "Received zero indices."
+      (t : ts) -> pure $ t :| ts
+
+  -- 1. Translate ranges to indices
+  indices <- foldlMapM1 parseIndexNum combineIndices txtIndices
+
+  -- 2. Check all in range
+  let maxElem = F1.maximum indices
+      idxLen = length trashIndexSeq
+  when (maxElem > idxLen) $ do
+    let msg =
+          mconcat
+            [ "Maximum index ",
+              showt maxElem,
+              " is greater than than the trash size: ",
+              showt idxLen
+            ]
+    throwText msg
+
+  -- 3. Filter indices, map to trash names
+  let filterIndices :: Seq PathData -> Seq (PathI TrashEntryFileName)
+      filterIndices =
+        fmap (view (_2 % #fileName))
+          . Seq.filter (\(i, _) -> i ∈ indices)
+          . Seq.zip (Seq.fromList [1 .. idxLen])
+
+  case filterIndices trashIndexSeq of
+    Seq.Empty -> throwText $ "No indices after filtering: " <> showt indices
+    (x :<| xs) -> pure $ USeqNE.fromFoldable1 (x :<|| xs)
+  where
+    combineIndices :: UniqueSeqNE Int -> Text -> m (UniqueSeqNE Int)
+    combineIndices acc txt = (acc <>) <$> parseIndexNum txt
+
+    parseIndexNum :: Text -> m (UniqueSeqNE Int)
+    parseIndexNum t = case T.split (== '-') t of
+      [one] -> do
+        n <- readNumOrDie one
+        pure $ USeqNE.singleton n
+      [sTxt, eTxt] -> do
+        s <- readNumOrDie sTxt
+        e <- readNumOrDie eTxt
+
+        case [s .. e] of
+          [] -> throwText $ "Bad range: start index " <> sTxt <> " > " <> eTxt
+          (x : xs) -> pure $ USeqNE.fromNonEmpty (x :| xs)
+      _ -> throwText $ "Expected number or range, received: " <> t
+
+    readNumOrDie :: Text -> m Int
+    readNumOrDie t = case TR.readMaybe (T.unpack t) of
+      Nothing -> throwText $ "Failed reading int: " <> t
+      Just n -> pure n

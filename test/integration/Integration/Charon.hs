@@ -23,6 +23,7 @@ import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Exception (PathNotFound, TrashEntryNotFoundE)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
+import Charon.Runner.Command (IndicesPathsStrategy (PathsStrategy))
 import Charon.Runner.Env
   ( Env (MkEnv, backend, logEnv, trashHome),
     LogEnv (MkLogEnv),
@@ -263,7 +264,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- permanently delete files
       let toPermDelete = αNames ↦ MkPathI
-      usingIntIO env $ Charon.permDelete True toPermDelete
+      usingIntIO env $ Charon.permDelete True (PathsStrategy toPermDelete)
 
       -- get index
       index <- getIndex env
@@ -309,7 +310,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       caughtEx <-
         try @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (Charon.permDelete True toPermDelete)
+          $ usingIntIONoCatch env (Charon.permDelete True $ PathsStrategy toPermDelete)
 
       ex <-
         either
@@ -356,7 +357,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       -- restore files
       let toRestore = αNames ↦ MkPathI
-      usingIntIO env $ Charon.restore toRestore
+      usingIntIO env $ Charon.restore (PathsStrategy toRestore)
 
       -- get index
       index <- getIndex env
@@ -401,7 +402,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       caughtEx <-
         try @_ @TrashEntryNotFoundE
-          $ usingIntIONoCatch env (Charon.restore toRestore)
+          $ usingIntIONoCatch env (Charon.restore $ PathsStrategy toRestore)
 
       ex <-
         either

@@ -149,6 +149,11 @@
                   CHARON_HASH = "${self.rev or self.dirtyRev}";
                   CHARON_MODIFIED = "${builtins.toString self.lastModified}";
                   CHARON_SHORT_HASH = "${self.shortRev or self.dirtyShortRev}";
+
+                  # Git is needed to run the tests (git diff).
+                  nativeBuildInputs = oldAttrs.nativeBuildInputs or [ ] ++ [
+                    pkgs.git
+                  ];
                 });
 
               # TODO: Once hlint is back to working with our GHC we can

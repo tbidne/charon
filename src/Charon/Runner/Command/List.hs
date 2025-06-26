@@ -18,7 +18,7 @@ where
 import Charon.Data.PathData.Formatting
   ( ColFormat,
     Coloring (ColoringDetect),
-    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
+    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular, FormatTabularSimple),
     Sort (Name),
   )
 import Charon.Prelude
@@ -37,6 +37,7 @@ import Data.Text qualified as T
 data ListFormatStyle
   = ListFormatStyleMultiline
   | ListFormatStyleTabular
+  | ListFormatStyleTabularSimple
   | ListFormatStyleSingleline
   deriving stock (Eq, Show)
 
@@ -45,6 +46,8 @@ parseListFormat "multi" = pure ListFormatStyleMultiline
 parseListFormat "m" = pure ListFormatStyleMultiline
 parseListFormat "tabular" = pure ListFormatStyleTabular
 parseListFormat "t" = pure ListFormatStyleTabular
+parseListFormat "tabular-simple" = pure ListFormatStyleTabularSimple
+parseListFormat "ts" = pure ListFormatStyleTabularSimple
 parseListFormat "single" = pure ListFormatStyleSingleline
 parseListFormat "s" = pure ListFormatStyleSingleline
 parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
@@ -85,6 +88,7 @@ instance AdvancePhase ListFormatPhase1 where
         coloring
         (formatPhase1 ^. #nameTrunc)
         (formatPhase1 ^. #origTrunc)
+    Just ListFormatStyleTabularSimple -> FormatTabularSimple coloring
     Nothing ->
       FormatTabular
         coloring

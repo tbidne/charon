@@ -37,6 +37,7 @@ module Charon.Data.Paths
     liftPathI',
     liftPathIF,
     liftPathIF',
+    pathLength,
   )
 where
 
@@ -247,6 +248,9 @@ toString (MkPathI p) = decodeDisplayEx p
 -- | 'PathI' to 'Text' via 'toString'.
 toText :: PathI i -> Text
 toText = T.pack . toString
+
+pathLength :: PathI i -> Int
+pathLength (MkPathI p) = OsStr.length p
 
 -- $general
 -- These functions allows for lifting arbitrary 'OsPath' functions onto our

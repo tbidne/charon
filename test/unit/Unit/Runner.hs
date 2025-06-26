@@ -18,10 +18,12 @@ import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
-  ( _Delete,
+  ( IndicesPathsStrategy (PathsStrategy),
+    _Delete,
     _Empty,
     _List,
     _Metadata,
+    _PathsStrategy,
     _PermDelete,
     _Restore,
   )
@@ -89,7 +91,8 @@ permDelete = testCase "Parses perm delete" $ do
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      MkPathI
+      PathsStrategy
+        $ MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteForce :: TestTree
@@ -101,7 +104,8 @@ permDeleteForce = testCase "Parses perm delete with force" $ do
   where
     argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      MkPathI
+      PathsStrategy
+        $ MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 emptyTrash :: TestTree
@@ -127,7 +131,7 @@ restore = testCase "Parses restore" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just expectedUSeq @=? cmd ^? _Restore
+  Just expectedUSeq @=? cmd ^? (_Restore % _PathsStrategy)
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
     expectedUSeq =

@@ -21,13 +21,16 @@ module Functional.Prelude.FuncEnv
 
     -- ** Runners
     runCharon,
+    runCharonEnv,
     runCharonException,
     runIndexMetadataM,
     runIndexMetadataTestDirM,
 
     -- *** Data capture
     captureCharon,
+    captureCharonEnv,
     captureCharonLogs,
+    captureCharonEnvLogs,
     captureCharonException,
     captureCharonExceptionLogs,
     captureCharonExceptionTerminal,
@@ -82,7 +85,10 @@ import Effects.LoggerNS
     Namespace,
   )
 import Effects.LoggerNS qualified as Logger
-import Effects.System.Terminal (Window (Window))
+import Effects.System.Terminal
+  ( MonadTerminal (getLine),
+    Window (Window),
+  )
 import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
@@ -131,11 +137,13 @@ data FuncEnv = MkFuncEnv
     -- | Saves the logs output.
     logsRef :: IORef Text,
     -- | Used to alternate responses to getChar.
-    charStream :: IORef CharStream
+    charStream :: IORef CharStream,
+    -- | Terminal answer to getLine.
+    strLine :: String
   }
 
 instance Show FuncEnv where
-  show (MkFuncEnv th backend ns _ _ _) =
+  show (MkFuncEnv th backend ns _ _ _ strLine) =
     mconcat
       [ "MkFuncEnv {trashHome = ",
         show th,
@@ -143,7 +151,9 @@ instance Show FuncEnv where
         show backend,
         ", logNamespace = ",
         show ns,
-        ", terminalRef = <ref>, logsRef = <ref>, charStream = <ref> }"
+        ", terminalRef = <ref>, logsRef = <ref>, charStream = <ref>, strLine = ",
+        show strLine,
+        "}"
       ]
 
 makeFieldLabelsNoPrefix ''FuncEnv
@@ -233,10 +243,12 @@ instance MonadPathWriter (FuncIO env) where
     | otherwise = liftIO $ PW.removeFile x
 
 instance
-  ( Is k A_Getter,
-    LabelOptic' "terminalRef" k env (IORef Text),
-    Is l A_Getter,
-    LabelOptic' "charStream" l env (IORef CharStream)
+  ( Is k1 A_Getter,
+    LabelOptic' "terminalRef" k1 env (IORef Text),
+    Is k2 A_Getter,
+    LabelOptic' "charStream" k2 env (IORef CharStream),
+    Is k3 A_Getter,
+    LabelOptic' "strLine" k3 env String
   ) =>
   MonadTerminal (FuncIO env)
   where
@@ -246,12 +258,17 @@ instance
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure c
+
+  getLine = asks (view #strLine)
+
   getTerminalSize =
     pure
       $ Window
         { height = 50,
           width = 100
         }
+
+  supportsPretty = pure False
 
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime localTime utc
@@ -288,7 +305,12 @@ instance MonadLoggerNS (FuncIO FuncEnv) where
 runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
-mkFuncEnv :: (HasCallStack, MonadIO m) => TomlConfigP2 -> IORef Text -> IORef Text -> m FuncEnv
+mkFuncEnv ::
+  (HasCallStack, MonadIO m) =>
+  TomlConfigP2 ->
+  IORef Text ->
+  IORef Text ->
+  m FuncEnv
 mkFuncEnv toml logsRef terminalRef = do
   trashHome <- liftIO getTrashHome'
   charStream <- liftIO $ newIORef altAnswers
@@ -299,7 +321,8 @@ mkFuncEnv toml logsRef terminalRef = do
         terminalRef,
         logsRef,
         logNamespace = "functional",
-        charStream
+        charStream,
+        strLine = "mkFuncEnv_answer"
       }
   where
     getTrashHome' = case toml ^. #trashHome of
@@ -310,9 +333,16 @@ mkFuncEnv toml logsRef terminalRef = do
 runCharon :: (MonadIO m) => [String] -> m ()
 runCharon = void . captureCharon
 
+runCharonEnv :: (MonadIO m) => (FuncEnv -> FuncEnv) -> [String] -> m ()
+runCharonEnv modEnv = void . captureCharonEnv modEnv
+
 -- | Runs charon and captures terminal output.
 captureCharon :: (MonadIO m) => [String] -> m [Text]
 captureCharon = fmap (view _1) . captureCharonLogs
+
+-- | Runs charon and captures terminal output.
+captureCharonEnv :: (MonadIO m) => (FuncEnv -> FuncEnv) -> [String] -> m [Text]
+captureCharonEnv modEnv = fmap (view _1) . captureCharonEnvLogs modEnv
 
 -- | Runs charon and captures (terminal output, logs).
 captureCharonLogs ::
@@ -320,12 +350,22 @@ captureCharonLogs ::
   -- Args.
   [String] ->
   m ([Text], [Text])
-captureCharonLogs argList = liftIO $ do
+captureCharonLogs = captureCharonEnvLogs id
+
+-- | Runs charon and captures (terminal output, logs).
+captureCharonEnvLogs ::
+  (MonadIO m) =>
+  -- | Env modifier
+  (FuncEnv -> FuncEnv) ->
+  -- Args.
+  [String] ->
+  m ([Text], [Text])
+captureCharonEnvLogs modEnv argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
   (toml, cmd) <- getConfig
-  env <- mkFuncEnv toml logsRef terminalRef
+  env <- modEnv <$> mkFuncEnv toml logsRef terminalRef
 
   runFuncIO (Runner.runCmd cmd) env
     `catchSync` \ex -> do
@@ -444,7 +484,8 @@ runIndexMetadataTestDirM testDir = do
             logNamespace = "functional",
             terminalRef,
             logsRef,
-            charStream
+            charStream,
+            strLine = "metadata_answer"
           }
 
   -- Need to canonicalize due to windows aliases

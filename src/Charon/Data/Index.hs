@@ -12,9 +12,11 @@ module Charon.Data.Index
     readSort,
 
     -- * Low level utils
+    getColoring,
     formatIndex',
     fromList,
     insert,
+    tabularSimpleNoSort,
   )
 where
 
@@ -23,7 +25,12 @@ import Charon.Data.PathData qualified as PathDataCore
 import Charon.Data.PathData.Formatting
   ( ColFormat,
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
-    PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
+    PathDataFormat
+      ( FormatMultiline,
+        FormatSingleline,
+        FormatTabular,
+        FormatTabularSimple
+      ),
     Sort (Name, Size),
     readSort,
     _ColFormatFixed,
@@ -34,9 +41,11 @@ import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashEntryFileName, TrashEntryPath),
   )
+import Charon.Data.Paths qualified as Paths
 import Charon.Prelude
 import Charon.Runner.Command.List (ListCmdP2)
 import Data.Foldable (toList)
+import Data.Foldable qualified as F
 import Data.HashMap.Strict qualified as HMap
 import Data.List qualified as L
 import Data.Ord (Ord (max))
@@ -226,6 +235,9 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
       revSort = listCmd ^. #revSort
       sort = listCmd ^. #sort
+  FormatTabularSimple color -> do
+    coloring <- getColoring color
+    pure $ tabularSimple coloring idx
 
 -- | Derives the column lengths for our one dynamic column @C@ when given
 -- exactly one fixed column length (@D_len@).
@@ -322,6 +334,44 @@ singleline coloring =
     colorFn
       | coloring = Formatting.formatSinglelineColor
       | otherwise = const Formatting.formatSingleline
+
+tabularSimple :: Bool -> Seq PathDataCore -> Text
+tabularSimple coloring =
+  tabularSimpleNoSort coloring
+    . Seq.sortOn (view #originalPath)
+
+tabularSimpleNoSort :: Bool -> Seq PathDataCore -> Text
+tabularSimpleNoSort coloring xs =
+  ((headerFn headerColor idxLen origLen <> "\n") <>)
+    . T.intercalate "\n"
+    . foldr f []
+    . L.zip3 colorStream [1 ..]
+    . toList
+    $ xs
+  where
+    headerColor = Green
+
+    f :: (Color, Natural, PathData) -> [Text] -> [Text]
+    f (c, idx, pd) acc = rowFn c idxLen idx pd : acc
+
+    (headerFn, rowFn)
+      | coloring =
+          ( Formatting.formatTabularSimpleHeaderColor,
+            Formatting.formatTabularSimpleRowColor
+          )
+      | otherwise =
+          ( const Formatting.formatTabularSimpleHeader,
+            const Formatting.formatTabularSimpleRow
+          )
+
+    -- maximum of text 'Index' or string length of max index i.e. number
+    -- + 1 for trailing colon e.g. '10:' (3).
+    idxLen = fromIntegral $ max (length (show maxIdx) + 1) 5
+
+    origLen = max maxOrig Formatting.formatOriginalPathLenMin
+
+    maxOrig = fromIntegral $ F.maximum (Paths.pathLength . view #originalPath <$> xs)
+    maxIdx = length xs
 
 colorStream :: [Color]
 colorStream = Blue : Magenta : colorStream

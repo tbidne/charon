@@ -3,7 +3,7 @@ name:               charon
 version:            0.1
 license:            MIT
 license-file:       LICENSE
-tested-with:        GHC ==9.4.7 || ==9.6.3 || ==9.8.1
+tested-with:        GHC ==9.6.6 || ==9.8.4 || ==9.10.2 || ==9.12.2
 copyright:          2022-2025 Thomas Bidne
 author:             Thomas Bidne
 maintainer:         tbidne@protonmail.com
@@ -157,8 +157,10 @@ library test-utils
     , base
     , charon
     , effects-fs
-    , hedgehog              >=1.0.2 && <1.6
-    , tasty-hunit           >=0.9   && <0.11
+    , hedgehog              >=1.0.2    && <1.6
+    , tasty                 >=1.1.0.3  && <1.6
+    , tasty-golden          ^>=2.3.1.1
+    , tasty-hunit           >=0.9      && <0.11
     , text
     , unordered-containers
 
@@ -207,11 +209,11 @@ test-suite unit
     , filepath
     , hedgehog
     , nonempty-containers
-    , pretty-simple         >=4.0.0.0  && <4.2
-    , random                >=1.2.1.1  && <1.4
-    , tasty                 >=1.1.0.3  && <1.6
-    , tasty-golden          ^>=2.3.1.1
-    , tasty-hedgehog        >=1.2.0.0  && <1.5
+    , pretty-simple         >=4.0.0.0 && <4.2
+    , random                >=1.2.1.1 && <1.4
+    , tasty
+    , tasty-golden
+    , tasty-hedgehog        >=1.2.0.0 && <1.5
     , tasty-hunit
     , test-utils
     , text

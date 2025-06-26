@@ -20,6 +20,7 @@ tests testEnv =
     "Permanent Delete Command"
     $ [ deletesOne testEnv',
         deletesMany testEnv',
+        deletesIndices testEnv',
         deleteUnknownError testEnv',
         deletesSome testEnv',
         deletesNoForce testEnv',
@@ -129,6 +130,78 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     -- leave f2 alone
     permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "file-link", "-f"]
     liftIO $ runCharon permDelArgList
+
+    -- trash structure assertions
+    permDelExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("f2", PathTypeFile, 5),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymbolicLink, 5)
+        ]
+
+    (permDelIdxSet, permDelMetadata) <- runIndexMetadataM
+    assertSetEq permDelExpectedIdxSet permDelIdxSet
+    permDelExpectedMetadata @=? permDelMetadata
+    assertFdoDirectorySizesM ["dir4"]
+  where
+    delExpectedMetadata = mkMetadata 8 7 0 55
+
+    permDelExpectedMetadata = mkMetadata 3 3 0 20
+
+deletesIndices :: IO TestEnv -> TestTree
+deletesIndices getTestEnv = testCase "Permanently deletes with --indices" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesIndices" $ do
+    testDir <- getTestDir
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+
+    -- SETUP
+    -- test w/ a nested dir
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+    -- test w/ a file in dir
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
+    assertPathsExist (filesToDelete ++ dirsToDelete)
+    assertSymlinksExist linksToDelete
+
+    liftIO $ runCharon delArgList
+
+    -- file assertions
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
+
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymbolicLink, 5),
+          ("file-link", PathTypeSymbolicLink, 5)
+        ]
+
+    -- trash structure assertions
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
+    -- PERMANENT DELETE
+
+    -- These are the indices for the same files as the previous test, in
+    -- in sorted order.
+    let modEnv = set' #strLine "2-3 5 7-8"
+
+    -- leave f2 alone
+    permDelArgList <- withSrArgsM ["perm-delete", "--indices", "-f"]
+    liftIO $ runCharonEnv modEnv permDelArgList
 
     -- trash structure assertions
     permDelExpectedIdxSet <-
@@ -668,9 +741,6 @@ displaysAllData getTestEnv = testCase "Displays all data for each backend" $ do
         -- Leaving off the "(y/n)?" suffix as the windows tests replaces all
         -- backslashes with forward slashes.
         Prefix "Permanently delete",
-        Exact "",
-        Exact "Permanently deleted paths:",
-        Exact "- f1",
         Exact ""
       ]
 

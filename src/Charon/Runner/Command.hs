@@ -10,6 +10,9 @@ module Charon.Runner.Command
     advancePhaseCmd,
     CmdPathF,
 
+    -- ** Sub types
+    IndicesPathsStrategy (..),
+
     -- * Optics
     _Delete,
     _PermDelete,
@@ -17,6 +20,8 @@ module Charon.Runner.Command
     _Restore,
     _List,
     _Metadata,
+    _IndicesStrategy,
+    _PathsStrategy,
   )
 where
 
@@ -40,22 +45,47 @@ import Charon.Runner.Phase
     Phase (Phase1, Phase2),
   )
 
+-- | Strategy for finding paths in the trash index.
+data IndicesPathsStrategy
+  = -- | Index strategy i.e. we will show the user the trash with numeric
+    -- indices, so that they can specify indices directly.
+    IndicesStrategy
+  | -- | Normal strategy, explicit trash names are given.
+    PathsStrategy (UniqueSeqNE (PathI TrashEntryFileName))
+  deriving stock (Eq, Show)
+
+makePrisms ''IndicesPathsStrategy
+
 advancePhaseCmd ::
   ( HasCallStack,
     MonadCatch m,
     MonadPathReader m,
-    MonadTerminal m
+    MonadTerminal m,
+    MonadThrow m
   ) =>
   Command Phase1 ->
   m (Command Phase2)
-advancePhaseCmd (Delete paths) = Delete <$> fromRawSet paths
-advancePhaseCmd (PermDelete force paths) = PermDelete force <$> fromRawSet paths
-advancePhaseCmd (Empty b) = pure (Empty b)
-advancePhaseCmd (Restore paths) = Restore <$> fromRawSet paths
-advancePhaseCmd Metadata = pure Metadata
-advancePhaseCmd (List cfg) = pure $ List $ advancePhase cfg
-advancePhaseCmd (Convert dest) = pure $ Convert dest
-advancePhaseCmd (Merge dest) = Merge <$> fromRaw dest
+advancePhaseCmd = \case
+  Delete paths -> Delete <$> fromRawSet paths
+  PermDelete force s -> PermDelete force <$> parseStrategy s
+  Empty b -> pure $ Empty b
+  Restore s -> Restore <$> parseStrategy s
+  Metadata -> pure Metadata
+  List cfg -> pure $ List $ advancePhase cfg
+  Convert dest -> pure $ Convert dest
+  Merge dest -> Merge <$> fromRaw dest
+  where
+    parseStrategy = \case
+      (True, Nothing) -> pure $ IndicesStrategy
+      (True, Just _) -> throwText $ mkStratErr "not both."
+      (False, Nothing) -> throwText $ mkStratErr "but none given."
+      (False, Just paths) -> PathsStrategy <$> fromRawSet paths
+
+    mkStratErr m =
+      mconcat
+        [ "Exactly one of --indices or explicit paths required, ",
+          m
+        ]
 
 fromRawSet ::
   ( HasCallStack,
@@ -75,6 +105,11 @@ type family CmdPathF p i where
   CmdPathF Phase1 i = RawPathI i
   CmdPathF Phase2 i = PathI i
 
+type IndicesPathsF :: Phase -> Type
+type family IndicesPathsF p where
+  IndicesPathsF Phase1 = (Bool, (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
+  IndicesPathsF Phase2 = IndicesPathsStrategy
+
 -- | Action to run.
 type Command :: Phase -> Type
 data Command s
@@ -83,11 +118,11 @@ data Command s
   | -- | Permanently deletes a path from the trash.
     PermDelete
       Bool
-      (UniqueSeqNE (CmdPathF s TrashEntryFileName))
+      (IndicesPathsF s)
   | -- | Empties the trash.
     Empty Bool
   | -- | Restores a path.
-    Restore (UniqueSeqNE (CmdPathF s TrashEntryFileName))
+    Restore (IndicesPathsF s)
   | -- | List all trash contents.
     List (ListCmd s)
   | -- | Prints trash metadata.

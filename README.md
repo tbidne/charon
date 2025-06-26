@@ -175,7 +175,7 @@ $ charon delete foo bar baz
 **Usage:**
 
 ```
-Usage: charon perm-delete [-f|--force] PATHS...
+Usage: charon perm-delete [-f|--force] [--indices] [PATHS...]
 
   Permanently deletes path(s) from the trash. Can use wildcards to match trash
   paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
@@ -185,6 +185,9 @@ Usage: charon perm-delete [-f|--force] PATHS...
 
 Available options:
   -f,--force               If enabled, will not ask before deleting path(s).
+
+  --indices                If active, allows deleting by index instead of trash
+                           name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
 ```
@@ -240,7 +243,7 @@ Permanently delete all contents (y/n)?
 **Usage:**
 
 ```
-Usage: charon restore PATHS...
+Usage: charon restore [--indices] [PATHS...]
 
   Restores the trash path(s) to their original location. Can use wildcards to
   match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
@@ -249,6 +252,9 @@ Usage: charon restore PATHS...
 
 
 Available options:
+  --indices                If active, allows deleting by index instead of trash
+                           name. Incompatible with explicit paths.
+
   -h,--help                Show this help text
 ```
 
@@ -270,7 +276,7 @@ $ charon restore foo baz
 
 ```
 Usage: charon list [--color (t[rue] | f[alse] | d[etect])]
-                   [--format (m[ulti] | s[ingle] | t[abular])]
+                   [--format (m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))]
                    [-n|--name-len (max|NAT)] [-o|--orig-len (max|NAT)]
                    [-s|--sort (name|size)] [-r|--reverse-sort]
 
@@ -282,7 +288,7 @@ Available options:
                            Determines if we should color output. Multiline is
                            unaffected.
 
-  --format (m[ulti] | s[ingle] | t[abular])
+  --format (m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))
                            Formatting options.
 
                            - multi: Prints each entry across multiple lines.
@@ -293,6 +299,9 @@ Available options:
                            - tabular: The default. Prints a table that tries to
                            intelligently size the table based on available
                            terminal width and filename / original path lengths.
+
+                           - tabular-simple: Simple table that does no resizing.
+                           Prints the table with indices.
 
   -n,--name-len (max|NAT)  Sets the file name column length to either NAT
                            characters or longest file-name. Only affects the
@@ -412,7 +421,7 @@ If you have never built a haskell program before, [Cabal](#cabal) is probably th
 ### Prerequisites
 
 * [`cabal 2.4+`](https://www.haskell.org/cabal/download.html)
-* [`ghc 9.4 - 9.12`](https://gitlab.haskell.org/ghc/ghc/-/wikis/GHC%20Status)
+* [`ghc 9.6 - 9.12`](https://gitlab.haskell.org/ghc/ghc/-/wikis/GHC%20Status)
 
 * [`ghcup`](https://www.haskell.org/ghcup/)
 

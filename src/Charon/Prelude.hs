@@ -92,10 +92,16 @@ import Data.Either as X (Either (Left, Right), either)
 import Data.Eq as X (Eq ((/=), (==)))
 import Data.Foldable as X
   ( Foldable (foldMap', foldl', foldr, foldr1, length),
+    foldlM,
     for_,
     null,
     sequenceA_,
     traverse_,
+  )
+import Data.Foldable1 as X
+  ( Foldable1 (foldMap1),
+    foldlM1,
+    foldlMapM1,
   )
 import Data.Function as X (const, flip, id, ($), (.))
 import Data.Functor as X (Functor (fmap), ($>), (<$>), (<&>))
@@ -122,7 +128,7 @@ import Data.Text as X (Text)
 import Data.Text qualified as T
 import Data.Text.Builder.Linear (Builder)
 import Data.Text.Display as X (Display (displayBuilder), display)
-import Data.Traversable as X (traverse)
+import Data.Traversable as X (for, traverse)
 import Data.Tuple as X (curry, fst, uncurry)
 #if MIN_VERSION_base(4, 17, 0)
 import Data.Type.Equality as X (type (~))
