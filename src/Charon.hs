@@ -121,7 +121,7 @@ permDelete noPrompt strategy = addNamespace "permDelete" $ do
       BackendFdo -> ("fdo", Fdo.getIndex, Fdo.permDelete)
       BackendJson -> ("json", Json.getIndex, Json.permDelete)
 
-  paths <- getIndexedPaths strategy idxFn
+  paths <- getIndexedPaths "delete." strategy idxFn
   addNamespace name $ delFn noPrompt paths
 
 -- | Reads the index at either the specified or default location. If the
@@ -205,7 +205,7 @@ restore params = addNamespace "restore" $ do
       BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force noPrompt)
       BackendJson -> ("json", Json.getIndex, Json.restore force noPrompt)
 
-  paths <- getIndexedPaths (params ^. #strategy) idxFn
+  paths <- getIndexedPaths "restore." (params ^. #strategy) idxFn
   addNamespace name $ restoreFn paths
   where
     force = params ^. #force
@@ -403,16 +403,18 @@ initalLog =
 getIndexedPaths ::
   forall m.
   ( HasCallStack,
+    MonadHandleWriter m,
     MonadTerminal m,
     MonadThrow m
   ) =>
+  Text ->
   IndicesPathsStrategy ->
   -- | Function to retrieve trash index.
   m Index ->
   -- | Trash entries corresponding to user indices.
   m (UniqueSeqNE (PathI TrashEntryFileName))
-getIndexedPaths (PathsStrategy paths) _ = pure paths
-getIndexedPaths IndicesStrategy idxFn = do
+getIndexedPaths _ (PathsStrategy paths) _ = pure paths
+getIndexedPaths actionStr IndicesStrategy idxFn = do
   index <- idxFn
 
   -- Sort index by original path.
@@ -429,8 +431,14 @@ getIndexedPaths IndicesStrategy idxFn = do
   let formatted = Index.tabularSimpleNoSort coloring trashIndexSeq
   putTextLn formatted
 
-  putTextLn "\nPlease enter a list of space-separated indices to delete."
+  putTextLn
+    $ "\nPlease enter a list of space-separated indices to "
+    <> actionStr
   putTextLn "For example: 1 3 5-12 15\n"
+
+  Utils.noBuffering
+  putStr "> "
+
   txtIndices <-
     T.words <$> Term.getTextLine >>= \case
       [] -> throwText "Received zero indices."

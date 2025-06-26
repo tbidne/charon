@@ -70,6 +70,7 @@ import Options.Applicative
     (<**>),
   )
 import Options.Applicative qualified as OA
+import Options.Applicative.Help (Doc)
 import Options.Applicative.Help.Chunk (Chunk (Chunk))
 import Options.Applicative.Help.Chunk qualified as Chunk
 import Options.Applicative.Help.Pretty qualified as Pretty
@@ -237,18 +238,18 @@ commandParser =
   OA.hsubparser
     ( mconcat
         [ mkCommand "delete" delParser delTxt,
-          mkCommand "d" delParser (mkCmdDesc "Alias for delete."),
+          mkCommand "d" delParser (mkCmdDescStr "Alias for delete."),
           mkCommand "perm-delete" permDelParser permDelTxt,
-          mkCommand "x" permDelParser (mkCmdDesc "Alias for perm-delete."),
+          mkCommand "x" permDelParser (mkCmdDescStr "Alias for perm-delete."),
           mkCommand "empty" emptyParser emptyTxt,
-          mkCommand "e" emptyParser (mkCmdDesc "Alias for empty."),
+          mkCommand "e" emptyParser (mkCmdDescStr "Alias for empty."),
           OA.commandGroup "Delete Commands"
         ]
     )
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "restore" restoreParser restoreTxt,
-            mkCommand "r" restoreParser (mkCmdDesc "Alias for restore."),
+            mkCommand "r" restoreParser (mkCmdDescStr "Alias for restore."),
             OA.commandGroup "Restore Commands",
             OA.hidden
           ]
@@ -256,9 +257,9 @@ commandParser =
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "list" listParser listTxt,
-            mkCommand "l" listParser (mkCmdDesc "Alias for list."),
+            mkCommand "l" listParser (mkCmdDescStr "Alias for list."),
             mkCommand "metadata" metadataParser metadataTxt,
-            mkCommand "m" metadataParser (mkCmdDesc "Alias for metadata."),
+            mkCommand "m" metadataParser (mkCmdDescStr "Alias for metadata."),
             OA.commandGroup "Information Commands",
             OA.hidden
           ]
@@ -272,36 +273,74 @@ commandParser =
           ]
       )
   where
-    delTxt = mkCmdDesc "Moves the path(s) to the trash."
+    delTxt = mkCmdDescStr "Moves the path(s) to the trash."
     permDelTxt =
       mkCmdDesc
-        $ mconcat
-          [ "Permanently deletes path(s) from the trash. Can use wildcards ",
-            "to match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, ",
-            "etc. To match a filename with a literal * not representing a ",
-            " wildcard -- e.g. '*foo' -- the * must be escaped (charon perm-delete '\\*foo')."
+        $ Chunk.vsepChunks
+          [ Chunk.paragraph
+              $ mconcat
+                [ "Permanently deletes path(s) from the trash. ",
+                  "Can be run with explicit paths, wildcards, or --indices."
+                ],
+            Chunk.paragraph "Examples:",
+            mkExample
+              [ "Deleting explicit paths f1 f2 f3:",
+                "$ charon perm-delete f1 f2 f3"
+              ],
+            mkExample
+              [ "Wildcard search; matches foobar, xxxfooyyybar, etc:",
+                "$ charon perm-delete '*foo*bar'"
+              ],
+            mkExample
+              [ "Prints out trash index first, allows delete via numeric indices:",
+                "$ charon perm-delete --indices"
+              ]
           ]
-    emptyTxt = mkCmdDesc "Empties the trash."
+    emptyTxt = mkCmdDescStr "Empties the trash."
     restoreTxt =
       mkCmdDesc
-        $ mconcat
-          [ "Restores the trash path(s) to their original location. Can use ",
-            "wildcards to match trash paths e.g. '*foo*bar' matches foobar, ",
-            "xxxfooyyybar, etc. To match a filename with a literal * not representing a ",
-            " wildcard -- e.g. '*foo' -- the * must be escaped (charon restore '\\*foo')."
+        $ Chunk.vsepChunks
+          [ Chunk.paragraph
+              $ mconcat
+                [ "Restores the trash path(s) to their original location. ",
+                  "Can be run with explicit paths, wildcards, or --indices."
+                ],
+            Chunk.paragraph "Examples:",
+            mkExample
+              [ "Restoring explicit paths f1 f2 f3:",
+                "$ charon restore f1 f2 f3"
+              ],
+            mkExample
+              [ "Wildcard search; matches foobar, xxxfooyyybar, etc:",
+                "$ charon restore '*foo*bar'"
+              ],
+            mkExample
+              [ "Prints out trash index first, allows restore via numeric indices:",
+                "$ charon restore --indices"
+              ]
           ]
-    listTxt = mkCmdDesc "Lists all trash contents."
-    metadataTxt = mkCmdDesc "Prints trash metadata."
-    convertTxt = mkCmdDesc "Converts the backend."
+    listTxt = mkCmdDescStr "Lists all trash contents."
+    metadataTxt = mkCmdDescStr "Prints trash metadata."
+    convertTxt = mkCmdDescStr "Converts the backend."
     mergeTxt = mkCmdDescNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
+    mkExample :: [String] -> Chunk Doc
+    mkExample =
+      Chunk.vcatChunks
+        . fmap (fmap (Pretty.indent 2) . Chunk.stringChunk)
+
     delParser = Delete <$> pathsParser
-    permDelParser = PermDelete <$> noPromptParser <*> ((,) <$> indicesParser <*> mPathsParser)
-    emptyParser = Empty <$> noPromptParser
+    permDelParser =
+      PermDelete
+        <$> noPromptParser "If enabled, will not ask before deleting path(s)."
+        <*> ((,) <$> indicesParser <*> mPathsParser)
+    emptyParser =
+      Empty
+        <$> noPromptParser "If enabled, will not ask before emptying the trash."
     restoreParser =
       Restore <$> do
-        force <- forceParser
-        noPrompt <- noPromptParser
+        force <- forceParser restoreForceTxt
+        noPrompt <- noPromptParser restoreNoPromptTxt
         strategy <- ((,) <$> indicesParser <*> mPathsParser)
         pure
           $ MkRestoreParams
@@ -309,6 +348,17 @@ commandParser =
               noPrompt,
               strategy
             }
+    restoreForceTxt =
+      mconcat
+        [ "If enabled, will forcibly overwrite restored path(s). Otherwise, ",
+          "collisions with existing paths will either throw an error ",
+          "(with --no-prompt) or prompt the user to decide."
+        ]
+    restoreNoPromptTxt =
+      mconcat
+        [ "If enabled, will not ask before restoring path(s). Collisions with ",
+          "existing paths will either error or overwrite, depending on --force."
+        ]
     listParser =
       fmap List
         $ MkListCmd
@@ -332,7 +382,7 @@ indicesParser =
         OA.short 'i',
         mkHelp
           $ mconcat
-            [ "If active, allows deleting by index instead of trash name. ",
+            [ "If active, allows selecting by numeric index instead of trash name. ",
               "Incompatible with explicit paths."
             ]
       ]
@@ -487,27 +537,23 @@ reverseSortParser =
   where
     helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
 
-forceParser :: Parser Force
-forceParser =
+forceParser :: String -> Parser Force
+forceParser helpTxt =
   fmap MkForce
     <$> OA.switch
     $ mconcat
       [ OA.long "force",
         mkHelp helpTxt
       ]
-  where
-    helpTxt = "If enabled, will forcibly overwrite restored path(s)."
 
-noPromptParser :: Parser NoPrompt
-noPromptParser =
+noPromptParser :: String -> Parser NoPrompt
+noPromptParser helpTxt =
   fmap MkNoPrompt
     <$> OA.switch
     $ mconcat
       [ OA.long "no-prompt",
         mkHelp helpTxt
       ]
-  where
-    helpTxt = "If enabled, will not ask before deleting/restoring path(s)."
 
 trashParser :: Parser (Maybe (RawPathI TrashHome))
 trashParser =
@@ -641,12 +687,14 @@ mkHelp =
     . Chunk.unChunk
     . Chunk.paragraph
 
-mkCmdDesc :: String -> InfoMod a
+mkCmdDescStr :: String -> InfoMod a
+mkCmdDescStr = mkCmdDesc . Chunk.paragraph
+
+mkCmdDesc :: Chunk Doc -> InfoMod a
 mkCmdDesc =
   OA.progDescDoc
     . fmap (<> Pretty.hardline)
     . Chunk.unChunk
-    . Chunk.paragraph
 
 -- For the last command, so we do not append two lines (there is an automatic
 -- one at the end).

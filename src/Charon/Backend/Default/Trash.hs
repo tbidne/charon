@@ -441,7 +441,7 @@ restoreTrashToOriginal
         if force ^. #unForce
           then
             -- 2.1. --force: overwrite paths without asking.
-            restoreFn' backend (pd ^. #pathType) pd
+            overwriteForce pd
           else
             -- 2.2. No --force: throw on overwrites.
             overwriteThrow pd

@@ -49,7 +49,7 @@ Charon: A tool for deleting files to a trash directory.
 Usage: charon [-c|--config (none|PATH)] [-b|--backend (cbor|fdo|json)]
               [--log-level (none|fatal|error|warn|info|debug)]
               [--log-size-mode (warn SIZE | delete SIZE)] [-t|--trash-home PATH]
-              [--version] COMMAND
+              COMMAND
 
   Charon moves files to a trash directory, so they can later be restored or
   permanently deleted. It is intended as a safer alternative to rm. See
@@ -93,12 +93,19 @@ Delete Commands
 
   d                        Alias for delete.
 
-  perm-delete              Permanently deletes path(s) from the trash. Can use
-                           wildcards to match trash paths e.g. '*foo*bar'
-                           matches foobar, xxxfooyyybar, etc. To match a
-                           filename with a literal * not representing a wildcard
-                           -- e.g. '*foo' -- the * must be escaped (charon
-                           perm-delete '\*foo').
+  perm-delete              Permanently deletes path(s) from the trash. Can be
+                           run with explicit paths, wildcards, or --indices.
+
+                           Examples:
+
+                             Deleting explicit paths f1 f2 f3:
+                             $ charon perm-delete f1 f2 f3
+
+                             Wildcard search; matches foobar, xxxfooyyybar, etc:
+                             $ charon perm-delete '*foo*bar'
+
+                             Prints out trash index first, allows delete via numeric indices:
+                             $ charon perm-delete --indices
 
   x                        Alias for perm-delete.
 
@@ -109,11 +116,19 @@ Delete Commands
 
 Restore Commands
   restore                  Restores the trash path(s) to their original
-                           location. Can use wildcards to match trash paths e.g.
-                           '*foo*bar' matches foobar, xxxfooyyybar, etc. To
-                           match a filename with a literal * not representing a
-                           wildcard -- e.g. '*foo' -- the * must be escaped
-                           (charon restore '\*foo').
+                           location. Can be run with explicit paths, wildcards,
+                           or --indices.
+
+                           Examples:
+
+                             Restoring explicit paths f1 f2 f3:
+                             $ charon restore f1 f2 f3
+
+                             Wildcard search; matches foobar, xxxfooyyybar, etc:
+                             $ charon restore '*foo*bar'
+
+                             Prints out trash index first, allows restore via numeric indices:
+                             $ charon restore --indices
 
   r                        Alias for restore.
 
@@ -134,7 +149,7 @@ Transform Commands
   merge                    Merges src (implicit or -t) trash home into dest.
                            Collisions will throw an error.
 
-Version: 0.1
+Version: 0.1 (bbdf7ac)
 ```
 
 # Configuration
@@ -177,18 +192,26 @@ $ charon delete foo bar baz
 ```
 Usage: charon perm-delete [--no-prompt] [-i|--indices] [PATHS...]
 
-  Permanently deletes path(s) from the trash. Can use wildcards to match trash
-  paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
-  with a literal * not representing a wildcard -- e.g. '*foo' -- the * must be
-  escaped (charon perm-delete '\*foo').
+  Permanently deletes path(s) from the trash. Can be run with explicit paths,
+  wildcards, or --indices.
+
+  Examples:
+
+    Deleting explicit paths f1 f2 f3:
+    $ charon perm-delete f1 f2 f3
+
+    Wildcard search; matches foobar, xxxfooyyybar, etc:
+    $ charon perm-delete '*foo*bar'
+
+    Prints out trash index first, allows delete via numeric indices:
+    $ charon perm-delete --indices
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before deleting/restoring
-                           path(s).
+  --no-prompt              If enabled, will not ask before deleting path(s).
 
-  -i,--indices             If active, allows deleting by index instead of trash
-                           name. Incompatible with explicit paths.
+  -i,--indices             If active, allows selecting by numeric index instead
+                           of trash name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
 ```
@@ -219,8 +242,7 @@ Usage: charon empty [--no-prompt]
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before deleting/restoring
-                           path(s).
+  --no-prompt              If enabled, will not ask before emptying the trash.
 
   -h,--help                Show this help text
 ```
@@ -247,20 +269,33 @@ Permanently delete all contents (y/n)?
 ```
 Usage: charon restore [--force] [--no-prompt] [-i|--indices] [PATHS...]
 
-  Restores the trash path(s) to their original location. Can use wildcards to
-  match trash paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match
-  a filename with a literal * not representing a wildcard -- e.g. '*foo' -- the
-  * must be escaped (charon restore '\*foo').
+  Restores the trash path(s) to their original location. Can be run with
+  explicit paths, wildcards, or --indices.
+
+  Examples:
+
+    Restoring explicit paths f1 f2 f3:
+    $ charon restore f1 f2 f3
+
+    Wildcard search; matches foobar, xxxfooyyybar, etc:
+    $ charon restore '*foo*bar'
+
+    Prints out trash index first, allows restore via numeric indices:
+    $ charon restore --indices
 
 
 Available options:
   --force                  If enabled, will forcibly overwrite restored path(s).
+                           Otherwise, collisions with existing paths will either
+                           throw an error (with --no-prompt) or prompt the user
+                           to decide.
 
-  --no-prompt              If enabled, will not ask before deleting/restoring
-                           path(s).
+  --no-prompt              If enabled, will not ask before restoring path(s).
+                           Collisions with existing paths will either error or
+                           overwrite, depending on --force.
 
-  -i,--indices             If active, allows deleting by index instead of trash
-                           name. Incompatible with explicit paths.
+  -i,--indices             If active, allows selecting by numeric index instead
+                           of trash name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
 ```
