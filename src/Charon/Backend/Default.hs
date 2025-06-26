@@ -205,7 +205,7 @@ permDeletePostHook ::
   Bool ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePostHook" $ do
+permDeletePostHook backendArgs postHook noPrompt paths = addNamespace "permDeletePostHook" $ do
   $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
   trashHome <- asks getTrashHome
 
@@ -217,7 +217,7 @@ permDeletePostHook backendArgs postHook force paths = addNamespace "permDeletePo
           Trash.permDeleteFromTrash
             backendArgs
             postHook
-            force
+            noPrompt
             deletedPathsRef
             trashHome
 
@@ -440,7 +440,7 @@ emptyTrash ::
   BackendArgs m pd ->
   Bool ->
   m ()
-emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
+emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
   trashHome@(MkPathI th) <- asks getTrashHome
 
   exists <- doesDirectoryExist th
@@ -449,9 +449,9 @@ emptyTrash backendArgs force = addNamespace "emptyTrash" $ do
       $(logDebug) "Trash home does not exist."
       putTextLn $ Paths.toText trashHome <> " is empty."
     else
-      if force
+      if noPrompt
         then do
-          $(logDebug) "Force on; deleting entire trash."
+          $(logDebug) "--no-prompt on; deleting entire trash."
           removeDirectoryRecursive th
           void Trash.createTrash
         else do

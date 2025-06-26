@@ -175,7 +175,7 @@ $ charon delete foo bar baz
 **Usage:**
 
 ```
-Usage: charon perm-delete [-f|--force] [--indices] [PATHS...]
+Usage: charon perm-delete [--no-prompt] [--indices] [PATHS...]
 
   Permanently deletes path(s) from the trash. Can use wildcards to match trash
   paths e.g. '*foo*bar' matches foobar, xxxfooyyybar, etc. To match a filename
@@ -184,7 +184,7 @@ Usage: charon perm-delete [-f|--force] [--indices] [PATHS...]
 
 
 Available options:
-  -f,--force               If enabled, will not ask before deleting path(s).
+  --no-prompt              If enabled, will not ask before deleting path(s).
 
   --indices                If active, allows deleting by index instead of trash
                            name. Incompatible with explicit paths.
@@ -212,13 +212,13 @@ Permanently delete (y/n)?
 **Usage:**
 
 ```
-Usage: charon empty [-f|--force]
+Usage: charon empty [--no-prompt]
 
   Empties the trash.
 
 
 Available options:
-  -f,--force               If enabled, will not ask before deleting path(s).
+  --no-prompt              If enabled, will not ask before deleting path(s).
 
   -h,--help                Show this help text
 ```

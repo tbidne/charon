@@ -21,7 +21,7 @@ tests testEnv =
     "Empty Command"
     [ emptyTrash testEnv',
       emptyTrashTwice testEnv',
-      emptyNoForce testEnv',
+      emptyPrompt testEnv',
       missingInfoForcesDelete testEnv',
       missingPathsForcesDelete testEnv'
     ]
@@ -77,7 +77,7 @@ emptyTrash getTestEnv = testCase "Empties trash" $ do
 
     -- EMPTY
 
-    emptyArgList <- withSrArgsM ["empty", "-f"]
+    emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
     runCharon emptyArgList
 
     -- file assertions
@@ -99,14 +99,14 @@ emptyTrashTwice :: IO TestEnv -> TestTree
 emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "emptyTrashTwice" $ do
-    emptyArgs <- withSrArgsM ["empty", "-f"]
+    emptyArgs <- withSrArgsM ["empty", "--no-prompt"]
     runCharon emptyArgs
     runCharon emptyArgs
 
-emptyNoForce :: IO TestEnv -> TestTree
-emptyNoForce getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
+emptyPrompt :: IO TestEnv -> TestTree
+emptyPrompt getTestEnv = testCase "Empties w/ no response deletes nothing" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "emptyNoForce" $ do
+  usingReaderT testEnv $ appendTestDirM "emptyPrompt" $ do
     testDir <- getTestDir
     let fileDeleteNames = show @Int <$> [1 .. 5]
         fileDeletePaths = (testDir </>!) <$> fileDeleteNames
@@ -190,7 +190,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     -- delete info dir, leaving trash dir in bad state
     clearDirectory (trashDir </> Default.Utils.pathInfo)
 
-    emptyArgList <- withSrArgsM ["empty", "-f"]
+    emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
     runCharon emptyArgList
 
     assertPathsExist $ fmap (trashDir </>) [Default.Utils.pathInfo, Default.Utils.pathFiles]
@@ -206,7 +206,7 @@ missingInfoForcesDelete getTestEnv = testCase "empty --force overwrites bad dire
     emptyExpectedMetadata = Metadata.empty
 
 missingPathsForcesDelete :: IO TestEnv -> TestTree
-missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad directory (no paths/)" $ do
+missingPathsForcesDelete getTestEnv = testCase "empty --no-prompt overwrites bad directory (no paths/)" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "missingPathsForcesDelete" $ do
     testDir <- getTestDir
@@ -247,7 +247,7 @@ missingPathsForcesDelete getTestEnv = testCase "empty --force overwrites bad dir
     -- delete info dir, leaving trash dir in bad state
     clearDirectory (trashDir </> Default.Utils.pathFiles)
 
-    emptyArgList <- withSrArgsM ["empty", "-f"]
+    emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
     runCharon emptyArgList
 
     -- file assertions

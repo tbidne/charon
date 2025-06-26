@@ -71,7 +71,7 @@ noPathsError getTestEnv = testCase "No Paths Error" $ do
     expectedErr =
       Outfix
         "The trash files directory was not found at '"
-        (trashFiles <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty -f).")
+        (trashFiles <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty --no-prompt).")
 
 noInfoError :: IO TestEnv -> TestTree
 noInfoError getTestEnv = testCase "No Info Error" $ do
@@ -94,7 +94,7 @@ noInfoError getTestEnv = testCase "No Info Error" $ do
     expectedErr =
       Outfix
         "The trash info directory was not found at '"
-        (trashInfo <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty -f).")
+        (trashInfo <> "' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty --no-prompt).")
 
 missingPathError :: IO TestEnv -> TestTree
 missingPathError getTestEnv = testCase "Entry Missing Path" $ do
@@ -130,7 +130,7 @@ missingPathError getTestEnv = testCase "Entry Missing Path" $ do
         "The file 'missing' was not found in the trash '"
         ( mconcat
             [ "' despite being listed in the index. This can be fixed by manually ",
-              "deleting the info file or deleting everything (i.e. charon empty -f)."
+              "deleting the info file or deleting everything (i.e. charon empty --no-prompt)."
             ]
         )
 
@@ -159,7 +159,7 @@ missingInfoError getTestEnv = testCase "Entry Missing Info" $ do
         "The file 'bar.<ext>' was not found in the trash '"
         ( mconcat
             [ "/.trash' index despite existing in the trash itself. This can ",
-              "be fixed by manually deleting the entry or deleting everything (i.e. charon empty -f)."
+              "be fixed by manually deleting the entry or deleting everything (i.e. charon empty --no-prompt)."
             ]
         )
 

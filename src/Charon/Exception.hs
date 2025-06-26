@@ -130,7 +130,7 @@ instance Exception TrashEntryFileNotFoundE where
         decodeDisplayEx thome,
         "' despite being listed in the index. This can be ",
         "fixed by manually deleting the info file or deleting everything ",
-        "(i.e. charon empty -f)."
+        "(i.e. charon empty --no-prompt)."
       ]
 
 -- | Path found files but not index.
@@ -149,7 +149,7 @@ instance Exception TrashEntryInfoNotFoundE where
         decodeDisplayEx thome,
         "' index despite existing in the trash itself. This can be fixed by ",
         "manually deleting the entry or deleting everything ",
-        "(i.e. charon empty -f)."
+        "(i.e. charon empty --no-prompt)."
       ]
     where
       -- Have to do this because ".<ext>" is not valid on windows i.e. fails

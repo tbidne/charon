@@ -67,8 +67,8 @@ advancePhaseCmd ::
   m (Command Phase2)
 advancePhaseCmd = \case
   Delete paths -> Delete <$> fromRawSet paths
-  PermDelete force s -> PermDelete force <$> parseStrategy s
-  Empty b -> pure $ Empty b
+  PermDelete noPrompt s -> PermDelete noPrompt <$> parseStrategy s
+  Empty noPrompt -> pure $ Empty noPrompt
   Restore s -> Restore <$> parseStrategy s
   Metadata -> pure Metadata
   List cfg -> pure $ List $ advancePhase cfg

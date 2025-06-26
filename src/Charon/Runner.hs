@@ -118,8 +118,8 @@ runCmd cmd =
   where
     runCmd' = \case
       Delete paths -> Charon.delete paths
-      PermDelete force strategy -> Charon.permDelete force strategy
-      Empty force -> Charon.emptyTrash force
+      PermDelete noPrompt strategy -> Charon.permDelete noPrompt strategy
+      Empty noPrompt -> Charon.emptyTrash noPrompt
       Restore strategy -> Charon.restore strategy
       List listCmd -> printIndex listCmd
       Metadata -> printMetadata

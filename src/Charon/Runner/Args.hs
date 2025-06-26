@@ -293,8 +293,8 @@ commandParser =
     mergeTxt = mkCmdDescNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     delParser = Delete <$> pathsParser
-    permDelParser = PermDelete <$> forceParser <*> ((,) <$> indicesParser <*> mPathsParser)
-    emptyParser = Empty <$> forceParser
+    permDelParser = PermDelete <$> noPromptParser <*> ((,) <$> indicesParser <*> mPathsParser)
+    emptyParser = Empty <$> noPromptParser
     restoreParser = Restore <$> ((,) <$> indicesParser <*> mPathsParser)
     listParser =
       fmap List
@@ -473,12 +473,11 @@ reverseSortParser =
   where
     helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
 
-forceParser :: Parser Bool
-forceParser =
+noPromptParser :: Parser Bool
+noPromptParser =
   OA.switch
     $ mconcat
-      [ OA.long "force",
-        OA.short 'f',
+      [ OA.long "no-prompt",
         mkHelp helpTxt
       ]
   where

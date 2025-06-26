@@ -109,7 +109,7 @@ permDelete ::
   Bool ->
   IndicesPathsStrategy ->
   m ()
-permDelete force strategy = addNamespace "permDelete" $ do
+permDelete noPrompt strategy = addNamespace "permDelete" $ do
   initalLog
 
   (name, idxFn, delFn) <-
@@ -119,7 +119,7 @@ permDelete force strategy = addNamespace "permDelete" $ do
       BackendJson -> ("json", Json.getIndex, Json.permDelete)
 
   paths <- getIndexedPaths strategy idxFn
-  addNamespace name $ delFn force paths
+  addNamespace name $ delFn noPrompt paths
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -223,13 +223,13 @@ emptyTrash ::
   ) =>
   Bool ->
   m ()
-emptyTrash force = addNamespace "emptyTrash" $ do
+emptyTrash noPrompt = addNamespace "emptyTrash" $ do
   initalLog
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash force
-      BackendFdo -> addNamespace "fdo" $ Fdo.emptyTrash force
-      BackendJson -> addNamespace "json" $ Json.emptyTrash force
+      BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash noPrompt
+      BackendFdo -> addNamespace "fdo" $ Fdo.emptyTrash noPrompt
+      BackendJson -> addNamespace "json" $ Json.emptyTrash noPrompt
 
 convert ::
   ( HasBackend env,

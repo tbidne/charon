@@ -58,9 +58,9 @@ argsTests =
     "Args"
     [ delete,
       permDelete,
-      permDeleteForce,
+      permDeleteNoPrompt,
       emptyTrash,
-      emptyTrashForce,
+      emptyTrashNoPrompt,
       restore,
       list,
       listNonDefaults,
@@ -95,14 +95,14 @@ permDelete = testCase "Parses perm delete" $ do
         $ MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
-permDeleteForce :: TestTree
-permDeleteForce = testCase "Parses perm delete with force" $ do
+permDeleteNoPrompt :: TestTree
+permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
   Just (True, expectedUSeq) @=? cmd ^? _PermDelete
   where
-    argList = ["perm-delete", "-f", "foo", "bar", "-c", "none"]
+    argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
     expectedUSeq =
       PathsStrategy
         $ MkPathI
@@ -117,14 +117,14 @@ emptyTrash = testCase "Parses empty" $ do
   where
     argList = ["empty", "-c", "none"]
 
-emptyTrashForce :: TestTree
-emptyTrashForce = testCase "Parses empty with force" $ do
+emptyTrashNoPrompt :: TestTree
+emptyTrashNoPrompt = testCase "Parses empty with --no-prompt" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
   Just True @=? cmd ^? _Empty
   where
-    argList = ["empty", "-f", "-c", "none"]
+    argList = ["empty", "--no-prompt", "-c", "none"]
 
 restore :: TestTree
 restore = testCase "Parses restore" $ do

@@ -23,7 +23,7 @@ tests testEnv =
         deletesIndices testEnv',
         deleteUnknownError testEnv',
         deletesSome testEnv',
-        deletesNoForce testEnv',
+        deletesPrompt testEnv',
         deletesWildcards testEnv',
         deletesSomeWildcards testEnv',
         displaysAllData testEnv'
@@ -63,7 +63,7 @@ deletesOne getTestEnv = testCase "Permanently deletes a single file" $ do
 
     -- PERMANENT DELETE
 
-    permDelArgList <- withSrArgsM ["perm-delete", "f1", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "f1", "--no-prompt"]
     liftIO $ runCharon permDelArgList
 
     -- file assertions
@@ -128,7 +128,7 @@ deletesMany getTestEnv = testCase "Permanently deletes several paths" $ do
     -- PERMANENT DELETE
 
     -- leave f2 alone
-    permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "file-link", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "f1", "f3", "dir1", "dir2", "file-link", "--no-prompt"]
     liftIO $ runCharon permDelArgList
 
     -- trash structure assertions
@@ -200,7 +200,7 @@ deletesIndices getTestEnv = testCase "Permanently deletes with --indices" $ do
     let modEnv = set' #strLine "2-3 5 7-8"
 
     -- leave f2 alone
-    permDelArgList <- withSrArgsM ["perm-delete", "--indices", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "--indices", "--no-prompt"]
     liftIO $ runCharonEnv modEnv permDelArgList
 
     -- trash structure assertions
@@ -253,7 +253,7 @@ deleteUnknownError getTestEnv = testCase "Delete unknown prints error" $ do
     liftIO $ delExpectedMetadata @=? delMetadata
 
     -- PERMANENT DELETE
-    permDelArgList <- withSrArgsM ["perm-delete", "bad file", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "bad file", "--no-prompt"]
     (ex, term) <- liftIO $ captureCharonExceptionTerminal @TrashEntryNotFoundE permDelArgList
 
     -- assert exception
@@ -308,7 +308,7 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
     -- PERMANENT DELETE
     permDelArgList <-
       withSrArgsM
-        ("perm-delete" : filesTryPermDelete ++ ["-f"])
+        ("perm-delete" : filesTryPermDelete ++ ["--no-prompt"])
     (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE permDelArgList
 
     assertMatch expectedEx ex
@@ -333,10 +333,10 @@ deletesSome getTestEnv = testCase "Deletes some, errors on others" $ do
 
     permDelExpectedMetadata = mkMetadata 1 1 0 5
 
-deletesNoForce :: IO TestEnv -> TestTree
-deletesNoForce getTestEnv = testCase "Permanently deletes several paths without --force" $ do
+deletesPrompt :: IO TestEnv -> TestTree
+deletesPrompt getTestEnv = testCase "Permanently deletes several paths with prompt" $ do
   testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deletesNoForce" $ do
+  usingReaderT testEnv $ appendTestDirM "deletesPrompt" $ do
     testDir <- getTestDir
     let fileDeleteNames = show @Int <$> [1 .. 5]
         fileDeletePaths = (testDir </>!) <$> fileDeleteNames
@@ -433,7 +433,7 @@ deletesWildcards getTestEnv = testCase "Permanently deletes several paths via wi
     -- PERMANENT DELETE
 
     -- leave g alone
-    permDelArgList <- withSrArgsM ["perm-delete", "*f*", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "*f*", "--no-prompt"]
     runCharon permDelArgList
 
     -- trash structure assertions
@@ -521,7 +521,7 @@ deletesSomeWildcards getTestEnv = testCase "Deletes some paths via wildcards" $ 
 
     -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
     -- delete will fail. This is how this test works.
-    permDelArgList <- withSrArgsM ["perm-delete", "*h*", "foo**bar", "*g*", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "*h*", "foo**bar", "*g*", "--no-prompt"]
     runCharonException @SomeException permDelArgList
 
     -- file assertions
@@ -599,7 +599,7 @@ deletesLiteralWildcardOnly getTestEnv = testCase "Permanently deletes filename w
     -- PERMANENT DELETE
 
     -- leave f alone
-    permDelArgList <- withSrArgsM ["perm-delete", "\\*", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "\\*", "--no-prompt"]
     runCharon permDelArgList
 
     -- trash structure assertions
@@ -661,7 +661,7 @@ deletesCombinedWildcardLiteral getTestEnv = testCase desc $ do
     -- PERMANENT DELETE
 
     -- leave f alone
-    permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "-f"]
+    permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "--no-prompt"]
     runCharon permDelArgList
 
     -- trash structure assertions

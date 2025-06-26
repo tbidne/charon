@@ -288,7 +288,7 @@ permDeleteFromTrash ::
 permDeleteFromTrash
   backendArgs
   postHook
-  force
+  noPrompt
   deletedPathsRef
   trashHome
   pathName = addNamespace "permDeleteFromTrash" $ do
@@ -309,10 +309,10 @@ permDeleteFromTrash
         deleteFn :: PathData -> m ()
         deleteFn pathData = do
           $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
-          if force
-            then -- NOTE: Technically don't need the pathdata if force is on, since we have
+          if noPrompt
+            then -- NOTE: Technically don't need the pathdata if noPrompt is on, since we have
             -- the path and can just delete it. Nevertheless, we retrieve the pathData
-            -- so that force does not change the semantics i.e. can only delete
+            -- so that noPrompt does not change the semantics i.e. can only delete
             -- "well-behaved" files, and we don't have to do a redundant file/directory
             -- check.
               deleteFn' backend pathData
