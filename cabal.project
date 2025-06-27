@@ -45,13 +45,13 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/fs-utils.git
-    tag: a0723442a926f712f2b4ef0fe2c766fa083255d2
+    tag: 9250f29d28c4ab6dd1ab44719157852c8044d9e9
 
 if !os(windows)
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: 89047cfffd9335e1360762efcf9fce4641439222
+        tag: d2ffa50688da366d43e4774640d25cdc524d967c
         subdir:
             lib/effects-async
             lib/effects-optparse
@@ -68,7 +68,7 @@ else
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: 89047cfffd9335e1360762efcf9fce4641439222
+        tag: d2ffa50688da366d43e4774640d25cdc524d967c
         subdir:
             lib/effects-async
             lib/effects-optparse

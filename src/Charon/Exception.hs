@@ -214,7 +214,7 @@ newtype TildePathE = MkTildePathE (PathI TrashEntryOriginalPath)
 instance Exception TildePathE where
   displayException (MkTildePathE p) =
     mconcat
-      [ "Attempted to delete path with a tilde! This is not allowed: ",
+      [ "Attempted to delete path with a tilde prefix! This is not allowed: ",
         decodeDisplayEx $ p ^. #unPathI
       ]
 

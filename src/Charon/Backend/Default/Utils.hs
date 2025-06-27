@@ -233,12 +233,10 @@ throwIfIllegal ::
   PathI TrashEntryOriginalPath ->
   m ()
 throwIfIllegal p = addNamespace "throwIfIllegal" $ do
-#if POSIX
-  when (Paths.containsTilde p) $ do
+  when (Paths.containsTildePrefix p) $ do
     let ex = MkTildePathE p
     $(logError) $ U.displayExT ex
     throwM $ MkTildePathE p
-#endif
   U.whenM (Paths.isRoot p) $ $(logError) "Path is root!" *> throwM MkRootE
   U.whenM (Paths.isEmpty p) $ $(logError) "Path is empty!" *> throwM MkEmptyPathE
   U.whenM (Paths.isDots p) $ $(logError) "Path is dots!" *> throwM (MkDotsPathE p)

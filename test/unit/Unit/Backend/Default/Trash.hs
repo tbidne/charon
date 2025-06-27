@@ -259,7 +259,8 @@ backendTests b =
         mvTrashEmptyError b,
         mvTrashDotError b,
         mvTrashDotsError b,
-        mvTrashDotsEndError b
+        mvTrashDotsEndError b,
+        mvTrashTildePathError b
       ]
     ++ osTests b
 
@@ -408,6 +409,27 @@ mvTrashDotsEndError backendArgs = testCase desc $ do
     desc = "mvOriginalToTrash throws exception for dots original path"
     dotDir = MkPathI [osp|/path/with/dots/...|]
 
+mvTrashTildePathError ::
+  ( Is k A_Getter,
+    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Serial pd,
+    Show pd
+  ) =>
+  BackendArgs PathDataT pd ->
+  TestTree
+mvTrashTildePathError backendArgs = testCase desc $ do
+  eformatted <-
+    try @_ @TildePathE
+      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
+  case eformatted of
+    Right result ->
+      assertFailure $ "Expected exception, received result: " <> show result
+    Left ex -> "Attempted to delete path with a tilde prefix! This is not allowed: ~/tilde/" @=? displayException ex
+  where
+    desc = "mvOriginalToTrash throws exception for tilde original path"
+    dotDir = MkPathI [osp|~/tilde/|]
+
 osTests ::
   ( Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
@@ -446,28 +468,7 @@ deriveEmptyErrorWindows backendArgs = testCase desc $ do
 
 #else
 
-osTests backendArgs = [ mvTrashTildePathError backendArgs]
-
-mvTrashTildePathError ::
-  ( Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
-    Serial pd,
-    Show pd
-  ) =>
-  BackendArgs PathDataT pd ->
-  TestTree
-mvTrashTildePathError backendArgs = testCase desc $ do
-  eformatted <-
-    try @_ @TildePathE
-      $ runPathDataT backendArgs (Trash.mvOriginalToTrash backendArgs trashHome ts dotDir)
-  case eformatted of
-    Right result ->
-      assertFailure $ "Expected exception, received result: " <> show result
-    Left ex -> "Attempted to delete path with a tilde! This is not allowed: /path/with/~/tilde/" @=? displayException ex
-  where
-    desc = "mvOriginalToTrash throws exception for tilde original path"
-    dotDir = MkPathI [osp|/path/with/~/tilde/|]
+osTests _ = []
 
 #endif
 

@@ -16,7 +16,7 @@ module Charon.Data.Paths
     -- * Functions
 
     -- ** Specific
-    containsTilde,
+    containsTildePrefix,
     isEmpty,
     isRoot,
     isRoot',
@@ -183,8 +183,8 @@ infixl 5 <//
 infixl 5 //>
 
 -- | Returns true if the path contains a tilde (~).
-containsTilde :: PathI i -> Bool
-containsTilde (MkPathI p) = OsStr.elem (OsStr.unsafeFromChar '~') p
+containsTildePrefix :: PathI i -> Bool
+containsTildePrefix = OsPath.containsTildePrefix . view #unPathI
 
 --- | Returns true if the paths is empty. Note that whitespace is __not__
 --- considered empty as we are trying to prevent deleting "" (which gets

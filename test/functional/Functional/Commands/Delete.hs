@@ -10,9 +10,6 @@ where
 import Charon.Data.Metadata qualified as Metadata
 import Charon.Exception (DotsPathE, EmptyPathE, PathNotFound)
 import Data.HashSet qualified as HashSet
-#if POSIX
-import FileSystem.OsPath (TildeException)
-#endif
 import FileSystem.OsPath qualified as OsP
 import Functional.Prelude
 
@@ -26,6 +23,7 @@ tests testEnv =
   testGroup
     "Delete d Command"
     $ [ deletesOne testEnv',
+        deletesTilde testEnv',
         deletesMany testEnv',
         deleteUnknownError testEnv',
         deleteDuplicateFile testEnv',
@@ -34,7 +32,6 @@ tests testEnv =
         deleteDotsError testEnv'
       ]
     ++ pathologicalTests testEnv'
-    ++ osTests testEnv'
   where
     testEnv' = appendTestDir "delete" <$> testEnv
 
@@ -46,6 +43,43 @@ deletesOne getTestEnv = testCase "Deletes one" $ do
     let f1 = testDir </>! "f1"
 
     expectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
+
+    -- setup
+    createFiles [f1]
+    assertPathsExist [f1]
+    argList <- withSrArgsM ["delete", OsP.unsafeDecode f1]
+
+    liftIO $ runCharon argList
+
+    -- file assertions
+    assertPathsDoNotExist [f1]
+
+    -- trash structure assertions
+    (idxSet, metadata) <- runIndexMetadataM
+
+    assertSetEq expectedIdxSet idxSet
+    liftIO $ expectedMetadata @=? metadata
+
+    assertFdoDirectorySizesM []
+  where
+    expectedMetadata = mkMetadata 1 1 0 5
+
+-- Tests that we can correctly delete a file with a tilde in the name.
+-- Actually tildes shouldn't throw errors at all because monad-effects is
+-- (hopefully) performing tilde expansion for us, and any internal tildes
+-- are fine.
+--
+-- We have a paranoia check for anything that gets through, but we probably
+-- cannot test that here (which is good, because it means the upstream
+-- handling works!). The internal check is tested in the unit tests.
+deletesTilde :: IO TestEnv -> TestTree
+deletesTilde getTestEnv = testCase "Deletes tilde" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "deletesOne" $ do
+    testDir <- getTestDir
+    let f1 = testDir </>! "f~"
+
+    expectedIdxSet <- mkPathDataSetM [("f~", PathTypeFile, 5)]
 
     -- setup
     createFiles [f1]
@@ -394,50 +428,3 @@ deletesPathological2 getTestEnv = testCase "Deletes pathological files 2" $ do
     assertFdoDirectorySizesM []
   where
     expectedMetadata = mkMetadata 3 3 0 15
-
-osTests :: IO TestEnv -> [TestTree]
-
-#if POSIX
-
-osTests testEnv = [deleteTildePathError testEnv]
-
-deleteTildePathError :: IO TestEnv -> TestTree
-deleteTildePathError getTestEnv = testCase "Deletes tilde prints error" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "deleteTildePathError" $ do
-    testDir <- getTestDir
-    let tildes = [[osp|~|], [osp|~/foo/|], [osp|./path/~/foo|], [osp|good|]]
-        files = (testDir </>) <$> tildes
-
-    argList <- withSrArgsM $ "delete" : (OsP.unsafeDecode <$> files)
-
-    -- setup
-    clearDirectory testDir
-
-    (ex, term) <- liftIO $ captureCharonExceptionTerminal @TildeException argList
-
-    assertMatch expectedEx ex
-    assertMatches expectedTerm term
-
-    -- trash structure assertions
-    (idxSet, metadata) <- runIndexMetadataM
-
-    assertSetEq expectedIdxSet idxSet
-    liftIO $ expectedMetadata @=? metadata
-    assertFdoDirectorySizesM []
-  where
-    expectedEx =
-      Outfixes
-        "Unexpected tilde in OsPath:"
-        []
-        "delete/deleteTildePathError/~"
-    expectedTerm = []
-
-    expectedIdxSet = HashSet.fromList []
-    expectedMetadata = Metadata.empty
-
-#else
-
-osTests _ = []
-
-#endif
