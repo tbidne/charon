@@ -40,6 +40,11 @@ import Charon.Data.Index qualified as Index
 import Charon.Data.Metadata (Metadata (MkMetadata))
 import Charon.Data.Metadata qualified as Metadata
 import Charon.Data.PathData (PathData)
+import Charon.Data.PathData.Formatting
+  ( Coloring (ColoringDetect),
+    PathDataFormat (FormatTabular),
+    Sort (Name),
+  )
 import Charon.Data.PathType (PathTypeW)
 import Charon.Data.Paths
   ( PathI (MkPathI),
@@ -58,6 +63,9 @@ import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
 import Charon.Runner.Command (Force, NoPrompt)
+import Charon.Runner.Command.List
+  ( ListCmd (MkListCmd, format, revSort, sort),
+  )
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
@@ -436,6 +444,7 @@ emptyTrash ::
     HasTrashHome env,
     Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
@@ -465,6 +474,11 @@ emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
           void Trash.createTrash
         else do
           Utils.noBuffering
+          index <- getIndex backendArgs
+          indexTxt <- Index.formatIndex indexFormat index
+          putStrLn ""
+          putTextLn indexTxt
+
           metadata <- getMetadata backendArgs
           putStrLn ""
           putTextLn $ Utils.renderPretty metadata
@@ -480,6 +494,13 @@ emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
                 $(logDebug) "Not deleting contents."
                 putStrLn ""
             | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+  where
+    indexFormat =
+      MkListCmd
+        { format = FormatTabular ColoringDetect Nothing Nothing,
+          sort = Name,
+          revSort = False
+        }
 
 merge ::
   ( HasCallStack,
