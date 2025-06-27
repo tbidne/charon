@@ -36,7 +36,7 @@ import Charon.Data.Paths
 import Charon.Data.Timestamp (Timestamp, fromText)
 import Charon.Env (HasBackend)
 #if WINDOWS
-import Charon.Exception (DotsPathE, EmptyPathE, FileNameEmptyE, RootE)
+import Charon.Exception (DotsPathE, EmptyPathE, FileNameEmptyE, RootE, TildePathE)
 #else
 import Charon.Exception (DotsPathE, EmptyPathE, RootE, TildePathE)
 #endif
