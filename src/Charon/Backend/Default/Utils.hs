@@ -36,7 +36,6 @@ import Charon.Data.Paths
     (<//>),
   )
 import Charon.Data.Paths qualified as Paths
-#if POSIX
 import Charon.Exception
   ( DotsPathE (MkDotsPathE),
     EmptyPathE (MkEmptyPathE),
@@ -46,16 +45,6 @@ import Charon.Exception
     TildePathE (MkTildePathE),
     UniquePathNotPrefixE (MkUniquePathNotPrefixE),
   )
-#else
-import Charon.Exception
-  ( DotsPathE (MkDotsPathE),
-    EmptyPathE (MkEmptyPathE),
-    FileNameEmptyE (MkFileNameEmptyE),
-    RenameDuplicateE (MkRenameDuplicateE),
-    RootE (MkRootE),
-    UniquePathNotPrefixE (MkUniquePathNotPrefixE),
-  )
-#endif
 import Charon.Prelude
 import Charon.Utils qualified as U
 import Data.ByteString.Char8 qualified as C8
