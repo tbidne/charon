@@ -43,12 +43,16 @@ module Charon.Utils
     noCallstacks,
 
     -- * Printing
+    putLine,
     displayList,
+
+    -- * Input
+    askYesNoQ,
+    getStrippedLine,
 
     -- * Misc
     filterSeqM,
     renderPretty,
-    noBuffering,
     getAllFiles,
     localTimeToMillis,
     getRandomTmpFile,
@@ -101,7 +105,6 @@ import Data.Text.Internal.Search qualified as TIS
 import Data.Time (LocalTime, UTCTime)
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
-import Effects.FileSystem.HandleWriter qualified as HW
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.Time (MonadTime (getMonotonicTime))
 import FileSystem.OsPath (TildeException)
@@ -116,7 +119,6 @@ import PathSize
 import PathSize qualified
 import PathSize.Data.Config qualified as PathSize.Config
 import PathSize.Utils qualified
-import System.IO qualified as IO
 import System.PosixCompat.Files qualified as PFiles
 import Text.Printf (PrintfArg)
 import URI.ByteString qualified as URI
@@ -289,12 +291,6 @@ filterSeqM p = foldl' foldP (pure Seq.empty)
 -- | When for monadic bool.
 whenM :: (Monad m) => m Bool -> m () -> m ()
 whenM mb ma = mb >>= (`when` ma)
-
--- | Sets NoBuffering.
-noBuffering :: (HasCallStack, MonadHandleWriter m) => m ()
-noBuffering = buffOff IO.stdin *> buffOff IO.stdout
-  where
-    buffOff h = HW.hSetBuffering h NoBuffering
 
 getPathSize ::
   ( HasCallStack,
@@ -494,3 +490,38 @@ displayList toText xs =
         [ "\n - ",
           toText x
         ]
+
+putLine :: (MonadTerminal m) => m ()
+putLine = putStrLn ""
+
+askYesNoQ ::
+  ( HasCallStack,
+    MonadHaskeline m,
+    MonadThrow m
+  ) =>
+  Text -> m Bool
+askYesNoQ s =
+  getInputChar msg >>= \case
+    Nothing -> throwText "Received empty response."
+    Just ans
+      | ans == 'y' -> pure True
+      | ans == 'n' -> pure False
+      | otherwise ->
+          throwText
+            $ mconcat
+              [ "Bad answer. Expected 'y' or 'n', received: ",
+                T.singleton ans
+              ]
+  where
+    msg = T.unpack $ s <> " (y/n)? "
+
+getStrippedLine ::
+  ( HasCallStack,
+    MonadHaskeline m,
+    MonadThrow m
+  ) =>
+  Text -> m Text
+getStrippedLine prompt =
+  getInputLine (T.unpack prompt) >>= \case
+    Nothing -> throwText "Received empty response."
+    Just s -> pure $ T.strip $ T.pack s

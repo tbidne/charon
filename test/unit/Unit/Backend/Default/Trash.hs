@@ -41,6 +41,7 @@ import Charon.Exception (DotsPathE, EmptyPathE, FileNameEmptyE, RootE, TildePath
 #else
 import Charon.Exception (DotsPathE, EmptyPathE, RootE, TildePathE)
 #endif
+import Charon.Utils qualified as Utils
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
@@ -150,7 +151,7 @@ runPathDataTLogs b (MkPathDataT x) = do
       `catchSync` \ex -> do
         putStrLn "LOGS"
         readIORef logsRef >>= putStrLn . T.unpack
-        putStrLn ""
+        Utils.putLine
         throwM ex
 
   t <- readIORef ref

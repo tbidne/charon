@@ -84,10 +84,7 @@ import Effects.Logger.Namespace
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
   )
 import Effects.Logger.Namespace qualified as Logger
-import Effects.System.Terminal
-  ( MonadTerminal (getLine),
-    Window (Window),
-  )
+import Effects.System.Terminal (Window (Window))
 import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
@@ -243,22 +240,11 @@ instance MonadPathWriter (FuncIO env) where
 
 instance
   ( Is k1 A_Getter,
-    LabelOptic' "terminalRef" k1 env (IORef Text),
-    Is k2 A_Getter,
-    LabelOptic' "charStream" k2 env (IORef CharStream),
-    Is k3 A_Getter,
-    LabelOptic' "strLine" k3 env String
+    LabelOptic' "terminalRef" k1 env (IORef Text)
   ) =>
   MonadTerminal (FuncIO env)
   where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
-  getChar = do
-    charStream <- asks (view #charStream)
-    c :> cs <- readIORef charStream
-    writeIORef charStream cs
-    pure c
-
-  getLine = asks (view #strLine)
 
   getTerminalSize =
     pure
@@ -268,6 +254,27 @@ instance
         }
 
   supportsPretty = pure False
+
+instance
+  ( Is k1 A_Getter,
+    LabelOptic' "charStream" k1 env (IORef CharStream),
+    Is k2 A_Getter,
+    LabelOptic' "strLine" k2 env String,
+    Is k3 A_Getter,
+    LabelOptic' "terminalRef" k3 env (IORef Text)
+  ) =>
+  MonadHaskeline (FuncIO env)
+  where
+  getInputChar prompt = do
+    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack prompt)
+    charStream <- asks (view #charStream)
+    c :> cs <- readIORef charStream
+    writeIORef charStream cs
+    pure $ Just c
+
+  getInputLine prompt = do
+    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack prompt)
+    Just <$> asks (view #strLine)
 
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime localTime utc
@@ -362,14 +369,15 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
   (toml, cmd) <- getConfig
   env <- modEnv <$> mkFuncEnv toml logsRef terminalRef
 
-  runFuncIO (Runner.runCmd cmd) env
-    `catchSync` \ex -> do
-      putStrLn "TERMINAL"
-      readIORef terminalRef >>= putStrLn . T.unpack
-      putStrLn "\n\nLOGS"
-      readIORef logsRef >>= putStrLn . T.unpack
-      putStrLn ""
-      throwM ex
+  catchesSync
+    (runFuncIO (Runner.runCmd cmd) env)
+    (handleEx terminalRef logsRef)
+    [ -- Restore and Perm Delete can throw ExitSuccess. We do not want to
+      -- error in these cases.
+      Handler $ \(ex :: ExitCode) -> case ex of
+        ExitSuccess -> pure ()
+        ExitFailure _ -> handleEx terminalRef logsRef ex
+    ]
 
   terminal <- T.lines <$> readIORef terminalRef
   logs <- T.lines <$> readIORef logsRef
@@ -378,6 +386,14 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+
+    handleEx terminalRef logsRef ex = do
+      putStrLn "TERMINAL"
+      readIORef terminalRef >>= putStrLn . T.unpack
+      putStrLn "\n\nLOGS"
+      readIORef logsRef >>= putStrLn . T.unpack
+      Utils.putLine
+      throwM ex
 
 -- | Runs Charon, catching the expected exception.
 runCharonException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
@@ -449,7 +465,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
           readIORef terminalRef >>= putStrLn . T.unpack
           putStrLn "\n\nLOGS"
           readIORef logsRef >>= putStrLn . T.unpack
-          putStrLn ""
+          Utils.putLine
           throwM ex
   where
     argList' = "-c" : "none" : argList

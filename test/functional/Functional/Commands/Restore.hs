@@ -20,6 +20,7 @@ tests testEnv =
     $ [ restoreOne testEnv',
         restoreMany testEnv',
         restoreIndices testEnv',
+        restoreIndicesExit testEnv',
         restoreUnknownError testEnv',
         restoreCollisionError testEnv',
         restoreSimultaneousCollisionError testEnv',
@@ -222,6 +223,69 @@ restoreIndices getTestEnv = testCase "Restores with --indices" $ do
   where
     delExpectedMetadata = mkMetadata 8 7 0 55
     restoreExpectedMetadata = mkMetadata 3 3 0 20
+
+restoreIndicesExit :: IO TestEnv -> TestTree
+restoreIndicesExit getTestEnv = testCase "Exits --indices" $ do
+  testEnv <- getTestEnv
+  usingReaderT testEnv $ appendTestDirM "restoreIndicesExit" $ do
+    testDir <- getTestDir
+
+    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        fileLinkToDelete = testDir </> [osp|file-link|]
+        dirLinkToDelete = testDir </> [osp|dir-link|]
+        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+
+    -- SETUP
+    -- test w/ a nested dir
+    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+    -- test w/ a file in dir
+    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
+
+    assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
+    assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+    assertSymlinksExist linksToDelete
+
+    runCharon delArgList
+
+    -- file assertions
+    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
+
+    -- trash structure assertions
+    delExpectedIdxSet <-
+      mkPathDataSetM
+        [ ("f1", PathTypeFile, 5),
+          ("f2", PathTypeFile, 5),
+          ("f3", PathTypeFile, 5),
+          ("dir1", PathTypeDirectory, 5),
+          ("dir2", PathTypeDirectory, 15),
+          ("dir4", PathTypeDirectory, 10),
+          ("dir-link", PathTypeSymbolicLink, 5),
+          ("file-link", PathTypeSymbolicLink, 5)
+        ]
+    (delIdxSet, delMetadata) <- runIndexMetadataM
+
+    assertSetEq delExpectedIdxSet delIdxSet
+    delExpectedMetadata @=? delMetadata
+    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
+    -- RESTORE
+
+    -- Throwing a 'quit' in the middle. Should abort successfully.
+    let modEnv = set' #strLine "2-3 quit 7-8"
+
+    -- do not restore f2
+    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
+    runCharonEnv modEnv restoreArgList
+
+    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
+    assertSetEq delExpectedIdxSet restoreIdxSet
+    delExpectedMetadata @=? restoreMetadata
+  where
+    delExpectedMetadata = mkMetadata 8 7 0 55
 
 restoreUnknownError :: IO TestEnv -> TestTree
 restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do

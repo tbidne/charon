@@ -33,12 +33,20 @@
       inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # FIXME: Remove once fork no longer needed.
+    haskeline = {
+      url = "github:haskell/haskeline";
+      flake = false;
+    };
     monad-effects = {
-      url = "github:tbidne/monad-effects";
+      url = "github:tbidne/monad-effects/haskeline";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.nix-hs-utils.follows = "nix-hs-utils";
+
+      # FIXME: Remove once merged.
+      inputs.haskeline.follows = "haskeline";
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
@@ -100,6 +108,8 @@
             overrides =
               final: prev:
               {
+                haskeline = hlib.dontCheck (final.callCabal2nix "haskeline" inputs.haskeline { });
+
                 path = hlib.dontCheck prev.path_0_9_6;
                 serialise = hlib.doJailbreak prev.serialise;
 
@@ -124,6 +134,7 @@
                 "effects-async"
                 "effects-ioref"
                 "effects-fs"
+                "effects-haskeline"
                 "effects-logger"
                 "effects-optparse"
                 "effects-stm"

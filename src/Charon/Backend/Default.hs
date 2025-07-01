@@ -68,9 +68,7 @@ import Charon.Runner.Command.List
   )
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
-import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
-import Effects.System.Terminal qualified as Term
 import Effects.Time (getSystemTime)
 import Numeric.Algebra.Additive.AMonoid (AMonoid (zero))
 import Numeric.Algebra.Additive.ASemigroup (ASemigroup ((.+.)))
@@ -172,7 +170,7 @@ permDelete ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -199,7 +197,7 @@ permDeletePostHook ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -358,7 +356,7 @@ restore ::
     LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
@@ -386,7 +384,7 @@ restorePostHook ::
     LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
@@ -447,7 +445,7 @@ emptyTrash ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
@@ -473,27 +471,24 @@ emptyTrash backendArgs noPrompt = addNamespace "emptyTrash" $ do
           removeDirectoryRecursive th
           void Trash.createTrash
         else do
-          Utils.noBuffering
           index <- getIndex backendArgs
           indexTxt <- Index.formatIndex indexFormat index
-          putStrLn ""
+          Utils.putLine
           putTextLn indexTxt
 
           metadata <- getMetadata backendArgs
-          putStrLn ""
+          Utils.putLine
           putTextLn $ Utils.renderPretty metadata
-          putStr "Permanently delete all contents (y/n)? "
-          c <- Ch.toLower <$> Term.getChar
-          if
-            | c == 'y' -> do
-                $(logDebug) "Deleting contents."
-                removeDirectoryRecursive th
-                void Trash.createTrash
-                putStrLn ""
-            | c == 'n' -> do
-                $(logDebug) "Not deleting contents."
-                putStrLn ""
-            | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+          ans <- Utils.askYesNoQ "Permanently delete all contents"
+          if ans
+            then do
+              $(logDebug) "Deleting contents."
+              removeDirectoryRecursive th
+              void Trash.createTrash
+              Utils.putLine
+            else do
+              $(logDebug) "Not deleting contents."
+              Utils.putLine
   where
     indexFormat =
       MkListCmd

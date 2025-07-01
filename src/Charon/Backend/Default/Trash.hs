@@ -65,7 +65,6 @@ import Charon.Exception
 import Charon.Prelude
 import Charon.Runner.Command (Force, NoPrompt)
 import Charon.Utils qualified as Utils
-import Data.Char qualified as Ch
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter
@@ -75,7 +74,6 @@ import Effects.FileSystem.PathWriter
   )
 import Effects.FileSystem.PathWriter qualified as PW
 import Effects.FileSystem.PathWriter qualified as WDir
-import Effects.System.Terminal qualified as Term
 import FileSystem.OsPath qualified as OsPath
 
 -- | Creates the trash directory if it does not exist.
@@ -270,7 +268,7 @@ permDeleteFromTrash ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
@@ -318,23 +316,12 @@ permDeleteFromTrash
             -- check.
               deleteFn' backend pathData
             else do
-              -- NOTE:
-              -- - No buffering on input so we can read a single char w/o requiring a
-              --   newline to end the input (which then gets passed to getChar, which
-              --   interferes with subsequent calls).
-              --
-              -- - No buffering on output so the "Permanently delete..." string gets
-              --   printed w/o the newline.
-              Utils.noBuffering
-
               let pdStr = Utils.renderPretty pathData
               putTextLn pdStr
-              putStr "\nPermanently delete (y/n)? "
-              c <- Ch.toLower <$> Term.getChar
-              if
-                | c == 'y' -> deleteFn' backend pathData *> putStrLn "\n"
-                | c == 'n' -> putStrLn "\n"
-                | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+              ans <- Utils.askYesNoQ "\nPermanently delete"
+              if ans
+                then deleteFn' backend pathData *> Utils.putLine
+                else Utils.putLine
 
     -- Need our own error handling here since if we are deleting multiple
     -- wildcard matches we want success/failure to be independent.
@@ -361,7 +348,7 @@ restoreTrashToOriginal ::
     LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
@@ -417,24 +404,22 @@ restoreTrashToOriginal
 
       -- 1. No --no-prompt. Ask before restoring paths.
       restorePrompt pd = do
-        Utils.noBuffering
-
         let pdStr = Utils.renderPretty pd
 
         putTextLn pdStr
-        putStr "\nRestore (y/n)? "
-        c <- Ch.toLower <$> Term.getChar
-        if
-          | c == 'y' -> do
-              if force ^. #unForce
-                then
-                  -- 2.1. --force: Do not ask for overwrites.
-                  overwriteForce pd *> putStrLn "\n"
-                else
-                  -- 2.2. No --force: Ask for overwrites.
-                  overwriteAsk pd *> putStrLn "\n"
-          | c == 'n' -> putStrLn "\n"
-          | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+
+        ans <- Utils.askYesNoQ "\nRestore"
+
+        if ans
+          then
+            if force ^. #unForce
+              then
+                -- 2.1. --force: Do not ask for overwrites.
+                overwriteForce pd *> Utils.putLine
+              else
+                -- 2.2. No --force: Ask for overwrites.
+                overwriteAsk pd *> Utils.putLine
+          else Utils.putLine
 
       -- 2. --no-prompt: Do not prompt before restoring, or before overwrites.
       restoreNoPrompt pd = do
@@ -452,15 +437,10 @@ restoreTrashToOriginal
         exists <- PathData.Core.originalPathExists pd
         if exists
           then do
-            Utils.noBuffering
-
-            let msg = "\nPath exists at original. Overwrite (y/n)? "
-            putStr msg
-            c <- Ch.toLower <$> Term.getChar
-            if
-              | c == 'y' -> restoreFn' backend pathType pd *> putStrLn "\n"
-              | c == 'n' -> putStrLn "\n"
-              | otherwise -> putStrLn ("\nUnrecognized: " <> [c])
+            ans <- Utils.askYesNoQ "\nPath exists at original. Overwrite"
+            if ans
+              then restoreFn' backend pathType pd *> Utils.putLine
+              else Utils.putLine
           else restoreFn' backend pathType pd
 
       -- Collisions throw exception.
