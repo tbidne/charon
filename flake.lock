@@ -65,11 +65,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1738875981,
-        "narHash": "sha256-UXYDrw4/bty2qyjNmvaTYSng0L+MDdzAzawG5gXBcF8=",
+        "lastModified": 1751586675,
+        "narHash": "sha256-gCG6RlIk6xnjUfq/SYHu2d3Vexg4tfOf3d0GttO8k14=",
         "owner": "tbidne",
         "repo": "exception-utils",
-        "rev": "e28b28ae3bc90a0336abf69eff28369b790f4e13",
+        "rev": "02fdf3d44f41019d2f31f7903f432dfc0e91e078",
         "type": "github"
       },
       "original": {
@@ -122,6 +122,22 @@
         "type": "github"
       }
     },
+    "haskeline": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1751439316,
+        "narHash": "sha256-ptj6PUCwqwV8q9eGNo9f29dkmyMtmfGJIfvu+SAmcdY=",
+        "owner": "haskell",
+        "repo": "haskeline",
+        "rev": "b12552d378c32fd3ccb813a959dc29419d47d9b2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "haskell",
+        "repo": "haskeline",
+        "type": "github"
+      }
+    },
     "monad-effects": {
       "inputs": {
         "algebra-simple": [
@@ -139,6 +155,9 @@
         "fs-utils": [
           "fs-utils"
         ],
+        "haskeline": [
+          "haskeline"
+        ],
         "nix-hs-utils": [
           "nix-hs-utils"
         ],
@@ -150,15 +169,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1751507025,
-        "narHash": "sha256-YlxL1wcBMg1Cr/G293smjMA7yDrTOO99IiMmoI73SZY=",
+        "lastModified": 1751791163,
+        "narHash": "sha256-enJ0VGAfBRtddWs+WES22pI1rUwdqZhsFdVb/BIVH04=",
         "owner": "tbidne",
         "repo": "monad-effects",
-        "rev": "7fa71a02efa422e51abe8600aaa3a0ddae4fca55",
+        "rev": "a62298759d3320840e27d8074a70c5b713ef74d2",
         "type": "github"
       },
       "original": {
         "owner": "tbidne",
+        "ref": "haskeline",
         "repo": "monad-effects",
         "type": "github"
       }
@@ -263,6 +283,7 @@
         "exception-utils": "exception-utils",
         "flake-parts": "flake-parts",
         "fs-utils": "fs-utils",
+        "haskeline": "haskeline",
         "monad-effects": "monad-effects",
         "nix-hs-utils": "nix-hs-utils",
         "nixpkgs": "nixpkgs",

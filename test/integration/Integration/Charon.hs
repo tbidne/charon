@@ -108,6 +108,8 @@ instance MonadTerminal IntIO where
     asks (view #termLogsRef)
       >>= \ref -> modifyIORef' ref ((:) . T.pack $ s)
 
+instance MonadHaskeline IntIO
+
 -- | Default way to run integration tests. Ensures uncaught exceptions do not
 -- mess with annotations
 usingIntIO :: IntEnv -> IntIO a -> PropertyT IO a

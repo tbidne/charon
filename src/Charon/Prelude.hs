@@ -43,10 +43,12 @@ import Control.Applicative as X
     Applicative (liftA2, pure, (<*>)),
     (*>),
   )
+import Control.Category as X (Category ((.)), (>>>))
 import Control.DeepSeq as X (NFData)
 import Control.Exception as X (IOException)
 import Control.Exception.Utils as X
   ( catchSync,
+    catchesSync,
     exitFailure,
     throwString,
     throwText,
@@ -64,12 +66,14 @@ import Control.Monad as X
   )
 import Control.Monad.Catch as X
   ( Exception (displayException),
+    Handler (Handler),
     MonadCatch,
     MonadMask,
     MonadThrow,
     SomeException,
     bracket,
     catch,
+    catches,
     finally,
     throwM,
     try,
@@ -103,7 +107,7 @@ import Data.Foldable1 as X
     foldlM1,
     foldlMapM1,
   )
-import Data.Function as X (const, flip, id, ($), (.))
+import Data.Function as X (const, flip, id, ($))
 import Data.Functor as X (Functor (fmap), ($>), (<$>), (<&>))
 import Data.HashMap.Strict as X (HashMap)
 import Data.HashSet as X (HashSet)
@@ -184,6 +188,7 @@ import Effects.FileSystem.PathWriter as X
         renameFile
       ),
   )
+import Effects.Haskeline as X (MonadHaskeline, getInputChar, getInputLine)
 import Effects.IORef as X
   ( IORef,
     MonadIORef,
@@ -300,8 +305,7 @@ import PathSize as X (findLargestPaths)
 import PathSize.Utils as X (MonadPosixC)
 import System.Exit as X (ExitCode (ExitFailure, ExitSuccess))
 import System.IO as X
-  ( BufferMode (NoBuffering),
-    FilePath,
+  ( FilePath,
     Handle,
     IO,
     IOMode (AppendMode),

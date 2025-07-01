@@ -111,6 +111,7 @@ library
     , deepseq               >=1.4.6.0   && <1.6
     , effects-async         ^>=0.1
     , effects-fs            ^>=0.1
+    , effects-haskeline     ^>=0.1
     , effects-ioref         ^>=0.1
     , effects-logger        ^>=0.1
     , effects-optparse      ^>=0.1
@@ -175,6 +176,7 @@ executable charon
   build-depends:
     , base
     , charon
+    , effects-haskeline
     , exception-utils
 
   hs-source-dirs:     app

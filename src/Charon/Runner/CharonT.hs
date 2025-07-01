@@ -43,6 +43,8 @@ newtype CharonT env m a = MkCharonT (ReaderT env m a)
 deriving newtype instance (MonadPosix m) => MonadPosix (CharonT env m)
 #endif
 
+deriving newtype instance (MonadHaskeline m) => MonadHaskeline (CharonT env m)
+
 instance
   (MonadHandleWriter m, MonadThread m, MonadTime m) =>
   MonadLogger (CharonT (Env m) m)

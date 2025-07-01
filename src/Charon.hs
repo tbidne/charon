@@ -52,7 +52,6 @@ import Data.Foldable1 qualified as F1
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter qualified as PW
-import Effects.System.Terminal qualified as Term
 import Text.Read qualified as TR
 
 -- NOTE: For functions that can encounter multiple exceptions, the first
@@ -99,7 +98,7 @@ permDelete ::
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -121,7 +120,7 @@ permDelete noPrompt strategy = addNamespace "permDelete" $ do
       BackendFdo -> ("fdo", Fdo.getIndex, Fdo.permDelete)
       BackendJson -> ("json", Json.getIndex, Json.permDelete)
 
-  paths <- getIndexedPaths "delete." strategy idxFn
+  paths <- getIndexedPaths "delete" strategy idxFn
   addNamespace name $ delFn noPrompt paths
 
 -- | Reads the index at either the specified or default location. If the
@@ -184,7 +183,7 @@ restore ::
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k,
     MonadPathReader m,
@@ -205,7 +204,7 @@ restore params = addNamespace "restore" $ do
       BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force noPrompt)
       BackendJson -> ("json", Json.getIndex, Json.restore force noPrompt)
 
-  paths <- getIndexedPaths "restore." (params ^. #strategy) idxFn
+  paths <- getIndexedPaths "restore" (params ^. #strategy) idxFn
   addNamespace name $ restoreFn paths
   where
     force = params ^. #force
@@ -220,7 +219,7 @@ emptyTrash ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
@@ -403,7 +402,7 @@ initalLog =
 getIndexedPaths ::
   forall m.
   ( HasCallStack,
-    MonadHandleWriter m,
+    MonadHaskeline m,
     MonadTerminal m,
     MonadThrow m
   ) =>
@@ -434,15 +433,14 @@ getIndexedPaths actionStr IndicesStrategy idxFn = do
   putTextLn
     $ "\nPlease enter a list of space-separated indices to "
     <> actionStr
+    <> "."
   putTextLn "For example: 1 3 5-12 15\n"
 
-  Utils.noBuffering
-  putStr "> "
-
   txtIndices <-
-    T.words <$> Term.getTextLine >>= \case
-      [] -> throwText "Received zero indices."
-      (t : ts) -> pure $ t :| ts
+    Utils.getStrippedLine "> " >>= \l ->
+      case T.words l of
+        [] -> throwText "Received zero indices."
+        (t : ts) -> pure $ t :| ts
 
   -- 1. Translate ranges to indices
   indices <- foldlMapM1 parseIndexNum combineIndices txtIndices
@@ -475,20 +473,31 @@ getIndexedPaths actionStr IndicesStrategy idxFn = do
     combineIndices acc txt = (acc <>) <$> parseIndexNum txt
 
     parseIndexNum :: Text -> m (UniqueSeqNE Int)
-    parseIndexNum t = case T.split (== '-') t of
-      [one] -> do
-        n <- readNumOrDie one
-        pure $ USeqNE.singleton n
-      [sTxt, eTxt] -> do
-        s <- readNumOrDie sTxt
-        e <- readNumOrDie eTxt
+    parseIndexNum t = do
+      when (quitTxt t) $ do
+        throwM ExitSuccess
+      case T.split (== '-') t of
+        [one] -> do
+          n <- readNumOrDie one
+          pure $ USeqNE.singleton n
+        [sTxt, eTxt] -> do
+          s <- readNumOrDie sTxt
+          e <- readNumOrDie eTxt
 
-        case [s .. e] of
-          [] -> throwText $ "Bad range: start index " <> sTxt <> " > " <> eTxt
-          (x : xs) -> pure $ USeqNE.fromNonEmpty (x :| xs)
-      _ -> throwText $ "Expected number or range, received: " <> t
+          case [s .. e] of
+            [] -> throwText $ "Bad range: start index " <> sTxt <> " > " <> eTxt
+            (x : xs) -> pure $ USeqNE.fromNonEmpty (x :| xs)
+        _ -> throwText $ "Expected number or range, received: " <> t
 
     readNumOrDie :: Text -> m Int
     readNumOrDie t = case TR.readMaybe (T.unpack t) of
       Nothing -> throwText $ "Failed reading int: " <> t
       Just n -> pure n
+
+    quitTxt :: Text -> Bool
+    quitTxt =
+      T.strip >>> T.toLower >>> \case
+        ":q" -> True
+        "exit" -> True
+        "quit" -> True
+        _ -> False

@@ -112,13 +112,15 @@ deriving newtype instance MonadPosix (IntPure env)
 
 instance MonadTerminal (IntPure IntPureEnv) where
   putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
-  getChar = pure 'y'
   getTerminalSize =
     pure
       $ Window
         { height = 50,
           width = 100
         }
+
+instance MonadHaskeline (IntPure IntPureEnv) where
+  getInputChar _ = pure $ Just 'y'
 
 instance MonadTime (IntPure env) where
   getSystemZonedTime = pure $ ZonedTime (LocalTime (toEnum 59_000) midday) utc
