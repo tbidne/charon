@@ -63,7 +63,7 @@ makeFieldLabelsNoPrefix ''PathData
 toPathData ::
   ( HasCallStack,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m
   ) =>
   Timestamp ->
@@ -118,7 +118,7 @@ toCorePathData ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m
@@ -147,7 +147,7 @@ toCorePathDataDirectorySizes ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m

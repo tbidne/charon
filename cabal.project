@@ -51,13 +51,13 @@ if !os(windows)
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: d2ffa50688da366d43e4774640d25cdc524d967c
+        tag: 7fa71a02efa422e51abe8600aaa3a0ddae4fca55
         subdir:
             lib/effects-async
             lib/effects-optparse
             lib/effects-fs
             lib/effects-ioref
-            lib/effects-logger-ns
+            lib/effects-logger
             lib/effects-stm
             lib/effects-terminal
             lib/effects-thread
@@ -68,13 +68,13 @@ else
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: d2ffa50688da366d43e4774640d25cdc524d967c
+        tag: 7fa71a02efa422e51abe8600aaa3a0ddae4fca55
         subdir:
             lib/effects-async
             lib/effects-optparse
             lib/effects-fs
             lib/effects-ioref
-            lib/effects-logger-ns
+            lib/effects-logger
             lib/effects-stm
             lib/effects-terminal
             lib/effects-thread

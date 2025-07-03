@@ -62,7 +62,7 @@ import Text.Read qualified as TR
 -- writes an entry in the trash index. If the trash location is not given,
 -- defaults to XDG data e.g. @~\/.local/share/charon/@.
 delete ::
-  forall env m.
+  forall env m k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
@@ -71,7 +71,7 @@ delete ::
     MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
@@ -91,7 +91,7 @@ delete paths = addNamespace "delete" $ do
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
-  forall env m.
+  forall env m k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
@@ -104,7 +104,7 @@ permDelete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -127,14 +127,14 @@ permDelete noPrompt strategy = addNamespace "permDelete" $ do
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
 getIndex ::
-  forall env m.
+  forall env m k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadReader env m,
@@ -151,14 +151,14 @@ getIndex = addNamespace "getIndex" $ do
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
-  forall m env.
+  forall m env k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadReader env m,
@@ -176,7 +176,7 @@ getMetadata = addNamespace "getMetadata" $ do
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
 restore ::
-  forall env m.
+  forall env m k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
@@ -186,7 +186,7 @@ restore ::
     MonadFileWriter m,
     MonadHandleWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
@@ -213,7 +213,7 @@ restore params = addNamespace "restore" $ do
 
 -- | Empties the trash.
 emptyTrash ::
-  forall m env.
+  forall m env k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
@@ -221,7 +221,7 @@ emptyTrash ::
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
@@ -246,7 +246,7 @@ convert ::
     MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -340,7 +340,7 @@ merge ::
     MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
@@ -392,7 +392,7 @@ merge dest = addNamespace "merge" $ do
 
 initalLog ::
   ( HasTrashHome env,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadReader env m
   ) =>
   m ()

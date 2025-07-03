@@ -90,12 +90,12 @@ runCharon = do
 -- 'getConfiguration' as an alternative 'runCharon', when we want to use a
 -- custom env.
 runCmd ::
-  forall m env.
+  forall m env k.
   ( HasBackend env,
     HasCallStack,
     HasTrashHome env,
     MonadAsync m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadFileReader m,
     MonadFileWriter m,
     MonadHandleWriter m,
@@ -215,7 +215,7 @@ printIndex ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadReader env m,
@@ -235,7 +235,7 @@ printMetadata ::
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadReader env m,

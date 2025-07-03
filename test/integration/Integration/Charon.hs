@@ -38,8 +38,8 @@ import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text qualified as T
-import Effects.LoggerNS (Namespace, defaultLogFormatter)
-import Effects.LoggerNS qualified as Logger
+import Effects.Logger.Namespace (defaultLogFormatter)
+import Effects.Logger.Namespace qualified as Logger
 import GHC.IsList (IsList (toList))
 import Hedgehog (PropertyT)
 import Integration.AsciiOnly (AsciiOnly (MkAsciiOnly))
@@ -101,10 +101,6 @@ instance MonadLogger IntIO where
     let txt = Logger.logStrToText formatted
     logsRef <- asks (view #logsRef)
     modifyIORef' logsRef (txt :)
-
-instance MonadLoggerNS IntIO where
-  getNamespace = view #namespace <$> ask
-  localNamespace f = local (over' #namespace f)
 
 -- Wno-missing-methods
 instance MonadTerminal IntIO where

@@ -192,17 +192,21 @@ import Effects.IORef as X
     readIORef,
     writeIORef,
   )
-import Effects.LoggerNS as X
+import Effects.Logger as X
   ( LogLevel (LevelDebug, LevelError, LevelInfo, LevelWarn),
     MonadLogger (monadLoggerLog),
-    MonadLoggerNS (getNamespace, localNamespace),
-    addNamespace,
     levelFatal,
     logDebug,
     logError,
     logFatal,
     logInfo,
     logWarn,
+  )
+import Effects.Logger.Namespace as X
+  ( HasNamespace,
+    MonadLoggerNS,
+    Namespace,
+    addNamespace,
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
 #if !WINDOWS
@@ -264,6 +268,7 @@ import Optics.Core as X
     Prism',
     iso,
     lens,
+    lensVL,
     over',
     preview,
     prism,

@@ -112,7 +112,7 @@ library
     , effects-async         ^>=0.1
     , effects-fs            ^>=0.1
     , effects-ioref         ^>=0.1
-    , effects-logger-ns     ^>=0.1
+    , effects-logger        ^>=0.1
     , effects-optparse      ^>=0.1
     , effects-terminal      ^>=0.1
     , effects-thread        ^>=0.1
@@ -205,7 +205,7 @@ test-suite unit
     , charon
     , containers
     , effects-fs
-    , effects-logger-ns
+    , effects-logger
     , effects-terminal
     , filepath
     , hedgehog
@@ -240,7 +240,7 @@ test-suite integration
     , base
     , charon
     , effects-fs
-    , effects-logger-ns
+    , effects-logger
     , effects-terminal
     , effects-time
     , env-guard             ^>=0.2
@@ -280,7 +280,7 @@ test-suite functional
     , base
     , charon
     , effects-fs
-    , effects-logger-ns
+    , effects-logger
     , effects-terminal
     , effects-time
     , env-guard             ^>=0.2

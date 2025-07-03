@@ -116,11 +116,11 @@ instance Serial DirectorySizes where
 
 -- | Appends an entry to directorysizes.
 appendEntry ::
-  forall m env.
+  forall m env k.
   ( HasCallStack,
     HasTrashHome env,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadReader env m,
     MonadFileReader m,
     MonadFileWriter m,
@@ -136,10 +136,10 @@ appendEntry dirSizeEntry = do
 
 -- | Appends an entry to directorysizes.
 appendEntryTrashHome ::
-  forall m.
+  forall m env k.
   ( HasCallStack,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadFileReader m,
     MonadFileWriter m,
     MonadPathReader m,
@@ -161,7 +161,7 @@ writeDirectorySizes ::
     HasTrashHome env,
     MonadCatch m,
     MonadFileWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
@@ -178,7 +178,7 @@ writeDirectorySizesTrashHome ::
   ( HasCallStack,
     MonadCatch m,
     MonadFileWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTime m
@@ -208,7 +208,7 @@ removeEntry ::
     MonadReader env m,
     MonadFileReader m,
     MonadFileWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTime m

@@ -65,7 +65,7 @@ toPathData ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m

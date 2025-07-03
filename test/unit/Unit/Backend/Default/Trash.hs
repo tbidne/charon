@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -44,12 +45,11 @@ import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
-import Effects.LoggerNS
+import Effects.Logger.Namespace
   ( LocStrategy (LocStable),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
-    Namespace,
   )
-import Effects.LoggerNS qualified as Logger
+import Effects.Logger.Namespace qualified as Logger
 import System.OsPath (encodeUtf)
 import System.OsPath qualified as FP
 import Unit.Prelude
@@ -99,6 +99,16 @@ data TestEnv = MkTestEnv
   }
   deriving stock (Generic)
   deriving anyclass (HasBackend)
+
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k TestEnv TestEnv x y
+  where
+  labelOptic =
+    lensVL $ \f (MkTestEnv a1 a2 a3 a4) ->
+      fmap
+        (\b -> MkTestEnv a1 a2 a3 b)
+        (f a4)
 
 -- NOTE: Real IO because of MonadThrow, etc. Would be nice to mock these and
 -- remove IO.
@@ -160,11 +170,6 @@ instance MonadLogger PathDataT where
             threadLabel = False,
             timezone = False
           }
-
-instance MonadLoggerNS PathDataT where
-  getNamespace = asks (\(MkTestEnv _ _ _ ns) -> ns)
-  localNamespace f =
-    local (\te@(MkTestEnv _ _ _ ns) -> te {logNamespace = f ns})
 
 -- No real IO!!!
 instance MonadPathWriter PathDataT where

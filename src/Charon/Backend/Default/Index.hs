@@ -41,15 +41,15 @@ type Acc = (Seq (PathData, PathI TrashEntryPath), HashSet (PathI TrashEntryFileN
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
 -- and trash/info.
 readIndex ::
-  forall m env (pd :: Type) k.
+  forall m env (pd :: Type) k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadFileReader m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadReader env m,
     MonadPathReader m,
     Serial pd
@@ -63,14 +63,14 @@ readIndex backendArgs =
 -- everything is 'well-formed' i.e. there is a bijection between trash/files
 -- and trash/info.
 readIndexTrashHome ::
-  forall m (pd :: Type) k.
+  forall m (pd :: Type) env k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadFileReader m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     Serial pd
   ) =>
@@ -127,12 +127,12 @@ readIndexTrashHome backendArgs trashHome = addNamespace "readIndexTrashHome" $ d
 
 -- | Like 'throwIfTrashNonExtant' except returns the path if it exists.
 getTrashEntryPath ::
-  forall m pd k.
+  forall m pd env k1 k2.
   ( HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m
   ) =>
   PathI TrashHome ->

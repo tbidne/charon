@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 module Unit.Backend.Default.Utils (tests) where
@@ -140,9 +141,21 @@ newtype TestIO a = MkTestIO (IO a)
 instance MonadLogger TestIO where
   monadLoggerLog _ _ _ _ = pure ()
 
-instance MonadLoggerNS TestIO where
-  getNamespace = pure ""
-  localNamespace _ m = m
+data TestEnv = MkTestEnv
+
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k TestEnv TestEnv x y
+  where
+  labelOptic =
+    lens
+      (const "ns")
+      const
+
+instance MonadReader TestEnv TestIO where
+  ask = pure MkTestEnv
+
+  local _ m = m
 
 instance MonadPathReader TestIO where
   makeAbsolute = liftIO . makeAbsolute
@@ -208,7 +221,7 @@ getPathTypePreservesBaseFileName =
 
 newtype RandIO a = MkRandIO (IO a)
   deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
-  deriving (MonadLogger, MonadLoggerNS) via TestIO
+  deriving (MonadLogger, MonadReader TestEnv) via TestIO
 
 runRandIO :: (MonadIO m, MonadCatch m, MonadTest m) => RandIO a -> m a
 runRandIO (MkRandIO io) = do

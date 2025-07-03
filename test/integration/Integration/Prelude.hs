@@ -127,9 +127,14 @@ instance MonadTime (IntPure env) where
 instance MonadLogger (IntPure IntPureEnv) where
   monadLoggerLog _ _ _ _ = pure ()
 
-instance MonadLoggerNS (IntPure IntPureEnv) where
-  getNamespace = pure ""
-  localNamespace _ = id
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k IntPureEnv IntPureEnv x y
+  where
+  labelOptic =
+    lens
+      (const "")
+      const
 
 instance MonadFileReader (IntPure IntPureEnv) where
   readBinaryFile _ = error "oh no"

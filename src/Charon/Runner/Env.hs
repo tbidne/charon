@@ -13,7 +13,6 @@ import Charon.Backend.Data (Backend)
 import Charon.Data.Paths (PathI, PathIndex (TrashHome))
 import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude
-import Effects.LoggerNS (Namespace)
 
 -- | Data for file logging.
 data LogFile m = MkLogFile
@@ -55,6 +54,17 @@ data Env m = MkEnv
   deriving stock (Show)
 
 makeFieldLabelsNoPrefix ''Env
+
+-- Logging requires a Getter/Setter 'namespace' optic on the env type.
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k (Env m) (Env m) x y
+  where
+  labelOptic =
+    lensVL $ \f (MkEnv a1 a2 a3) ->
+      fmap
+        (\b -> MkEnv a1 a2 (set' #logNamespace b a3))
+        (f (a3 ^. #logNamespace))
 
 deriving anyclass instance HasTrashHome (Env m)
 

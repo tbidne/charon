@@ -77,7 +77,7 @@ getTrashPath trashHome name = trashHome <//> MkPathI pathFiles <//> name
 getPathInfo ::
   ( HasCallStack,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m
   ) =>
   PathI TrashHome ->
@@ -105,7 +105,7 @@ getPathInfo trashHome origPath = addNamespace "getPathInfo" $ do
 
 mkAbsoluteAndGetName ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadThrow m
   ) =>
@@ -143,7 +143,7 @@ mkAbsoluteAndGetName origPath = addNamespace "mkAbsoluteAndGetName" $ do
 
 mkUniqName ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadThrow m
   ) =>
@@ -216,7 +216,7 @@ throwIfNotPrefix origName newName = do
 
 throwIfIllegal ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadThrow m
   ) =>
   PathI TrashEntryOriginalPath ->

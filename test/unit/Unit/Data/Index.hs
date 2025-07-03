@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Unit tests for Data.Index
@@ -289,6 +290,15 @@ data TestEnv = MkTestEnv Natural (PathI TrashHome)
 instance HasTrashHome TestEnv where
   getTrashHome (MkTestEnv _ th) = th
 
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k TestEnv TestEnv x y
+  where
+  labelOptic =
+    lens
+      (const "ns")
+      const
+
 newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
   deriving
     ( Applicative,
@@ -349,10 +359,6 @@ instance MonadTerminal ConfigIO where
 
 instance MonadLogger ConfigIO where
   monadLoggerLog _ _ _ _ = pure ()
-
-instance MonadLoggerNS ConfigIO where
-  getNamespace = pure ""
-  localNamespace _ m = m
 
 -- Tests tabular automatic formatting i.e. nothing specified
 tabularAutoTests :: TestTree

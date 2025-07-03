@@ -124,7 +124,7 @@
                 "effects-async"
                 "effects-ioref"
                 "effects-fs"
-                "effects-logger-ns"
+                "effects-logger"
                 "effects-optparse"
                 "effects-stm"
                 "effects-terminal"

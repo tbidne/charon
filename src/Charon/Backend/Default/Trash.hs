@@ -82,7 +82,7 @@ import FileSystem.OsPath qualified as OsPath
 createTrash ::
   ( HasCallStack,
     HasTrashHome env,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathWriter m,
     MonadReader env m
   ) =>
@@ -92,7 +92,7 @@ createTrash = addNamespace "createTrash" $ asks getTrashHome >>= createTrashDir
 -- | Creates the trash directory if it does not exist.
 createTrashDir ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathWriter m
   ) =>
   PathI TrashHome ->
@@ -121,7 +121,7 @@ createTrashDir trashHome = addNamespace "createTrashDir" $ do
 doesTrashExist ::
   ( HasCallStack,
     HasTrashHome env,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadReader env m,
     MonadThrow m
@@ -140,7 +140,7 @@ doesTrashExist = addNamespace "doesTrashExist" $ asks getTrashHome >>= doesTrash
 -- If all three dirs exist, returns 'True'.
 doesTrashExistPath ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadThrow m
   ) =>
@@ -187,7 +187,7 @@ mvOriginalToTrash_ ::
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
     MonadCatch m,
     MonadFileWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathWriter m,
     Serial pd,
     Show pd
@@ -206,12 +206,12 @@ mvOriginalToTrash_ backendArgs th ts =
 -- created pd.
 mvOriginalToTrash ::
   ( HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
     MonadCatch m,
     MonadFileWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathWriter m,
     Serial pd,
     Show pd
@@ -262,17 +262,17 @@ mvOriginalToTrash
 -- In this case, the error has already been reported, so this is purely for
 -- signaling (i.e. should we exit with an error).
 permDeleteFromTrash ::
-  forall m pd k.
+  forall m pd env k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTerminal m,
@@ -357,13 +357,13 @@ permDeleteFromTrash
 restoreTrashToOriginal ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
     MonadTerminal m,
@@ -500,12 +500,12 @@ restoreTrashToOriginal
 -- | Searches for a single result. Throws exceptions for decode errors or if
 -- the info file exists, yet the path itself does not.
 findOnePathData ::
-  forall m pd.
+  forall m pd env k.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     Serial pd,
     Show pd
@@ -549,11 +549,11 @@ findOnePathData trashHome pathName backendArgs = addNamespace "findOnePathData" 
 findManyPathData ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     Serial pd
   ) =>
@@ -596,11 +596,11 @@ data PathDataSearchResult
 findPathData ::
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     Serial pd,
     Show pd
@@ -658,7 +658,7 @@ mergeTrashDirs ::
   ( HasCallStack,
     MonadFileReader m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m

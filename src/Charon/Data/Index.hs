@@ -74,11 +74,11 @@ empty = MkIndex mempty
 
 -- | Formats the 'Index' in a pretty way.
 formatIndex ::
-  forall m.
+  forall m env k.
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadTerminal m
   ) =>
   -- | List config
@@ -91,11 +91,11 @@ formatIndex listCmd idx =
 
 -- | Formats the 'Index' in a pretty way.
 formatIndex' ::
-  forall m.
+  forall m env k.
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadTerminal m
   ) =>
   -- | List config
@@ -255,7 +255,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 --        Return @C_min@. We are going to wrap regardless since @D_len > T_max@,
 --        so just ust it and @C_min@.
 mkDynamicLen ::
-  (MonadLoggerNS f) =>
+  (MonadLoggerNS m env k) =>
   -- | @T_max@: Max total len for our dynamic columns
   Natural ->
   -- | @C_min@: Min required len for our derived column
@@ -266,7 +266,7 @@ mkDynamicLen ::
   -- | @D_len@: The fixed, requested length for the other column.
   Natural ->
   -- | Derived @C_len@
-  f Natural
+  m Natural
 mkDynamicLen tMax cMin cMax dLen =
   addNamespace "mkDynamicLen"
     $ if dLen + cMax <= tMax
@@ -303,7 +303,12 @@ mkDynamicLen tMax cMin cMax dLen =
                   ]
               pure cMin
 
-getTerminalLen :: (MonadCatch m, MonadLoggerNS m, MonadTerminal m) => m Natural
+getTerminalLen ::
+  ( MonadCatch m,
+    MonadLoggerNS m env k,
+    MonadTerminal m
+  ) =>
+  m Natural
 getTerminalLen = addNamespace "getTerminalLen" $ do
   trySync getTerminalWidth >>= \case
     Right w -> pure w

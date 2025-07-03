@@ -10,8 +10,8 @@ where
 
 import Charon.Prelude
 import Charon.Runner.Env (Env, LogFile)
-import Effects.LoggerNS (defaultLogFormatter, guardLevel)
-import Effects.LoggerNS qualified as Logger
+import Effects.Logger (guardLevel)
+import Effects.Logger.Namespace qualified as NS
 
 -- | `CharonT` is the main application type that runs shell commands.
 type CharonT :: Type -> (Type -> Type) -> Type -> Type
@@ -53,20 +53,13 @@ instance
       Nothing -> pure ()
       Just (handle, logLevel) -> do
         guardLevel logLevel lvl $ do
-          formatted <- Logger.formatLog (defaultLogFormatter loc) lvl msg
-          let bs = Logger.logStrToBs formatted
+          formatted <- NS.formatLog (NS.defaultLogFormatter loc) lvl msg
+          let bs = NS.logStrToBs formatted
           hPut handle bs
     where
       handleAndLevel :: Getter (LogFile m) (Handle, LogLevel)
       handleAndLevel =
         to (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
-
-instance
-  (MonadHandleWriter m, MonadThread m, MonadTime m) =>
-  MonadLoggerNS (CharonT (Env m) m)
-  where
-  getNamespace = asks (view (#logEnv % #logNamespace))
-  localNamespace = local . over' (#logEnv % #logNamespace)
 
 -- | Runs a 'CharonT' with the given @env@.
 runCharonT :: CharonT env m a -> env -> m a

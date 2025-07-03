@@ -79,12 +79,11 @@ import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.PathReader (XdgDirectory (XdgState))
 import Effects.FileSystem.PathReader qualified as PR
 import Effects.FileSystem.PathWriter qualified as PW
-import Effects.LoggerNS
+import Effects.Logger.Namespace
   ( LocStrategy (LocPartial),
     LogFormatter (MkLogFormatter, locStrategy, newline, timezone),
-    Namespace,
   )
-import Effects.LoggerNS qualified as Logger
+import Effects.Logger.Namespace qualified as Logger
 import Effects.System.Terminal
   ( MonadTerminal (getLine),
     Window (Window),
@@ -131,7 +130,7 @@ data FuncEnv = MkFuncEnv
     trashHome :: PathI TrashHome,
     backend :: Backend,
     -- | Log namespace.
-    logNamespace :: Namespace,
+    namespace :: Namespace,
     -- | Saves the terminal output.
     terminalRef :: IORef Text,
     -- | Saves the logs output.
@@ -298,10 +297,6 @@ instance MonadLogger (FuncIO FuncEnv) where
             timezone = False
           }
 
-instance MonadLoggerNS (FuncIO FuncEnv) where
-  getNamespace = asks (view #logNamespace)
-  localNamespace f = local (over' #logNamespace f)
-
 runFuncIO :: (FuncIO env) a -> env -> IO a
 runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
@@ -320,7 +315,7 @@ mkFuncEnv toml logsRef terminalRef = do
         backend = fromMaybe BackendCbor (toml ^. #backend),
         terminalRef,
         logsRef,
-        logNamespace = "functional",
+        namespace = "functional",
         charStream,
         strLine = "mkFuncEnv_answer"
       }
@@ -481,7 +476,7 @@ runIndexMetadataTestDirM testDir = do
         MkFuncEnv
           { trashHome = MkPathI (testDir </> trashDir),
             backend,
-            logNamespace = "functional",
+            namespace = "functional",
             terminalRef,
             logsRef,
             charStream,

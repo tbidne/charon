@@ -300,7 +300,7 @@ getPathSize ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m
@@ -313,7 +313,7 @@ getPathSizeIgnoreDirSize ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m
@@ -328,7 +328,7 @@ getPathSizeConfig ::
   ( HasCallStack,
     MonadAsync m,
     MonadCatch m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
     MonadTerminal m
@@ -392,7 +392,7 @@ epoch = Time.Posix.posixSecondsToUTCTime 0
 
 getRandomTmpFile ::
   ( HasCallStack,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadPathReader m,
     MonadThrow m,
     MonadTime m

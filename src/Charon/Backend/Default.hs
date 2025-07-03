@@ -82,16 +82,16 @@ import Numeric.Algebra.Additive.ASemigroup (ASemigroup ((.+.)))
 -- writes an entry in the trash index. If the trash location is not given,
 -- defaults to XDG data e.g. @~\/.local/share/charon/@.
 delete ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
     HasTrashHome env,
     MonadCatch m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
@@ -107,16 +107,16 @@ delete backendArgs = deletePostHook backendArgs (const $ pure ())
 -- | 'delete' that takes a callback that runs on the created path data, assuming
 -- the delete succeeded.
 deletePostHook ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( HasCallStack,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
-    LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
     HasTrashHome env,
     MonadCatch m,
     MonadFileWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathWriter m,
     MonadReader env m,
     MonadTerminal m,
@@ -163,12 +163,12 @@ deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
@@ -176,7 +176,7 @@ permDelete ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadReader env m,
     MonadTerminal m,
     Serial pd,
@@ -190,12 +190,12 @@ permDelete backendArgs = permDeletePostHook backendArgs (const $ pure ())
 
 -- | Permanently deletes the paths from the trash.
 permDeletePostHook ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
@@ -203,7 +203,7 @@ permDeletePostHook ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadReader env m,
     MonadTerminal m,
     Serial pd,
@@ -250,16 +250,16 @@ permDeletePostHook backendArgs postHook noPrompt paths = addNamespace "permDelet
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
 getIndex ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadPathReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadReader env m,
     Serial pd
   ) =>
@@ -274,15 +274,15 @@ getIndex backendArgs = addNamespace "getIndex" $ do
 
 -- | Retrieves metadata for the trash directory.
 getMetadata ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadReader env m,
     Serial pd
@@ -350,17 +350,17 @@ getMetadata backendArgs = addNamespace "getMetadata" $ do
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
 restore ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
@@ -378,17 +378,17 @@ restore backendArgs = restorePostHook backendArgs (const $ pure ())
 -- | @restore trash p@ restores the trashed path @\<trash\>\/p@ to its original
 -- location.
 restorePostHook ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
@@ -438,17 +438,17 @@ restorePostHook backendArgs postHook force noPrompt paths = addNamespace "restor
 
 -- | Empties the trash.
 emptyTrash ::
-  forall m env pd k.
+  forall m env pd k1 k2.
   ( DecodeExtra pd ~ PathI TrashEntryFileName,
     HasCallStack,
     HasTrashHome env,
-    Is k A_Getter,
-    LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     MonadAsync m,
     MonadCatch m,
     MonadFileReader m,
     MonadHandleWriter m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
     MonadReader env m,
@@ -506,7 +506,7 @@ merge ::
   ( HasCallStack,
     MonadFileReader m,
     MonadIORef m,
-    MonadLoggerNS m,
+    MonadLoggerNS m env k,
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m
