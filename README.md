@@ -17,7 +17,6 @@
 ### Table of Contents
 
 - [Introduction](#introduction)
-  - [Usage](#usage)
 - [Configuration](#configuration)
 - [Commands](#commands)
   - [Delete Commands](#delete-commands)
@@ -40,117 +39,6 @@
 
 `charon` is a CLI tool for deleting files (like `rm`), but instead of permanently deleting files,
  moves them to a trash location (like Windows' recycle bin, or OSX's trash).
-
-## Usage
-
-```
-Charon: A tool for deleting files to a trash directory.
-
-Usage: charon [-c|--config (none|PATH)] [-b|--backend (cbor|fdo|json)]
-              [--log-level (none|fatal|error|warn|info|debug)]
-              [--log-size-mode (warn SIZE | delete SIZE)] [-t|--trash-home PATH]
-              COMMAND
-
-  Charon moves files to a trash directory, so they can later be restored or
-  permanently deleted. It is intended as a safer alternative to rm. See
-  github.com/tbidne/charon#readme for full documentation.
-
-Available options:
-  -c,--config (none|PATH)  Path to the toml config file. Can be the string
-                           'none' -- in which case no toml config is used -- or
-                           a path to the config file. If not specified then we
-                           look in the XDG config directory e.g.
-                           ~/.config/charon/config.toml
-
-  -b,--backend (cbor|fdo|json)
-                           Backend to use with charon. This option affects how
-                           path metadata is stored. Options are:
-
-                           - cbor: Space efficient, not inspectable.
-                           - fdo: Compatible with FreeDesktop.org.
-                           - json: Inspectable.
-
-  --log-level (none|fatal|error|warn|info|debug)
-                           The file level in which to log. Defaults to none.
-                           Logs are written to the XDG state directory e.g.
-                           ~/.local/state/charon.
-
-  --log-size-mode (warn SIZE | delete SIZE)
-                           Sets a threshold for the file log size, upon which we
-                           either print a warning or delete the file, if it is
-                           exceeded. The SIZE should include the value and units
-                           e.g. 'warn 10 mb', 'warn 5 gigabytes', 'delete
-                           20.5B'.
-
-  -t,--trash-home PATH     Path to the trash directory. This overrides the toml
-                           config, if it exists. If neither is given then we use
-                           the XDG data directory e.g. ~/.local/share/charon.
-
-  -h,--help                Show this help text
-
-Delete Commands
-  delete                   Moves the path(s) to the trash.
-
-  d                        Alias for delete.
-
-  perm-delete              Permanently deletes path(s) from the trash. Can be
-                           run with explicit paths, wildcards, or --indices.
-
-                           Examples:
-
-                             Deleting explicit paths f1 f2 f3:
-                             $ charon perm-delete f1 f2 f3
-
-                             Wildcard search; matches foobar, xxxfooyyybar, etc:
-                             $ charon perm-delete '*foo*bar'
-
-                             Prints out trash index first, allows delete via numeric indices:
-                             $ charon perm-delete --indices
-
-  x                        Alias for perm-delete.
-
-  empty                    Empties the trash.
-
-  e                        Alias for empty.
-
-
-Restore Commands
-  restore                  Restores the trash path(s) to their original
-                           location. Can be run with explicit paths, wildcards,
-                           or --indices.
-
-                           Examples:
-
-                             Restoring explicit paths f1 f2 f3:
-                             $ charon restore f1 f2 f3
-
-                             Wildcard search; matches foobar, xxxfooyyybar, etc:
-                             $ charon restore '*foo*bar'
-
-                             Prints out trash index first, allows restore via numeric indices:
-                             $ charon restore --indices
-
-  r                        Alias for restore.
-
-
-Information Commands
-  list                     Lists all trash contents.
-
-  l                        Alias for list.
-
-  metadata                 Prints trash metadata.
-
-  m                        Alias for metadata.
-
-
-Transform Commands
-  convert                  Converts the backend.
-
-  merge                    Merges src (implicit or -t) trash home into dest.
-                           Collisions will throw an error.
-
-Version: 0.1 (bbdf7ac)
-```
 
 # Configuration
 
@@ -208,10 +96,10 @@ Usage: charon perm-delete [--no-prompt] [-i|--indices] [PATHS...]
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before deleting path(s).
+  --no-prompt              Will not ask before deleting path(s).
 
-  -i,--indices             If active, allows selecting by numeric index instead
-                           of trash name. Incompatible with explicit paths.
+  -i,--indices             Allows selecting by numeric index instead of trash
+                           name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
 ```
@@ -229,6 +117,20 @@ Size:      0.00B
 Created:   2023-02-24 14:32:01
 
 Permanently delete (y/n)?
+
+# permanent delete via indices
+$ charon perm-delete -i
+
+Index | Created             | Original
+--------------------------------------------------
+1     | 2025-07-01 12:04:56 | /home/user/file
+2     | 2025-06-27 15:18:02 | /home/user/directory
+3     | 2025-07-02 12:28:27 | /other-file
+
+Please enter a list of space-separated indices to delete.
+For example: 1 3 5-12 15
+
+>
 ```
 
 ### Empty
@@ -242,7 +144,7 @@ Usage: charon empty [--no-prompt]
 
 
 Available options:
-  --no-prompt              If enabled, will not ask before emptying the trash.
+  --no-prompt              Will not ask before emptying the trash.
 
   -h,--help                Show this help text
 ```
@@ -252,10 +154,16 @@ Available options:
 ```
 $ charon empty
 
-Entries:      8
-Total Files:  12
-Log size:     144.80K
-Size:         31.36K
+Index | Created             | Original
+--------------------------------------------------
+1     | 2025-07-01 12:04:56 | /home/user/file
+2     | 2025-06-27 15:18:02 | /home/user/directory
+3     | 2025-07-02 12:28:27 | /other-file
+
+Entries:      3
+Total Files:  5
+Log size:     1.38M
+Size:         223.00K
 
 Permanently delete all contents (y/n)?
 ```
@@ -285,17 +193,17 @@ Usage: charon restore [--force] [--no-prompt] [-i|--indices] [PATHS...]
 
 
 Available options:
-  --force                  If enabled, will forcibly overwrite restored path(s).
-                           Otherwise, collisions with existing paths will either
-                           throw an error (with --no-prompt) or prompt the user
-                           to decide.
+  --force                  Forcibly overwrites restored path(s). Otherwise,
+                           collisions with existing paths will either throw an
+                           error (with --no-prompt) or prompt the user to
+                           decide.
 
-  --no-prompt              If enabled, will not ask before restoring path(s).
-                           Collisions with existing paths will either error or
-                           overwrite, depending on --force.
+  --no-prompt              Will not ask before restoring path(s). Collisions
+                           with existing paths will either error or overwrite,
+                           depending on --force.
 
-  -i,--indices             If active, allows selecting by numeric index instead
-                           of trash name. Incompatible with explicit paths.
+  -i,--indices             Allows selecting by numeric index instead of trash
+                           name. Incompatible with explicit paths.
 
   -h,--help                Show this help text
 ```
@@ -308,6 +216,20 @@ $ charon delete foo baz
 
 # restore "foo" and "baz" to their original locations
 $ charon restore foo baz
+
+# restore delete via indices
+$ charon restore -i
+
+Index | Created             | Original
+--------------------------------------------------
+1     | 2025-07-01 12:04:56 | /home/user/file
+2     | 2025-06-27 15:18:02 | /home/user/directory
+3     | 2025-07-02 12:28:27 | /other-file
+
+Please enter a list of space-separated indices to restore.
+For example: 1 3 5-12 15
+
+>
 ```
 
 ## Information Commands
@@ -412,14 +334,15 @@ Size:         111.35M
 ### Convert
 
 ```
-Usage: charon convert (-d|--dest (cbor|fdo))
+Usage: charon convert (-d|--dest (cbor|fdo|json))
 
   Converts the backend.
 
 
 Available options:
-  -d,--dest (cbor|fdo)     Backend to which we convert the current backend. See
-                           --backend for more details
+  -d,--dest (cbor|fdo|json)
+                           Backend to which we convert the current backend. See
+                           --backend for more details.
 
   -h,--help                Show this help text
 ```
@@ -439,7 +362,6 @@ Usage: charon merge (-d|--dest PATH)
 
   Merges src (implicit or -t) trash home into dest. Collisions will throw an
   error.
-
 
 Available options:
   -d,--dest PATH           Path to the dest trash directory.

@@ -332,11 +332,11 @@ commandParser =
     delParser = Delete <$> pathsParser
     permDelParser =
       PermDelete
-        <$> noPromptParser "If enabled, will not ask before deleting path(s)."
+        <$> noPromptParser "Will not ask before deleting path(s)."
         <*> ((,) <$> indicesParser <*> mPathsParser)
     emptyParser =
       Empty
-        <$> noPromptParser "If enabled, will not ask before emptying the trash."
+        <$> noPromptParser "Will not ask before emptying the trash."
     restoreParser =
       Restore <$> do
         force <- forceParser restoreForceTxt
@@ -350,13 +350,13 @@ commandParser =
             }
     restoreForceTxt =
       mconcat
-        [ "If enabled, will forcibly overwrite restored path(s). Otherwise, ",
+        [ "Forcibly overwrites restored path(s). Otherwise, ",
           "collisions with existing paths will either throw an error ",
           "(with --no-prompt) or prompt the user to decide."
         ]
     restoreNoPromptTxt =
       mconcat
-        [ "If enabled, will not ask before restoring path(s). Collisions with ",
+        [ "Will not ask before restoring path(s). Collisions with ",
           "existing paths will either error or overwrite, depending on --force."
         ]
     listParser =
@@ -382,7 +382,7 @@ indicesParser =
         OA.short 'i',
         mkHelp
           $ mconcat
-            [ "If active, allows selecting by numeric index instead of trash name. ",
+            [ "Allows selecting by numeric index instead of trash name. ",
               "Incompatible with explicit paths."
             ]
       ]

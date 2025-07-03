@@ -429,7 +429,7 @@ getIndexedPaths actionStr IndicesStrategy idxFn = do
   -- to line up.
   coloring <- Index.getColoring ColoringDetect
   let formatted = Index.tabularSimpleNoSort coloring trashIndexSeq
-  putTextLn formatted
+  putTextLn $ "\n" <> formatted
 
   putTextLn
     $ "\nPlease enter a list of space-separated indices to "
