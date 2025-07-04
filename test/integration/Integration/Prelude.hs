@@ -185,7 +185,7 @@ captureCharonIntExceptionPure argList = do
   case result of
     Right _ ->
       error
-        "captureCharonExceptionLogs: Expected exception, received none"
+        "captureCharonLogsE: Expected exception, received none"
     Left ex -> do
       terminal <- readIORef terminalRef
       deletedPaths <- readIORef deletedPathsRef

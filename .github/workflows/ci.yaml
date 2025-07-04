@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - golden
 
   pull_request:
     branches:
@@ -23,15 +24,12 @@ jobs:
           - "9.12.2"
         platform:
           - os: "macos-latest"
-            set-env: "export"
             unit-trials: 10000
             int-trials: 1000
           - os: "ubuntu-latest"
-            set-env: "export"
             unit-trials: 10000
             int-trials: 1000
           - os: "windows-latest"
-            set-env: "set"
             unit-trials: 1000
             int-trials: 1000
     runs-on: ${{ matrix.platform.os }}
@@ -58,15 +56,26 @@ jobs:
         if: ${{ failure() && steps.unit.conclusion == 'failure' }}
         with:
           name: unit-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
-          path: test/unit/Unit/Data/Index/*
+          path: test/unit/Unit/Data/Index/*actual
+          retention-days: 1
 
       - name: Integration Tests
+        shell: bash
         run: |
-          ${{ matrix.platform.set-env }} INT_LOGS=1
+          export INT_LOGS=1
           cabal test integration --test-options '--hedgehog-tests ${{ matrix.platform.int-trials }} --hedgehog-discards 10000'
 
       - name: Functional Tests
-        run: cabal test functional
+        id: functional
+        run: cabal test functional --test-options '--size-cutoff 100000'
+
+      - uses: actions/upload-artifact@v4
+        name: Functional Tests Upload
+        if: ${{ failure() && steps.functional.conclusion == 'failure' }}
+        with:
+          name: functional-artifacts_${{ matrix.platform.os }}_${{ matrix.ghc }}
+          path: test/functional/goldens/*actual
+          retention-days: 1
 
       - name: Benchmarks
         if: ${{ matrix.platform.os == 'ubuntu-latest' }}
@@ -87,6 +96,7 @@ jobs:
           path: |
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
+          retention-days: 1
   nix:
     strategy:
       fail-fast: false
@@ -105,26 +115,7 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Compile & Test
-        run: |
-          set +e
-
-          out=$(nix build 2>&1)
-          ec=$?
-
-          regex=".*'(nix log \/nix\/store\/.*.drv)'.*"
-
-          if [[ $ec -ne 0 ]]; then
-            if [[ $out =~ $regex ]]; then
-              echo echo "*** Regex match ***"
-              log_cmd="${BASH_REMATCH[1]}"
-              $log_cmd | cat
-            else
-              echo "*** No regex match on output ***"
-              echo $out
-            fi
-          fi
-
-          exit $ec
+        run: nix build -Lv
   lint:
     runs-on: "ubuntu-latest"
     steps:

@@ -1,0 +1,106 @@
+Name:      dir-link
+Original:  <dir>/dir-link
+Type:      Symlink
+Size:      5.00B
+Created:   2020-05-31 12:00:00
+
+Name:      dir1
+Original:  <dir>/dir1
+Type:      Directory
+Size:      4.10K
+Created:   2020-05-31 12:00:00
+
+Name:      dir2
+Original:  <dir>/dir2
+Type:      Directory
+Size:      8.19K
+Created:   2020-05-31 12:00:00
+
+Name:      dir4
+Original:  <dir>/dir4
+Type:      Directory
+Size:      4.10K
+Created:   2020-05-31 12:00:00
+
+Name:      f1
+Original:  <dir>/f1
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      f2
+Original:  <dir>/f2
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      f3
+Original:  <dir>/f3
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      file-link
+Original:  <dir>/file-link
+Type:      Symlink
+Size:      5.00B
+Created:   2020-05-31 12:00:00
+
+Entries:      8
+Total Files:  7
+Log size:     0.00B
+Size:         16.00K 
+
+Name:      dir-link
+Original:  <dir>/dir-link
+Type:      Symlink
+Size:      5.00B
+Created:   2020-05-31 12:00:00
+
+Name:      dir1
+Original:  <dir>/dir1
+Type:      Directory
+Size:      4.10K
+Created:   2020-05-31 12:00:00
+
+Name:      dir2
+Original:  <dir>/dir2
+Type:      Directory
+Size:      8.19K
+Created:   2020-05-31 12:00:00
+
+Name:      dir4
+Original:  <dir>/dir4
+Type:      Directory
+Size:      4.10K
+Created:   2020-05-31 12:00:00
+
+Name:      f1
+Original:  <dir>/f1
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      f2
+Original:  <dir>/f2
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      f3
+Original:  <dir>/f3
+Type:      File
+Size:      0.00B
+Created:   2020-05-31 12:00:00
+
+Name:      file-link
+Original:  <dir>/file-link
+Type:      Symlink
+Size:      5.00B
+Created:   2020-05-31 12:00:00
+
+Entries:      8
+Total Files:  7
+Log size:     0.00B
+Size:         16.00K 
+

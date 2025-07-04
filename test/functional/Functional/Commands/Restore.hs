@@ -7,9 +7,7 @@ module Functional.Commands.Restore
   )
 where
 
-import Charon.Data.Metadata qualified as Metadata
 import Charon.Exception (RestoreCollisionE, TrashEntryNotFoundE)
-import Data.HashSet qualified as HashSet
 import FileSystem.OsPath (unsafeDecode)
 import Functional.Prelude
 
@@ -33,641 +31,511 @@ tests testEnv =
     testEnv' = appendTestDir "restore" <$> testEnv
 
 restoreOne :: IO TestEnv -> TestTree
-restoreOne getTestEnv = testCase "Restores a single file" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreOne" $ do
-    testDir <- getTestDir
-
-    let trashDir = testDir </>! ".trash"
-        f1 = testDir </>! "f1"
-
-    delArgList <- withSrArgsPathsM ["delete"] [f1]
-
-    -- SETUP
-
-    createFiles [f1]
-    assertPathsExist [f1]
-
-    -- delete to trash first
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist [f1]
-
-    -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
-    runCharon restoreArgList
-
-    -- file assertions
-    assertPathsExist [trashDir, f1]
-
-    -- trash structure assertions
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoreOne getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores a single file",
+        testName = testDirPrefix <> [osp|restoreOne|]
+      }
   where
-    delExpectedMetadata = mkMetadata 1 1 0 5
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreOne" $ do
+        testDir <- getTestDir
 
-    restoreExpectedIdxSet = HashSet.empty
-    restoreExpectedMetadata = Metadata.empty
+        let trashDir = testDir </>! ".trash"
+            f1 = testDir </>! "f1"
+
+        delArgList <- withSrArgsPathsM ["delete"] [f1]
+
+        -- SETUP
+
+        createFiles [f1]
+        assertPathsExist [f1]
+
+        -- delete to trash first
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist [f1]
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
+        runCharon restoreArgList
+
+        -- file assertions
+        assertPathsExist [trashDir, f1]
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoreMany :: IO TestEnv -> TestTree
-restoreMany getTestEnv = testCase "Restores several paths" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
-    testDir <- getTestDir
-
-    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
-        fileLinkToDelete = testDir </> [osp|file-link|]
-        dirLinkToDelete = testDir </> [osp|dir-link|]
-        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
-
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
-
-    -- SETUP
-    -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
-    -- test w/ a file in dir
-    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
-
-    assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
-    assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    assertSymlinksExist linksToDelete
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15),
-          ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymbolicLink, 5),
-          ("file-link", PathTypeSymbolicLink, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
-
-    -- RESTORE
-
-    -- do not restore f2
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f3", "dir1", "dir2", "file-link"]
-    runCharon restoreArgList
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f2", PathTypeFile, 5),
-          ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymbolicLink, 5)
-        ]
-
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM ["dir4"]
+restoreMany getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores several paths",
+        testName = testDirPrefix <> [osp|restoreMany|]
+      }
   where
-    delExpectedMetadata = mkMetadata 8 7 0 55
-    restoreExpectedMetadata = mkMetadata 3 3 0 20
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreMany" $ do
+        testDir <- getTestDir
+
+        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+            fileLinkToDelete = testDir </> [osp|file-link|]
+            dirLinkToDelete = testDir </> [osp|dir-link|]
+            linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+
+        -- SETUP
+        -- test w/ a nested dir
+        createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+        -- test w/ a file in dir
+        createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        createSymlinks
+          [ F fileLinkToDelete,
+            D dirLinkToDelete,
+            F $ testDir </>! "dir4" </>! "link"
+          ]
+
+        assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
+        assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        assertSymlinksExist linksToDelete
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
+        -- RESTORE
+
+        -- do not restore f2
+        restoreArgList <-
+          withSrArgsM
+            [ "restore",
+              "--no-prompt",
+              "f1",
+              "f3",
+              "dir1",
+              "dir2",
+              "file-link"
+            ]
+        runCharon restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM ["dir4"]
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoreIndices :: IO TestEnv -> TestTree
-restoreIndices getTestEnv = testCase "Restores with --indices" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreIndices" $ do
-    testDir <- getTestDir
-
-    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
-        fileLinkToDelete = testDir </> [osp|file-link|]
-        dirLinkToDelete = testDir </> [osp|dir-link|]
-        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
-
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
-
-    -- SETUP
-    -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
-    -- test w/ a file in dir
-    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
-
-    assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
-    assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    assertSymlinksExist linksToDelete
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15),
-          ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymbolicLink, 5),
-          ("file-link", PathTypeSymbolicLink, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
-
-    -- RESTORE
-
-    -- These are the indices for the same files as the previous test, in
-    -- in sorted order.
-    let modEnv = set' #strLine "2-3 5 7-8"
-
-    -- do not restore f2
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
-    runCharonEnv modEnv restoreArgList
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f2", PathTypeFile, 5),
-          ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymbolicLink, 5)
-        ]
-
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM ["dir4"]
+restoreIndices getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores with --indices",
+        testName = testDirPrefix <> [osp|restoreIndices|]
+      }
   where
-    delExpectedMetadata = mkMetadata 8 7 0 55
-    restoreExpectedMetadata = mkMetadata 3 3 0 20
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreIndices" $ do
+        testDir <- getTestDir
+
+        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+            fileLinkToDelete = testDir </> [osp|file-link|]
+            dirLinkToDelete = testDir </> [osp|dir-link|]
+            linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+
+        -- SETUP
+        -- test w/ a nested dir
+        createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+        -- test w/ a file in dir
+        createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
+
+        assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
+        assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        assertSymlinksExist linksToDelete
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
+        -- RESTORE
+
+        -- These are the indices for the same files as the previous test, in
+        -- in sorted order.
+        let modEnv = set' #strLine "2-3 5 7-8"
+
+        -- do not restore f2
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
+        runCharonEnv modEnv restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM ["dir4"]
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoreIndicesExit :: IO TestEnv -> TestTree
-restoreIndicesExit getTestEnv = testCase "Exits --indices" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreIndicesExit" $ do
-    testDir <- getTestDir
-
-    let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-        dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
-        fileLinkToDelete = testDir </> [osp|file-link|]
-        dirLinkToDelete = testDir </> [osp|dir-link|]
-        linksToDelete = [fileLinkToDelete, dirLinkToDelete]
-
-    delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
-
-    -- SETUP
-    -- test w/ a nested dir
-    createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
-    -- test w/ a file in dir
-    createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
-
-    assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
-    assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
-    assertSymlinksExist linksToDelete
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("dir1", PathTypeDirectory, 5),
-          ("dir2", PathTypeDirectory, 15),
-          ("dir4", PathTypeDirectory, 10),
-          ("dir-link", PathTypeSymbolicLink, 5),
-          ("file-link", PathTypeSymbolicLink, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
-
-    -- RESTORE
-
-    -- Throwing a 'quit' in the middle. Should abort successfully.
-    let modEnv = set' #strLine "2-3 quit 7-8"
-
-    -- do not restore f2
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
-    runCharonEnv modEnv restoreArgList
-
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet restoreIdxSet
-    delExpectedMetadata @=? restoreMetadata
+restoreIndicesExit getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Exits --indices",
+        testName = testDirPrefix <> [osp|restoreIndicesExit|]
+      }
   where
-    delExpectedMetadata = mkMetadata 8 7 0 55
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreIndicesExit" $ do
+        testDir <- getTestDir
+
+        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+            fileLinkToDelete = testDir </> [osp|file-link|]
+            dirLinkToDelete = testDir </> [osp|dir-link|]
+            linksToDelete = [fileLinkToDelete, dirLinkToDelete]
+
+        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+
+        -- SETUP
+        -- test w/ a nested dir
+        createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+        -- test w/ a file in dir
+        createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
+
+        assertPathsExist ((testDir </>!) <$> ["dir1", "dir2/dir3"])
+        assertPathsExist ((testDir </>! "dir2/dir3/foo") : filesToDelete)
+        assertSymlinksExist linksToDelete
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ linksToDelete)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
+
+        -- RESTORE
+
+        -- Throwing a 'quit' in the middle. Should abort successfully.
+        let modEnv = set' #strLine "2-3 quit 7-8"
+
+        -- do not restore f2
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
+        runCharonEnv modEnv restoreArgList
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoreUnknownError :: IO TestEnv -> TestTree
-restoreUnknownError getTestEnv = testCase "Restore unknown prints error" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
-    testDir <- getTestDir
-
-    let f1 = testDir </> [osp|f1|]
-    delArgList <- withSrArgsPathsM ["delete"] [f1]
-
-    -- SETUP
-
-    -- technically we do not need to have anything in the trash to attempt
-    -- a restore, but this way we can ensure the trash itself is set
-    -- up (i.e. dir exists w/ index), so that we can test the restore
-    -- failure only.
-    clearDirectory testDir
-    createFiles [f1]
-
-    -- delete to trash first
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist [f1]
-
-    -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "bad file"]
-    (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
-
-    assertMatch expectedEx ex
-    assertMatches expectedTerm term
-
-    -- trash structure assertions
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet restoreIdxSet
-    delExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoreUnknownError getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restore unknown prints error",
+        testName = testDirPrefix <> [osp|restoreUnknownError|]
+      }
   where
-    expectedEx = Exact "No entry for 'bad file'"
-    expectedTerm = []
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreUnknownError" $ do
+        testDir <- getTestDir
 
-    delExpectedMetadata = mkMetadata 1 1 0 5
+        let f1 = testDir </> [osp|f1|]
+        delArgList <- withSrArgsPathsM ["delete"] [f1]
+
+        -- SETUP
+
+        -- technically we do not need to have anything in the trash to attempt
+        -- a restore, but this way we can ensure the trash itself is set
+        -- up (i.e. dir exists w/ index), so that we can test the restore
+        -- failure only.
+        clearDirectory testDir
+        createFiles [f1]
+
+        -- delete to trash first
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist [f1]
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "bad file"]
+        exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` exBs `concatBs` bs2
 
 restoreCollisionError :: IO TestEnv -> TestTree
-restoreCollisionError getTestEnv = testCase "Restore collision prints error" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
-    testDir <- getTestDir
-
-    let f1 = testDir </>! "f1"
-    delArgList <- withSrArgsPathsM ["delete"] [f1]
-
-    -- SETUP
-
-    createFiles [f1]
-
-    -- delete to trash first and recreate
-    runCharon delArgList
-    createFiles [f1]
-
-    -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM [("f1", PathTypeFile, 5)]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
-    (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
-
-    assertMatch expectedEx ex
-    assertMatches expectedTerm term
-
-    -- trash structure assertions
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet restoreIdxSet
-    delExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoreCollisionError getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restore collision prints error",
+        testName = testDirPrefix <> [osp|restoreCollisionError|]
+      }
   where
-    expectedEx =
-      Outfix
-        "Cannot restore the trash file 'f1' as one exists at the original location"
-        "restore/restoreCollisionError/f1'"
-    expectedTerm = []
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreCollisionError" $ do
+        testDir <- getTestDir
 
-    delExpectedMetadata = mkMetadata 1 1 0 5
+        let f1 = testDir </>! "f1"
+        delArgList <- withSrArgsPathsM ["delete"] [f1]
+
+        -- SETUP
+
+        createFiles [f1]
+
+        -- delete to trash first and recreate
+        runCharon delArgList
+        createFiles [f1]
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
+        exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` exBs `concatBs` bs2
 
 restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
-restoreSimultaneousCollisionError getTestEnv = testCase desc $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
-    testDir <- getTestDir
-
-    let f1 = testDir </>! "f1"
-        f2 = testDir </>! "f2"
-        f3 = testDir </>! "f3"
-    delArgList <- withSrArgsPathsM ["delete"] [f1]
-
-    -- SETUP
-
-    createFiles [f1, f2, f3]
-
-    -- delete twice
-    runCharon (delArgList <> (unsafeDecode <$> [f2, f3]))
-    createFiles [f1]
-    runCharon delArgList
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM2
-        [ ("f1", "f1", PathTypeFile, 5),
-          ("f1 (1)", "f1", PathTypeFile, 5),
-          ("f2", "f2", PathTypeFile, 5),
-          ("f3", "f3", PathTypeFile, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f1 (1)", "f2"]
-    (ex, term) <- captureCharonExceptionTerminal @RestoreCollisionE restoreArgList
-
-    assertMatch expectedEx ex
-    assertMatches expectedTerm term
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM2
-        [ ("f1 (1)", "f1", PathTypeFile, 5),
-          ("f2", "f2", PathTypeFile, 5),
-          ("f3", "f3", PathTypeFile, 5)
-        ]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoreSimultaneousCollisionError getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restore simultaneous collision prints error",
+        testName = testDirPrefix <> [osp|restoreSimultaneousCollisionError|]
+      }
   where
-    desc = "Restore simultaneous collision prints error"
-    expectedEx =
-      Outfix
-        "Cannot restore the trash file 'f1 (1)' as one exists at the original location"
-        "estore/restoreSimultaneousCollisionError/f1'"
-    expectedTerm =
-      [ Exact "Restored paths:",
-        Outfix "- " "restore/restoreSimultaneousCollisionError/f1",
-        Exact ""
-      ]
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoreSimultaneousCollisionError" $ do
+        testDir <- getTestDir
 
-    delExpectedMetadata = mkMetadata 4 4 0 20
-    restoreExpectedMetadata = mkMetadata 3 3 0 15
+        let f1 = testDir </>! "f1"
+            f2 = testDir </>! "f2"
+            f3 = testDir </>! "f3"
+        delArgList <- withSrArgsPathsM ["delete"] [f1]
+
+        -- SETUP
+
+        createFiles [f1, f2, f3]
+
+        -- delete twice
+        runCharon (delArgList <> (unsafeDecode <$> [f2, f3]))
+        createFiles [f1]
+        runCharon delArgList
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f1 (1)", "f2"]
+        exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` exBs `concatBs` bs2
 
 restoresSome :: IO TestEnv -> TestTree
-restoresSome getTestEnv = testCase "Restores some, errors on others" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
-    testDir <- getTestDir
-
-    let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
-        filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
-    delArgList <- withSrArgsPathsM ["delete"] realFiles
-
-    -- setup
-    clearDirectory testDir
-    createFiles realFiles
-    assertPathsExist realFiles
-
-    -- delete to trash first
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist realFiles
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f5", PathTypeFile, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-    restoreArgList <- withSrArgsM ("restore" : "--no-prompt" : filesTryRestore)
-    (ex, term) <- captureCharonExceptionTerminal @TrashEntryNotFoundE restoreArgList
-
-    -- file assertions
-    assertPathsDoNotExist ((testDir </>!) <$> ["f3", "f4"])
-    assertPathsExist ((testDir </>!) <$> ["f1", "f2"])
-
-    assertMatch expectedEx ex
-    assertMatches expectedTerm term
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <- mkPathDataSetM [("f5", PathTypeFile, 5)]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoresSome getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores some, errors on others",
+        testName = testDirPrefix <> [osp|restoresSome|]
+      }
   where
-    expectedEx = Exact "No entry for 'f3'"
-    expectedTerm =
-      [ Exact "Restored paths:",
-        Outfixes "- " [] "restore/restoresSome/f1",
-        Outfixes "- " [] "restore/restoresSome/f2",
-        Exact ""
-      ]
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresSome" $ do
+        testDir <- getTestDir
 
-    delExpectedMetadata = mkMetadata 3 3 0 15
+        let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
+            filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
+        delArgList <- withSrArgsPathsM ["delete"] realFiles
 
-    restoreExpectedMetadata = mkMetadata 1 1 0 5
+        -- setup
+        clearDirectory testDir
+        createFiles realFiles
+        assertPathsExist realFiles
+
+        -- delete to trash first
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist realFiles
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+        restoreArgList <- withSrArgsM ("restore" : "--no-prompt" : filesTryRestore)
+        exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir restoreArgList
+
+        -- file assertions
+        assertPathsDoNotExist ((testDir </>!) <$> ["f3", "f4"])
+        assertPathsExist ((testDir </>!) <$> ["f1", "f2"])
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` exBs `concatBs` bs2
 
 restoresWildcards :: IO TestEnv -> TestTree
-restoresWildcards getTestEnv = testCase "Restores several paths via wildcards" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresWildcards" $ do
-    testDir <- getTestDir
-
-    let filesToRestore = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
-        otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-    delArgList <- withSrArgsPathsM ["delete"] (filesToRestore <> otherFiles)
-
-    -- SETUP
-    createFiles (filesToRestore <> otherFiles)
-    assertPathsExist (filesToRestore ++ otherFiles)
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (filesToRestore ++ otherFiles)
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("1f", PathTypeFile, 5),
-          ("2f", PathTypeFile, 5),
-          ("3f", PathTypeFile, 5),
-          ("g1", PathTypeFile, 5),
-          ("g2", PathTypeFile, 5),
-          ("g3", PathTypeFile, 5),
-          ("1g", PathTypeFile, 5),
-          ("2g", PathTypeFile, 5),
-          ("3g", PathTypeFile, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-
-    -- leave g alone
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*f*"]
-    runCharon restoreArgList
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("g1", PathTypeFile, 5),
-          ("g2", PathTypeFile, 5),
-          ("g3", PathTypeFile, 5),
-          ("1g", PathTypeFile, 5),
-          ("2g", PathTypeFile, 5),
-          ("3g", PathTypeFile, 5)
-        ]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoresWildcards getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores several paths via wildcards",
+        testName = testDirPrefix <> [osp|restoresWildcards|]
+      }
   where
-    delExpectedMetadata = mkMetadata 12 12 0 60
-    restoreExpectedMetadata = mkMetadata 6 6 0 30
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresWildcards" $ do
+        testDir <- getTestDir
+
+        let filesToRestore = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
+            otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
+        delArgList <- withSrArgsPathsM ["delete"] (filesToRestore <> otherFiles)
+
+        -- SETUP
+        createFiles (filesToRestore <> otherFiles)
+        assertPathsExist (filesToRestore ++ otherFiles)
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (filesToRestore ++ otherFiles)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+
+        -- leave g alone
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*f*"]
+        runCharon restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoresSomeWildcards :: IO TestEnv -> TestTree
-restoresSomeWildcards getTestEnv = testCase "Restores some paths via wildcards" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresSomeWildcards" $ do
-    testDir <- getTestDir
-
-    let filesToRestore =
-          [ "h1",
-            "h2",
-            "h3",
-            "1h",
-            "2h",
-            "3h",
-            "fooAbar"
-          ]
-        otherFiles =
-          [ "fooBadbar",
-            "fooXbar",
-            "g1",
-            "g2",
-            "g3",
-            "1g",
-            "2g",
-            "3g"
-          ]
-        testFilesToRestore = (testDir </>!) <$> filesToRestore
-        testFiles = (testDir </>!) <$> filesToRestore <> otherFiles
-
-    delArgList <- withSrArgsPathsM ["delete"] testFiles
-
-    -- SETUP
-    createFiles testFiles
-    assertPathsExist testFiles
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist testFiles
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("h1", PathTypeFile, 5),
-          ("h2", PathTypeFile, 5),
-          ("h3", PathTypeFile, 5),
-          ("1h", PathTypeFile, 5),
-          ("2h", PathTypeFile, 5),
-          ("3h", PathTypeFile, 5),
-          ("fooAbar", PathTypeFile, 5),
-          ("fooBadbar", PathTypeFile, 5),
-          ("fooXbar", PathTypeFile, 5),
-          ("g1", PathTypeFile, 5),
-          ("g2", PathTypeFile, 5),
-          ("g3", PathTypeFile, 5),
-          ("1g", PathTypeFile, 5),
-          ("2g", PathTypeFile, 5),
-          ("3g", PathTypeFile, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM []
-
-    -- RESTORE
-
-    -- We want a collision to force an error
-    createFiles [testDir </>! "fooBadbar"]
-
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*h*", "foo**bar", "*g*"]
-    runCharonException @RestoreCollisionE restoreArgList
-
-    -- file assertions
-    -- 1. Every restore attempt before fooBarBar should succeed.
-    assertPathsExist testFilesToRestore
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("fooBadbar", PathTypeFile, 5),
-          ("fooXbar", PathTypeFile, 5),
-          ("g1", PathTypeFile, 5),
-          ("g2", PathTypeFile, 5),
-          ("g3", PathTypeFile, 5),
-          ("1g", PathTypeFile, 5),
-          ("2g", PathTypeFile, 5),
-          ("3g", PathTypeFile, 5)
-        ]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM []
+restoresSomeWildcards getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores some paths via wildcards",
+        testName = testDirPrefix <> [osp|restoresSomeWildcards|]
+      }
   where
-    delExpectedMetadata = mkMetadata 15 15 0 75
-    restoreExpectedMetadata = mkMetadata 8 8 0 40
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresSomeWildcards" $ do
+        testDir <- getTestDir
+
+        let filesToRestore =
+              [ "h1",
+                "h2",
+                "h3",
+                "1h",
+                "2h",
+                "3h",
+                "fooAbar"
+              ]
+            otherFiles =
+              [ "fooBadbar",
+                "fooXbar",
+                "g1",
+                "g2",
+                "g3",
+                "1g",
+                "2g",
+                "3g"
+              ]
+            testFilesToRestore = (testDir </>!) <$> filesToRestore
+            testFiles = (testDir </>!) <$> filesToRestore <> otherFiles
+
+        delArgList <- withSrArgsPathsM ["delete"] testFiles
+
+        -- SETUP
+        createFiles testFiles
+        assertPathsExist testFiles
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist testFiles
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- RESTORE
+
+        -- We want a collision to force an error
+        createFiles [testDir </>! "fooBadbar"]
+
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*h*", "foo**bar", "*g*"]
+        exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
+
+        -- file assertions
+        -- 1. Every restore attempt before fooBarBar should succeed.
+        assertPathsExist testFilesToRestore
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` exBs `concatBs` bs2
 
 -- Wildcard literals are not valid in windows paths
 
@@ -679,125 +547,100 @@ wildcardLiteralTests testEnv =
   ]
 
 restoresLiteralWildcardOnly :: IO TestEnv -> TestTree
-restoresLiteralWildcardOnly getTestEnv = testCase "Restores filename w/ literal wildcard" $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresLiteralWildcardOnly" $ do
-    testDir <- getTestDir
-
-    let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
-        testFiles = (testDir </>!) <$> files
-        testWcLiteral = testDir </>! "*"
-    delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
-
-    -- SETUP
-    createFiles (testWcLiteral : testFiles)
-    assertPathsExist (testWcLiteral : testFiles)
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (testWcLiteral : testFiles)
-
-    -- trash structure assertions
-    delExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("1f", PathTypeFile, 5),
-          ("2f", PathTypeFile, 5),
-          ("3f", PathTypeFile, 5),
-          ("*", PathTypeFile, 5)
-        ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM [ ]
-
-    -- RESTORE
-
-    -- leave f alone
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "\\*"]
-    runCharon restoreArgList
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <-
-      mkPathDataSetM
-        [ ("f1", PathTypeFile, 5),
-          ("f2", PathTypeFile, 5),
-          ("f3", PathTypeFile, 5),
-          ("1f", PathTypeFile, 5),
-          ("2f", PathTypeFile, 5),
-          ("3f", PathTypeFile, 5)
-        ]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM [ ]
+restoresLiteralWildcardOnly getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores filename w/ literal wildcard",
+        testName = testDirPrefix <> [osp|restoresLiteralWildcardOnly|]
+      }
   where
-    delExpectedMetadata = mkMetadata 7 7 0 35
-    restoreExpectedMetadata = mkMetadata 6 6 0 30
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresLiteralWildcardOnly" $ do
+        testDir <- getTestDir
+
+        let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
+            testFiles = (testDir </>!) <$> files
+            testWcLiteral = testDir </>! "*"
+        delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
+
+        -- SETUP
+        createFiles (testWcLiteral : testFiles)
+        assertPathsExist (testWcLiteral : testFiles)
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (testWcLiteral : testFiles)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM [ ]
+
+        -- RESTORE
+
+        -- leave f alone
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "\\*"]
+        runCharon restoreArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM [ ]
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
-restoresCombinedWildcardLiteral getTestEnv = testCase desc $ do
-  testEnv <- getTestEnv
-  usingReaderT testEnv $ appendTestDirM "restoresCombinedWildcardLiteral" $ do
-    testDir <- getTestDir
-
-    let files = ["yxxfoo", "yxxbar", "yxxbaz"]
-        wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
-        testFiles = (testDir </>!) <$> files
-        testWcLiterals = (testDir </>!) <$> wcLiterals
-    delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
-
-    -- SETUP
-    createFiles (testWcLiterals <> testFiles)
-    assertPathsExist (testWcLiterals <> testFiles)
-
-    runCharon delArgList
-
-    -- file assertions
-    assertPathsDoNotExist (testWcLiterals <> testFiles)
-
-    -- trash structure assertions
-    delExpectedIdxSet <- mkPathDataSetM
-      [ ("yxxfoo", PathTypeFile, 5),
-        ("yxxbar", PathTypeFile, 5),
-        ("yxxbaz", PathTypeFile, 5),
-        ("y*xxfoo", PathTypeFile, 5),
-        ("y*xxbar", PathTypeFile, 5),
-        ("y*xxbaz", PathTypeFile, 5)
-      ]
-    (delIdxSet, delMetadata) <- runIndexMetadataM
-    assertSetEq delExpectedIdxSet delIdxSet
-    delExpectedMetadata @=? delMetadata
-    assertFdoDirectorySizesM [ ]
-
-    -- RESTORE
-
-    restoreArgList <- withSrArgsM ["restore", "--no-prompt", "y\\*xx*"]
-    runCharon restoreArgList
-
-    -- file assertions
-    assertPathsExist testWcLiterals
-
-    -- trash structure assertions
-    restoreExpectedIdxSet <- mkPathDataSetM
-      [ ("yxxfoo", PathTypeFile, 5),
-        ("yxxbar", PathTypeFile, 5),
-        ("yxxbaz", PathTypeFile, 5)
-      ]
-    (restoreIdxSet, restoreMetadata) <- runIndexMetadataM
-    assertSetEq restoreExpectedIdxSet restoreIdxSet
-    restoreArgListExpectedMetadata @=? restoreMetadata
-    assertFdoDirectorySizesM [ ]
+restoresCombinedWildcardLiteral getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores filename w/ literal * and wildcard",
+        testName = testDirPrefix <> [osp|restoresCombinedWildcardLiteral|]
+      }
   where
-    desc = "Restores filename w/ literal * and wildcard"
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresCombinedWildcardLiteral" $ do
+        testDir <- getTestDir
 
-    delExpectedMetadata = mkMetadata 6 6 0 30
-    restoreArgListExpectedMetadata = mkMetadata 3 3 0 15
+        let files = ["yxxfoo", "yxxbar", "yxxbaz"]
+            wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
+            testFiles = (testDir </>!) <$> files
+            testWcLiterals = (testDir </>!) <$> wcLiterals
+        delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
+
+        -- SETUP
+        createFiles (testWcLiterals <> testFiles)
+        assertPathsExist (testWcLiterals <> testFiles)
+
+        runCharon delArgList
+
+        -- file assertions
+        assertPathsDoNotExist (testWcLiterals <> testFiles)
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM [ ]
+
+        -- RESTORE
+
+        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "y\\*xx*"]
+        runCharon restoreArgList
+
+        -- file assertions
+        assertPathsExist testWcLiterals
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM [ ]
+
+        bs2 <- captureIndexBs testDir
+        pure $ bs1 `concatBs` bs2
 
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
 wildcardLiteralTests = const []
 #endif
+
+testDirPrefix :: OsString
+testDirPrefix = [osstr|restore_|]

@@ -33,7 +33,9 @@
       inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # FIXME: Remove once fork no longer needed.
+    # TODO: [Haskeline override]
+    #
+    # Remove once new release in nixpkgs.
     haskeline = {
       url = "github:haskell/haskeline";
       flake = false;
@@ -45,7 +47,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.nix-hs-utils.follows = "nix-hs-utils";
 
-      # FIXME: Remove once merged.
+      # see TODO: [Haskeline override]
       inputs.haskeline.follows = "haskeline";
 
       inputs.algebra-simple.follows = "algebra-simple";
@@ -108,6 +110,10 @@
             overrides =
               final: prev:
               {
+                # These are flaky.
+                auto-update = hlib.dontCheck prev.auto-update;
+
+                # see TODO: [Haskeline override]
                 haskeline = hlib.dontCheck (final.callCabal2nix "haskeline" inputs.haskeline { });
 
                 path = hlib.dontCheck prev.path_0_9_6;

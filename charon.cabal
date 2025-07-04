@@ -224,7 +224,7 @@ test-suite unit
     , unordered-containers
 
   hs-source-dirs:   test/unit
-  ghc-options:      -threaded -with-rtsopts=-N
+  ghc-options:      -threaded
   default-language: GHC2021
 
 test-suite integration
@@ -280,6 +280,7 @@ test-suite functional
 
   build-depends:
     , base
+    , bytestring
     , charon
     , effects-fs
     , effects-logger
@@ -289,6 +290,7 @@ test-suite functional
     , filepath
     , pretty-simple
     , tasty
+    , tasty-golden
     , tasty-hunit
     , test-utils
     , text

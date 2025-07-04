@@ -22,9 +22,7 @@ module Functional.Prelude.FuncEnv
     -- ** Runners
     runCharon,
     runCharonEnv,
-    runCharonException,
-    runIndexMetadataM,
-    runIndexMetadataTestDirM,
+    runCharonE,
 
     -- *** Data capture
     captureCharon,
@@ -32,13 +30,10 @@ module Functional.Prelude.FuncEnv
     captureCharonLogs,
     captureCharonEnvLogs,
     captureCharonException,
-    captureCharonExceptionLogs,
-    captureCharonExceptionTerminal,
+    captureCharonLogsE,
+    captureCharonTermE,
 
     -- * Misc
-    mkPathDataSetM,
-    mkPathDataSetM2,
-    mkPathDataSetTestDirM,
     getTestDir,
     assertFdoDirectorySizesM,
     assertFdoDirectorySizesTestDirM,
@@ -47,31 +42,16 @@ module Functional.Prelude.FuncEnv
   )
 where
 
-import Charon qualified
 import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
 import Charon.Backend.Data qualified as Backend
 import Charon.Backend.Fdo.DirectorySizes (DirectorySizes (MkDirectorySizes))
 import Charon.Backend.Fdo.DirectorySizes qualified as DirectorySizes
-import Charon.Data.Metadata (Metadata)
-import Charon.Data.PathData
-  ( PathData
-      ( UnsafePathData,
-        created,
-        fileName,
-        originalPath,
-        pathType,
-        size
-      ),
-  )
-import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude
 import Charon.Runner qualified as Runner
 import Charon.Runner.Toml (TomlConfigP2)
 import Charon.Utils qualified as Utils
-import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
@@ -89,7 +69,7 @@ import Effects.System.Terminal qualified as Term
 import Effects.Time
   ( MonadTime (getMonotonicTime, getSystemZonedTime),
   )
-import FileSystem.OsPath (unsafeDecode, unsafeEncodeValid)
+import FileSystem.OsPath (unsafeDecode)
 import GHC.Exts (IsList (toList))
 import System.Environment qualified as SysEnv
 import System.Exit (die)
@@ -202,11 +182,10 @@ instance
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
   getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
-  -- Default to zero because path sizes are inconcsistent and difficult to
-  -- mock.
-  --
-  -- See NOTE: [Windows getFileSize]
-  getFileSize _ = pure 0
+  -- Real size. This makes our lives easier as we do not have to mock it
+  -- (hence can use difficult to mock posix functions directly), though it
+  -- means we need separate files for windows/osx/linux.
+  getFileSize = liftIO . PR.getFileSize
   getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with
@@ -279,9 +258,6 @@ instance
 instance MonadTime (FuncIO env) where
   getSystemZonedTime = pure $ ZonedTime localTime utc
   getMonotonicTime = pure 0
-
-fixedTimestamp :: Timestamp
-fixedTimestamp = MkTimestamp localTime
 
 localTime :: LocalTime
 localTime = LocalTime (toEnum 59_000) midday
@@ -396,8 +372,8 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
       throwM ex
 
 -- | Runs Charon, catching the expected exception.
-runCharonException :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
-runCharonException = void . captureCharonExceptionLogs @e
+runCharonE :: forall e m. (Exception e, MonadIO m) => [String] -> m ()
+runCharonE = void . captureCharonLogsE @e
 
 -- | Runs charon and captures a thrown exception.
 captureCharonException ::
@@ -406,27 +382,27 @@ captureCharonException ::
   -- Args.
   [String] ->
   m Text
-captureCharonException = fmap (view _1) . captureCharonExceptionLogs @e
+captureCharonException = fmap (view _1) . captureCharonLogsE @e
 
 -- | Runs charon and captures a thrown exception and logs.
-captureCharonExceptionLogs ::
+captureCharonLogsE ::
   forall e m.
   (Exception e, MonadIO m) =>
   -- Args.
   [String] ->
   m (Text, [Text])
-captureCharonExceptionLogs =
+captureCharonLogsE =
   fmap (\(ex, _, ls) -> (ex, ls))
     . captureCharonExceptionTerminalLogs @e
 
 -- | Runs charon and captures a thrown exception and terminal.
-captureCharonExceptionTerminal ::
+captureCharonTermE ::
   forall e m.
   (Exception e, MonadIO m) =>
   -- Args.
   [String] ->
   m (Text, [Text])
-captureCharonExceptionTerminal =
+captureCharonTermE =
   fmap (\(ex, term, _) -> (ex, term))
     . captureCharonExceptionTerminalLogs @e
 
@@ -452,7 +428,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
             case result of
               Right _ ->
                 error
-                  "captureCharonExceptionLogs: Expected exception, received none"
+                  "captureCharonLogsE: Expected exception, received none"
               Left ex -> do
                 term <- T.lines <$> readIORef terminalRef
                 logs <- T.lines <$> readIORef logsRef
@@ -470,166 +446,6 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
   where
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
-
--- | Runs Charon's Index and Metadata commands, using the TestEnv to determine
--- the test directory.
-runIndexMetadataM :: TestM (HashSet PathData, Metadata)
-runIndexMetadataM = do
-  testDir <- getTestDir
-  runIndexMetadataTestDirM testDir
-
--- | Runs Charon's Index and Metadata commands with the given test directory.
-runIndexMetadataTestDirM :: OsPath -> TestM (HashSet PathData, Metadata)
-runIndexMetadataTestDirM testDir = do
-  env <- ask
-  terminalRef <- newIORef ""
-  logsRef <- newIORef ""
-  charStream <- newIORef altAnswers
-
-  let trashDir = env ^. #trashDir
-      backend = env ^. #backend
-      funcEnv =
-        MkFuncEnv
-          { trashHome = MkPathI (testDir </> trashDir),
-            backend,
-            namespace = "functional",
-            terminalRef,
-            logsRef,
-            charStream,
-            strLine = "metadata_answer"
-          }
-
-  -- Need to canonicalize due to windows aliases
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
-
-  idx <- liftIO $ fmap (view _1) . view #unIndex <$> runFuncIO Charon.getIndex funcEnv
-  mdata <- liftIO $ runFuncIO Charon.getMetadata funcEnv
-
-  -- TODO:
-  --
-  -- This is really not great. Basically, the sizes are non-deterministic so
-  -- we set them to zero to avoid test failures.
-  --
-  -- A better solution would be to revamp the entire test suite. Use golden
-  -- tests probably, and only assert things we care about e.g. paths.
-  --
-  -- While we are at it, we may want to see if we can trim down the tests
-  -- complexity, for instance, modifying the environment is not simple.
-  --
-  -- Alas, this is a lot of work.
-  let mdata' = set' #size (fromℤ 0) mdata
-
-  pure (foldl' (addSet tmpDir) HSet.empty idx, mdata')
-  where
-    addSet :: OsPath -> HashSet PathData -> PathData -> HashSet PathData
-    addSet tmp acc pd =
-      let fixPath =
-            MkPathI
-              . unsafeEncodeValid
-              . T.unpack
-              . T.replace (T.pack $ unsafeDecode tmp) ""
-              . T.pack
-              . unsafeDecode
-              . view #unPathI
-       in HSet.insert
-            (set' #size (fromℤ 0) $ over' #originalPath fixPath pd)
-            acc
-
--- | Transforms the list of filepaths into a Set PathData i.e. for each @p@,
---
--- @
--- { fileName = p,
---   originalPath = testDir </> p
---   created = fixedTimestamp
--- }
--- @
---
--- The type of PathData that is returned depends on the test env's current
--- backend.
-mkPathDataSetM :: [(String, PathType, Integer)] -> TestM (HashSet PathData)
-mkPathDataSetM paths = do
-  testDir <- getTestDir
-  mkPathDataSetTestDirM testDir paths
-
-{- ORMOLU_DISABLE -}
-
--- | Like 'mkPathDataSetM', except uses the given path as the test directory,
--- rather than having it determined by the TestEnv.
-mkPathDataSetTestDirM ::
-  OsPath ->
-  [(String, PathType, Integer)] ->
-  TestM (HashSet PathData)
-mkPathDataSetTestDirM testDir pathData = do
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
-  let testDir' =
-        unsafeEncodeValid
-          $ T.unpack
-          $ T.replace (T.pack $ unsafeDecode tmpDir) "" (T.pack $ unsafeDecode testDir)
-
-  pure
-    $ HSet.fromList
-    $ pathData
-    <&> \(p, pathType, _sizeNat) ->
-      let p' = unsafeEncodeValid p
-      -- NOTE: [Windows getFileSize]
-      --
-      -- Unlike files, the symlinks sizes are not mocked. While our
-      -- expected value of 5 seems to work for posix, on windows they
-      -- apparently have size 0. We could try to mock these instead, however
-      -- that is difficult as the relevant MonadPosixC function
-      -- (getFileStatus) involves foreign pointers.
-      --
-      -- Thus we do the easy thing here and zero everything out.
-      --
-      -- UPDATE: We now do the same thing for posix too, since we use the same
-      -- difficult to mock function.
-          size = fromℤ 0
-       in UnsafePathData
-            { fileName = MkPathI p',
-              originalPath = MkPathI (testDir' </> p'),
-              created = fixedTimestamp,
-              pathType = MkPathTypeW pathType,
-              size
-            }
-
--- | Like 'mkPathDataSetM', except takes two paths for when the fileName and
--- originalPath differ i.e. for each @(p, q)@
---
--- @
--- { fileName = p,
---   originalPath = testDir </> q
---   created = fixedTimestamp
--- }
--- @
-mkPathDataSetM2 :: [(String, String, PathType, Integer)] -> TestM (HashSet PathData)
-mkPathDataSetM2 pathData = do
-  testDir <- getTestDir
-  tmpDir <- PR.canonicalizePath =<< PR.getTemporaryDirectory
-  let testDir' =
-        unsafeEncodeValid
-          $ T.unpack
-          $ T.replace
-            (T.pack $ unsafeDecode tmpDir)
-            ""
-            (T.pack $ unsafeDecode testDir)
-
-  pure
-    $ HSet.fromList
-    $ pathData
-    <&> \(fn, opath, pathType, _sizeNat) ->
-      -- See NOTE: [Windows getFileSize]
-      let fn' = unsafeEncodeValid fn
-          opath' = unsafeEncodeValid opath
-          size = fromℤ 0
-       in UnsafePathData
-            { fileName = MkPathI fn',
-              originalPath = MkPathI (testDir' </> opath'),
-              created = fixedTimestamp,
-              pathType = MkPathTypeW pathType,
-              size
-            }
-
-{- ORMOLU_ENABLE -}
 
 -- | Returns the full test dir for the given environment i.e.
 --

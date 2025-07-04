@@ -1,0 +1,1 @@
+The trash files directory was not found at '<dir>/.trash/files' despite the trash home existing. This can be fixed by manually creating the directory or resetting everything (i.e. charon empty --no-prompt).
