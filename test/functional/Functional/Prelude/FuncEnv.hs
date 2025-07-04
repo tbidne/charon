@@ -202,11 +202,10 @@ instance
   pathIsSymbolicLink = liftIO . PR.pathIsSymbolicLink
   getTemporaryDirectory = liftIO PR.getTemporaryDirectory
 
-  -- Default to zero because path sizes are inconcsistent and difficult to
-  -- mock.
-  --
-  -- See NOTE: [Windows getFileSize]
-  getFileSize _ = pure 0
+  -- Real size. This makes our lives easier as we do not have to mock it
+  -- (hence can use difficult to mock posix functions directly), though it
+  -- means we need separate files for windows/osx/linux.
+  getFileSize = liftIO . PR.getFileSize
   getSymbolicLinkTarget = liftIO . PR.getSymbolicLinkTarget
 
   -- Redirecting the xdg state to the trash dir so that we do not interact with

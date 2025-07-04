@@ -47,7 +47,8 @@ import Control.Category as X (Category ((.)), (>>>))
 import Control.DeepSeq as X (NFData)
 import Control.Exception as X (IOException)
 import Control.Exception.Utils as X
-  ( catchSync,
+  ( TextException,
+    catchSync,
     catchesSync,
     exitFailure,
     throwString,

@@ -86,7 +86,6 @@ import Charon.Prelude
 import Control.Exception (Exception (toException), SomeException (SomeException))
 import Control.Exception.Annotation.Utils (ExceptionProxy (MkExceptionProxy))
 import Control.Exception.Annotation.Utils qualified as AnnUtils
-import Control.Exception.Utils (TextException)
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Char8 qualified as C8
 import Data.ByteString.Lazy qualified as BSL

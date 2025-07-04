@@ -20,6 +20,7 @@ import GHC.Conc (setUncaughtExceptionHandler)
 import System.Environment.Guard (ExpectEnv (ExpectEnvSet), guardOrElse')
 import System.OsPath (encodeUtf)
 import Test.Tasty qualified as Tasty
+import Test.Tasty.Golden (DeleteOutputFile (OnPass))
 
 -- | Runs functional tests.
 main :: IO ()
@@ -27,6 +28,7 @@ main = do
   setUncaughtExceptionHandler $ \ex -> putStrLn ("\n" <> displayException ex)
 
   Tasty.defaultMain
+    $ Tasty.localOption OnPass
     $ Tasty.withResource setup teardown
     $ \env ->
       let setBackend b = set' #backend b <$> env

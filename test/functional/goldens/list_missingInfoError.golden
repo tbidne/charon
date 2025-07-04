@@ -1,0 +1,1 @@
+The file 'bar.<ext>' was not found in the trash '<dir>/.trash' index despite existing in the trash itself. This can be fixed by manually deleting the entry or deleting everything (i.e. charon empty --no-prompt).

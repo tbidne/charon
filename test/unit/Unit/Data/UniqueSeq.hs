@@ -23,6 +23,20 @@ import Hedgehog.Range qualified as Range
 import Unit.Prelude
 import Utils qualified
 
+-- NOTE: Pretty strange behavior. Unit tests were dying on CI, but the logs
+-- were useless i.e. there was no obvious test failure. The test suite itself
+-- just crashed.
+--
+-- This is semi-reproducible if we comment out the tests in this module and
+-- UniqueSeqNE and run the unit tests. My _guess_ is that the crash is due
+-- to the fact that haskeline is not thread-safe, so the concurrency causes
+-- a crash sometimes. These tests here "protect" the test in some way, due
+-- to them being slow. When they're off, however, we have multiple tests
+-- invoking haskeline in such a way as to cause a crash.
+--
+-- This is just a guess. In any case, disabling concurrency in the cabal
+-- is the apparent fix.
+
 tests :: TestTree
 tests =
   testGroup

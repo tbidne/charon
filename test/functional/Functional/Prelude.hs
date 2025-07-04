@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Prelude for functional test suite.
@@ -8,6 +10,11 @@ module Functional.Prelude
 
     -- * Lifted HUnit
     (@=?),
+
+    -- * Golden Tests
+    GoldenParams (..),
+    testGoldenParams,
+    testGoldenParamsOs,
 
     -- * Running Charon
 
@@ -30,6 +37,11 @@ module Functional.Prelude
     FuncEnv.captureCharonException,
     FuncEnv.captureCharonExceptionLogs,
     FuncEnv.captureCharonExceptionTerminal,
+
+    -- *** ByteString
+    captureIndex,
+    captureMetadata,
+    captureCharonExceptionTermBS,
 
     -- * Assertions
     assertPathsExist,
@@ -57,6 +69,8 @@ module Functional.Prelude
     foldFilePaths,
     foldFilePathsAcc,
     cfp,
+    concatBs,
+    terminalToBs,
   )
 where
 
@@ -72,17 +86,22 @@ import Charon.Data.Metadata
   )
 import Charon.Data.PathType as X (PathTypeW (MkPathTypeW))
 import Charon.Prelude as X
+import Data.ByteString qualified as BS
+import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
+import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
+import FileSystem.IO (writeBinaryFileIO)
 import FileSystem.OsPath
   ( combineFilePaths,
     unsafeDecode,
+    unsafeEncode,
     unsafeEncodeValid,
     (</>!),
   )
 import Functional.Prelude.FuncEnv (TestEnv, TestM, (@=?))
 import Functional.Prelude.FuncEnv qualified as FuncEnv
-import Test.Tasty as X (TestTree, testGroup)
+import Test.Tasty as X (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit as X
   ( assertBool,
     assertEqual,
@@ -211,5 +230,101 @@ mkMetadata numEntries numFiles _logSize _size =
       logSize = fromℤ 0,
       size = fromℤ 0
     }
+
+{- ORMOLU_ENABLE -}
+
+data GoldenParams = MkGoldenParams
+  { runner :: IO ByteString,
+    -- | Test string description
+    testDesc :: TestName,
+    -- | Test function name, for creating unique file paths.
+    testName :: OsPath
+  }
+
+makeFieldLabelsNoPrefix ''GoldenParams
+
+testGoldenParamsOs :: GoldenParams -> TestTree
+testGoldenParamsOs = testGoldenParams' True
+
+testGoldenParams :: GoldenParams -> TestTree
+testGoldenParams = testGoldenParams' False
+
+testGoldenParams' :: Bool -> GoldenParams -> TestTree
+testGoldenParams' diffOs params = goldenDiffCustom desc goldenPath actualPath $ do
+  bs <- params ^. #runner
+  writeActualFile bs
+  where
+    desc = params ^. #testDesc
+
+    osSfx
+      | diffOs = osExt
+      | otherwise = [osstr||]
+
+    goldenPath = unsafeDecode $ basePath <> osSfx <> [osstr|.golden|]
+    actualPath = unsafeDecode $ basePath <> osSfx <> [osstr|.actual|]
+
+    writeActualFile :: ByteString -> IO ()
+    writeActualFile =
+      writeBinaryFileIO (unsafeEncode actualPath)
+        . (<> "\n")
+
+    basePath = [ospPathSep|test/functional/goldens|] </> (params ^. #testName)
+
+terminalToBs :: OsPath -> [Text] -> ByteString
+terminalToBs testDir = terminalToBs' replaceFn
+  where
+    testDirTxt = T.pack $ unsafeDecode testDir
+
+    replaceFn =
+      T.replace "\\" "/"
+        . T.replace testDirTxt "<dir>"
+
+terminalToBs' :: (Text -> Text) -> [Text] -> ByteString
+terminalToBs' modTxt =
+  encodeUtf8
+    . T.strip
+    . T.unlines
+    . fmap modTxt
+
+concatBs :: ByteString -> ByteString -> ByteString
+concatBs x y = strip $ x <> "\n\n" <> y
+  where
+    strip = BS.dropWhile isSpc . BS.dropWhileEnd isSpc
+    isSpc = Ch.isSpace . Ch.chr . fromIntegral
+
+captureIndex :: OsPath -> TestM ByteString
+captureIndex testDir = do
+  indexArgs <- withSrArgsM ["list", "--format", "s"]
+  indexTxt <- FuncEnv.captureCharon indexArgs
+
+  pure $ terminalToBs testDir indexTxt
+
+captureMetadata :: TestM ByteString
+captureMetadata = do
+  metadataArgs <- withSrArgsM ["metadata"]
+  metadataTxt <- FuncEnv.captureCharon metadataArgs
+  pure $ terminalToBs' id metadataTxt
+
+captureCharonExceptionTermBS ::
+  forall e.
+  (Exception e) =>
+  OsPath ->
+  [String] ->
+  TestM ByteString
+captureCharonExceptionTermBS testDir argList = do
+  (ex, term) <- liftIO $ FuncEnv.captureCharonExceptionTerminal @e argList
+  pure $ terminalToBs testDir $ ex : "" : term
+
+{- ORMOLU_DISABLE -}
+
+osExt :: OsString
+osExt =
+#if WINDOWS
+  [osstr|_windows|]
+#elif OSX
+  [osstr|_osx|]
+#else
+  [osstr|_linux|]
+#endif
 
 {- ORMOLU_ENABLE -}
