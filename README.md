@@ -387,8 +387,6 @@ If you have never built a haskell program before, [Cabal](#cabal) is probably th
 * [`cabal 2.4+`](https://www.haskell.org/cabal/download.html)
 * [`ghc 9.6 - 9.12`](https://gitlab.haskell.org/ghc/ghc/-/wikis/GHC%20Status)
 
-* [`ghcup`](https://www.haskell.org/ghcup/)
-
 The easiest way to install these is generally [`ghcup`](https://www.haskell.org/ghcup/).
 
 ### Build Charon
