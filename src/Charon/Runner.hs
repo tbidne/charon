@@ -14,7 +14,7 @@ module Charon.Runner
 where
 
 import Charon qualified
-import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
 import Charon.Data.Index qualified as Index
 import Charon.Data.Paths
   ( PathI (MkPathI),
@@ -145,7 +145,8 @@ withEnv ::
   (Env m -> m a) ->
   m a
 withEnv mergedConfig onEnv = do
-  trashHome <- trashOrDefault $ mergedConfig ^. #trashHome
+  trashHome <-
+    trashOrDefault (mergedConfig ^. #backend) (mergedConfig ^. #trashHome)
 
   withLogHandle (mergedConfig ^. #logSizeMode) $ \handle ->
     let logFile =
@@ -255,17 +256,31 @@ trashOrDefault ::
   ( HasCallStack,
     MonadPathReader m
   ) =>
+  Maybe Backend ->
   Maybe (PathI TrashHome) ->
   m (PathI TrashHome)
-trashOrDefault = maybe getTrashHome pure
+-- 1. Use explicit path.
+trashOrDefault _ (Just th) = pure th
+-- 2. No path but fdo: default fdo location.
+trashOrDefault (Just BackendFdo) Nothing = getFdoDefaultTrashHome
+-- 3. Generic default.
+trashOrDefault _ _ = getGenericDefaultTrashHome
 
 -- | Retrieves the default trash directory.
-getTrashHome ::
+getGenericDefaultTrashHome ::
   ( HasCallStack,
     MonadPathReader m
   ) =>
   m (PathI TrashHome)
-getTrashHome = MkPathI <$> (getXdgData charonPath)
+getGenericDefaultTrashHome = MkPathI <$> (getXdgData charonPath)
+
+-- | Retrieves the default trash directory for fdo backend.
+getFdoDefaultTrashHome ::
+  ( HasCallStack,
+    MonadPathReader m
+  ) =>
+  m (PathI TrashHome)
+getFdoDefaultTrashHome = MkPathI <$> (getXdgData [osp|Trash|])
 
 withLogHandle ::
   ( HasCallStack,
