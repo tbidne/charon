@@ -140,9 +140,7 @@ type CommandP2 = Command Phase2
 advancePhaseCmd ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPathReader m,
-    MonadTerminal m,
-    MonadThrow m
+    MonadPathReader m
   ) =>
   Command Phase1 ->
   m (Command Phase2)
@@ -179,8 +177,7 @@ advancePhaseCmd = \case
 fromRawSet ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPathReader m,
-    MonadTerminal m
+    MonadPathReader m
   ) =>
   UniqueSeqNE (RawPathI i) ->
   m (UniqueSeqNE (PathI i))

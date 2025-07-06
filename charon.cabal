@@ -45,10 +45,10 @@ common common-lang
     cpp-options: -DWINDOWS
 
   elif os(osx)
-    cpp-options: -DOSX -DPOSIX
+    cpp-options: -DOSX
 
   else
-    cpp-options: -DLINUX -DPOSIX
+    cpp-options: -DLINUX
 
 library
   import:           common-lang

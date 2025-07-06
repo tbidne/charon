@@ -1,0 +1,61 @@
+---
+resolver: nightly-2025-02-18
+packages:
+  - .
+ghc-options:
+  "$locals": -Wall -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wmissing-deriving-strategies
+    -Wmissing-export-lists
+    -Wmissing-exported-signatures
+    -Wmissing-home-modules
+    -Wpartial-fields
+    -Wprepositive-qualified-module
+    -Wredundant-constraints
+    -Wunused-binds
+    -Wunused-packages
+    -Wunused-type-patterns
+    -Wno-missing-import-lists
+    -Wno-unticked-promoted-constructors
+extra-deps:
+  - env-guard-0.2@sha256:4251503bde7549e267bd307f4b293c8c0ac48c6585968108e3e3fc5a3cfbb179,1312
+  - gitrev-typed-0.1@sha256:905b696dec9c52486290cfef2d3156420de83f5b21bfb0821a37822f40ee1568,3783
+  - text-display-1.0.0.0@sha256:17d5a404f51ce40ba22327bdc6688fd239f66d0aa056b8d5cb83974d1dc706e5,2772
+  - uri-bytestring-0.3.3.1@sha256:9244001daa1552e0fda9980f9bf9e4c9430bbc4f0777fdb75020594fcbc21d50,2782
+  - git: https://github.com/tbidne/algebra-simple.git
+    commit: 37ec7127fbd0f591d4539e4bf72a0badd7569181
+  - git: https://github.com/tbidne/bounds.git
+    commit: b7ca541cfdd8564bcebe5d38456fe7abf77885b8
+  - git: https://github.com/tbidne/exception-utils.git
+    commit: 02fdf3d44f41019d2f31f7903f432dfc0e91e078
+  - git: https://github.com/tbidne/fs-utils.git
+    commit: 9250f29d28c4ab6dd1ab44719157852c8044d9e9
+  # see TODO: [Haskeline override]
+  - git: https://github.com/tbidne/haskeline.git
+    commit: b12552d378c32fd3ccb813a959dc29419d47d9b2
+  - git: https://github.com/tbidne/monad-effects.git
+    commit: a62298759d3320840e27d8074a70c5b713ef74d2
+    subdirs:
+      - lib/effects-async
+      - lib/effects-optparse
+      - lib/effects-fs
+      - lib/effects-haskeline
+      - lib/effects-ioref
+      - lib/effects-logger
+      - lib/effects-stm
+      - lib/effects-terminal
+      - lib/effects-thread
+      - lib/effects-time
+      - lib/effects-unix
+      - lib/effects-unix-compat
+  - git: https://github.com/tbidne/path-size.git
+    commit: ad6bc15f1d6e615d820a68429802973c230f0929
+  - git: https://github.com/tbidne/si-bytes.git
+    commit: baf98b6945e32fc48b2e31e72ab3abaa966c4115
+  - git: https://github.com/tbidne/smart-math.git
+    commit: fe5befb66274752b4ce7f6cdde2c947cc9eabffc
+allow-newer: true
+allow-newer-deps:
+  - path

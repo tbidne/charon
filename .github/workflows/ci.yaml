@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - stack
 
   pull_request:
     branches:
@@ -96,6 +97,28 @@ jobs:
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.csv
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
           retention-days: 1
+  stack:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "macos-latest"
+          - "ubuntu-latest"
+          - "windows-latest"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup haskell
+        uses: haskell-actions/setup@v2
+        with:
+          enable-stack: true
+
+      - name: Build
+        run: stack build --ghc-options -Werror
+
+      - name: Test
+        run: stack test --ghc-options -Werror
   nix:
     strategy:
       fail-fast: false

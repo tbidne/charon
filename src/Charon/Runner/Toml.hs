@@ -83,8 +83,7 @@ instance DecodeTOML (TomlConfig Phase1) where
 mergeConfigs ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPathReader m,
-    MonadTerminal m
+    MonadPathReader m
   ) =>
   Args ->
   TomlConfigP1 ->

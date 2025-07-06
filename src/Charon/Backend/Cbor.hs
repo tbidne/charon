@@ -72,7 +72,6 @@ delete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -93,7 +92,6 @@ permDelete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadPosixC m,
     MonadTerminal m
   ) =>
@@ -113,7 +111,6 @@ getIndex ::
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadPosixC m,
     MonadTerminal m
   ) =>
@@ -136,7 +133,6 @@ getMetadata ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Metadata
@@ -157,7 +153,6 @@ restore ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   Force ->
@@ -179,7 +174,6 @@ emptyTrash ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   NoPrompt ->
@@ -209,7 +203,6 @@ toRosetta ::
     MonadFileReader m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Rosetta
@@ -228,7 +221,6 @@ toRosetta = addNamespace "toRosetta" $ do
 fromRosetta ::
   ( HasCallStack,
     MonadLoggerNS m env k,
-    MonadFileReader m,
     MonadFileWriter m,
     MonadIORef m,
     MonadMask m,

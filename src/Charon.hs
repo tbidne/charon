@@ -74,7 +74,6 @@ delete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -104,7 +103,6 @@ permDelete ::
     MonadPathWriter m,
     MonadPosixC m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -136,7 +134,6 @@ getIndex ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Index
@@ -160,7 +157,6 @@ getMetadata ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Metadata
@@ -189,7 +185,6 @@ restore ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -224,7 +219,6 @@ emptyTrash ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   NoPrompt ->
@@ -250,7 +244,6 @@ convert ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -343,7 +336,6 @@ merge ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -391,8 +383,7 @@ merge dest = addNamespace "merge" $ do
 
 initalLog ::
   ( HasTrashHome env,
-    MonadLoggerNS m env k,
-    MonadReader env m
+    MonadLoggerNS m env k
   ) =>
   m ()
 initalLog =

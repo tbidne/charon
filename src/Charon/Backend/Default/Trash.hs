@@ -81,8 +81,7 @@ createTrash ::
   ( HasCallStack,
     HasTrashHome env,
     MonadLoggerNS m env k,
-    MonadPathWriter m,
-    MonadReader env m
+    MonadPathWriter m
   ) =>
   m (PathI TrashDirFiles, PathI TrashDirInfo)
 createTrash = addNamespace "createTrash" $ asks getTrashHome >>= createTrashDir
@@ -121,7 +120,6 @@ doesTrashExist ::
     HasTrashHome env,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadReader env m,
     MonadThrow m
   ) =>
   m Bool
@@ -180,7 +178,6 @@ doesTrashExistPath trashHome = addNamespace "doesTrashExistPath" $ do
 -- | Moves the 'PathData'\'s @originalPath@ to the trash.
 mvOriginalToTrash_ ::
   ( HasCallStack,
-    Is k A_Getter,
     LabelOptic' "fileName" k pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k pd (PathI TrashEntryOriginalPath),
     MonadCatch m,

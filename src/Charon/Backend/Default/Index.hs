@@ -50,7 +50,6 @@ readIndex ::
     MonadFileReader m,
     MonadCatch m,
     MonadLoggerNS m env k2,
-    MonadReader env m,
     MonadPathReader m,
     Serial pd
   ) =>

@@ -103,7 +103,6 @@ delete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -159,7 +158,6 @@ permDelete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadPosixC m,
     MonadTerminal m,
     MonadTime m
@@ -183,7 +181,6 @@ getIndex ::
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadPosixC m,
     MonadTerminal m
   ) =>
@@ -212,7 +209,6 @@ getMetadata ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Metadata
@@ -239,7 +235,6 @@ restore ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m
   ) =>
@@ -265,7 +260,6 @@ emptyTrash ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   NoPrompt ->
@@ -282,7 +276,6 @@ merge ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTime m
   ) =>
   PathI TrashHome ->
@@ -325,7 +318,6 @@ toRosetta ::
     MonadFileReader m,
     MonadPathReader m,
     MonadPosixC m,
-    MonadReader env m,
     MonadTerminal m
   ) =>
   m Rosetta
@@ -426,7 +418,6 @@ removeDirectorySize ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTime m
   ) =>
   PathData ->

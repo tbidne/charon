@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -408,6 +409,9 @@ getRandomTmpFile prefix = addNamespace "getRandomTmpFile" $ do
 
   pure tmpFile
 
+{- ORMOLU_DISABLE -}
+
+#if WINDOWS
 getSymLinkSize ::
   ( HasCallStack,
     MonadPosixC m,
@@ -415,9 +419,19 @@ getSymLinkSize ::
   ) =>
   OsPath ->
   m (Bytes B Natural)
+#else
+getSymLinkSize ::
+  ( HasCallStack,
+    MonadPosixC m
+  ) =>
+  OsPath ->
+  m (Bytes B Natural)
+#endif
 getSymLinkSize =
   fmap (fromℤ . fromIntegral . PFiles.fileSize)
     . PathSize.Utils.getFileStatus
+
+{- ORMOLU_ENABLE -}
 
 -- | Retrieves the path type. Used so we can wrap with a custom exception,
 -- for the purpose of ignoring callstacks.

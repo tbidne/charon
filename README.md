@@ -391,7 +391,29 @@ The easiest way to install these is generally [`ghcup`](https://www.haskell.org/
 
 ### Build Charon
 
-Once you have `cabal` and `ghc`, `charon` can be built with `cabal build` or installed globally (i.e. `~/.cabal/bin/`) with `cabal install`.
+Once you have `cabal` and `ghc`, `charon` can be built with `cabal build` or installed globally (i.e. `~/.local/bin`) with `cabal install`.
+
+> [!IMPORTANT]
+>
+> Charon requires git information to be available at build time, for the purposes of including some data in the binary (e.g. commit hash). Cabal's vanilla install method interfers with this, though we have a workaround that relies on passing the current directory as an environment variable:
+>
+> ```sh
+> $ export CHARON_HOME=$(pwd); cabal install exe:charon
+> ```
+>
+> Nix does not require such a workaround, and stack does not seem to require it either.
+
+### Stack
+
+#### Prerequisites
+
+* [`stack`](https://docs.haskellstack.org/en/stable/)
+
+Like `cabal` and `ghc`, `stack` can be installed with [`ghcup`](https://www.haskell.org/ghcup/).
+
+#### Build Charon
+
+Once you have `stack`, `charon` can be built with `stack build` or installed globally (i.e. `~/.local/bin`p) with `stack install`.
 
 ## Nix
 

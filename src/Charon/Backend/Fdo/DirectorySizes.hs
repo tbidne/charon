@@ -121,7 +121,6 @@ appendEntry ::
     HasTrashHome env,
     MonadCatch m,
     MonadLoggerNS m env k,
-    MonadReader env m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadPathReader m,
@@ -164,7 +163,6 @@ writeDirectorySizes ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTime m
   ) =>
   DirectorySizes ->
@@ -205,7 +203,6 @@ removeEntry ::
   ( HasCallStack,
     HasTrashHome env,
     MonadCatch m,
-    MonadReader env m,
     MonadFileReader m,
     MonadFileWriter m,
     MonadLoggerNS m env k,

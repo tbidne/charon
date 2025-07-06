@@ -91,7 +91,6 @@ delete ::
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m,
     Serial pd,
@@ -116,7 +115,6 @@ deletePostHook ::
     MonadIORef m,
     MonadLoggerNS m env k2,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     MonadTime m,
     Serial pd,
@@ -175,7 +173,6 @@ permDelete ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadLoggerNS m env k2,
-    MonadReader env m,
     MonadTerminal m,
     Serial pd,
     Show pd
@@ -202,7 +199,6 @@ permDeletePostHook ::
     MonadPathReader m,
     MonadPathWriter m,
     MonadLoggerNS m env k2,
-    MonadReader env m,
     MonadTerminal m,
     Serial pd,
     Show pd
@@ -258,7 +254,6 @@ getIndex ::
     MonadFileReader m,
     MonadPathReader m,
     MonadLoggerNS m env k2,
-    MonadReader env m,
     Serial pd
   ) =>
   BackendArgs m pd ->
@@ -282,7 +277,6 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
-    MonadReader env m,
     Serial pd
   ) =>
   BackendArgs m pd ->
@@ -361,7 +355,6 @@ restore ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     Serial pd,
     Show pd
@@ -389,7 +382,6 @@ restorePostHook ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     Serial pd,
     Show pd
@@ -449,7 +441,6 @@ emptyTrash ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadReader env m,
     MonadTerminal m,
     Serial pd
   ) =>
