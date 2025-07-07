@@ -34,8 +34,10 @@ import Charon.Runner.Command
         Restore
       ),
     CommandP1,
+    DeleteParams (MkDeleteParams),
     Force (MkForce),
     NoPrompt (MkNoPrompt),
+    PermDeleteParams (MkPermDeleteParams, noPrompt, strategy),
     RestoreParams (MkRestoreParams, force, noPrompt, strategy),
   )
 import Charon.Runner.Command.List
@@ -161,7 +163,7 @@ argsParser =
     <*> commandParser
 
 version :: Parser (a -> a)
-version = OA.infoOption versLong (OA.long "version" <> OA.short 'v' <> OA.hidden)
+version = OA.infoOption versLong (OA.long "version" <> OA.hidden)
 
 backendParser :: Parser (Maybe Backend)
 backendParser =
@@ -329,11 +331,16 @@ commandParser =
       Chunk.vcatChunks
         . fmap (fmap (Pretty.indent 2) . Chunk.stringChunk)
 
-    delParser = Delete <$> pathsParser
+    delParser = Delete . MkDeleteParams <$> pathsParser
     permDelParser =
-      PermDelete
-        <$> noPromptParser "Will not ask before deleting path(s)."
-        <*> ((,) <$> indicesParser <*> mPathsParser)
+      PermDelete <$> do
+        noPrompt <- noPromptParser "Will not ask before deleting path(s)."
+        strategy <- ((,) <$> indicesParser <*> mPathsParser)
+        pure
+          $ MkPermDeleteParams
+            { noPrompt,
+              strategy
+            }
     emptyParser =
       Empty
         <$> noPromptParser "Will not ask before emptying the trash."

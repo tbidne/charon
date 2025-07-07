@@ -33,7 +33,7 @@ import Charon.Data.PathData (PathData)
 import Charon.Data.PathData.Formatting (Coloring (ColoringDetect))
 import Charon.Data.Paths
   ( PathI (MkPathI),
-    PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
+    PathIndex (TrashEntryFileName, TrashHome),
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∈))
@@ -42,8 +42,10 @@ import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
 import Charon.Runner.Command
-  ( IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
+  ( DeleteParams,
+    IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
     NoPrompt,
+    PermDeleteParams,
     RestoreParams,
   )
 import Charon.Runner.Phase (Phase (Phase2))
@@ -78,15 +80,17 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  UniqueSeqNE (PathI TrashEntryOriginalPath) ->
+  DeleteParams Phase2 ->
   m ()
-delete paths = addNamespace "delete" $ do
+delete params = addNamespace "delete" $ do
   initalLog
   asks getBackend
     >>= \case
       BackendCbor -> addNamespace "cbor" $ Cbor.delete paths
       BackendFdo -> addNamespace "fdo" $ Fdo.delete paths
       BackendJson -> addNamespace "json" $ Json.delete paths
+  where
+    paths = params ^. #paths
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -108,10 +112,9 @@ permDelete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  NoPrompt ->
-  IndicesPathsStrategy ->
+  PermDeleteParams Phase2 ->
   m ()
-permDelete noPrompt strategy = addNamespace "permDelete" $ do
+permDelete params = addNamespace "permDelete" $ do
   initalLog
 
   (name, idxFn, delFn) <-
@@ -122,6 +125,9 @@ permDelete noPrompt strategy = addNamespace "permDelete" $ do
 
   paths <- getIndexedPaths "delete" strategy idxFn
   addNamespace name $ delFn noPrompt paths
+  where
+    strategy = params ^. #strategy
+    noPrompt = params ^. #noPrompt
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.

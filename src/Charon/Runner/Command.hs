@@ -11,8 +11,10 @@ module Charon.Runner.Command
     CmdPathF,
 
     -- ** Delete
+    DeleteParams (..),
 
     -- ** PermDelete
+    PermDeleteParams (..),
 
     -- ** Restore
     RestoreParams (..),
@@ -85,6 +87,35 @@ data IndicesPathsStrategy
 
 makePrisms ''IndicesPathsStrategy
 
+newtype DeleteParams s = MkDeleteParams
+  { paths :: UniqueSeqNE (CmdPathF s TrashEntryOriginalPath)
+  }
+
+makeFieldLabelsNoPrefix ''DeleteParams
+
+deriving stock instance Eq (DeleteParams Phase1)
+
+deriving stock instance Show (DeleteParams Phase1)
+
+deriving stock instance Eq (DeleteParams Phase2)
+
+deriving stock instance Show (DeleteParams Phase2)
+
+data PermDeleteParams s = MkPermDeleteParams
+  { noPrompt :: NoPrompt,
+    strategy :: IndicesPathsF s
+  }
+
+makeFieldLabelsNoPrefix ''PermDeleteParams
+
+deriving stock instance Eq (PermDeleteParams Phase1)
+
+deriving stock instance Show (PermDeleteParams Phase1)
+
+deriving stock instance Eq (PermDeleteParams Phase2)
+
+deriving stock instance Show (PermDeleteParams Phase2)
+
 data RestoreParams s = MkRestoreParams
   { force :: Force,
     noPrompt :: NoPrompt,
@@ -105,11 +136,9 @@ deriving stock instance Show (RestoreParams Phase2)
 type Command :: Phase -> Type
 data Command s
   = -- | Deletes a path.
-    Delete (UniqueSeqNE (CmdPathF s TrashEntryOriginalPath))
+    Delete (DeleteParams s)
   | -- | Permanently deletes a path from the trash.
-    PermDelete
-      NoPrompt
-      (IndicesPathsF s)
+    PermDelete (PermDeleteParams s)
   | -- | Empties the trash.
     Empty NoPrompt
   | -- | Restores a path.
@@ -147,8 +176,15 @@ advancePhaseCmd ::
   Command Phase1 ->
   m (Command Phase2)
 advancePhaseCmd = \case
-  Delete paths -> Delete <$> fromRawSet paths
-  PermDelete noPrompt s -> PermDelete noPrompt <$> parseStrategy s
+  Delete params -> Delete . MkDeleteParams <$> fromRawSet (params ^. #paths)
+  PermDelete params -> do
+    strategy <- parseStrategy (params ^. #strategy)
+    pure
+      $ PermDelete
+      $ MkPermDeleteParams
+        { noPrompt = params ^. #noPrompt,
+          strategy
+        }
   Empty noPrompt -> pure $ Empty noPrompt
   Restore params -> do
     strategy <- parseStrategy (params ^. #strategy)

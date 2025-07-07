@@ -17,16 +17,24 @@ import Charon.Backend.Data qualified as Backend.Data
 import Charon.Data.PathData (PathData)
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.PathType qualified as PathType
-import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName))
+import Charon.Data.Paths
+  ( PathI (MkPathI),
+    PathIndex
+      ( TrashEntryFileName,
+        TrashEntryOriginalPath
+      ),
+  )
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (↦), (∪))
 import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Exception (PathNotFound, TrashEntryNotFoundE)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
 import Charon.Runner.Command
-  ( Force (MkForce),
+  ( DeleteParams (MkDeleteParams),
+    Force (MkForce),
     IndicesPathsStrategy (PathsStrategy),
     NoPrompt (MkNoPrompt),
+    PermDeleteParams (MkPermDeleteParams),
     RestoreParams (MkRestoreParams),
   )
 import Charon.Runner.Env
@@ -178,7 +186,7 @@ delete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ Charon.delete (αTestPaths ↦ MkPathI)
+      usingIntIO env $ charonDelete (αTestPaths ↦ MkPathI)
 
       annotate "Assert lookup"
 
@@ -216,7 +224,7 @@ deleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 
       caughtEx <-
         try @_ @PathNotFound
-          $ usingIntIONoCatch env (Charon.delete (toDelete ↦ MkPathI))
+          $ usingIntIONoCatch env (charonDelete (toDelete ↦ MkPathI))
 
       ex <-
         either
@@ -258,7 +266,7 @@ permDelete backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ Charon.delete (αTestPaths ↦ MkPathI)
+      usingIntIO env $ charonDelete (αTestPaths ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -299,7 +307,7 @@ permDeleteSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir (αTest ∪ γTest)
 
       -- delete files
-      usingIntIO env $ Charon.delete (toDelete ↦ MkPathI)
+      usingIntIO env $ charonDelete (toDelete ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -351,7 +359,7 @@ restore backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ Charon.delete (αTestPaths ↦ MkPathI)
+      usingIntIO env $ charonDelete (αTestPaths ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -391,7 +399,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir (αTest ∪ γTest)
 
       -- delete files
-      usingIntIO env $ Charon.delete (toDelete ↦ MkPathI)
+      usingIntIO env $ charonDelete (toDelete ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -429,8 +437,16 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
   where
     desc = "Some trash entries are restored, others error"
 
+charonDelete :: UniqueSeqNE (PathI TrashEntryOriginalPath) -> IntIO ()
+charonDelete =
+  Charon.delete
+    . MkDeleteParams
+
 charonPermDelete :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
-charonPermDelete = Charon.permDelete (MkNoPrompt True) . PathsStrategy
+charonPermDelete =
+  Charon.permDelete
+    . MkPermDeleteParams (MkNoPrompt True)
+    . PathsStrategy
 
 charonRestore :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonRestore =
@@ -455,7 +471,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ Charon.delete (αTestPaths ↦ MkPathI)
+      usingIntIO env $ charonDelete (αTestPaths ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"
@@ -490,7 +506,7 @@ metadata backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       setupDir testDir αTest
 
       -- delete files
-      usingIntIO env $ Charon.delete (αTestPaths ↦ MkPathI)
+      usingIntIO env $ charonDelete (αTestPaths ↦ MkPathI)
 
       -- assert original files moved to trash
       annotate "Assert lookup"

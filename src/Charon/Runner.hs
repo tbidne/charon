@@ -119,8 +119,8 @@ runCmd cmd =
   runCmd' cmd `catch` logEx
   where
     runCmd' = \case
-      Delete paths -> Charon.delete paths
-      PermDelete noPrompt strategy -> Charon.permDelete noPrompt strategy
+      Delete params -> Charon.delete params
+      PermDelete params -> Charon.permDelete params
       Empty noPrompt -> Charon.emptyTrash noPrompt
       Restore params -> Charon.restore params
       List listCmd -> printIndex listCmd

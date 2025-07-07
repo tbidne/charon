@@ -18,8 +18,7 @@ import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
-  ( IndicesPathsStrategy (PathsStrategy),
-    NoPrompt (MkNoPrompt),
+  ( NoPrompt (MkNoPrompt),
     _Delete,
     _Empty,
     _List,
@@ -76,7 +75,7 @@ delete = testCase "Parses delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just expectedUSeq @=? cmd ^? _Delete
+  Just expectedUSeq @=? cmd ^? _Delete % #paths
   where
     argList = ["delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -88,12 +87,12 @@ permDelete = testCase "Parses perm delete" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (MkNoPrompt False, expectedUSeq) @=? cmd ^? _PermDelete
+  Just (MkNoPrompt False) @=? cmd ^? (_PermDelete % #noPrompt)
+  Just expectedUSeq @=? cmd ^? (_PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      PathsStrategy
-        $ MkPathI
+      MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteNoPrompt :: TestTree
@@ -101,12 +100,12 @@ permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
   (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
 
   Nothing @=? cfg ^. #trashHome
-  Just (MkNoPrompt True, expectedUSeq) @=? cmd ^? _PermDelete
+  Just (MkNoPrompt True) @=? cmd ^? (_PermDelete % #noPrompt)
+  Just expectedUSeq @=? cmd ^? (_PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
     expectedUSeq =
-      PathsStrategy
-        $ MkPathI
+      MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 emptyTrash :: TestTree
