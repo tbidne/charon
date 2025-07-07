@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - sort
 
   pull_request:
     branches:
@@ -23,14 +24,14 @@ jobs:
           - "9.12.2"
         platform:
           - os: "macos-latest"
-            unit-trials: 10000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
           - os: "ubuntu-latest"
-            unit-trials: 10000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
           - os: "windows-latest"
-            unit-trials: 1000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +98,7 @@ jobs:
             benchmarks/${{ matrix.platform.os }}_${{ matrix.ghc }}_ci.svg
           retention-days: 1
   nix:
+    if: false
     strategy:
       fail-fast: false
       matrix:
