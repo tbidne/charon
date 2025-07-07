@@ -78,7 +78,8 @@ getPathInfo ::
   ( HasCallStack,
     MonadCatch m,
     MonadLoggerNS m env k,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadPosixC m
   ) =>
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
@@ -293,7 +294,8 @@ pathDataToType ::
     LabelOptic' "fileName" k a (PathI TrashEntryFileName),
     HasCallStack,
     MonadCatch m,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadPosixC m
   ) =>
   PathI TrashHome ->
   a ->

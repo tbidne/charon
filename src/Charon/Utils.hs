@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -83,7 +84,10 @@ import Charon.Exception
     UniquePathNotPrefixE,
   )
 import Charon.Prelude
-import Control.Exception (Exception (toException), SomeException (SomeException))
+import Control.Exception
+  ( Exception (toException),
+    SomeException (SomeException),
+  )
 import Control.Exception.Annotation.Utils (ExceptionProxy (MkExceptionProxy))
 import Control.Exception.Annotation.Utils qualified as AnnUtils
 import Data.ByteString.Builder qualified as Builder
@@ -105,6 +109,12 @@ import Data.Time (LocalTime, UTCTime)
 import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.PathReader qualified as PR
+#if WINDOWS
+import Effects.System.PosixCompat qualified as PXC
+#else
+import Effects.System.Posix qualified as PX
+import System.OsString.Internal.Types (OsString(OsString))
+#endif
 import Effects.Time (MonadTime (getMonotonicTime))
 import FileSystem.OsPath (TildeException)
 import FileSystem.OsPath qualified as OsPath
@@ -355,7 +365,8 @@ getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
 getAllFiles ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadPosixC m
   ) =>
   OsPath ->
   m [OsPath]
@@ -424,20 +435,19 @@ getSymLinkSize =
 getPathType ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPathReader m
+    MonadPosixC m
   ) =>
   OsPath ->
   m PathType
-getPathType p =
-  -- NOTE: [getPathType]
-  --
-  -- It would be nice to switch this from PathReader's getPathType to
-  -- PosixCompact's, as the latter is faster (fewer IO calls). Alas, the latter
-  -- is also much harder to mock, which we unfortunately rely on in some tests.
-  --
-  -- If we figure out how to mock it (or make the tests realer), we can then
-  -- swap it.
-  PR.getPathType p `catch` \(_ :: IOException) -> throwM $ MkPathNotFound p
+getPathType p = do
+#if WINDOWS
+  fp <- OsPath.decodeThrowM p
+  PXC.getPathType fp
+    `catch` \(_ :: IOException) -> throwM $ MkPathNotFound p
+#else
+  PX.getPathType (coerce p)
+    `catch` \(_ :: IOException) -> throwM $ MkPathNotFound p
+#endif
 
 displayEx :: (Exception e) => e -> String
 displayEx ex =

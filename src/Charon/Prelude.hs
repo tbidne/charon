@@ -93,6 +93,7 @@ import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
 import Data.Bytes as X (Bytes (MkBytes), Size (B), _MkBytes)
 import Data.Char as X (Char)
+import Data.Coerce as X (coerce)
 import Data.Either as X (Either (Left, Right), either)
 import Data.Eq as X (Eq ((/=), (==)))
 import Data.Foldable as X
@@ -168,6 +169,7 @@ import Effects.FileSystem.PathReader as X
         doesPathExist,
         getFileSize,
         getHomeDirectory,
+        getTemporaryDirectory,
         listDirectory,
         makeAbsolute
       ),

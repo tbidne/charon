@@ -108,8 +108,11 @@ deletesMany getTestEnv =
       testEnv <- getTestEnv
       usingReaderT testEnv $ appendTestDirM "deletesMany" $ do
         testDir <- getTestDir
-        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
-            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4"]
+        -- Tests trailing slash and trailing whitespace. We choose a filename
+        -- (e_ws) that will not be last, since our test suite strips trailing
+        -- whitespace, but we want to see it.
+        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3", "e_ws  "]
+            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4", "dirslash/"]
             fileLinkToDelete = testDir </> [osp|file-link|]
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
@@ -118,7 +121,7 @@ deletesMany getTestEnv =
 
         -- setup
         -- test w/ a nested dir
-        createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4"])
+        createDirectories ((testDir </>!) <$> ["dir1", "dir2", "dir2/dir3", "dir4", "dirslash/"])
         -- test w/ a file in dir
         createFiles ((testDir </>! "dir2/dir3/foo") : filesToDelete)
         createSymlinks [F fileLinkToDelete, D dirLinkToDelete, F $ testDir </>! "dir4" </>! "link"]
@@ -127,8 +130,15 @@ deletesMany getTestEnv =
 
         liftIO $ runCharon argList
 
+        let duplicate = [testDir </>! "f1"]
+        argListDuplicate <- withSrArgsPathsM ["delete"] duplicate
+        createFiles duplicate
+        assertPathsExist duplicate
+
+        liftIO $ runCharon argListDuplicate
+
         -- file assertions
-        assertPathsDoNotExist (filesToDelete ++ dirsToDelete)
+        assertPathsDoNotExist (filesToDelete ++ dirsToDelete ++ duplicate)
         assertSymlinksDoNotExist linksToDelete
 
         captureIndexBs testDir

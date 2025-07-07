@@ -64,7 +64,8 @@ toPathData ::
   ( HasCallStack,
     MonadCatch m,
     MonadLoggerNS m env k,
-    MonadPathReader m
+    MonadPathReader m,
+    MonadPosixC m
   ) =>
   Timestamp ->
   PathI TrashHome ->

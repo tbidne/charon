@@ -26,117 +26,24 @@ tests :: TestTree
 tests =
   testGroup
     "Backend.Default.Utils"
-    [ specs,
-      props
+    [ props
     ]
 
-specs :: TestTree
-specs =
-  testGroup
-    "Specs"
-    [ getPathInfoTests
-    ]
-
-getPathInfoTests :: TestTree
-getPathInfoTests =
-  testGroup
-    "getPathInfo"
-    [ testPathSlash,
-      testDuplicate,
-      testTrailingWhitespace
-    ]
-
-testPathSlash :: TestTree
-testPathSlash = testCase "Retrieves name from path ending in a /" $ do
-  (resultFileName, resultOrigPath, resultPathType) <-
-    runTestIO $ Utils.getPathInfo trashHome slashPath
-
-  MkPathI [osp|path|] @=? resultFileName
-  PathTypeDirectory @=? resultPathType ^. #unPathTypeW
-
-  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
-
-  let errMsg =
-        mconcat
-          [ "Expected '",
-            expectedOrigPathStr,
-            "' to be a suffix of '",
-            resultOrigPathStr,
-            ","
-          ]
-
-  -- CI adds prefixes like the drive letter on window
-  -- (e.g. /some/path -> D:\\some\\path), hence we need to check the weaker
-  -- suffix check rather than equality.
-  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
-  where
-    slashPath = MkPathI [ospPathSep|/some/path/|]
-    expectedOrigPath = [ospPathSep|/some/path|]
-
-testDuplicate :: TestTree
-testDuplicate = testCase "Renames duplicate" $ do
-  (resultFileName, resultOrigPath, resultPathType) <-
-    runTestIO $ Utils.getPathInfo trashHome slashPath
-
-  MkPathI [osp|duplicate (1)|] @=? resultFileName
-  PathTypeFile @=? resultPathType ^. #unPathTypeW
-
-  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- OsPath.decodeThrowM expectedOrigPath
-
-  let errMsg =
-        mconcat
-          [ "Expected '",
-            expectedOrigPathStr,
-            "' to be a suffix of '",
-            resultOrigPathStr,
-            ","
-          ]
-
-  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
-  where
-    slashPath = MkPathI [ospPathSep|/a/duplicate|]
-    expectedOrigPath = [ospPathSep|/a/duplicate|]
-
-{- ORMOLU_DISABLE -}
-
-testTrailingWhitespace :: TestTree
-testTrailingWhitespace = testCase desc $ do
-  (resultFileName, resultOrigPath, resultPathType) <-
-    runTestIO $ Utils.getPathInfo trashHome testPathI
-
-  MkPathI expected @=? resultFileName
-  PathTypeFile @=? resultPathType ^. #unPathTypeW
-
-  resultOrigPathStr <- OsPath.decodeThrowM (resultOrigPath ^. #unPathI)
-  expectedOrigPathStr <- OsPath.decodeThrowM expected
-
-  let errMsg =
-        mconcat
-          [ "Expected '",
-            expectedOrigPathStr,
-            "' to be a suffix of '",
-            resultOrigPathStr,
-            ","
-          ]
-
-  assertBool errMsg $ expectedOrigPathStr `L.isSuffixOf` resultOrigPathStr
-  where
-    testOsPath = [ospPathSep|/some whitespace   |]
-    testPathI = MkPathI testOsPath
-
-#if WINDOWS
-    desc = "Strips trailing whitespace (windows)"
-    expected = [ospPathSep|some whitespace|]
-#else
-    desc = "Preserves trailing whitespace (unix)"
-    expected = [ospPathSep|some whitespace   |]
-#endif
-
-{- ORMOLU_ENABLE -}
 newtype TestIO a = MkTestIO (IO a)
-  deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
+  deriving
+    ( Applicative,
+      Functor,
+      Monad,
+      MonadIO,
+      MonadCatch,
+      MonadPosixCompat,
+      MonadThrow
+    )
+    via IO
+
+#if !WINDOWS
+deriving newtype instance MonadPosix TestIO
+#endif
 
 instance MonadLogger TestIO where
   monadLoggerLog _ _ _ _ = pure ()
@@ -157,42 +64,6 @@ instance MonadReader TestEnv TestIO where
 
   local _ m = m
 
-instance MonadPathReader TestIO where
-  makeAbsolute = liftIO . makeAbsolute
-  doesPathExist path = do
-    pathStr <- OsPath.decodeThrowM path
-    e1Str <- OsPath.decodeThrowM expected
-
-    pure $ e1Str `L.isSuffixOf` pathStr
-    where
-      expected = [ospPathSep|/home/trash/files/duplicate|]
-
-  doesDirectoryExist path = do
-    pathStr <- OsPath.decodeThrowM path
-    expectedStr <- OsPath.decodeThrowM expected
-
-    pure $ expectedStr `L.isSuffixOf` pathStr
-    where
-      expected = [ospPathSep|/some/path|]
-
-  doesFileExist path = do
-    pathStr <- OsPath.decodeThrowM path
-
-    pure $ L.any (`L.isSuffixOf` pathStr) expecteds
-    where
-      expecteds =
-        OsPath.unsafeDecode
-          <$> [ [ospPathSep|/a/duplicate|],
-                -- unix vs. windows (windows trims whitespace apparently)
-                [ospPathSep|/some whitespace|],
-                [ospPathSep|/some whitespace   |]
-              ]
-
-  pathIsSymbolicLink = liftIO . pathIsSymbolicLink
-
-runTestIO :: TestIO a -> IO a
-runTestIO (MkTestIO io) = io
-
 trashHome :: PathI TrashHome
 trashHome = MkPathI $ [ospPathSep|/home/trash|]
 
@@ -207,8 +78,17 @@ getPathTypePreservesBaseFileName :: TestTree
 getPathTypePreservesBaseFileName =
   testPropertyNamed desc "getPathTypePreservesBaseFileName" $ do
     property $ do
-      p@(MkPathI fileName) <- forAll genPath
-      r@(MkPathI uniqueFileName, _, _) <- runRandIO $ Utils.getPathInfo trashHome p
+      (MkPathI fileName) <- forAll genPath
+      filePath <- liftIO $ do
+        tmp <- liftIO getTemporaryDirectory
+        let d = tmp </> testDirName
+        createDirectoryIfMissing True d
+        let path = d </> fileName
+        writeBinaryFile path "file"
+        pure path
+      r@(MkPathI uniqueFileName, _, _) <-
+        runRandIO
+          $ Utils.getPathInfo trashHome (MkPathI filePath)
 
       annotateShow r
 
@@ -219,9 +99,24 @@ getPathTypePreservesBaseFileName =
   where
     desc = "getPathType unique fileName uses original name base"
 
+    testDirName = [ospPathSep|charon/unit/getPathTypePreservesBaseFileName|]
+
 newtype RandIO a = MkRandIO (IO a)
-  deriving (Applicative, Functor, Monad, MonadIO, MonadCatch, MonadThrow) via IO
+  deriving
+    ( Applicative,
+      Functor,
+      Monad,
+      MonadIO,
+      MonadCatch,
+      MonadPosixCompat,
+      MonadThrow
+    )
+    via IO
   deriving (MonadLogger, MonadReader TestEnv) via TestIO
+
+#if !WINDOWS
+deriving newtype instance MonadPosix RandIO
+#endif
 
 runRandIO :: (MonadIO m, MonadCatch m, MonadTest m) => RandIO a -> m a
 runRandIO (MkRandIO io) = do

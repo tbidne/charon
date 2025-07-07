@@ -282,6 +282,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
+    MonadPosixC m,
     MonadReader env m,
     Serial pd
   ) =>
@@ -449,6 +450,7 @@ emptyTrash ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     Serial pd

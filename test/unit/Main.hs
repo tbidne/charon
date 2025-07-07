@@ -4,7 +4,6 @@ module Main (main) where
 import Test.Tasty qualified as Tasty
 import Test.Tasty.Golden (DeleteOutputFile (OnPass))
 import Unit.Backend.Cbor.PathData qualified as Backend.Cbor.PathData
-import Unit.Backend.Default.Trash qualified as Backend.Default.Trash
 import Unit.Backend.Default.Utils qualified as Backend.Default.Utils
 import Unit.Backend.Fdo.PathData qualified as Backend.Fdo.PathData
 import Unit.Backend.Json.PathData qualified as Backend.Json.PathData
@@ -26,7 +25,6 @@ main =
         Backend.Default.Utils.tests,
         Backend.Fdo.PathData.tests,
         Backend.Json.PathData.tests,
-        Backend.Default.Trash.tests,
         Data.Index.tests,
         Data.UniqueSeq.tests,
         Data.UniqueSeqNE.tests,
