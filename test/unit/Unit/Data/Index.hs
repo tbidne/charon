@@ -10,7 +10,7 @@ module Unit.Data.Index
   )
 where
 
-import Charon.Data.Index (Index (MkIndex), Sort (Name, Size))
+import Charon.Data.Index (Index (MkIndex), Sort (Created, Name, Size))
 import Charon.Data.Index qualified as Index
 import Charon.Data.PathData (PathData (UnsafePathData))
 import Charon.Data.PathData.Formatting
@@ -69,7 +69,9 @@ multilineTests =
     [ testFormatMultiline1,
       testFormatMultiline2,
       testFormatMultiline3,
-      testFormatMultiline4
+      testFormatMultiline4,
+      testFormatMultiline5,
+      testFormatMultiline6
     ]
 
 singlelineTests :: TestTree
@@ -80,6 +82,8 @@ singlelineTests =
       testFormatSingleline2,
       testFormatSingleline3,
       testFormatSingleline4,
+      testFormatSingleline5,
+      testFormatSingleline6,
       testFormatSinglelineColor
     ]
 
@@ -91,6 +95,8 @@ tabularSimpleTests =
       testFormatTabularSimple2,
       testFormatTabularSimple3,
       testFormatTabularSimple4,
+      testFormatTabularSimple5,
+      testFormatTabularSimple6,
       testFormatTabularSimpleColor
     ]
 
@@ -104,6 +110,8 @@ tabularFixedTests =
       testFormatTabularFixed2,
       testFormatTabularFixed3,
       testFormatTabularFixed4,
+      testFormatTabularFixed5,
+      testFormatTabularFixed6,
       testFormatTabularFixedColor
     ]
 
@@ -143,6 +151,24 @@ testFormatMultiline4 =
     Size
     True
 
+testFormatMultiline5 :: TestTree
+testFormatMultiline5 =
+  testGoldenFormatParams
+    "Multiline, created, asc"
+    [osp|multi-created-asc|]
+    FormatMultiline
+    Created
+    False
+
+testFormatMultiline6 :: TestTree
+testFormatMultiline6 =
+  testGoldenFormatParams
+    "Multiline, created, desc"
+    [osp|multi-created-desc|]
+    FormatMultiline
+    Created
+    True
+
 testFormatSingleline1 :: TestTree
 testFormatSingleline1 =
   testGoldenFormatParams
@@ -177,6 +203,24 @@ testFormatSingleline4 =
     [osp|single-size-desc|]
     (FormatSingleline ColoringOff)
     Size
+    True
+
+testFormatSingleline5 :: TestTree
+testFormatSingleline5 =
+  testGoldenFormatParams
+    "Singleline, created, asc"
+    [osp|single-created-asc|]
+    (FormatSingleline ColoringOff)
+    Created
+    False
+
+testFormatSingleline6 :: TestTree
+testFormatSingleline6 =
+  testGoldenFormatParams
+    "Singleline, created, desc"
+    [osp|single-created-desc|]
+    (FormatSingleline ColoringOff)
+    Created
     True
 
 testFormatSinglelineColor :: TestTree
@@ -224,6 +268,24 @@ testFormatTabularSimple4 =
     Size
     True
 
+testFormatTabularSimple5 :: TestTree
+testFormatTabularSimple5 =
+  testGoldenFormatParams
+    "TabularSimple, created, asc"
+    [osp|tabular-simple-created-asc|]
+    (FormatTabularSimple ColoringOff)
+    Created
+    False
+
+testFormatTabularSimple6 :: TestTree
+testFormatTabularSimple6 =
+  testGoldenFormatParams
+    "TabularSimple, created, desc"
+    [osp|tabular-simple-created-desc|]
+    (FormatTabularSimple ColoringOff)
+    Created
+    True
+
 testFormatTabularSimpleColor :: TestTree
 testFormatTabularSimpleColor =
   testGoldenFormatParams
@@ -267,6 +329,24 @@ testFormatTabularFixed4 =
     [osp|tabular-size-desc|]
     fixedTabularFormat
     Size
+    True
+
+testFormatTabularFixed5 :: TestTree
+testFormatTabularFixed5 =
+  testGoldenFormatParams
+    "Tabular, created, asc"
+    [osp|tabular-created-asc|]
+    fixedTabularFormat
+    Created
+    False
+
+testFormatTabularFixed6 :: TestTree
+testFormatTabularFixed6 =
+  testGoldenFormatParams
+    "Tabular, created, desc"
+    [osp|tabular-created-desc|]
+    fixedTabularFormat
+    Created
     True
 
 testFormatTabularFixedColor :: TestTree
@@ -524,49 +604,53 @@ testFormatTabularAutoNameFixedOrig = testGoldenFormat desc fileName mkIndex fmt 
 
 mkIndex :: (MonadFail f) => f (Seq PathData)
 mkIndex = do
-  ts <- ts'
+  ts1 <- mkTs1
+  ts2 <- mkTs2
   pure
     [ UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|foo|])
         (MkPathI [osp|/path/foo|])
         (fromℤ 70)
-        ts,
+        ts1,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|bazzz|])
         (MkPathI [osp|/path/bar/bazzz|])
         (fromℤ 5_000)
-        ts,
+        ts2,
       UnsafePathData
         (MkPathTypeW PathTypeDirectory)
         (MkPathI [osp|dir|])
         (MkPathI [osp|/some/really/really/long/dir|])
         (fromℤ 20_230)
-        ts,
+        ts1,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|f|])
         (MkPathI [osp|/foo/path/f|])
         (fromℤ 13_070_000)
-        ts,
+        ts2,
       UnsafePathData
         (MkPathTypeW PathTypeDirectory)
         (MkPathI [osp|d|])
         (MkPathI [osp|/d|])
         (fromℤ 5_000_000_000_000_000_000_000_000_000)
-        ts,
+        ts1,
       UnsafePathData
         (MkPathTypeW PathTypeFile)
         (MkPathI [osp|z|])
         (MkPathI [osp|/z|])
         (fromℤ 200_120)
-        ts
+        ts2
     ]
   where
     -- 5,000 Y
-    ts' :: (MonadFail f) => f Timestamp
-    ts' = fromText "2020-05-31T12:00:00"
+    mkTs1 :: (MonadFail f) => f Timestamp
+    mkTs1 = fromText "2020-05-31T12:00:00"
+
+    mkTs2 :: (MonadFail f) => f Timestamp
+    mkTs2 = fromText "2020-06-30T12:00:00"
 
 toBS :: Text -> ByteString
 toBS = TEnc.encodeUtf8
@@ -644,9 +728,14 @@ testGolden
       idx <- mkIdx
       let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
       formatted <- runConfigIO fmt termWidth
-      writeBinaryFile apath (toBS formatted)
+      writeActualFile (toBS formatted)
     where
       (gpath, apath) = mkGoldenPaths fileName
+
+      writeActualFile :: ByteString -> IO ()
+      writeActualFile =
+        writeBinaryFile apath
+          . (<> "\n")
 
 mkGoldenPaths :: OsPath -> (OsPath, OsPath)
 -- NOTE: Using the same goldens for all backends since we want formatting to be

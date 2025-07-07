@@ -19,7 +19,7 @@ import Charon.Data.PathData.Formatting
   ( ColFormat,
     Coloring (ColoringDetect),
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular, FormatTabularSimple),
-    Sort (Name),
+    Sort (Name, OriginalPath),
   )
 import Charon.Prelude
 import Charon.Runner.Phase
@@ -126,12 +126,17 @@ instance AdvancePhase (ListCmd Phase1) where
   type NextPhase (ListCmd Phase1) = ListCmd Phase2
 
   advancePhase listCfg =
-    MkListCmd
-      { format,
-        sort,
-        revSort
-      }
+    let sort = case listCfg ^. #sort of
+          Just s -> s
+          Nothing -> case format of
+            FormatSingleline _ -> OriginalPath
+            FormatTabularSimple _ -> OriginalPath
+            _ -> Name
+     in MkListCmd
+          { format,
+            sort,
+            revSort
+          }
     where
-      sort = fromMaybe Name (listCfg ^. #sort)
       revSort = fromMaybe False (listCfg ^. #revSort)
       format = advancePhase (listCfg ^. #format)
