@@ -7,7 +7,7 @@ module Unit.Runner
 where
 
 import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
-import Charon.Data.Index (Sort (Name))
+import Charon.Data.Index (Sort (Name, OriginalPath))
 import Charon.Data.PathData.Formatting
   ( ColFormat (ColFormatFixed, ColFormatMax),
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
@@ -225,7 +225,7 @@ listSingleline = testCase "List singleline" $ do
     defList =
       MkListCmd
         { format = FormatSingleline ColoringOff,
-          sort = Name,
+          sort = OriginalPath,
           revSort = False
         }
 

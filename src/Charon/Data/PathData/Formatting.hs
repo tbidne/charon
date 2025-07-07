@@ -37,6 +37,7 @@ module Charon.Data.PathData.Formatting
     formatSinglelineColor,
 
     -- * Sorting
+    sortCreatedName,
     sortNameCreated,
     sortSizeName,
     sortReverse,
@@ -137,8 +138,18 @@ _FormatSingleline =
     )
 {-# INLINE _FormatSingleline #-}
 
+sortCreatedName :: PathData -> PathData -> Ordering
+sortCreatedName x y = case sortCreated x y of
+  EQ -> sortName x y
+  other -> other
+
 sortNameCreated :: PathData -> PathData -> Ordering
 sortNameCreated x y = case sortName x y of
+  EQ -> sortCreated x y
+  other -> other
+
+sortOriginalCreated :: PathData -> PathData -> Ordering
+sortOriginalCreated x y = case sortOriginal x y of
   EQ -> sortCreated x y
   other -> other
 
@@ -167,6 +178,9 @@ sortName pd1 pd2 = case liftA2 (,) (OsPath.decode p1) (OsPath.decode p2) of
   where
     p1 = pd1 ^. (#fileName % #unPathI)
     p2 = pd2 ^. (#fileName % #unPathI)
+
+sortOriginal :: PathData -> PathData -> Ordering
+sortOriginal = mapOrd (view #originalPath)
 
 -- | Sorts by the name.
 sortSize :: PathData -> PathData -> Ordering
@@ -342,20 +356,28 @@ formatSeparatorsLen = 12
 
 -- | How to sort the index list.
 data Sort
-  = -- | Sort by name.
+  = -- | Sort by created timestamp.
+    Created
+  | -- | Sort by original path.
+    OriginalPath
+  | -- | Sort by name.
     Name
   | -- | Sort by size.
     Size
   deriving stock (Eq, Show)
 
 readSort :: (MonadFail m) => Text -> m Sort
+readSort "created" = pure Created
 readSort "name" = pure Name
+readSort "original" = pure OriginalPath
 readSort "size" = pure Size
 readSort other = fail $ "Unrecognized sort: " <> T.unpack other
 
 sortFn :: Bool -> Sort -> PathData -> PathData -> Ordering
 sortFn b = \case
+  Created -> rev sortCreatedName
   Name -> rev sortNameCreated
+  OriginalPath -> rev sortOriginalCreated
   Size -> rev sortSizeName
   where
     rev

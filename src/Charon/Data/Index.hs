@@ -105,10 +105,10 @@ formatIndex' ::
   m Text
 formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format of
   FormatMultiline ->
-    pure $ multiline (Formatting.sortFn (listCmd ^. #revSort) (listCmd ^. #sort)) idx
+    pure $ multiline sortFn idx
   FormatSingleline color -> do
     coloring <- getColoring color
-    pure $ singleline coloring idx
+    pure $ singleline sortFn coloring idx
   FormatTabular color nameFormat origFormat -> do
     coloring <- getColoring color
 
@@ -208,7 +208,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
                 origApprox = maxLenForDynCols - nameApprox
              in pure (nameApprox, origApprox)
 
-    pure $ tabular coloring (Formatting.sortFn revSort sort) nameLen origLen idx
+    pure $ tabular coloring sortFn nameLen origLen idx
     where
       -- Search the index; find the longest name and orig path
       findMaxes :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
@@ -232,12 +232,11 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
         where
           wantsFixed = preview (_Just % _ColFormatFixed) mcolFormat
           wantsMax = preview (_Just % _ColFormatMax) mcolFormat $> maxLen
-
-      revSort = listCmd ^. #revSort
-      sort = listCmd ^. #sort
   FormatTabularSimple color -> do
     coloring <- getColoring color
-    pure $ tabularSimple coloring idx
+    pure $ tabularSimple sortFn coloring idx
+  where
+    sortFn = Formatting.sortFn (listCmd ^. #revSort) (listCmd ^. #sort)
 
 -- | Derives the column lengths for our one dynamic column @C@ when given
 -- exactly one fixed column length (@D_len@).
@@ -325,13 +324,13 @@ multiline sort =
     . toList
     . getElems sort
 
-singleline :: Bool -> Seq PathDataCore -> Text
-singleline coloring =
+singleline :: (PathDataCore -> PathDataCore -> Ordering) -> Bool -> Seq PathDataCore -> Text
+singleline sort coloring =
   T.intercalate "\n"
     . foldr f []
     . L.zip colorStream
     . toList
-    . Seq.sortOn (view #originalPath)
+    . getElems sort
   where
     f :: (Color, PathData) -> [Text] -> [Text]
     f (c, pd) acc = colorFn c pd : acc
@@ -340,10 +339,10 @@ singleline coloring =
       | coloring = Formatting.formatSinglelineColor
       | otherwise = const Formatting.formatSingleline
 
-tabularSimple :: Bool -> Seq PathDataCore -> Text
-tabularSimple coloring =
+tabularSimple :: (PathDataCore -> PathDataCore -> Ordering) -> Bool -> Seq PathDataCore -> Text
+tabularSimple sort coloring =
   tabularSimpleNoSort coloring
-    . Seq.sortOn (view #originalPath)
+    . getElems sort
 
 tabularSimpleNoSort :: Bool -> Seq PathDataCore -> Text
 tabularSimpleNoSort coloring xs =

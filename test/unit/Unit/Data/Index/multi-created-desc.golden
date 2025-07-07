@@ -1,21 +1,3 @@
-Name:      foo
-Original:  /path/foo
-Type:      File
-Size:      70.00B
-Created:   2020-05-31 12:00:00
-
-Name:      bazzz
-Original:  /path/bar/bazzz
-Type:      File
-Size:      5.00K
-Created:   2020-06-30 12:00:00
-
-Name:      dir
-Original:  /some/really/really/long/dir
-Type:      Directory
-Size:      20.23K
-Created:   2020-05-31 12:00:00
-
 Name:      z
 Original:  /z
 Type:      File
@@ -27,6 +9,24 @@ Original:  /foo/path/f
 Type:      File
 Size:      13.07M
 Created:   2020-06-30 12:00:00
+
+Name:      bazzz
+Original:  /path/bar/bazzz
+Type:      File
+Size:      5.00K
+Created:   2020-06-30 12:00:00
+
+Name:      foo
+Original:  /path/foo
+Type:      File
+Size:      70.00B
+Created:   2020-05-31 12:00:00
+
+Name:      dir
+Original:  /some/really/really/long/dir
+Type:      Directory
+Size:      20.23K
+Created:   2020-05-31 12:00:00
 
 Name:      d
 Original:  /d
