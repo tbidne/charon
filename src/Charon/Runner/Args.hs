@@ -358,12 +358,13 @@ commandParser =
     permDelParser =
       PermDelete <$> do
         prompt <- promptParser "Prompts before deleting path(s). This is the default."
-        strategy <- ((,) <$> indicesParser <*> mPathsParser)
+        indices <- indicesParser
         verbose <- verboseParser "Lists deleted paths."
+        paths <- mPathsParser
         pure
           $ MkPermDeleteParams
             { prompt,
-              strategy,
+              strategy = (indices, paths),
               verbose
             }
     emptyParser =
@@ -372,14 +373,15 @@ commandParser =
     restoreParser =
       Restore <$> do
         force <- forceParser restoreForceTxt
+        indices <- indicesParser
         prompt <- promptParser restorePromptTxt
-        strategy <- ((,) <$> indicesParser <*> mPathsParser)
         verbose <- verboseParser "Lists restored paths."
+        paths <- mPathsParser
         pure
           $ MkRestoreParams
             { force,
               prompt,
-              strategy,
+              strategy = (indices, paths),
               verbose
             }
     restoreForceTxt =
@@ -433,7 +435,7 @@ listFormatStyleParser =
     $ OA.option (OA.str >>= parseListFormat)
     $ mconcat
       [ OA.long "format",
-        OA.metavar "(m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))",
+        OA.metavar "(m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))",
         OA.helpDoc helpTxt
       ]
   where
@@ -536,7 +538,7 @@ coloringParser =
     $ OA.option readColoring
     $ mconcat
       [ OA.long "color",
-        OA.metavar "(t[rue] | f[alse] | d[etect])",
+        OA.metavar "(t[rue]|f[alse]|d[etect])",
         mkHelp
           $ mconcat
             [ "Determines if we should color output. Multiline is unaffected."
@@ -562,7 +564,7 @@ sortParser =
       [ OA.long "sort",
         OA.short 's',
         OA.metavar "(name|size)",
-        mkHelp "How to sort the list. Defaults to name. Does not affect 'single' style."
+        mkHelp "How to sort the list. Defaults to name."
       ]
 
 reverseSortParser :: Parser (Maybe Bool)
@@ -575,7 +577,7 @@ reverseSortParser =
         mkHelp helpTxt
       ]
   where
-    helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
+    helpTxt = "Sorts in the reverse order."
 
 forceParser :: String -> Parser (WithDisabled ())
 forceParser helpTxt = withDisabledParser mainParser "force"
@@ -700,7 +702,7 @@ logSizeModeParser =
       ( mconcat
           [ OA.long "log-size-mode",
             mkHelp helpTxt,
-            OA.metavar "(warn SIZE | delete SIZE)"
+            OA.metavar "(warn SIZE|delete SIZE)"
           ]
       )
   where

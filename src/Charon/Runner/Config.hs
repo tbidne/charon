@@ -126,4 +126,4 @@ readLogLevel = \case
 
 -- | String description of possible log levels parsed by 'readLogLevel'.
 logLevelStrings :: String
-logLevelStrings = "(debug | info | warn | error | fatal | none)"
+logLevelStrings = "(debug|info|warn|error|fatal|none)"

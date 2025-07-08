@@ -57,12 +57,16 @@ This section describes the possible commands, along with their specific options.
 **Usage:**
 
 ```
-Usage: charon delete PATHS...
+Usage: charon delete PATHS... [-v|--verbose]
 
   Moves the path(s) to the trash.
 
 
 Available options:
+  -v,--verbose             Lists deleted paths.
+
+  --no-verbose             Disables --verbose.
+
   -h,--help                Show this help text
 ```
 
@@ -78,7 +82,7 @@ $ charon delete foo bar baz
 **Usage:**
 
 ```
-Usage: charon perm-delete [--no-prompt] [-i|--indices] [PATHS...]
+Usage: charon perm-delete [--prompt] [-i|--indices] [-v|--verbose] [PATHS...]
 
   Permanently deletes path(s) from the trash. Can be run with explicit paths,
   wildcards, or --indices.
@@ -96,10 +100,19 @@ Usage: charon perm-delete [--no-prompt] [-i|--indices] [PATHS...]
 
 
 Available options:
-  --no-prompt              Will not ask before deleting path(s).
+  --prompt                 Prompts before deleting path(s). This is the default.
+
+  --no-prompt              Disables --prompt.
 
   -i,--indices             Allows selecting by numeric index instead of trash
-                           name. Incompatible with explicit paths.
+                           name. Incompatible with explicit paths. The prompt
+                           can be exited via 'exit', 'quit', or ':q'.
+
+  --no-indices             Disables --indices.
+
+  -v,--verbose             Lists deleted paths.
+
+  --no-verbose             Disables --verbose.
 
   -h,--help                Show this help text
 ```
@@ -138,13 +151,16 @@ For example: 1 3 5-12 15
 **Usage:**
 
 ```
-Usage: charon empty [--no-prompt]
+Usage: charon empty [--prompt]
 
   Empties the trash.
 
 
 Available options:
-  --no-prompt              Will not ask before emptying the trash.
+  --prompt                 Prompts before emptying the trash. This is the
+                           default.
+
+  --no-prompt              Disables --prompt.
 
   -h,--help                Show this help text
 ```
@@ -175,7 +191,8 @@ Permanently delete all contents (y/n)?
 **Usage:**
 
 ```
-Usage: charon restore [--force] [--no-prompt] [-i|--indices] [PATHS...]
+Usage: charon restore [--force] [-i|--indices] [--prompt] [-v|--verbose]
+                      [PATHS...]
 
   Restores the trash path(s) to their original location. Can be run with
   explicit paths, wildcards, or --indices.
@@ -198,12 +215,22 @@ Available options:
                            error (with --no-prompt) or prompt the user to
                            decide.
 
-  --no-prompt              Will not ask before restoring path(s). Collisions
-                           with existing paths will either error or overwrite,
-                           depending on --force.
+  --no-force               Disables --force.
 
   -i,--indices             Allows selecting by numeric index instead of trash
-                           name. Incompatible with explicit paths.
+                           name. Incompatible with explicit paths. The prompt
+                           can be exited via 'exit', 'quit', or ':q'.
+
+  --no-indices             Disables --indices.
+
+  --prompt                 Prompts before restoring path(s). This is the
+                           default.
+
+  --no-prompt              Disables --prompt.
+
+  -v,--verbose             Lists restored paths.
+
+  --no-verbose             Disables --verbose.
 
   -h,--help                Show this help text
 ```
@@ -239,8 +266,8 @@ For example: 1 3 5-12 15
 **Usage:**
 
 ```
-Usage: charon list [--color (t[rue] | f[alse] | d[etect])]
-                   [--format (m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))]
+Usage: charon list [--color (t[rue]|f[alse]|d[etect])]
+                   [--format (m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))]
                    [-n|--name-len (max|NAT)] [-o|--orig-len (max|NAT)]
                    [-s|--sort (name|size)] [-r|--reverse-sort]
 
@@ -248,11 +275,11 @@ Usage: charon list [--color (t[rue] | f[alse] | d[etect])]
 
 
 Available options:
-  --color (t[rue] | f[alse] | d[etect])
+  --color (t[rue]|f[alse]|d[etect])
                            Determines if we should color output. Multiline is
                            unaffected.
 
-  --format (m[ulti] | s[ingle] | t[abular] | (ts|tabular-simple))
+  --format (m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))
                            Formatting options.
 
                            - multi: Prints each entry across multiple lines.
@@ -275,11 +302,9 @@ Available options:
                            characters or longest path. Only affects the
                            'tabular' format.
 
-  -s,--sort (name|size)    How to sort the list. Defaults to name. Does not
-                           affect 'single' style.
+  -s,--sort (name|size)    How to sort the list. Defaults to name.
 
-  -r,--reverse-sort        Sorts in the reverse order. Does not affect 'single'
-                           style.
+  -r,--reverse-sort        Sorts in the reverse order.
 
   -h,--help                Show this help text
 ```
