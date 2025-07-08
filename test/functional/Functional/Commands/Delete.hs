@@ -95,9 +95,11 @@ deletesTilde getTestEnv =
 
         captureIndexBs testDir
 
+{- ORMOLU_DISABLE -}
+
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv =
-  testGoldenParams
+  testGoldenParamsOs
     $ MkGoldenParams
       { runner,
         testDesc = "Deletes many paths",
@@ -111,8 +113,15 @@ deletesMany getTestEnv =
         -- Tests trailing slash and trailing whitespace. We choose a filename
         -- (e_ws) that will not be last, since our test suite strips trailing
         -- whitespace, but we want to see it.
+        --
+        -- Cannot have this test on windows as trailing whitespace is stripped.
+#if WINDOWS
+        let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3"]
+#else
         let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3", "e_ws  "]
-            dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4", "dirslash/"]
+#endif
+      
+        let dirsToDelete = (testDir </>!) <$> ["dir1", "dir2", "dir4", "dirslash/"]
             fileLinkToDelete = testDir </> [osp|file-link|]
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
@@ -142,6 +151,8 @@ deletesMany getTestEnv =
         assertSymlinksDoNotExist linksToDelete
 
         captureIndexBs testDir
+
+{- ORMOLU_ENABLE -}
 
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv =
