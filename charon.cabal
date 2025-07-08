@@ -96,8 +96,10 @@ library
     Charon.Runner.CharonT
     Charon.Runner.Command
     Charon.Runner.Command.List
+    Charon.Runner.Config
     Charon.Runner.Env
     Charon.Runner.FileSizeMode
+    Charon.Runner.Merged
     Charon.Runner.Phase
     Charon.Runner.Toml
     Charon.Utils

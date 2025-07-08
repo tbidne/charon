@@ -18,12 +18,12 @@ module Integration.Prelude
   )
 where
 
-import Charon.Backend.Data (Backend (BackendCbor))
+import Charon.Backend.Data (Backend)
 import Charon.Data.Paths (PathI, PathIndex (TrashHome))
 import Charon.Env (HasBackend, HasTrashHome)
 import Charon.Prelude as X
 import Charon.Runner qualified as Runner
-import Charon.Runner.Toml (TomlConfigP2)
+import Charon.Runner.Merged (MergedConfig)
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
@@ -177,10 +177,10 @@ captureCharonIntExceptionPure argList = do
   terminalRef <- newIORef ""
   deletedPathsRef <- newIORef []
 
-  (toml, cmd) <- getConfig
-  env <- mkIntPureEnv toml terminalRef deletedPathsRef
+  cfg <- getConfig
+  let env = mkIntPureEnv cfg terminalRef deletedPathsRef
 
-  result <- try @_ @e $ runIntPure (Runner.runCmd cmd) env
+  result <- try @_ @e $ runIntPure (Runner.runCmd $ cfg ^. #command) env
 
   case result of
     Right _ ->
@@ -199,17 +199,11 @@ captureCharonIntExceptionPure argList = do
     argList' = "-c" : "none" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-mkIntPureEnv :: TomlConfigP2 -> IORef Text -> IORef [OsPath] -> IO IntPureEnv
-mkIntPureEnv toml terminalRef deletedPathsRef = do
-  trashHome <- getTrashHome'
-  pure
-    $ MkIntPureEnv
-      { backend = fromMaybe BackendCbor (toml ^. #backend),
-        trashHome = trashHome,
-        terminalRef,
-        deletedPathsRef
-      }
-  where
-    getTrashHome' = case toml ^. #trashHome of
-      Nothing -> error "Setup error, no trash home on config"
-      Just th -> pure th
+mkIntPureEnv :: MergedConfig -> IORef Text -> IORef [OsPath] -> IntPureEnv
+mkIntPureEnv toml terminalRef deletedPathsRef =
+  MkIntPureEnv
+    { backend = toml ^. #coreConfig ^. #backend,
+      trashHome = toml ^. #coreConfig ^. #trashHome,
+      terminalRef,
+      deletedPathsRef
+    }

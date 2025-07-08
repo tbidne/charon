@@ -5,9 +5,7 @@
 module Charon.Runner.Command
   ( -- * Types
     Command (..),
-    CommandP1,
-    CommandP2,
-    advancePhaseCmd,
+    mergeCommand,
     CmdPathF,
 
     -- ** Delete
@@ -50,11 +48,8 @@ import Charon.Data.Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Prelude
-import Charon.Runner.Command.List (ListCmd)
-import Charon.Runner.Phase
-  ( AdvancePhase (advancePhase),
-    Phase (Phase1, Phase2),
-  )
+import Charon.Runner.Command.List (ListCmd, mergeListCommand)
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged))
 
 newtype Force = MkForce {unForce :: Bool}
   deriving stock (Eq, Show)
@@ -66,15 +61,15 @@ newtype NoPrompt = MkNoPrompt {unNoPrompt :: Bool}
 
 makeFieldLabelsNoPrefix ''NoPrompt
 
-type CmdPathF :: Phase -> PathIndex -> Type
+type CmdPathF :: ConfigPhase -> PathIndex -> Type
 type family CmdPathF p i where
-  CmdPathF Phase1 i = RawPathI i
-  CmdPathF Phase2 i = PathI i
+  CmdPathF ConfigPhaseArgs i = RawPathI i
+  CmdPathF ConfigPhaseMerged i = PathI i
 
-type IndicesPathsF :: Phase -> Type
+type IndicesPathsF :: ConfigPhase -> Type
 type family IndicesPathsF p where
-  IndicesPathsF Phase1 = (Bool, (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
-  IndicesPathsF Phase2 = IndicesPathsStrategy
+  IndicesPathsF ConfigPhaseArgs = (Bool, (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
+  IndicesPathsF ConfigPhaseMerged = IndicesPathsStrategy
 
 -- | Strategy for finding paths in the trash index.
 data IndicesPathsStrategy
@@ -93,13 +88,13 @@ newtype DeleteParams s = MkDeleteParams
 
 makeFieldLabelsNoPrefix ''DeleteParams
 
-deriving stock instance Eq (DeleteParams Phase1)
+deriving stock instance Eq (DeleteParams ConfigPhaseArgs)
 
-deriving stock instance Show (DeleteParams Phase1)
+deriving stock instance Show (DeleteParams ConfigPhaseArgs)
 
-deriving stock instance Eq (DeleteParams Phase2)
+deriving stock instance Eq (DeleteParams ConfigPhaseMerged)
 
-deriving stock instance Show (DeleteParams Phase2)
+deriving stock instance Show (DeleteParams ConfigPhaseMerged)
 
 data PermDeleteParams s = MkPermDeleteParams
   { noPrompt :: NoPrompt,
@@ -108,13 +103,13 @@ data PermDeleteParams s = MkPermDeleteParams
 
 makeFieldLabelsNoPrefix ''PermDeleteParams
 
-deriving stock instance Eq (PermDeleteParams Phase1)
+deriving stock instance Eq (PermDeleteParams ConfigPhaseArgs)
 
-deriving stock instance Show (PermDeleteParams Phase1)
+deriving stock instance Show (PermDeleteParams ConfigPhaseArgs)
 
-deriving stock instance Eq (PermDeleteParams Phase2)
+deriving stock instance Eq (PermDeleteParams ConfigPhaseMerged)
 
-deriving stock instance Show (PermDeleteParams Phase2)
+deriving stock instance Show (PermDeleteParams ConfigPhaseMerged)
 
 data RestoreParams s = MkRestoreParams
   { force :: Force,
@@ -124,16 +119,16 @@ data RestoreParams s = MkRestoreParams
 
 makeFieldLabelsNoPrefix ''RestoreParams
 
-deriving stock instance Eq (RestoreParams Phase1)
+deriving stock instance Eq (RestoreParams ConfigPhaseArgs)
 
-deriving stock instance Show (RestoreParams Phase1)
+deriving stock instance Show (RestoreParams ConfigPhaseArgs)
 
-deriving stock instance Eq (RestoreParams Phase2)
+deriving stock instance Eq (RestoreParams ConfigPhaseMerged)
 
-deriving stock instance Show (RestoreParams Phase2)
+deriving stock instance Show (RestoreParams ConfigPhaseMerged)
 
 -- | Action to run.
-type Command :: Phase -> Type
+type Command :: ConfigPhase -> Type
 data Command s
   = -- | Deletes a path.
     Delete (DeleteParams s)
@@ -154,28 +149,24 @@ data Command s
 
 makePrisms ''Command
 
-deriving stock instance Eq (Command Phase1)
+deriving stock instance Eq (Command ConfigPhaseArgs)
 
-deriving stock instance Show (Command Phase1)
+deriving stock instance Show (Command ConfigPhaseArgs)
 
-deriving stock instance Eq (Command Phase2)
+deriving stock instance Eq (Command ConfigPhaseMerged)
 
-deriving stock instance Show (Command Phase2)
+deriving stock instance Show (Command ConfigPhaseMerged)
 
-type CommandP1 = Command Phase1
-
-type CommandP2 = Command Phase2
-
-advancePhaseCmd ::
+mergeCommand ::
   ( HasCallStack,
     MonadCatch m,
     MonadPathReader m,
     MonadTerminal m,
     MonadThrow m
   ) =>
-  Command Phase1 ->
-  m (Command Phase2)
-advancePhaseCmd = \case
+  Command ConfigPhaseArgs ->
+  m (Command ConfigPhaseMerged)
+mergeCommand = \case
   Delete params -> Delete . MkDeleteParams <$> fromRawSet (params ^. #paths)
   PermDelete params -> do
     strategy <- parseStrategy (params ^. #strategy)
@@ -196,7 +187,7 @@ advancePhaseCmd = \case
             }
     pure $ Restore params2
   Metadata -> pure Metadata
-  List cfg -> pure $ List $ advancePhase cfg
+  List cfg -> pure $ List $ mergeListCommand cfg
   Convert dest -> pure $ Convert dest
   Merge dest -> Merge <$> fromRaw dest
   where

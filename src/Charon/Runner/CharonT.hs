@@ -9,7 +9,8 @@ module Charon.Runner.CharonT
 where
 
 import Charon.Prelude
-import Charon.Runner.Env (Env, LogFile)
+import Charon.Runner.Config (LogFile)
+import Charon.Runner.Env (Env)
 import Effects.Logger (guardLevel)
 import Effects.Logger.Namespace qualified as NS
 
@@ -47,10 +48,10 @@ deriving newtype instance (MonadHaskeline m) => MonadHaskeline (CharonT env m)
 
 instance
   (MonadHandleWriter m, MonadThread m, MonadTime m) =>
-  MonadLogger (CharonT (Env m) m)
+  MonadLogger (CharonT Env m)
   where
   monadLoggerLog loc _src lvl msg = do
-    mhandle <- asks (preview (#logEnv % #logFile %? handleAndLevel))
+    mhandle <- asks (preview (#coreConfig % #logging % #logFile %? handleAndLevel))
     case mhandle of
       Nothing -> pure ()
       Just (handle, logLevel) -> do
@@ -59,7 +60,7 @@ instance
           let bs = NS.logStrToBs formatted
           hPut handle bs
     where
-      handleAndLevel :: Getter (LogFile m) (Handle, LogLevel)
+      handleAndLevel :: Getter LogFile (Handle, LogLevel)
       handleAndLevel =
         to (\lf -> bimap (view #handle) (view #logLevel) (lf, lf))
 

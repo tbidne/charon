@@ -48,7 +48,7 @@ import Charon.Runner.Command
     PermDeleteParams,
     RestoreParams,
   )
-import Charon.Runner.Phase (Phase (Phase2))
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseMerged))
 import Charon.Utils qualified as Utils
 import Data.Foldable1 qualified as F1
 import Data.Sequence qualified as Seq
@@ -80,7 +80,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  DeleteParams Phase2 ->
+  DeleteParams ConfigPhaseMerged ->
   m ()
 delete params = addNamespace "delete" $ do
   initalLog
@@ -112,7 +112,7 @@ permDelete ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  PermDeleteParams Phase2 ->
+  PermDeleteParams ConfigPhaseMerged ->
   m ()
 permDelete params = addNamespace "permDelete" $ do
   initalLog
@@ -199,7 +199,7 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  RestoreParams Phase2 ->
+  RestoreParams ConfigPhaseMerged ->
   m ()
 restore params = addNamespace "restore" $ do
   initalLog

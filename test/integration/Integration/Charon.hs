@@ -37,9 +37,12 @@ import Charon.Runner.Command
     PermDeleteParams (MkPermDeleteParams),
     RestoreParams (MkRestoreParams),
   )
-import Charon.Runner.Env
-  ( Env (MkEnv, backend, logEnv, trashHome),
+import Charon.Runner.Config
+  ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
     LogEnv (MkLogEnv),
+  )
+import Charon.Runner.Env
+  ( Env (MkEnv, coreConfig),
   )
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.HashSet qualified as HSet
@@ -62,7 +65,7 @@ import System.Environment.Guard.Lifted (ExpectEnv (ExpectEnvSet), withGuard_)
 -- We could use this to later verify logs, if we wished.
 
 data IntEnv = MkIntEnv
-  { coreEnv :: Env IO,
+  { coreEnv :: Env,
     termLogsRef :: IORef [Text],
     logsRef :: IORef [Text],
     namespace :: Namespace
@@ -71,10 +74,10 @@ data IntEnv = MkIntEnv
 makeFieldLabelsNoPrefix ''IntEnv
 
 instance HasBackend IntEnv where
-  getBackend = view (#coreEnv % #backend)
+  getBackend = view (#coreEnv % #coreConfig % #backend)
 
 instance HasTrashHome IntEnv where
-  getTrashHome = view (#coreEnv % #trashHome)
+  getTrashHome = view (#coreEnv % #coreConfig % #trashHome)
 
 -- | Type for running integration tests.
 newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
@@ -540,9 +543,12 @@ mkEnv backend fp = do
     $ MkIntEnv
       { coreEnv =
           MkEnv
-            { trashHome = MkPathI fp,
-              backend,
-              logEnv = MkLogEnv Nothing ""
+            { coreConfig =
+                MkCoreConfig
+                  { trashHome = MkPathI fp,
+                    backend,
+                    logging = MkLogEnv Nothing ""
+                  }
             },
         termLogsRef,
         logsRef,

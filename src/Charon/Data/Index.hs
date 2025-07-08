@@ -43,7 +43,8 @@ import Charon.Data.Paths
   )
 import Charon.Data.Paths qualified as Paths
 import Charon.Prelude
-import Charon.Runner.Command.List (ListCmdP2)
+import Charon.Runner.Command.List (ListCmd)
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseMerged))
 import Data.Foldable (toList)
 import Data.Foldable qualified as F
 import Data.HashMap.Strict qualified as HMap
@@ -82,7 +83,7 @@ formatIndex ::
     MonadTerminal m
   ) =>
   -- | List config
-  ListCmdP2 ->
+  ListCmd ConfigPhaseMerged ->
   -- | The index to format
   Index ->
   m Text
@@ -99,7 +100,7 @@ formatIndex' ::
     MonadTerminal m
   ) =>
   -- | List config
-  ListCmdP2 ->
+  ListCmd ConfigPhaseMerged ->
   -- | The index to format
   Seq PathDataCore ->
   m Text

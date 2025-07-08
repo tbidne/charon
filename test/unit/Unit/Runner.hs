@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wno-missing-methods #-}
 
 -- | Runner unit tests.
 module Unit.Runner
@@ -13,7 +14,7 @@ import Charon.Data.PathData.Formatting
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
     PathDataFormat (FormatMultiline, FormatSingleline, FormatTabular),
   )
-import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
@@ -35,11 +36,17 @@ import Charon.Runner.Command.List
         sort
       ),
   )
+import Charon.Runner.Config (_LogLevelOn)
 import Charon.Runner.FileSizeMode
   ( FileSizeMode
       ( FileSizeModeDelete,
         FileSizeModeWarn
       ),
+  )
+import Charon.Runner.Merged
+import Effects.FileSystem.PathReader
+  ( MonadPathReader (getXdgDirectory),
+    XdgDirectory (XdgData),
   )
 import System.Environment qualified as SysEnv
 import Unit.Prelude
@@ -72,10 +79,10 @@ argsTests =
 
 delete :: TestTree
 delete = testCase "Parses delete" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just expectedUSeq @=? cmd ^? _Delete % #paths
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just expectedUSeq @=? cfg ^? (#command % _Delete % #paths)
   where
     argList = ["delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -84,11 +91,11 @@ delete = testCase "Parses delete" $ do
 
 permDelete :: TestTree
 permDelete = testCase "Parses perm delete" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just (MkNoPrompt False) @=? cmd ^? (_PermDelete % #noPrompt)
-  Just expectedUSeq @=? cmd ^? (_PermDelete % #strategy % _PathsStrategy)
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just (MkNoPrompt False) @=? cfg ^? (#command % _PermDelete % #noPrompt)
+  Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -97,11 +104,11 @@ permDelete = testCase "Parses perm delete" $ do
 
 permDeleteNoPrompt :: TestTree
 permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just (MkNoPrompt True) @=? cmd ^? (_PermDelete % #noPrompt)
-  Just expectedUSeq @=? cmd ^? (_PermDelete % #strategy % _PathsStrategy)
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just (MkNoPrompt True) @=? cfg ^? (#command % _PermDelete % #noPrompt)
+  Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -110,28 +117,28 @@ permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
 
 emptyTrash :: TestTree
 emptyTrash = testCase "Parses empty" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just False @=? cmd ^? _Empty % #unNoPrompt
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just False @=? cfg ^? #command % _Empty % #unNoPrompt
   where
     argList = ["empty", "-c", "none"]
 
 emptyTrashNoPrompt :: TestTree
 emptyTrashNoPrompt = testCase "Parses empty with --no-prompt" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just True @=? cmd ^? _Empty % #unNoPrompt
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just True @=? cfg ^? #command % _Empty % #unNoPrompt
   where
     argList = ["empty", "--no-prompt", "-c", "none"]
 
 restore :: TestTree
 restore = testCase "Parses restore" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just expectedUSeq @=? cmd ^? (_Restore % #strategy % _PathsStrategy)
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just expectedUSeq @=? cfg ^? (#command % _Restore % #strategy % _PathsStrategy)
   where
     argList = ["restore", "foo", "bar", "-c", "none"]
     expectedUSeq =
@@ -140,10 +147,10 @@ restore = testCase "Parses restore" $ do
 
 list :: TestTree
 list = testCase "Parses list" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just defList @=? cmd ^? _List
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just defList @=? cfg ^? #command % _List
   where
     argList = ["list", "-c", "none"]
     defList =
@@ -155,10 +162,10 @@ list = testCase "Parses list" $ do
 
 listNonDefaults :: TestTree
 listNonDefaults = testCase "List non-default args" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just defList @=? cmd ^? _List
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just defList @=? cfg ^? #command % _List
   where
     argList =
       [ "-c",
@@ -186,10 +193,10 @@ listNonDefaults = testCase "List non-default args" $ do
 
 listMultiline :: TestTree
 listMultiline = testCase "List multiline" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just defList @=? cmd ^? _List
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just defList @=? cfg ^? #command % _List
   where
     argList =
       [ "-c",
@@ -207,10 +214,10 @@ listMultiline = testCase "List multiline" $ do
 
 listSingleline :: TestTree
 listSingleline = testCase "List singleline" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just defList @=? cmd ^? _List
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just defList @=? cfg ^? #command % _List
   where
     argList =
       [ "-c",
@@ -230,10 +237,10 @@ listSingleline = testCase "List singleline" $ do
 
 listNonDefaultsNoFormat :: TestTree
 listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just defList @=? cmd ^? _List
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just defList @=? cfg ^? #command % _List
   where
     argList =
       [ "-c",
@@ -253,10 +260,10 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
 
 metadata :: TestTree
 metadata = testCase "Parses metadata" $ do
-  (cfg, cmd) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Just () @=? cmd ^? _Metadata
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Just () @=? cfg ^? #command % _Metadata
   where
     argList = ["metadata", "-c", "none"]
 
@@ -272,23 +279,23 @@ tomlTests =
 
 parsesExample :: TestTree
 parsesExample = testCase "Parses example" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Just (MkPathI [osp|./tmp|]) @=? cfg ^. #trashHome
-  Just BackendFdo @=? cfg ^. #backend
-  Just (Just LevelInfo) @=? cfg ^. #logLevel
-  Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^. #logSizeMode
+  MkPathI [osp|./tmp|] @=? cfg ^. #coreConfig % #trashHome
+  BackendFdo @=? cfg ^. #coreConfig % #backend
+  Just LevelInfo @=? cfg ^? #coreConfig % #logging %? #logLevel % _LogLevelOn
+  Just (FileSizeModeWarn (MkBytes 10_000_000)) @=? cfg ^? #coreConfig % #logging %? #logSizeMode
   where
     argList = ["-c", "examples/config.toml", "delete", "foo"]
 
 argsOverridesToml :: TestTree
 argsOverridesToml = testCase "Args overrides Toml" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Just (MkPathI [osp|not-tmp|]) @=? cfg ^. #trashHome
-  Just BackendCbor @=? cfg ^. #backend
-  Just (Just LevelError) @=? cfg ^. #logLevel
-  Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^. #logSizeMode
+  MkPathI [osp|not-tmp|] @=? cfg ^. #coreConfig % #trashHome
+  BackendCbor @=? cfg ^. #coreConfig % #backend
+  Just LevelError @=? cfg ^? #coreConfig % #logging %? #logLevel % _LogLevelOn
+  Just (FileSizeModeDelete (MkBytes 5_000_000)) @=? cfg ^? #coreConfig % #logging %? #logSizeMode
   where
     argList =
       [ "-c",
@@ -307,9 +314,9 @@ argsOverridesToml = testCase "Args overrides Toml" $ do
 
 argsDisablesTomlLogging :: TestTree
 argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Just Nothing @=? cfg ^. #logLevel
+  Nothing @=? cfg ^. #coreConfig % #logging
   where
     argList =
       [ "-c",
@@ -322,10 +329,10 @@ argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
 
 defaultConfig :: TestTree
 defaultConfig = testCase "Default config" $ do
-  (cfg, _) <- SysEnv.withArgs argList getConfiguration
+  cfg <- runConfig argList
 
-  Nothing @=? cfg ^. #trashHome
-  Nothing @=? cfg ^. #logLevel
+  defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
+  Nothing @=? cfg ^. (#coreConfig % #logging)
   where
     argList =
       [ "-c",
@@ -333,3 +340,30 @@ defaultConfig = testCase "Default config" $ do
         "delete",
         "foo"
       ]
+
+newtype MockIO a = MkMockIO (IO a)
+  deriving newtype
+    ( Applicative,
+      Functor,
+      Monad,
+      MonadCatch,
+      MonadFileReader,
+      MonadOptparse,
+      MonadThrow
+    )
+
+instance MonadPathReader MockIO where
+  getXdgDirectory XdgData p = pure $ [osp|xdg_data|] </> p
+  getXdgDirectory other _ = error $ "unexpected xdg: " ++ show other
+
+instance MonadTerminal MockIO
+
+runMockIO :: MockIO a -> IO a
+runMockIO (MkMockIO io) = io
+
+runConfig :: [String] -> IO MergedConfig
+runConfig argList = do
+  SysEnv.withArgs argList (runMockIO getConfiguration)
+
+defTrashHome :: PathI TrashHome
+defTrashHome = MkPathI [ospPathSep|xdg_data/charon|]

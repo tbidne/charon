@@ -33,7 +33,6 @@ import Charon.Runner.Command
         PermDelete,
         Restore
       ),
-    CommandP1,
     DeleteParams (MkDeleteParams),
     Force (MkForce),
     NoPrompt (MkNoPrompt),
@@ -46,8 +45,14 @@ import Charon.Runner.Command.List
     ListFormatStyle,
     parseListFormat,
   )
+import Charon.Runner.Config
+  ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
+    LogLevelConfig,
+    LoggingConfig (MkLoggingConfig, logLevel, logSizeMode),
+  )
+import Charon.Runner.Config qualified as Config
 import Charon.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
-import Charon.Utils qualified as Utils
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseArgs))
 import Control.Applicative qualified as A
 import Data.List qualified as L
 import Data.Version (showVersion)
@@ -105,19 +110,12 @@ data TomlConfigPath
 
 -- | CLI args.
 data Args = MkArgs
-  { -- | Path to toml config.
-    tomlConfigPath :: TomlConfigPath,
-    -- | Backend to use.
-    backend :: Maybe Backend,
-    -- | The file logging level. The double Maybe is so we distinguish between
-    -- unspecified (Nothing) and explicitly disabled (Just Nothing).
-    logLevel :: !(Maybe (Maybe LogLevel)),
-    -- | Whether to warn/delete for large log files.
-    logSizeMode :: Maybe FileSizeMode,
-    -- | Path to trash home.
-    trashHome :: !(Maybe (RawPathI TrashHome)),
-    -- | Command to run.
-    command :: CommandP1
+  { -- | Command to run.
+    command :: Command ConfigPhaseArgs,
+    -- | Core config.
+    coreConfig :: CoreConfig ConfigPhaseArgs,
+    -- | Path to toml config.
+    tomlConfigPath :: TomlConfigPath
   }
   deriving stock (Eq, Generic, Show)
 
@@ -151,16 +149,33 @@ parserInfoArgs =
           ]
 
 argsParser :: Parser Args
-argsParser =
-  MkArgs
-    <$> configParser
-    <*> backendParser
-    <*> logLevelParser
-    <*> logSizeModeParser
-    <*> trashParser
-    <**> version
-    <**> OA.helper
-    <*> commandParser
+argsParser = p <**> version <**> OA.helper
+  where
+    p :: Parser Args
+    p = do
+      command <- commandParser
+
+      backend <- backendParser
+      logLevel <- logLevelParser
+      logSizeMode <- logSizeModeParser
+      trashHome <- trashParser
+
+      tomlConfigPath <- configParser
+      pure
+        $ MkArgs
+          { command,
+            coreConfig =
+              MkCoreConfig
+                { backend,
+                  logging =
+                    MkLoggingConfig
+                      { logLevel,
+                        logSizeMode
+                      },
+                  trashHome
+                },
+            tomlConfigPath
+          }
 
 version :: Parser (a -> a)
 version = OA.infoOption versLong (OA.long "version" <> OA.hidden)
@@ -235,7 +250,7 @@ configParser =
         then pure TomlNone
         else pure $ TomlPath p
 
-commandParser :: Parser CommandP1
+commandParser :: Parser (Command ConfigPhaseArgs)
 commandParser =
   OA.hsubparser
     ( mconcat
@@ -595,13 +610,13 @@ trashDestParser =
   where
     helpTxt = "Path to the dest trash directory."
 
-logLevelParser :: Parser (Maybe (Maybe LogLevel))
+logLevelParser :: Parser (Maybe LogLevelConfig)
 logLevelParser =
   A.optional
-    $ OA.option (OA.str >>= Utils.readLogLevel)
+    $ OA.option (OA.str >>= Config.readLogLevel)
     $ mconcat
       [ OA.long "log-level",
-        OA.metavar Utils.logLevelStrings,
+        OA.metavar Config.logLevelStrings,
         mkHelp
           $ mconcat
             [ "The file level in which to log. Defaults to none. Logs are ",

@@ -26,10 +26,6 @@ module Charon.Utils
     normalizedFormat,
     formatBytes,
 
-    -- * Logs
-    readLogLevel,
-    logLevelStrings,
-
     -- * Paths
     getPathType,
 
@@ -155,27 +151,6 @@ formatBytes =
   Bytes.formatSized
     (MkFloatingFormatter (Just 2))
     Bytes.sizedFormatterUnix
-
--- | Reads the 'LogLevel'.
-readLogLevel :: (MonadFail m) => Text -> m (Maybe LogLevel)
-readLogLevel "none" = pure Nothing
-readLogLevel "fatal" = pure $ Just levelFatal
-readLogLevel "error" = pure $ Just LevelError
-readLogLevel "warn" = pure $ Just LevelWarn
-readLogLevel "info" = pure $ Just LevelInfo
-readLogLevel "debug" = pure $ Just LevelDebug
-readLogLevel other =
-  fail
-    $ mconcat
-      [ "Expected log-level ",
-        logLevelStrings,
-        ", received: ",
-        T.unpack other
-      ]
-
--- | String description of possible log levels parsed by 'readLogLevel'.
-logLevelStrings :: String
-logLevelStrings = "(none|fatal|error|warn|info|debug)"
 
 -- | Merge two fields using the 'Alternative' instance.
 mergeAlt ::

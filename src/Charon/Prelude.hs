@@ -32,6 +32,7 @@ module Charon.Prelude
     pathCharon,
 
     -- * Misc
+    charonPath,
     doesAnyPathExist,
     doesAnyPathNotExist,
     usingReaderT,
@@ -395,3 +396,6 @@ concatWith f ds
 todo :: forall {r :: RuntimeRep} (a :: TYPE r). (HasCallStack) => a
 todo = raise# (errorCallWithCallStackException "Prelude.todo: not yet implemented" ?callStack)
 {-# WARNING todo "todo remains in code" #-}
+
+charonPath :: OsPath
+charonPath = [osp|charon|]

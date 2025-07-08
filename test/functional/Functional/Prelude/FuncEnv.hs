@@ -42,15 +42,18 @@ module Functional.Prelude.FuncEnv
   )
 where
 
-import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
+import Charon.Backend.Data (Backend (BackendFdo))
 import Charon.Backend.Data qualified as Backend
 import Charon.Backend.Fdo.DirectorySizes (DirectorySizes (MkDirectorySizes))
 import Charon.Backend.Fdo.DirectorySizes qualified as DirectorySizes
-import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
-import Charon.Env (HasBackend, HasTrashHome)
+import Charon.Data.Paths (PathI (MkPathI))
+import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Charon.Runner qualified as Runner
-import Charon.Runner.Toml (TomlConfigP2)
+import Charon.Runner.Config (CoreConfig)
+import Charon.Runner.Env qualified as Env
+import Charon.Runner.Merged (MergedConfig)
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseEnv))
 import Charon.Utils qualified as Utils
 import Data.List qualified as L
 import Data.Text qualified as T
@@ -72,7 +75,6 @@ import Effects.Time
 import FileSystem.OsPath (unsafeDecode)
 import GHC.Exts (IsList (toList))
 import System.Environment qualified as SysEnv
-import System.Exit (die)
 import Test.Tasty.HUnit (assertBool)
 import Test.Tasty.HUnit qualified as HUnit
 
@@ -103,11 +105,8 @@ altAnswers = 'n' :> 'y' :> altAnswers
 
 -- | Environment for running functional tests.
 data FuncEnv = MkFuncEnv
-  { -- | Trash home.
-    trashHome :: PathI TrashHome,
-    backend :: Backend,
-    -- | Log namespace.
-    namespace :: Namespace,
+  { -- | Core config.
+    coreConfig :: CoreConfig ConfigPhaseEnv,
     -- | Saves the terminal output.
     terminalRef :: IORef Text,
     -- | Saves the logs output.
@@ -118,25 +117,13 @@ data FuncEnv = MkFuncEnv
     strLine :: String
   }
 
-instance Show FuncEnv where
-  show (MkFuncEnv th backend ns _ _ _ strLine) =
-    mconcat
-      [ "MkFuncEnv {trashHome = ",
-        show th,
-        ", backend = ",
-        show backend,
-        ", logNamespace = ",
-        show ns,
-        ", terminalRef = <ref>, logsRef = <ref>, charStream = <ref>, strLine = ",
-        show strLine,
-        "}"
-      ]
-
 makeFieldLabelsNoPrefix ''FuncEnv
 
-deriving anyclass instance HasBackend FuncEnv
+instance HasBackend FuncEnv where
+  getBackend = view (#coreConfig % #backend)
 
-deriving anyclass instance HasTrashHome FuncEnv
+instance HasTrashHome FuncEnv where
+  getTrashHome = view (#coreConfig % #trashHome)
 
 -- | Type for running functional tests.
 newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
@@ -163,13 +150,22 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
 deriving newtype instance MonadPosix (FuncIO env)
 #endif
 
+instance
+  (k ~ A_Lens, x ~ Namespace, y ~ Namespace) =>
+  LabelOptic "namespace" k FuncEnv FuncEnv x y
+  where
+  labelOptic =
+    lensVL $ \f (MkFuncEnv a1 a2 a3 a4 a5) ->
+      fmap
+        (\b -> MkFuncEnv (set' (#logging % #logNamespace) b a1) a2 a3 a4 a5)
+        (f (a1 ^. (#logging % #logNamespace)))
+
 -- Overriding this for getXdgDirectory
 
 {- ORMOLU_DISABLE -}
 
 instance
-  ( Is k A_Getter,
-    LabelOptic' "trashHome" k env (PathI TrashHome)
+  ( HasTrashHome env
   ) =>
   MonadPathReader (FuncIO env)
   where
@@ -192,7 +188,7 @@ instance
   -- the real state (~/.local/state/charon) and instead use our testing
   -- trash dir
   getXdgDirectory XdgState _ = do
-    MkPathI th <- asks (view #trashHome)
+    MkPathI th <- asks getTrashHome
     pure th
   getXdgDirectory xdg p = liftIO $ PR.getXdgDirectory xdg p
 
@@ -285,27 +281,24 @@ runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
 mkFuncEnv ::
   (HasCallStack, MonadIO m) =>
-  TomlConfigP2 ->
+  MergedConfig ->
   IORef Text ->
   IORef Text ->
   m FuncEnv
-mkFuncEnv toml logsRef terminalRef = do
-  trashHome <- liftIO getTrashHome'
+mkFuncEnv cfg logsRef terminalRef = do
   charStream <- liftIO $ newIORef altAnswers
+
+  env <- liftIO $ Env.withEnv cfg pure
+  let env' = set' (#coreConfig % #logging % #logNamespace) "functional" env
+
   pure
     $ MkFuncEnv
-      { trashHome = trashHome,
-        backend = fromMaybe BackendCbor (toml ^. #backend),
+      { coreConfig = env' ^. #coreConfig,
         terminalRef,
         logsRef,
-        namespace = "functional",
         charStream,
         strLine = "mkFuncEnv_answer"
       }
-  where
-    getTrashHome' = case toml ^. #trashHome of
-      Nothing -> die "Setup error, no trash home on config"
-      Just th -> pure th
 
 -- | Runs charon.
 runCharon :: (MonadIO m) => [String] -> m ()
@@ -342,11 +335,11 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
-  (toml, cmd) <- getConfig
-  env <- modEnv <$> mkFuncEnv toml logsRef terminalRef
+  cfg <- getConfig
+  env <- modEnv <$> mkFuncEnv cfg logsRef terminalRef
 
   catchesSync
-    (runFuncIO (Runner.runCmd cmd) env)
+    (runFuncIO (Runner.runCmd $ cfg ^. #command) env)
     (handleEx terminalRef logsRef)
     [ -- Restore and Perm Delete can throw ExitSuccess. We do not want to
       -- error in these cases.
@@ -419,11 +412,11 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
 
   try @_ @e getConfig >>= \case
     Left ex -> pure (T.pack (displayException ex), [], [])
-    Right (toml, cmd) -> do
-      env <- mkFuncEnv toml logsRef terminalRef
+    Right cfg -> do
+      env <- mkFuncEnv cfg logsRef terminalRef
 
       let runCatch = do
-            result <- try @_ @e $ runFuncIO (Runner.runCmd cmd) env
+            result <- try @_ @e $ runFuncIO (Runner.runCmd $ cfg ^. #command) env
 
             case result of
               Right _ ->

@@ -14,14 +14,8 @@ module Charon.Runner
 where
 
 import Charon qualified
-import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
 import Charon.Data.Index qualified as Index
-import Charon.Data.Paths
-  ( PathI (MkPathI),
-    PathIndex (TrashHome),
-  )
 import Charon.Env (HasBackend, HasTrashHome)
-import Charon.Env qualified as Env
 import Charon.Prelude
 import Charon.Runner.Args
   ( TomlConfigPath
@@ -43,23 +37,14 @@ import Charon.Runner.Command
         PermDelete,
         Restore
       ),
-    CommandP2,
   )
-import Charon.Runner.Command.List (ListCmdP2)
-import Charon.Runner.Env
-  ( Env (MkEnv, backend, logEnv, trashHome),
-    LogEnv (MkLogEnv, logFile, logNamespace),
-    LogFile (MkLogFile, handle, logLevel),
-  )
-import Charon.Runner.FileSizeMode (FileSizeMode (..))
-import Charon.Runner.FileSizeMode qualified as FileSizeMode
-import Charon.Runner.Toml (TomlConfigP2, defaultTomlConfig, mergeConfigs)
+import Charon.Runner.Command.List (ListCmd)
+import Charon.Runner.Env qualified as Env
+import Charon.Runner.Merged
+import Charon.Runner.Merged qualified as Merged
+import Charon.Runner.Phase
+import Charon.Runner.Toml (defaultTomlConfig)
 import Charon.Utils qualified as U
-import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
-import Data.Bytes qualified as Bytes
-import Effects.FileSystem.HandleWriter (withBinaryFile)
-import Effects.FileSystem.PathReader (getXdgData, getXdgState)
-import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 import TOML qualified
 
 -- | Entry point for running Charon. Does everything: reads CLI args,
@@ -84,8 +69,8 @@ runCharon ::
   ) =>
   m ()
 runCharon = do
-  (config, cmd) <- getConfiguration
-  withEnv config (runCharonT $ runCmd cmd)
+  merged <- getConfiguration
+  Env.withEnv merged (runCharonT $ runCmd $ merged ^. #command)
 
 -- | Runs Charon in the given environment. This is useful in conjunction with
 -- 'getConfiguration' as an alternative 'runCharon', when we want to use a
@@ -110,7 +95,7 @@ runCmd ::
     MonadTerminal m,
     MonadTime m
   ) =>
-  CommandP2 ->
+  Command ConfigPhaseMerged ->
   m ()
 runCmd cmd =
   -- NOTE: This adds a callstack to any thrown exceptions e.g. exitFailure.
@@ -133,39 +118,6 @@ runCmd cmd =
       $(logError) (U.displayExT ex)
       throwM ex
 
-withEnv ::
-  ( HasCallStack,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
-  ) =>
-  TomlConfigP2 ->
-  (Env m -> m a) ->
-  m a
-withEnv mergedConfig onEnv = do
-  trashHome <-
-    trashOrDefault (mergedConfig ^. #backend) (mergedConfig ^. #trashHome)
-
-  withLogHandle (mergedConfig ^. #logSizeMode) $ \handle ->
-    let logFile =
-          join (mergedConfig ^. #logLevel) <&> \logLevel ->
-            MkLogFile
-              { handle,
-                logLevel
-              }
-     in onEnv
-          $ MkEnv
-            { trashHome,
-              backend = fromMaybe BackendCbor (mergedConfig ^. #backend),
-              logEnv =
-                MkLogEnv
-                  { logFile,
-                    logNamespace = "main"
-                  }
-            }
-
 -- | Parses CLI 'Args' and optional 'TomlConfig' to produce the user
 -- configuration. For values shared between the CLI and Toml file, the CLI
 -- takes priority.
@@ -180,7 +132,7 @@ getConfiguration ::
     MonadPathReader m,
     MonadTerminal m
   ) =>
-  m (TomlConfigP2, CommandP2)
+  m MergedConfig
 getConfiguration = do
   -- get CLI args
   args <- getArgs
@@ -203,7 +155,7 @@ getConfiguration = do
     TomlNone -> pure defaultTomlConfig
 
   -- merge shared CLI and toml values
-  mergeConfigs args tomlConfig
+  Merged.mergeConfigs args tomlConfig
   where
     readConfig fp = do
       contents <- readFileUtf8ThrowM fp
@@ -224,7 +176,7 @@ printIndex ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  ListCmdP2 ->
+  ListCmd ConfigPhaseMerged ->
   m ()
 printIndex listCmd = do
   index <- Charon.getIndex
@@ -249,104 +201,3 @@ printMetadata = Charon.getMetadata >>= prettyDel
 
 prettyDel :: (Display a, MonadTerminal m) => a -> m ()
 prettyDel = putTextLn . U.renderPretty
-
--- | If the argument is given, returns it. Otherwise searches for the default
--- trash location.
-trashOrDefault ::
-  ( HasCallStack,
-    MonadPathReader m
-  ) =>
-  Maybe Backend ->
-  Maybe (PathI TrashHome) ->
-  m (PathI TrashHome)
--- 1. Use explicit path.
-trashOrDefault _ (Just th) = pure th
--- 2. No path but fdo: default fdo location.
-trashOrDefault (Just BackendFdo) Nothing = getFdoDefaultTrashHome
--- 3. Generic default.
-trashOrDefault _ _ = getGenericDefaultTrashHome
-
--- | Retrieves the default trash directory.
-getGenericDefaultTrashHome ::
-  ( HasCallStack,
-    MonadPathReader m
-  ) =>
-  m (PathI TrashHome)
-getGenericDefaultTrashHome = MkPathI <$> (getXdgData charonPath)
-
--- | Retrieves the default trash directory for fdo backend.
-getFdoDefaultTrashHome ::
-  ( HasCallStack,
-    MonadPathReader m
-  ) =>
-  m (PathI TrashHome)
-getFdoDefaultTrashHome = MkPathI <$> (getXdgData [osp|Trash|])
-
-withLogHandle ::
-  ( HasCallStack,
-    MonadFileWriter m,
-    MonadHandleWriter m,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
-  ) =>
-  Maybe FileSizeMode ->
-  (Handle -> m a) ->
-  m a
-withLogHandle sizeMode onHandle = do
-  xdgState <- getXdgState charonPath
-  createDirectoryIfMissing True xdgState
-
-  MkPathI logPath <- Env.getTrashLog
-
-  handleLogSize logPath sizeMode
-
-  withBinaryFile logPath AppendMode onHandle
-
-handleLogSize ::
-  ( HasCallStack,
-    MonadPathReader m,
-    MonadPathWriter m,
-    MonadTerminal m
-  ) =>
-  OsPath ->
-  Maybe FileSizeMode ->
-  m ()
-handleLogSize logFile msizeMode = do
-  logExists <- doesFileExist logFile
-  when logExists $ do
-    logSize <- getFileSize logFile
-    let logSize' = MkBytes (fromIntegral logSize)
-
-    case sizeMode of
-      FileSizeModeWarn warnSize ->
-        when (logSize' > warnSize)
-          $ putTextLn
-          $ sizeWarning warnSize logFile logSize'
-      FileSizeModeDelete delSize ->
-        when (logSize' > delSize) $ do
-          putTextLn $ sizeWarning delSize logFile logSize' <> " Deleting log."
-          removeFile logFile
-  where
-    sizeMode = fromMaybe FileSizeMode.defaultSizeMode msizeMode
-    sizeWarning warnSize fp fileSize =
-      mconcat
-        [ "Warning: log dir ",
-          decodeDisplayExT fp,
-          " has size: ",
-          formatBytes fileSize,
-          ", but specified threshold is: ",
-          formatBytes warnSize,
-          "."
-        ]
-
-    formatBytes =
-      Bytes.formatSized (MkFloatingFormatter (Just 2)) Bytes.sizedFormatterNatural
-        . Bytes.normalize
-        -- Convert to double _before_ normalizing. We may lose some precision
-        -- here, but it is better than normalizing a natural, which will
-        -- truncate (i.e. greater precision loss).
-        . fmap (fromIntegral @Natural @Double)
-
-charonPath :: OsPath
-charonPath = [osp|charon|]

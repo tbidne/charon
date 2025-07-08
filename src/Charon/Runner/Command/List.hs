@@ -10,8 +10,7 @@ module Charon.Runner.Command.List
 
     -- * Phase 2
     ListCmd (..),
-    ListCmdP1,
-    ListCmdP2,
+    mergeListCommand,
   )
 where
 
@@ -23,9 +22,8 @@ import Charon.Data.PathData.Formatting
   )
 import Charon.Prelude
 import Charon.Runner.Phase
-  ( AdvancePhase (NextPhase, advancePhase),
-    MaybePhaseF,
-    Phase (Phase1, Phase2),
+  ( ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged),
+    ConfigPhaseF,
   )
 import Data.Text qualified as T
 
@@ -72,71 +70,66 @@ makeFieldLabelsNoPrefix ''ListFormatPhase1
 --------------------------------------------------------------------------------
 
 -- | Associates the phase to the formatting type.
-type ListFormatPhaseF :: Phase -> Type
+type ListFormatPhaseF :: ConfigPhase -> Type
 type family ListFormatPhaseF s where
-  ListFormatPhaseF Phase1 = ListFormatPhase1
-  ListFormatPhaseF Phase2 = PathDataFormat
+  ListFormatPhaseF ConfigPhaseArgs = ListFormatPhase1
+  ListFormatPhaseF ConfigPhaseMerged = PathDataFormat
 
-instance AdvancePhase ListFormatPhase1 where
-  type NextPhase ListFormatPhase1 = PathDataFormat
-
-  advancePhase formatPhase1 = case formatPhase1 ^. #style of
-    Just ListFormatStyleMultiline -> FormatMultiline
-    Just ListFormatStyleSingleline -> FormatSingleline coloring
-    Just ListFormatStyleTabular ->
-      FormatTabular
-        coloring
-        (formatPhase1 ^. #nameTrunc)
-        (formatPhase1 ^. #origTrunc)
-    Just ListFormatStyleTabularSimple -> FormatTabularSimple coloring
-    Nothing ->
-      FormatTabular
-        coloring
-        (formatPhase1 ^. #nameTrunc)
-        (formatPhase1 ^. #origTrunc)
-    where
-      coloring = fromMaybe ColoringDetect (formatPhase1 ^. #coloring)
+mergeFormat :: ListFormatPhase1 -> PathDataFormat
+mergeFormat formatPhase1 = case formatPhase1 ^. #style of
+  Just ListFormatStyleMultiline -> FormatMultiline
+  Just ListFormatStyleSingleline -> FormatSingleline coloring
+  Just ListFormatStyleTabular ->
+    FormatTabular
+      coloring
+      (formatPhase1 ^. #nameTrunc)
+      (formatPhase1 ^. #origTrunc)
+  Just ListFormatStyleTabularSimple -> FormatTabularSimple coloring
+  Nothing ->
+    FormatTabular
+      coloring
+      (formatPhase1 ^. #nameTrunc)
+      (formatPhase1 ^. #origTrunc)
+  where
+    coloring = fromMaybe ColoringDetect (formatPhase1 ^. #coloring)
 
 -- | Arguments for the list command.
-type ListCmd :: Phase -> Type
+type ListCmd :: ConfigPhase -> Type
 data ListCmd p = MkListCmd
   { -- | Format style.
     format :: ListFormatPhaseF p,
     -- | How to sort the list.
-    sort :: MaybePhaseF p Sort,
+    sort :: ConfigPhaseF p Sort,
     -- | Whether to reverse the sort.
-    revSort :: MaybePhaseF p Bool
+    revSort :: ConfigPhaseF p Bool
   }
 
 makeFieldLabelsNoPrefix ''ListCmd
 
-deriving stock instance Eq (ListCmd Phase1)
+deriving stock instance Eq (ListCmd ConfigPhaseArgs)
 
-deriving stock instance Show (ListCmd Phase1)
+deriving stock instance Show (ListCmd ConfigPhaseArgs)
 
-deriving stock instance Eq (ListCmd Phase2)
+deriving stock instance Eq (ListCmd ConfigPhaseMerged)
 
-deriving stock instance Show (ListCmd Phase2)
+deriving stock instance Show (ListCmd ConfigPhaseMerged)
 
-type ListCmdP1 = ListCmd Phase1
+-- instance AdvancePhase (ListCmd Phase1) where
+--  type NextPhase (ListCmd Phase1) = ListCmd Phase2
 
-type ListCmdP2 = ListCmd Phase2
-
-instance AdvancePhase (ListCmd Phase1) where
-  type NextPhase (ListCmd Phase1) = ListCmd Phase2
-
-  advancePhase listCfg =
-    let sort = case listCfg ^. #sort of
-          Just s -> s
-          Nothing -> case format of
-            FormatSingleline _ -> OriginalPath
-            FormatTabularSimple _ -> OriginalPath
-            _ -> Name
-     in MkListCmd
-          { format,
-            sort,
-            revSort
-          }
-    where
-      revSort = fromMaybe False (listCfg ^. #revSort)
-      format = advancePhase (listCfg ^. #format)
+mergeListCommand :: ListCmd ConfigPhaseArgs -> ListCmd ConfigPhaseMerged
+mergeListCommand listCfg =
+  let sort = case listCfg ^. #sort of
+        Just s -> s
+        Nothing -> case format of
+          FormatSingleline _ -> OriginalPath
+          FormatTabularSimple _ -> OriginalPath
+          _ -> Name
+   in MkListCmd
+        { format,
+          sort,
+          revSort
+        }
+  where
+    revSort = fromMaybe False (listCfg ^. #revSort)
+    format = mergeFormat (listCfg ^. #format)
