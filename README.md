@@ -244,7 +244,7 @@ $ charon delete foo baz
 # restore "foo" and "baz" to their original locations
 $ charon restore foo baz
 
-# restore delete via indices
+# restore via indices
 $ charon restore -i
 
 Index | Created             | Original
