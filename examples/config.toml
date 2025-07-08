@@ -1,6 +1,7 @@
-# Path to the trash home. Overridden by the CLI -t option. Defaults to
-# XDG data ~/.local/share/charon
-trash-home = "./tmp"
+# Uses the FreeDesktop.org backend i.e. changes how the trash data is
+# represented to match the FDO spec. This can be used to integrate charon
+# with an FDO-compliant trash implementation.
+backend = "fdo"
 
 # File log level. Can be one of none, fatal, error, warn, info, or debug.
 # Defaults to none.
@@ -11,7 +12,18 @@ log-level = "info"
 # Defaults to "delete 50 mb".
 log-size-mode = "warn 10 mb"
 
-# Uses the FreeDesktop.org backend i.e. changes how the trash data is
-# represented to match the FDO spec. This can be used to integrate charon
-# with an FDO-compliant trash implementation.
-backend = "fdo"
+# Path to the trash home. Overridden by the CLI -t option. Defaults to
+# XDG data ~/.local/share/charon. The 'fdo' backend defaults to
+# ~/.local/share/Trash.
+trash-home = "./tmp"
+
+# Config for various commands, rather than specifying on the CLI every time.
+[delete]
+verbose = true
+
+[perm-delete]
+indices = true
+
+[restore]
+indices = true
+prompt = false

@@ -46,7 +46,7 @@ deletesOne getTestEnv =
         let trashDir = testDir </> (testEnv ^. #trashDir)
             f1 = testDir </> [osstr|f1|]
 
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -64,7 +64,7 @@ deletesOne getTestEnv =
 
         -- PERMANENT DELETE
 
-        permDelArgList <- withSrArgsM ["perm-delete", "f1", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "f1", "--no-prompt"]
         liftIO $ runCharon permDelArgList
 
         -- file assertions
@@ -95,7 +95,7 @@ deletesMany getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -121,6 +121,7 @@ deletesMany getTestEnv =
         permDelArgList <-
           withSrArgsM
             [ "perm-delete",
+              "-v",
               "f1",
               "f3",
               "dir1",
@@ -155,7 +156,7 @@ deletesIndices getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -188,7 +189,7 @@ deletesIndices getTestEnv =
         -- Alas, the output is non-deterministic since it's a formatted
         -- table, where the header line is dependent on the longest path
         -- __before__ we strip the test directory.
-        permDelArgList <- withSrArgsM ["perm-delete", "--indices", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "--indices", "--no-prompt"]
         liftIO $ runCharonEnv modEnv permDelArgList
 
         -- trash structure assertions
@@ -215,7 +216,7 @@ deletesIndicesExit getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -240,7 +241,7 @@ deletesIndicesExit getTestEnv =
         let modEnv = set' #strLine "2-3 exit 7-8"
 
         -- leave f2 alone
-        permDelArgList <- withSrArgsM ["perm-delete", "--indices", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "--indices", "--no-prompt"]
         liftIO $ runCharonEnv modEnv permDelArgList
 
         bs2 <- captureIndexBs testDir
@@ -262,7 +263,7 @@ deleteUnknownError getTestEnv =
 
         let f1 = testDir </>! "f1"
 
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -283,7 +284,7 @@ deleteUnknownError getTestEnv =
         bs1 <- captureIndexBs testDir
 
         -- PERMANENT DELETE
-        permDelArgList <- withSrArgsM ["perm-delete", "bad file", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "bad file", "--no-prompt"]
         exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir permDelArgList
 
         -- trash structure assertions
@@ -309,7 +310,7 @@ deletesSome getTestEnv =
         let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
             filesTryPermDelete = ["f1", "f2", "f3", "f4", "f5"]
 
-        delArgList <- withSrArgsPathsM ["delete"] realFiles
+        delArgList <- withSrArgsPathsM ["delete", "-v"] realFiles
 
         -- setup
         createFiles realFiles
@@ -328,7 +329,7 @@ deletesSome getTestEnv =
         -- PERMANENT DELETE
         permDelArgList <-
           withSrArgsM
-            ("perm-delete" : filesTryPermDelete ++ ["--no-prompt"])
+            ("perm-delete" : "-v" : filesTryPermDelete ++ ["--no-prompt"])
         exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir permDelArgList
 
         -- trash structure assertions
@@ -353,7 +354,7 @@ deletesPrompt getTestEnv =
         let fileDeleteNames = show @Int <$> [1 .. 5]
             fileDeletePaths = (testDir </>!) <$> fileDeleteNames
 
-        delArgList <- withSrArgsPathsM ["delete"] fileDeletePaths
+        delArgList <- withSrArgsPathsM ["delete", "-v"] fileDeletePaths
 
         -- SETUP
         createFiles fileDeletePaths
@@ -370,7 +371,7 @@ deletesPrompt getTestEnv =
 
         -- PERMANENT DELETE
 
-        permDelArgList <- withSrArgsM ("perm-delete" : fileDeleteNames)
+        permDelArgList <- withSrArgsM ("perm-delete" : "-v" : fileDeleteNames)
         runCharon permDelArgList
 
         -- trash structure assertions
@@ -395,7 +396,7 @@ deletesWildcards getTestEnv =
         let filesToDelete = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
             otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> otherFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> otherFiles)
 
         -- SETUP
         createFiles (filesToDelete <> otherFiles)
@@ -413,7 +414,7 @@ deletesWildcards getTestEnv =
         -- PERMANENT DELETE
 
         -- leave g alone
-        permDelArgList <- withSrArgsM ["perm-delete", "*f*", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "*f*", "--no-prompt"]
         runCharon permDelArgList
 
         -- trash structure assertions
@@ -456,7 +457,7 @@ deletesSomeWildcards getTestEnv =
               ]
             testFiles = (testDir </>!) <$> files
 
-        delArgList <- withSrArgsPathsM ["delete"] testFiles
+        delArgList <- withSrArgsPathsM ["delete", "-v"] testFiles
 
         -- SETUP
         createFiles testFiles
@@ -475,7 +476,7 @@ deletesSomeWildcards getTestEnv =
 
         -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
         -- delete will fail. This is how this test works.
-        permDelArgList <- withSrArgsM ["perm-delete", "*h*", "foo**bar", "*g*", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "*h*", "foo**bar", "*g*", "--no-prompt"]
         exBs <- captureCharonTermBsE @TextException testDir permDelArgList
 
         -- file assertions
@@ -514,7 +515,7 @@ deletesLiteralWildcardOnly getTestEnv =
             testFiles = (testDir </>!) <$> files
             testWcLiteral = testDir </>! "*"
         
-        delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (testWcLiteral : testFiles)
 
         -- SETUP
         clearDirectory testDir
@@ -533,7 +534,7 @@ deletesLiteralWildcardOnly getTestEnv =
         -- PERMANENT DELETE
 
         -- leave f alone
-        permDelArgList <- withSrArgsM ["perm-delete", "\\*", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "\\*", "--no-prompt"]
         runCharon permDelArgList
 
         -- trash structure assertions
@@ -560,7 +561,7 @@ deletesCombinedWildcardLiteral getTestEnv =
             testFiles = (testDir </>!) <$> files
             testWcLiterals = (testDir </>!) <$> wcLiterals
         
-        delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (testWcLiterals <> testFiles)
 
         -- SETUP
         createFiles (testWcLiterals <> testFiles)
@@ -578,7 +579,7 @@ deletesCombinedWildcardLiteral getTestEnv =
         -- PERMANENT DELETE
 
         -- leave f alone
-        permDelArgList <- withSrArgsM ["perm-delete", "y\\*xx*", "--no-prompt"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "y\\*xx*", "--no-prompt"]
         runCharon permDelArgList
 
         -- trash structure assertions
@@ -607,7 +608,7 @@ displaysAllData getTestEnv =
         testDir <- getTestDir
         let f1 = testDir </>! "f1"
 
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -629,7 +630,7 @@ displaysAllData getTestEnv =
         -- NOTE: we don't actually delete f1 as the first mocked answer is 'n'
         -- (see altAnswers in FuncEnv), but it doesn't matter as this test is only
         -- concerned with grabbing the terminal data for an unforced delete.
-        permDelArgList <- withSrArgsM ["perm-delete", "f1"]
+        permDelArgList <- withSrArgsM ["perm-delete", "-v", "f1"]
         (terminalResult, _) <- captureCharonLogs permDelArgList
         let termBs = terminalToBs testDir terminalResult
 

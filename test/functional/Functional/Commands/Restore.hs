@@ -47,7 +47,7 @@ restoreOne getTestEnv =
         let trashDir = testDir </>! ".trash"
             f1 = testDir </>! "f1"
 
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -66,7 +66,7 @@ restoreOne getTestEnv =
 
         -- RESTORE
 
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "f1"]
         runCharon restoreArgList
 
         -- file assertions
@@ -97,7 +97,7 @@ restoreMany getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -129,6 +129,7 @@ restoreMany getTestEnv =
         restoreArgList <-
           withSrArgsM
             [ "restore",
+              "-v",
               "--no-prompt",
               "f1",
               "f3",
@@ -163,7 +164,7 @@ restoreIndices getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -192,7 +193,7 @@ restoreIndices getTestEnv =
         let modEnv = set' #strLine "2-3 5 7-8"
 
         -- do not restore f2
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "--indices"]
         runCharonEnv modEnv restoreArgList
 
         -- trash structure assertions
@@ -220,7 +221,7 @@ restoreIndicesExit getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        delArgList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- SETUP
         -- test w/ a nested dir
@@ -248,7 +249,7 @@ restoreIndicesExit getTestEnv =
         let modEnv = set' #strLine "2-3 quit 7-8"
 
         -- do not restore f2
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "--indices"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "--indices"]
         runCharonEnv modEnv restoreArgList
 
         bs2 <- captureIndexBs testDir
@@ -269,7 +270,7 @@ restoreUnknownError getTestEnv =
         testDir <- getTestDir
 
         let f1 = testDir </> [osp|f1|]
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -291,7 +292,7 @@ restoreUnknownError getTestEnv =
         assertFdoDirectorySizesM []
 
         -- RESTORE
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "bad file"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "bad file"]
         exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir restoreArgList
 
         -- trash structure assertions
@@ -315,7 +316,7 @@ restoreCollisionError getTestEnv =
         testDir <- getTestDir
 
         let f1 = testDir </>! "f1"
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -330,7 +331,7 @@ restoreCollisionError getTestEnv =
         assertFdoDirectorySizesM []
 
         -- RESTORE
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "f1"]
         exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
 
         -- trash structure assertions
@@ -356,7 +357,7 @@ restoreSimultaneousCollisionError getTestEnv =
         let f1 = testDir </>! "f1"
             f2 = testDir </>! "f2"
             f3 = testDir </>! "f3"
-        delArgList <- withSrArgsPathsM ["delete"] [f1]
+        delArgList <- withSrArgsPathsM ["delete", "-v"] [f1]
 
         -- SETUP
 
@@ -372,7 +373,7 @@ restoreSimultaneousCollisionError getTestEnv =
         assertFdoDirectorySizesM []
 
         -- RESTORE
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "f1", "f1 (1)", "f2"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "f1", "f1 (1)", "f2"]
         exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
 
         -- trash structure assertions
@@ -397,7 +398,7 @@ restoresSome getTestEnv =
 
         let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
             filesTryRestore = ["f1", "f2", "f3", "f4", "f5"]
-        delArgList <- withSrArgsPathsM ["delete"] realFiles
+        delArgList <- withSrArgsPathsM ["delete", "-v"] realFiles
 
         -- setup
         clearDirectory testDir
@@ -415,7 +416,7 @@ restoresSome getTestEnv =
         assertFdoDirectorySizesM []
 
         -- RESTORE
-        restoreArgList <- withSrArgsM ("restore" : "--no-prompt" : filesTryRestore)
+        restoreArgList <- withSrArgsM ("restore" : "-v" : "--no-prompt" : filesTryRestore)
         exBs <- captureCharonTermBsE @TrashEntryNotFoundE testDir restoreArgList
 
         -- file assertions
@@ -443,7 +444,7 @@ restoresWildcards getTestEnv =
 
         let filesToRestore = (testDir </>!) <$> ["f1", "f2", "f3", "1f", "2f", "3f"]
             otherFiles = (testDir </>!) <$> ["g1", "g2", "g3", "1g", "2g", "3g"]
-        delArgList <- withSrArgsPathsM ["delete"] (filesToRestore <> otherFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (filesToRestore <> otherFiles)
 
         -- SETUP
         createFiles (filesToRestore <> otherFiles)
@@ -461,7 +462,7 @@ restoresWildcards getTestEnv =
         -- RESTORE
 
         -- leave g alone
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*f*"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "*f*"]
         runCharon restoreArgList
 
         -- trash structure assertions
@@ -505,7 +506,7 @@ restoresSomeWildcards getTestEnv =
             testFilesToRestore = (testDir </>!) <$> filesToRestore
             testFiles = (testDir </>!) <$> filesToRestore <> otherFiles
 
-        delArgList <- withSrArgsPathsM ["delete"] testFiles
+        delArgList <- withSrArgsPathsM ["delete", "-v"] testFiles
 
         -- SETUP
         createFiles testFiles
@@ -525,7 +526,7 @@ restoresSomeWildcards getTestEnv =
         -- We want a collision to force an error
         createFiles [testDir </>! "fooBadbar"]
 
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "*h*", "foo**bar", "*g*"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "*h*", "foo**bar", "*g*"]
         exBs <- captureCharonTermBsE @RestoreCollisionE testDir restoreArgList
 
         -- file assertions
@@ -563,7 +564,7 @@ restoresLiteralWildcardOnly getTestEnv =
         let files = ["f1", "f2", "f3", "1f", "2f", "3f"]
             testFiles = (testDir </>!) <$> files
             testWcLiteral = testDir </>! "*"
-        delArgList <- withSrArgsPathsM ["delete"] (testWcLiteral : testFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (testWcLiteral : testFiles)
 
         -- SETUP
         createFiles (testWcLiteral : testFiles)
@@ -581,7 +582,7 @@ restoresLiteralWildcardOnly getTestEnv =
         -- RESTORE
 
         -- leave f alone
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "\\*"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "\\*"]
         runCharon restoreArgList
 
         -- trash structure assertions
@@ -608,7 +609,7 @@ restoresCombinedWildcardLiteral getTestEnv =
             wcLiterals = ["y*xxfoo", "y*xxbar", "y*xxbaz"]
             testFiles = (testDir </>!) <$> files
             testWcLiterals = (testDir </>!) <$> wcLiterals
-        delArgList <- withSrArgsPathsM ["delete"] (testWcLiterals <> testFiles)
+        delArgList <- withSrArgsPathsM ["delete", "-v"] (testWcLiterals <> testFiles)
 
         -- SETUP
         createFiles (testWcLiterals <> testFiles)
@@ -625,7 +626,7 @@ restoresCombinedWildcardLiteral getTestEnv =
 
         -- RESTORE
 
-        restoreArgList <- withSrArgsM ["restore", "--no-prompt", "y\\*xx*"]
+        restoreArgList <- withSrArgsM ["restore", "-v", "--no-prompt", "y\\*xx*"]
         runCharon restoreArgList
 
         -- file assertions

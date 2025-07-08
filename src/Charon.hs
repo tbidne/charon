@@ -86,11 +86,12 @@ delete params = addNamespace "delete" $ do
   initalLog
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.delete paths
-      BackendFdo -> addNamespace "fdo" $ Fdo.delete paths
-      BackendJson -> addNamespace "json" $ Json.delete paths
+      BackendCbor -> addNamespace "cbor" $ Cbor.delete verbose paths
+      BackendFdo -> addNamespace "fdo" $ Fdo.delete verbose paths
+      BackendJson -> addNamespace "json" $ Json.delete verbose paths
   where
     paths = params ^. #paths
+    verbose = params ^. #verbose
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -124,10 +125,11 @@ permDelete params = addNamespace "permDelete" $ do
       BackendJson -> ("json", Json.getIndex, Json.permDelete)
 
   paths <- getIndexedPaths "delete" strategy idxFn
-  addNamespace name $ delFn prompt paths
+  addNamespace name $ delFn verbose prompt paths
   where
     strategy = params ^. #strategy
     prompt = params ^. #prompt
+    verbose = params ^. #verbose
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -206,15 +208,16 @@ restore params = addNamespace "restore" $ do
 
   (name, idxFn, restoreFn) <-
     asks @env @m getBackend <&> \case
-      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore force prompt)
-      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force prompt)
-      BackendJson -> ("json", Json.getIndex, Json.restore force prompt)
+      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore)
+      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore)
+      BackendJson -> ("json", Json.getIndex, Json.restore)
 
   paths <- getIndexedPaths "restore" (params ^. #strategy) idxFn
-  addNamespace name $ restoreFn paths
+  addNamespace name $ restoreFn verbose force prompt paths
   where
     force = params ^. #force
     prompt = params ^. #prompt
+    verbose = params ^. #verbose
 
 -- | Empties the trash.
 emptyTrash ::

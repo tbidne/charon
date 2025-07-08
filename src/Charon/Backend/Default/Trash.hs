@@ -311,11 +311,11 @@ permDeleteFromTrash
           if prompt ^. #unPrompt
             then do
               let pdStr = Utils.renderPretty pathData
-              putTextLn pdStr
+              putTextLn $ "\n" <> pdStr
               ans <- Utils.askYesNoQ "\nPermanently delete"
               if ans
-                then deleteFn' backend pathData *> Utils.putLine
-                else Utils.putLine
+                then void $ deleteFn' backend pathData
+                else pure ()
             else
               -- NOTE: Technically don't need the pathdata if noPrompt is on, since we have
               -- the path and can just delete it. Nevertheless, we retrieve the pathData
@@ -416,11 +416,11 @@ restoreTrashToOriginal
             if force ^. #unForce
               then
                 -- 2.1. --force: Do not ask for overwrites.
-                overwriteForce pd *> Utils.putLine
+                overwriteForce pd
               else
                 -- 2.2. No --force: Ask for overwrites.
-                overwriteAsk pd *> Utils.putLine
-          else Utils.putLine
+                overwriteAsk pd
+          else pure ()
 
       -- 2. --no-prompt: Do not prompt before restoring, or before overwrites.
       restoreNoPrompt pd = do
@@ -440,8 +440,8 @@ restoreTrashToOriginal
           then do
             ans <- Utils.askYesNoQ "\nPath exists at original. Overwrite"
             if ans
-              then restoreFn' backend pathType pd *> Utils.putLine
-              else Utils.putLine
+              then restoreFn' backend pathType pd
+              else pure ()
           else restoreFn' backend pathType pd
 
       -- Collisions throw exception.

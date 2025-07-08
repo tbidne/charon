@@ -28,6 +28,7 @@ module Charon.Data.Paths
     -- $general
     showPaths,
     renderPath,
+    renderPathQuote,
     reindex,
     (<//>),
     (<//),
@@ -240,6 +241,9 @@ showPaths = L.intercalate ", " . fmap (show . view #unPathI)
 
 renderPath :: PathI i -> Text
 renderPath = T.pack . decodeLenient . view #unPathI
+
+renderPathQuote :: PathI i -> Text
+renderPathQuote = (\s -> "'" <> s <> "'") . renderPath
 
 -- | 'PathI' to 'String'. Attempts decoding for nicer display.
 toString :: PathI i -> String

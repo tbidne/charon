@@ -53,7 +53,12 @@ mergeConfigs ::
   TomlConfig ->
   m MergedConfig
 mergeConfigs args toml = do
-  command <- mergeCommand (args ^. #command)
+  command <-
+    mergeCommand
+      (toml ^. #deleteConfig)
+      (toml ^. #permDeleteConfig)
+      (toml ^. #restoreConfig)
+      (args ^. #command)
 
   let backend = argsCore ^. #backend <|.|> tomlCore ^. #backend
 

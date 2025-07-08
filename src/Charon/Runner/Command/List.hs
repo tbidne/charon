@@ -114,9 +114,6 @@ deriving stock instance Eq (ListCmd ConfigPhaseMerged)
 
 deriving stock instance Show (ListCmd ConfigPhaseMerged)
 
--- instance AdvancePhase (ListCmd Phase1) where
---  type NextPhase (ListCmd Phase1) = ListCmd Phase2
-
 mergeListCommand :: ListCmd ConfigPhaseArgs -> ListCmd ConfigPhaseMerged
 mergeListCommand listCfg =
   let sort = case listCfg ^. #sort of

@@ -17,13 +17,13 @@
 Cannot restore the trash file 'fooBadbar' as one exists at the original location: '<dir>/fooBadbar'
 
 Restored paths:
- - <dir>/1h
- - <dir>/2h
- - <dir>/3h
- - <dir>/h1
- - <dir>/h2
- - <dir>/h3
- - <dir>/fooAbar
+ - '<dir>/1h'
+ - '<dir>/2h'
+ - '<dir>/3h'
+ - '<dir>/h1'
+ - '<dir>/h2'
+ - '<dir>/h3'
+ - '<dir>/fooAbar'
 
 2020-05-31 12:00:00 <dir>/1g
 2020-05-31 12:00:00 <dir>/2g

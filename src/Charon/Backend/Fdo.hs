@@ -69,7 +69,7 @@ import Charon.Data.Timestamp (Timestamp (MkTimestamp))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Prelude
-import Charon.Runner.Command (Force, Prompt)
+import Charon.Runner.Command (Force, Prompt, Verbose)
 import Charon.Utils qualified as Utils
 import Data.HashMap.Strict qualified as HMap
 import Data.Sequence qualified as Seq
@@ -107,6 +107,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
+  Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete paths = do
@@ -164,6 +165,7 @@ permDelete ::
     MonadTerminal m,
     MonadTime m
   ) =>
+  Verbose ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
@@ -243,6 +245,7 @@ restore ::
     MonadTerminal m,
     MonadTime m
   ) =>
+  Verbose ->
   Force ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->

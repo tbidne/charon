@@ -62,7 +62,7 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
-import Charon.Runner.Command (Force, Prompt)
+import Charon.Runner.Command (Force, Prompt, Verbose)
 import Charon.Runner.Command.List
   ( ListCmd (MkListCmd, format, revSort, sort),
   )
@@ -98,6 +98,7 @@ delete ::
     Show pd
   ) =>
   BackendArgs m pd ->
+  Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 delete backendArgs = deletePostHook backendArgs (const $ pure ())
@@ -124,40 +125,47 @@ deletePostHook ::
   ) =>
   BackendArgs m pd ->
   ((pd, PathTypeW, PathI TrashEntryPath) -> m ()) ->
+  Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
-deletePostHook backendArgs postHook paths = addNamespace "deletePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
-  trashHome <- asks getTrashHome
+deletePostHook
+  backendArgs
+  postHook
+  verbose
+  paths = addNamespace "deletePostHook" $ do
+    $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
+    trashHome <- asks getTrashHome
 
-  void Trash.createTrash
+    void Trash.createTrash
 
-  currTime <- MkTimestamp <$> getSystemTime
+    currTime <- MkTimestamp <$> getSystemTime
 
-  let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
+    let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
 
-  deletedPathsRef <- newIORef Seq.Empty
+    deletedPathsRef <- newIORef Seq.Empty
 
-  -- move paths to trash
-  eResult <- trySync $ for_ paths $ \p -> do
-    pd <- deleteAction p
-    modifyIORef' deletedPathsRef (:|> p)
-    postHook pd
+    -- move paths to trash
+    eResult <- trySync $ for_ paths $ \p -> do
+      pd <- deleteAction p
+      modifyIORef' deletedPathsRef (:|> p)
+      postHook pd
 
-  deletedPaths <- readIORef deletedPathsRef
+    deletedPaths <- readIORef deletedPathsRef
 
-  unless (null deletedPaths) $ do
-    let msg = Utils.displayList Paths.renderPath deletedPaths
+    when (verbose ^. #unVerbose) $ do
+      let msg =
+            if null deletedPaths
+              then "\nNo paths deleted."
+              else
+                mconcat
+                  [ "Deleted paths:",
+                    Utils.displayList Paths.renderPathQuote deletedPaths
+                  ]
+      putTextLn msg
 
-    putTextLn
-      $ mconcat
-        [ "Deleted paths:",
-          msg
-        ]
-
-  case eResult of
-    Right _ -> pure ()
-    Left ex -> throwM ex
+    case eResult of
+      Right _ -> pure ()
+      Left ex -> throwM ex
 
 -- | Permanently deletes the paths from the trash.
 permDelete ::
@@ -181,6 +189,7 @@ permDelete ::
     Show pd
   ) =>
   BackendArgs m pd ->
+  Verbose ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
@@ -209,41 +218,49 @@ permDeletePostHook ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
+  Verbose ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-permDeletePostHook backendArgs postHook prompt paths = addNamespace "permDeletePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
-  trashHome <- asks getTrashHome
+permDeletePostHook
+  backendArgs
+  postHook
+  verbose
+  prompt
+  paths = addNamespace "permDeletePostHook" $ do
+    $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
+    trashHome <- asks getTrashHome
 
-  deletedPathsRef <- newIORef Seq.Empty
+    deletedPathsRef <- newIORef Seq.Empty
 
-  -- permanently delete paths
-  addNamespace "deleting" $ do
-    let deleteAction =
-          Trash.permDeleteFromTrash
-            backendArgs
-            postHook
-            prompt
-            deletedPathsRef
-            trashHome
+    -- permanently delete paths
+    addNamespace "deleting" $ do
+      let deleteAction =
+            Trash.permDeleteFromTrash
+              backendArgs
+              postHook
+              prompt
+              deletedPathsRef
+              trashHome
 
-    eResult <- trySync $ for_ paths deleteAction
+      eResult <- trySync $ for_ paths deleteAction
 
-    deletedPaths <- readIORef deletedPathsRef
+      deletedPaths <- readIORef deletedPathsRef
 
-    unless (null deletedPaths) $ do
-      let msg = Utils.displayList Paths.renderPath deletedPaths
+      when (verbose ^. #unVerbose) $ do
+        let msg =
+              if null deletedPaths
+                then "\nNo paths permanently deleted."
+                else
+                  mconcat
+                    [ "Permanently deleted paths:",
+                      Utils.displayList Paths.renderPathQuote deletedPaths
+                    ]
+        putTextLn msg
 
-      putTextLn
-        $ mconcat
-          [ "Permanently deleted paths:",
-            msg
-          ]
-
-    case eResult of
-      Right _ -> pure ()
-      Left ex -> throwM ex
+      case eResult of
+        Right _ -> pure ()
+        Left ex -> throwM ex
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -368,6 +385,7 @@ restore ::
     Show pd
   ) =>
   BackendArgs m pd ->
+  Verbose ->
   Force ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
@@ -397,43 +415,52 @@ restorePostHook ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
+  Verbose ->
   Force ->
   Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
-restorePostHook backendArgs postHook force prompt paths = addNamespace "restorePostHook" $ do
-  $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
-  trashHome <- asks getTrashHome
+restorePostHook
+  backendArgs
+  postHook
+  verbose
+  force
+  prompt
+  paths = addNamespace "restorePostHook" $ do
+    $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
+    trashHome <- asks getTrashHome
 
-  restoredPathsRef <- newIORef Seq.Empty
+    restoredPathsRef <- newIORef Seq.Empty
 
-  -- move trash paths back to original location
-  addNamespace "restoring" $ do
-    let restoreAction =
-          Trash.restoreTrashToOriginal
-            backendArgs
-            postHook
-            force
-            prompt
-            restoredPathsRef
-            trashHome
+    -- move trash paths back to original location
+    addNamespace "restoring" $ do
+      let restoreAction =
+            Trash.restoreTrashToOriginal
+              backendArgs
+              postHook
+              force
+              prompt
+              restoredPathsRef
+              trashHome
 
-    eResult <- trySync $ for_ paths restoreAction
+      eResult <- trySync $ for_ paths restoreAction
 
-    restoredPaths <- readIORef restoredPathsRef
+      restoredPaths <- readIORef restoredPathsRef
 
-    unless (null restoredPaths) $ do
-      let msg = Utils.displayList Paths.renderPath restoredPaths
+      when (verbose ^. #unVerbose) $ do
+        let msg =
+              if null restoredPaths
+                then "\nNo paths restored."
+                else
+                  mconcat
+                    [ "Restored paths:",
+                      Utils.displayList Paths.renderPathQuote restoredPaths
+                    ]
+        putTextLn msg
 
-      putTextLn
-        $ mconcat
-          [ "Restored paths:",
-            msg
-          ]
-
-    case eResult of
-      Right _ -> pure ()
-      Left ex -> throwM ex
+      case eResult of
+        Right _ -> pure ()
+        Left ex -> throwM ex
 
 -- | Empties the trash.
 emptyTrash ::

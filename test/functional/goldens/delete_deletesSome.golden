@@ -1,8 +1,8 @@
 Path not found: '<dir>/f3'
 
 Deleted paths:
- - <dir>/f1
- - <dir>/f2
+ - '<dir>/f1'
+ - '<dir>/f2'
 
 2020-05-31 12:00:00 <dir>/f1
 2020-05-31 12:00:00 <dir>/f2

@@ -36,6 +36,7 @@ import Charon.Runner.Command
     PermDeleteParams (MkPermDeleteParams),
     Prompt (MkPrompt),
     RestoreParams (MkRestoreParams),
+    Verbose (MkVerbose),
   )
 import Charon.Runner.Config
   ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
@@ -443,18 +444,18 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 charonDelete :: UniqueSeqNE (PathI TrashEntryOriginalPath) -> IntIO ()
 charonDelete =
   Charon.delete
-    . MkDeleteParams
+    . (\s -> MkDeleteParams s (MkVerbose True))
 
 charonPermDelete :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonPermDelete =
   Charon.permDelete
-    . MkPermDeleteParams (MkPrompt False)
+    . (\s -> MkPermDeleteParams (MkPrompt False) s (MkVerbose True))
     . PathsStrategy
 
 charonRestore :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonRestore =
   Charon.restore
-    . MkRestoreParams (MkForce False) (MkPrompt False)
+    . (\s -> MkRestoreParams (MkForce False) (MkPrompt False) s (MkVerbose True))
     . PathsStrategy
 
 emptyTrash :: Backend -> IO OsPath -> TestTree

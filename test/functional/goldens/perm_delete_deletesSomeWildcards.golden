@@ -17,13 +17,13 @@
 Mock: cannot delete fooBadbar
 
 Permanently deleted paths:
- - 1h
- - 2h
- - 3h
- - h1
- - h2
- - h3
- - fooAbar
+ - '1h'
+ - '2h'
+ - '3h'
+ - 'h1'
+ - 'h2'
+ - 'h3'
+ - 'fooAbar'
 
 2020-05-31 12:00:00 <dir>/1g
 2020-05-31 12:00:00 <dir>/2g

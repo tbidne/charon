@@ -33,10 +33,9 @@ import Charon.Runner.Command
         PermDelete,
         Restore
       ),
-    DeleteParams (MkDeleteParams),
-    Force (MkForce),
-    PermDeleteParams (MkPermDeleteParams, prompt, strategy),
-    RestoreParams (MkRestoreParams, force, prompt, strategy),
+    DeleteParams (MkDeleteParams, paths, verbose),
+    PermDeleteParams (MkPermDeleteParams, prompt, strategy, verbose),
+    RestoreParams (MkRestoreParams, force, prompt, strategy, verbose),
   )
 import Charon.Runner.Command.List
   ( ListCmd (MkListCmd),
@@ -347,15 +346,25 @@ commandParser =
       Chunk.vcatChunks
         . fmap (fmap (Pretty.indent 2) . Chunk.stringChunk)
 
-    delParser = Delete . MkDeleteParams <$> pathsParser
+    delParser =
+      Delete <$> do
+        paths <- pathsParser
+        verbose <- verboseParser "Lists deleted paths."
+        pure
+          $ MkDeleteParams
+            { paths,
+              verbose
+            }
     permDelParser =
       PermDelete <$> do
         prompt <- promptParser "Prompts before deleting path(s). This is the default."
         strategy <- ((,) <$> indicesParser <*> mPathsParser)
+        verbose <- verboseParser "Lists deleted paths."
         pure
           $ MkPermDeleteParams
             { prompt,
-              strategy
+              strategy,
+              verbose
             }
     emptyParser =
       Empty
@@ -365,11 +374,13 @@ commandParser =
         force <- forceParser restoreForceTxt
         prompt <- promptParser restorePromptTxt
         strategy <- ((,) <$> indicesParser <*> mPathsParser)
+        verbose <- verboseParser "Lists restored paths."
         pure
           $ MkRestoreParams
             { force,
               prompt,
-              strategy
+              strategy,
+              verbose
             }
     restoreForceTxt =
       mconcat
@@ -557,14 +568,22 @@ reverseSortParser =
   where
     helpTxt = "Sorts in the reverse order. Does not affect 'single' style."
 
-forceParser :: String -> Parser Force
-forceParser helpTxt =
-  fmap MkForce
-    <$> OA.switch
-    $ mconcat
-      [ OA.long "force",
-        mkHelp helpTxt
-      ]
+forceParser :: String -> Parser (WithDisabled ())
+forceParser helpTxt = withDisabledParser mainParser "force"
+  where
+    switchParser =
+      OA.switch
+        ( mconcat
+            [ OA.long "force",
+              mkHelp helpTxt
+            ]
+        )
+    mainParser = do
+      b <- switchParser
+      pure
+        $ if b
+          then Just ()
+          else Nothing
 
 promptParser :: String -> Parser (WithDisabled ())
 promptParser helpTxt = withDisabledParser mainParser "prompt"
@@ -573,6 +592,24 @@ promptParser helpTxt = withDisabledParser mainParser "prompt"
       OA.switch
         ( mconcat
             [ OA.long "prompt",
+              mkHelp helpTxt
+            ]
+        )
+    mainParser = do
+      b <- switchParser
+      pure
+        $ if b
+          then Just ()
+          else Nothing
+
+verboseParser :: String -> Parser (WithDisabled ())
+verboseParser helpTxt = withDisabledParser mainParser "verbose"
+  where
+    switchParser =
+      OA.switch
+        ( mconcat
+            [ OA.long "verbose",
+              OA.short 'v',
               mkHelp helpTxt
             ]
         )

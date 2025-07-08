@@ -6,7 +6,7 @@
 Cannot restore the trash file 'f1 (1)' as one exists at the original location: '<dir>/f1'
 
 Restored paths:
- - <dir>/f1
+ - '<dir>/f1'
 
 2020-05-31 12:00:00 <dir>/f1
 2020-05-31 12:00:00 <dir>/f2

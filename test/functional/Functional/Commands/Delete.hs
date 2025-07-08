@@ -51,7 +51,7 @@ deletesOne getTestEnv =
         -- setup
         createFiles [f1]
         assertPathsExist [f1]
-        argList <- withSrArgsM ["delete", OsP.unsafeDecode f1]
+        argList <- withSrArgsM ["delete", "-v", OsP.unsafeDecode f1]
 
         liftIO $ runCharon argList
 
@@ -86,7 +86,7 @@ deletesTilde getTestEnv =
         -- setup
         createFiles [f1]
         assertPathsExist [f1]
-        argList <- withSrArgsM ["delete", OsP.unsafeDecode f1]
+        argList <- withSrArgsM ["delete", "-v", OsP.unsafeDecode f1]
 
         liftIO $ runCharon argList
 
@@ -117,7 +117,7 @@ deletesMany getTestEnv =
             dirLinkToDelete = testDir </> [osp|dir-link|]
             linksToDelete = [fileLinkToDelete, dirLinkToDelete]
 
-        argList <- withSrArgsPathsM ["delete"] (filesToDelete <> dirsToDelete <> linksToDelete)
+        argList <- withSrArgsPathsM ["delete", "-v"] (filesToDelete <> dirsToDelete <> linksToDelete)
 
         -- setup
         -- test w/ a nested dir
@@ -131,7 +131,7 @@ deletesMany getTestEnv =
         liftIO $ runCharon argList
 
         let duplicate = [testDir </>! "f1"]
-        argListDuplicate <- withSrArgsPathsM ["delete"] duplicate
+        argListDuplicate <- withSrArgsPathsM ["delete", "-v"] duplicate
         createFiles duplicate
         assertPathsExist duplicate
 
@@ -158,7 +158,7 @@ deleteUnknownError getTestEnv =
         testDir <- getTestDir
         let file = testDir </> [osstr|bad file|]
 
-        argList <- withSrArgsM ["delete", OsP.unsafeDecode file]
+        argList <- withSrArgsM ["delete", "-v", OsP.unsafeDecode file]
 
         -- setup
         clearDirectory testDir
@@ -180,7 +180,7 @@ deleteDuplicateFile getTestEnv =
         testDir <- getTestDir
         let file = testDir </> [osstr|f1|]
 
-        argList <- withSrArgsM ["delete", OsP.unsafeDecode file]
+        argList <- withSrArgsM ["delete", "-v", OsP.unsafeDecode file]
 
         -- setup
         clearDirectory testDir
@@ -216,7 +216,7 @@ deletesSome getTestEnv =
         let realFiles = (testDir </>!) <$> ["f1", "f2", "f5"]
             filesTryDelete = (testDir </>!) <$> ["f1", "f2", "f3", "f4", "f5"]
 
-        argList <- withSrArgsPathsM ["delete"] filesTryDelete
+        argList <- withSrArgsPathsM ["delete", "-v"] filesTryDelete
 
         -- setup
         createFiles realFiles
@@ -244,7 +244,7 @@ deleteEmptyError getTestEnv =
       usingReaderT testEnv $ appendTestDirM "deleteEmptyError" $ do
         testDir <- getTestDir
 
-        argList <- withSrArgsM ["delete", ""]
+        argList <- withSrArgsM ["delete", "-v", ""]
 
         -- setup
         clearDirectory testDir
@@ -270,7 +270,7 @@ deleteDotsError getTestEnv =
         let dots = [[osp|.|], [osp|..|], [osp|...|]]
             files = (testDir </>) <$> dots
 
-        argList <- withSrArgsM $ "delete" : (OsP.unsafeDecode <$> files)
+        argList <- withSrArgsM $ "delete" : "-v" : (OsP.unsafeDecode <$> files)
 
         -- setup
         clearDirectory testDir
@@ -325,7 +325,7 @@ deletesPathological1 getTestEnv =
                       "\974" -- ώ
                     ]
 
-        argList <- withSrArgsPathsM ["delete"] files
+        argList <- withSrArgsPathsM ["delete", "-v"] files
 
         -- setup
         createFiles files
@@ -362,7 +362,7 @@ deletesPathological2 getTestEnv =
                       "\13312" -- 㐀
                     ]
 
-        argList <- withSrArgsPathsM ["delete"] files
+        argList <- withSrArgsPathsM ["delete", "-v"] files
 
         -- setup
         createFiles files
