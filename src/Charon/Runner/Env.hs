@@ -28,7 +28,6 @@ import Charon.Runner.FileSizeMode
         FileSizeModeWarn
       ),
   )
-import Charon.Runner.FileSizeMode qualified as FileSizeMode
 import Charon.Runner.Merged (MergedConfig)
 import Charon.Runner.Phase
   ( ConfigPhase
@@ -107,7 +106,7 @@ withEnv cfg onEnv =
           LogLevelOff -> onMLogFile Nothing
           LogLevelOn lvl ->
             withLogHandle
-              (Just $ logging ^. #logSizeMode)
+              (logging ^. #logSizeMode)
               (\h -> onMLogFile $ Just $ MkLogFile h lvl)
 
 withLogHandle ::
@@ -118,7 +117,7 @@ withLogHandle ::
     MonadPathWriter m,
     MonadTerminal m
   ) =>
-  Maybe FileSizeMode ->
+  FileSizeMode ->
   (Handle -> m a) ->
   m a
 withLogHandle sizeMode onHandle = do
@@ -138,9 +137,9 @@ handleLogSize ::
     MonadTerminal m
   ) =>
   OsPath ->
-  Maybe FileSizeMode ->
+  FileSizeMode ->
   m ()
-handleLogSize logFile msizeMode = do
+handleLogSize logFile sizeMode = do
   logExists <- doesFileExist logFile
   when logExists $ do
     logSize <- getFileSize logFile
@@ -156,7 +155,6 @@ handleLogSize logFile msizeMode = do
           putTextLn $ sizeWarning delSize logFile logSize' <> " Deleting log."
           removeFile logFile
   where
-    sizeMode = fromMaybe FileSizeMode.defaultSizeMode msizeMode
     sizeWarning warnSize fp fileSize =
       mconcat
         [ "Warning: log dir ",

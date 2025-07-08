@@ -49,7 +49,7 @@ import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasTrashHome)
 import Charon.Prelude
-import Charon.Runner.Command (Force, NoPrompt)
+import Charon.Runner.Command (Force, Prompt)
 import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import System.OsPath qualified as OsP
@@ -97,7 +97,7 @@ permDelete ::
     MonadPosixC m,
     MonadTerminal m
   ) =>
-  NoPrompt ->
+  Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 permDelete = Default.permDelete backendArgs
@@ -161,7 +161,7 @@ restore ::
     MonadTerminal m
   ) =>
   Force ->
-  NoPrompt ->
+  Prompt ->
   UniqueSeqNE (PathI TrashEntryFileName) ->
   m ()
 restore = Default.restore backendArgs
@@ -182,7 +182,7 @@ emptyTrash ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  NoPrompt ->
+  Prompt ->
   m ()
 emptyTrash = Default.emptyTrash backendArgs
 

@@ -19,7 +19,7 @@ module Charon.Runner.Command
 
     -- ** Misc types
     Force (..),
-    NoPrompt (..),
+    Prompt (..),
     IndicesPathsStrategy (..),
 
     -- * Optics
@@ -50,16 +50,22 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Prelude
 import Charon.Runner.Command.List (ListCmd, mergeListCommand)
 import Charon.Runner.Phase (ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged))
+import Charon.Runner.WithDisabled (WithDisabled (Disabled))
 
 newtype Force = MkForce {unForce :: Bool}
   deriving stock (Eq, Show)
 
 makeFieldLabelsNoPrefix ''Force
 
-newtype NoPrompt = MkNoPrompt {unNoPrompt :: Bool}
+type PromptF :: ConfigPhase -> Type
+type family PromptF p where
+  PromptF ConfigPhaseArgs = WithDisabled ()
+  PromptF ConfigPhaseMerged = Prompt
+
+newtype Prompt = MkPrompt {unPrompt :: Bool}
   deriving stock (Eq, Show)
 
-makeFieldLabelsNoPrefix ''NoPrompt
+makeFieldLabelsNoPrefix ''Prompt
 
 type CmdPathF :: ConfigPhase -> PathIndex -> Type
 type family CmdPathF p i where
@@ -97,7 +103,7 @@ deriving stock instance Eq (DeleteParams ConfigPhaseMerged)
 deriving stock instance Show (DeleteParams ConfigPhaseMerged)
 
 data PermDeleteParams s = MkPermDeleteParams
-  { noPrompt :: NoPrompt,
+  { prompt :: PromptF s,
     strategy :: IndicesPathsF s
   }
 
@@ -113,7 +119,7 @@ deriving stock instance Show (PermDeleteParams ConfigPhaseMerged)
 
 data RestoreParams s = MkRestoreParams
   { force :: Force,
-    noPrompt :: NoPrompt,
+    prompt :: PromptF s,
     strategy :: IndicesPathsF s
   }
 
@@ -135,7 +141,7 @@ data Command s
   | -- | Permanently deletes a path from the trash.
     PermDelete (PermDeleteParams s)
   | -- | Empties the trash.
-    Empty NoPrompt
+    Empty (PromptF s)
   | -- | Restores a path.
     Restore (RestoreParams s)
   | -- | List all trash contents.
@@ -173,16 +179,16 @@ mergeCommand = \case
     pure
       $ PermDelete
       $ MkPermDeleteParams
-        { noPrompt = params ^. #noPrompt,
+        { prompt = mergePromptDefTrue $ params ^. #prompt,
           strategy
         }
-  Empty noPrompt -> pure $ Empty noPrompt
+  Empty prompt -> pure $ Empty $ mergePromptDefTrue prompt
   Restore params -> do
     strategy <- parseStrategy (params ^. #strategy)
     let params2 =
           MkRestoreParams
             { force = params ^. #force,
-              noPrompt = params ^. #noPrompt,
+              prompt = mergePromptDefTrue $ params ^. #prompt,
               strategy
             }
     pure $ Restore params2
@@ -202,6 +208,13 @@ mergeCommand = \case
         [ "Exactly one of --indices or explicit paths required, ",
           m
         ]
+
+    -- For commands that take --prompt, default no answer to True
+    -- (i.e. requires prompt).
+    mergePromptDefTrue :: WithDisabled () -> Prompt
+    mergePromptDefTrue argsPrompt = case argsPrompt of
+      Disabled -> MkPrompt False
+      _ -> MkPrompt True
 
 fromRawSet ::
   ( HasCallStack,

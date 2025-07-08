@@ -12,6 +12,7 @@ module Charon.Backend.Data
 where
 
 import Charon.Prelude
+import Charon.Runner.Default
 import Data.Text qualified as T
 import TOML (DecodeTOML (tomlDecoder))
 
@@ -24,6 +25,9 @@ data Backend
   | -- | For use with the json backend.
     BackendJson
   deriving stock (Bounded, Enum, Eq, Show)
+
+instance Default Backend where
+  def = BackendCbor
 
 instance DecodeTOML Backend where
   tomlDecoder = tomlDecoder >>= parseBackend

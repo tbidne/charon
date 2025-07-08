@@ -35,9 +35,8 @@ import Charon.Runner.Command
       ),
     DeleteParams (MkDeleteParams),
     Force (MkForce),
-    NoPrompt (MkNoPrompt),
-    PermDeleteParams (MkPermDeleteParams, noPrompt, strategy),
-    RestoreParams (MkRestoreParams, force, noPrompt, strategy),
+    PermDeleteParams (MkPermDeleteParams, prompt, strategy),
+    RestoreParams (MkRestoreParams, force, prompt, strategy),
   )
 import Charon.Runner.Command.List
   ( ListCmd (MkListCmd),
@@ -53,6 +52,7 @@ import Charon.Runner.Config
 import Charon.Runner.Config qualified as Config
 import Charon.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
 import Charon.Runner.Phase (ConfigPhase (ConfigPhaseArgs))
+import Charon.Runner.WithDisabled (WithDisabled (Disabled, With, Without))
 import Control.Applicative qualified as A
 import Data.List qualified as L
 import Data.Version (showVersion)
@@ -60,6 +60,7 @@ import Effects.Optparse (osPath)
 import FileSystem.OsString qualified as OsString
 import Options.Applicative
   ( CommandFields,
+    FlagFields,
     InfoMod,
     Mod,
     OptionFields,
@@ -349,25 +350,25 @@ commandParser =
     delParser = Delete . MkDeleteParams <$> pathsParser
     permDelParser =
       PermDelete <$> do
-        noPrompt <- noPromptParser "Will not ask before deleting path(s)."
+        prompt <- promptParser "Prompts before deleting path(s). This is the default."
         strategy <- ((,) <$> indicesParser <*> mPathsParser)
         pure
           $ MkPermDeleteParams
-            { noPrompt,
+            { prompt,
               strategy
             }
     emptyParser =
       Empty
-        <$> noPromptParser "Will not ask before emptying the trash."
+        <$> promptParser "Prompts before emptying the trash. This is the default."
     restoreParser =
       Restore <$> do
         force <- forceParser restoreForceTxt
-        noPrompt <- noPromptParser restoreNoPromptTxt
+        prompt <- promptParser restorePromptTxt
         strategy <- ((,) <$> indicesParser <*> mPathsParser)
         pure
           $ MkRestoreParams
             { force,
-              noPrompt,
+              prompt,
               strategy
             }
     restoreForceTxt =
@@ -376,11 +377,7 @@ commandParser =
           "collisions with existing paths will either throw an error ",
           "(with --no-prompt) or prompt the user to decide."
         ]
-    restoreNoPromptTxt =
-      mconcat
-        [ "Will not ask before restoring path(s). Collisions with ",
-          "existing paths will either error or overwrite, depending on --force."
-        ]
+    restorePromptTxt = "Prompts before restoring path(s). This is the default."
     listParser =
       fmap List
         $ MkListCmd
@@ -569,14 +566,22 @@ forceParser helpTxt =
         mkHelp helpTxt
       ]
 
-noPromptParser :: String -> Parser NoPrompt
-noPromptParser helpTxt =
-  fmap MkNoPrompt
-    <$> OA.switch
-    $ mconcat
-      [ OA.long "no-prompt",
-        mkHelp helpTxt
-      ]
+promptParser :: String -> Parser (WithDisabled ())
+promptParser helpTxt = withDisabledParser mainParser "prompt"
+  where
+    switchParser =
+      OA.switch
+        ( mconcat
+            [ OA.long "prompt",
+              mkHelp helpTxt
+            ]
+        )
+    mainParser = do
+      b <- switchParser
+      pure
+        $ if b
+          then Just ()
+          else Nothing
 
 trashParser :: Parser (Maybe (RawPathI TrashHome))
 trashParser =
@@ -726,3 +731,45 @@ mkCmdDescNoLine =
   OA.progDescDoc
     . Chunk.unChunk
     . Chunk.paragraph
+
+-- | Adds a '--no-x' switch to the parser.
+withDisabledParser ::
+  -- | Main parser.
+  Parser (Maybe a) ->
+  -- | Name for this option, to be used in disabled switch name.
+  String ->
+  Parser (WithDisabled a)
+withDisabledParser mainParser name =
+  withDisabledParserOpts opts mainParser name
+  where
+    helpTxt = "Disables --" ++ name ++ "."
+    opts = mkHelp helpTxt
+
+-- | Like 'withDisabledParser', except it also takes an arg for the disabled
+-- switch options.
+withDisabledParserOpts ::
+  -- | Disabled switch options.
+  Mod FlagFields Bool ->
+  -- | Main parser
+  Parser (Maybe a) ->
+  -- | Name for this option, to be used in disabled switch name.
+  String ->
+  Parser (WithDisabled a)
+withDisabledParserOpts disabledOpts mainParser name = do
+  mx <- mainParser
+  y <- noParser
+  pure
+    $ if y
+      then Disabled
+      else maybe Without With mx
+  where
+    noParser =
+      OA.flag
+        False
+        True
+        ( mconcat
+            [ OA.long $ "no-" ++ name,
+              OA.hidden,
+              disabledOpts
+            ]
+        )

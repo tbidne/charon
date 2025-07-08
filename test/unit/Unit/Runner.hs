@@ -19,7 +19,7 @@ import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
-  ( NoPrompt (MkNoPrompt),
+  ( Prompt (MkPrompt),
     _Delete,
     _Empty,
     _List,
@@ -94,7 +94,7 @@ permDelete = testCase "Parses perm delete" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
-  Just (MkNoPrompt False) @=? cfg ^? (#command % _PermDelete % #noPrompt)
+  Just (MkPrompt True) @=? cfg ^? (#command % _PermDelete % #prompt)
   Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "foo", "bar", "-c", "none"]
@@ -107,7 +107,7 @@ permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
-  Just (MkNoPrompt True) @=? cfg ^? (#command % _PermDelete % #noPrompt)
+  Just (MkPrompt False) @=? cfg ^? (#command % _PermDelete % #prompt)
   Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
     argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
@@ -120,7 +120,7 @@ emptyTrash = testCase "Parses empty" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
-  Just False @=? cfg ^? #command % _Empty % #unNoPrompt
+  Just True @=? cfg ^? #command % _Empty % #unPrompt
   where
     argList = ["empty", "-c", "none"]
 
@@ -129,7 +129,7 @@ emptyTrashNoPrompt = testCase "Parses empty with --no-prompt" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
-  Just True @=? cfg ^? #command % _Empty % #unNoPrompt
+  Just False @=? cfg ^? #command % _Empty % #unPrompt
   where
     argList = ["empty", "--no-prompt", "-c", "none"]
 

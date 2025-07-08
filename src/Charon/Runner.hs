@@ -106,7 +106,7 @@ runCmd cmd =
     runCmd' = \case
       Delete params -> Charon.delete params
       PermDelete params -> Charon.permDelete params
-      Empty noPrompt -> Charon.emptyTrash noPrompt
+      Empty prompt -> Charon.emptyTrash prompt
       Restore params -> Charon.restore params
       List listCmd -> printIndex listCmd
       Metadata -> printMetadata

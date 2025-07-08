@@ -44,8 +44,8 @@ import Charon.Prelude
 import Charon.Runner.Command
   ( DeleteParams,
     IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
-    NoPrompt,
     PermDeleteParams,
+    Prompt,
     RestoreParams,
   )
 import Charon.Runner.Phase (ConfigPhase (ConfigPhaseMerged))
@@ -124,10 +124,10 @@ permDelete params = addNamespace "permDelete" $ do
       BackendJson -> ("json", Json.getIndex, Json.permDelete)
 
   paths <- getIndexedPaths "delete" strategy idxFn
-  addNamespace name $ delFn noPrompt paths
+  addNamespace name $ delFn prompt paths
   where
     strategy = params ^. #strategy
-    noPrompt = params ^. #noPrompt
+    prompt = params ^. #prompt
 
 -- | Reads the index at either the specified or default location. If the
 -- file does not exist, returns empty.
@@ -206,15 +206,15 @@ restore params = addNamespace "restore" $ do
 
   (name, idxFn, restoreFn) <-
     asks @env @m getBackend <&> \case
-      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore force noPrompt)
-      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force noPrompt)
-      BackendJson -> ("json", Json.getIndex, Json.restore force noPrompt)
+      BackendCbor -> ("cbor", Cbor.getIndex, Cbor.restore force prompt)
+      BackendFdo -> ("fdo", Fdo.getIndex, Fdo.restore force prompt)
+      BackendJson -> ("json", Json.getIndex, Json.restore force prompt)
 
   paths <- getIndexedPaths "restore" (params ^. #strategy) idxFn
   addNamespace name $ restoreFn paths
   where
     force = params ^. #force
-    noPrompt = params ^. #noPrompt
+    prompt = params ^. #prompt
 
 -- | Empties the trash.
 emptyTrash ::
@@ -233,15 +233,15 @@ emptyTrash ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  NoPrompt ->
+  Prompt ->
   m ()
-emptyTrash noPrompt = addNamespace "emptyTrash" $ do
+emptyTrash prompt = addNamespace "emptyTrash" $ do
   initalLog
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash noPrompt
-      BackendFdo -> addNamespace "fdo" $ Fdo.emptyTrash noPrompt
-      BackendJson -> addNamespace "json" $ Json.emptyTrash noPrompt
+      BackendCbor -> addNamespace "cbor" $ Cbor.emptyTrash prompt
+      BackendFdo -> addNamespace "fdo" $ Fdo.emptyTrash prompt
+      BackendJson -> addNamespace "json" $ Json.emptyTrash prompt
 
 convert ::
   ( HasBackend env,

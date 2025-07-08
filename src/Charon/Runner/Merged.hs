@@ -9,7 +9,7 @@ module Charon.Runner.Merged
   )
 where
 
-import Charon.Backend.Data (Backend (BackendCbor, BackendFdo))
+import Charon.Backend.Data (Backend (BackendFdo))
 import Charon.Data.Paths
   ( PathI (MkPathI),
     PathIndex (TrashHome),
@@ -23,7 +23,7 @@ import Charon.Runner.Config
     LogLevelConfig (LogLevelOn),
     LoggingConfig (MkLoggingConfig, logLevel, logSizeMode),
   )
-import Charon.Runner.FileSizeMode qualified as FileSizeMode
+import Charon.Runner.Default (Default (def), (<|.|>))
 import Charon.Runner.Phase
   ( ConfigPhase
       ( ConfigPhaseArgs,
@@ -32,7 +32,6 @@ import Charon.Runner.Phase
       ),
   )
 import Charon.Runner.Toml (TomlConfig)
-import Charon.Utils qualified as U
 import Effects.FileSystem.PathReader (getXdgData)
 
 data MergedConfig = MkMergedConfig
@@ -56,15 +55,12 @@ mergeConfigs ::
 mergeConfigs args toml = do
   command <- mergeCommand (args ^. #command)
 
-  let backend =
-        fromMaybe
-          BackendCbor
-          (U.mergeAlt #backend #backend argsCore tomlCore)
+  let backend = argsCore ^. #backend <|.|> tomlCore ^. #backend
 
       logging =
         mergeLogging (argsCore ^. #logging) (tomlCore ^. #logging)
 
-  let thRawPath = U.mergeAlt #trashHome #trashHome argsCore tomlCore
+  let thRawPath = argsCore ^. #trashHome <|> tomlCore ^. #trashHome
   thPath <- traverse fromRaw thRawPath
 
   trashHome <- trashOrDefault backend thPath
@@ -97,7 +93,7 @@ mergeConfigs args toml = do
             { logLevel,
               logSizeMode =
                 fromMaybe
-                  FileSizeMode.defaultSizeMode
+                  def
                   (argsLogging ^. #logSizeMode <|> tomlLogging ^. #logSizeMode)
             }
 

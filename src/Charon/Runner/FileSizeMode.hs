@@ -1,11 +1,11 @@
 module Charon.Runner.FileSizeMode
   ( FileSizeMode (..),
-    defaultSizeMode,
     parseFileSizeMode,
   )
 where
 
 import Charon.Prelude
+import Charon.Runner.Default (Default (def))
 import Data.Bytes (Size (M), SomeSize)
 import Data.Bytes qualified as Bytes
 import Data.Char qualified as Ch
@@ -21,10 +21,10 @@ data FileSizeMode
     FileSizeModeDelete (Bytes B Natural)
   deriving stock (Eq, Show)
 
-defaultSizeMode :: FileSizeMode
-defaultSizeMode = FileSizeModeDelete $ Bytes.convert_ fiftyMb
-  where
-    fiftyMb = MkBytes @M 50
+instance Default FileSizeMode where
+  def = FileSizeModeDelete $ Bytes.convert_ fiftyMb
+    where
+      fiftyMb = MkBytes @M 50
 
 parseFileSizeMode :: (MonadFail m) => Text -> m FileSizeMode
 parseFileSizeMode txt = do

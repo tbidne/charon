@@ -63,7 +63,7 @@ import Charon.Exception
     TrashEntryWildcardNotFoundE (MkTrashEntryWildcardNotFoundE),
   )
 import Charon.Prelude
-import Charon.Runner.Command (Force, NoPrompt)
+import Charon.Runner.Command (Force, Prompt)
 import Charon.Utils qualified as Utils
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
@@ -279,7 +279,7 @@ permDeleteFromTrash ::
   ) =>
   BackendArgs m pd ->
   (PathData -> m ()) ->
-  NoPrompt ->
+  Prompt ->
   IORef (Seq (PathI TrashEntryFileName)) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
@@ -287,7 +287,7 @@ permDeleteFromTrash ::
 permDeleteFromTrash
   backendArgs
   postHook
-  noPrompt
+  prompt
   deletedPathsRef
   trashHome
   pathName = addNamespace "permDeleteFromTrash" $ do
@@ -308,20 +308,21 @@ permDeleteFromTrash
         deleteFn :: PathData -> m ()
         deleteFn pathData = do
           $(logDebug) ("Deleting: " <> Paths.toText (pathData ^. #fileName))
-          if noPrompt ^. #unNoPrompt
-            then -- NOTE: Technically don't need the pathdata if noPrompt is on, since we have
-            -- the path and can just delete it. Nevertheless, we retrieve the pathData
-            -- so that noPrompt does not change the semantics i.e. can only delete
-            -- "well-behaved" files, and we don't have to do a redundant file/directory
-            -- check.
-              deleteFn' backend pathData
-            else do
+          if prompt ^. #unPrompt
+            then do
               let pdStr = Utils.renderPretty pathData
               putTextLn pdStr
               ans <- Utils.askYesNoQ "\nPermanently delete"
               if ans
                 then deleteFn' backend pathData *> Utils.putLine
                 else Utils.putLine
+            else
+              -- NOTE: Technically don't need the pathdata if noPrompt is on, since we have
+              -- the path and can just delete it. Nevertheless, we retrieve the pathData
+              -- so that noPrompt does not change the semantics i.e. can only delete
+              -- "well-behaved" files, and we don't have to do a redundant file/directory
+              -- check.
+              deleteFn' backend pathData
 
     -- Need our own error handling here since if we are deleting multiple
     -- wildcard matches we want success/failure to be independent.
@@ -360,7 +361,7 @@ restoreTrashToOriginal ::
   BackendArgs m pd ->
   (PathData -> m ()) ->
   Force ->
-  NoPrompt ->
+  Prompt ->
   IORef (Seq (PathI TrashEntryOriginalPath)) ->
   PathI TrashHome ->
   PathI TrashEntryFileName ->
@@ -369,7 +370,7 @@ restoreTrashToOriginal
   backendArgs
   postHook
   force
-  noPrompt
+  prompt
   restoredPathsRef
   trashHome
   pathName = addNamespace "restoreTrashToOriginal" $ do
@@ -386,9 +387,9 @@ restoreTrashToOriginal
 
           $(logDebug) ("Restoring: " <> Paths.toText fileName)
 
-          if noPrompt ^. #unNoPrompt
-            then restoreNoPrompt pd
-            else restorePrompt pd
+          if prompt ^. #unPrompt
+            then restorePrompt pd
+            else restoreNoPrompt pd
 
     -- Need our own error handling here since if we are restoring multiple
     -- wildcard matches we want success/failure to be independent.

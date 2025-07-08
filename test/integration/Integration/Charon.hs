@@ -33,8 +33,8 @@ import Charon.Runner.Command
   ( DeleteParams (MkDeleteParams),
     Force (MkForce),
     IndicesPathsStrategy (PathsStrategy),
-    NoPrompt (MkNoPrompt),
     PermDeleteParams (MkPermDeleteParams),
+    Prompt (MkPrompt),
     RestoreParams (MkRestoreParams),
   )
 import Charon.Runner.Config
@@ -448,13 +448,13 @@ charonDelete =
 charonPermDelete :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonPermDelete =
   Charon.permDelete
-    . MkPermDeleteParams (MkNoPrompt True)
+    . MkPermDeleteParams (MkPrompt False)
     . PathsStrategy
 
 charonRestore :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonRestore =
   Charon.restore
-    . MkRestoreParams (MkForce False) (MkNoPrompt True)
+    . MkRestoreParams (MkForce False) (MkPrompt False)
     . PathsStrategy
 
 emptyTrash :: Backend -> IO OsPath -> TestTree
@@ -482,7 +482,7 @@ emptyTrash backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
       assertPathsDoNotExist αTestPaths
 
       -- empty trash
-      usingIntIO env $ Charon.emptyTrash (MkNoPrompt True)
+      usingIntIO env $ Charon.emptyTrash (MkPrompt False)
 
       -- get index
       index <- getIndex env
