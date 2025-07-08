@@ -404,19 +404,28 @@ commandParser =
     convertParser = Convert <$> backendDestParser
     mergeParser = Merge <$> trashDestParser
 
-indicesParser :: Parser Bool
-indicesParser =
-  OA.switch
-    $ mconcat
-      [ OA.long "indices",
-        OA.short 'i',
-        mkHelp
-          $ mconcat
-            [ "Allows selecting by numeric index instead of trash name. ",
-              "Incompatible with explicit paths. The prompt can be exited ",
-              "via 'exit', 'quit', or ':q'."
+indicesParser :: Parser (WithDisabled ())
+indicesParser = withDisabledParser mainParser "indices"
+  where
+    switchParser =
+      OA.switch
+        ( mconcat
+            [ OA.short 'i',
+              OA.long "indices",
+              mkHelp
+                $ mconcat
+                  [ "Allows selecting by numeric index instead of trash name. ",
+                    "Incompatible with explicit paths. The prompt can be exited ",
+                    "via 'exit', 'quit', or ':q'."
+                  ]
             ]
-      ]
+        )
+    mainParser = do
+      b <- switchParser
+      pure
+        $ if b
+          then Just ()
+          else Nothing
 
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =

@@ -60,6 +60,7 @@ import Charon.Runner.Phase
   )
 import Charon.Runner.WithDisabled
   ( WithDisabled (Disabled, With, Without),
+    fromBool,
     fromDefault,
     (<.>?),
     (<>?),
@@ -99,7 +100,7 @@ type family CmdPathF p i where
 
 type IndicesPathsF :: ConfigPhase -> Type
 type family IndicesPathsF p where
-  IndicesPathsF ConfigPhaseArgs = (Bool, (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
+  IndicesPathsF ConfigPhaseArgs = (WithDisabled (), (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
   IndicesPathsF ConfigPhaseToml = Maybe Bool
   IndicesPathsF ConfigPhaseMerged = IndicesPathsStrategy
 
@@ -306,7 +307,7 @@ mergePermDelete args = \case
           verbose = fromDefault argsVerbose
         }
   Just toml -> do
-    strategy <- parseStrategy (over' _1 (|| tomlStrategy) argsStrategy)
+    strategy <- parseStrategy (over' _1 (<> tomlStrategy) argsStrategy)
     pure
       $ MkPermDeleteParams
         { prompt = mergePromptDefTrue $ argsPrompt <>? toml ^. #prompt,
@@ -314,7 +315,10 @@ mergePermDelete args = \case
           verbose = argsVerbose <.>? toml ^. #verbose
         }
     where
-      tomlStrategy = fromMaybe False (toml ^. #strategy)
+      tomlStrategy =
+        fromBool
+          . fromMaybe False
+          $ (toml ^. #strategy)
   where
     argsStrategy = args ^. #strategy
     argsPrompt = args ^. #prompt $> MkPrompt True
@@ -340,7 +344,7 @@ mergeRestore args = \case
           verbose = fromDefault argsVerbose
         }
   Just toml -> do
-    strategy <- parseStrategy (over' _1 (|| tomlStrategy) argsStrategy)
+    strategy <- parseStrategy (over' _1 (<> tomlStrategy) argsStrategy)
     pure
       $ MkRestoreParams
         { force = argsForce <.>? toml ^. #force,
@@ -349,7 +353,10 @@ mergeRestore args = \case
           verbose = argsVerbose <.>? toml ^. #verbose
         }
     where
-      tomlStrategy = fromMaybe False (toml ^. #strategy)
+      tomlStrategy =
+        fromBool
+          . fromMaybe False
+          $ (toml ^. #strategy)
   where
     argsForce = args ^. #force $> MkForce True
     argsStrategy = args ^. #strategy
@@ -362,13 +369,15 @@ parseStrategy ::
     MonadPathReader m,
     MonadTerminal m
   ) =>
-  (Bool, Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))) ->
+  (WithDisabled (), Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))) ->
   m IndicesPathsStrategy
 parseStrategy = \case
-  (True, Nothing) -> pure $ IndicesStrategy
-  (True, Just _) -> throwText $ mkStratErr "not both."
-  (False, Nothing) -> throwText $ mkStratErr "but none given."
-  (False, Just paths) -> PathsStrategy <$> fromRawSet paths
+  (With _, Nothing) -> pure $ IndicesStrategy
+  (With _, Just _) -> throwText $ mkStratErr "not both."
+  (Without, Nothing) -> throwText $ mkStratErr "but none given."
+  (Without, Just paths) -> PathsStrategy <$> fromRawSet paths
+  (Disabled, Nothing) -> throwText $ mkStratErr "but none given."
+  (Disabled, Just paths) -> PathsStrategy <$> fromRawSet paths
   where
     mkStratErr m =
       mconcat
