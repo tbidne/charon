@@ -14,10 +14,15 @@ import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.UniqueSeq qualified as USeq
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Runner.CharonT (runCharonT)
-import Charon.Runner.Env
-  ( Env (MkEnv, backend, logEnv, trashHome),
+import Charon.Runner.Command
+  ( DeleteParams (MkDeleteParams, paths, verbose),
+    Verbose (MkVerbose),
+  )
+import Charon.Runner.Config
+  ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
     LogEnv (MkLogEnv),
   )
+import Charon.Runner.Env (Env (MkEnv, coreConfig))
 import FileSystem.OsPath ((</>!))
 
 -- | Index reading benchmarks.
@@ -54,8 +59,14 @@ setup testDir = do
         modifyIORef' uniqueSeqRef (`USeq.append` MkPathI filepath)
 
       uniqueSeq <- readIORef uniqueSeqRef
+      let params =
+            MkDeleteParams
+              { paths = USeqNE.unsafefromUniqueSeq uniqueSeq,
+                verbose = MkVerbose False
+              }
+
       env <- mkEnv $ MkPathI trashDir
-      runCharonT (Charon.delete $ USeqNE.unsafefromUniqueSeq uniqueSeq) env
+      runCharonT (Charon.delete params) env
       where
         trashDir = dir </> [osp|.trash/|]
 
@@ -65,11 +76,14 @@ readIndex desc =
     . nfIO
     . (runCharonT Charon.getIndex <=< mkEnv)
 
-mkEnv :: PathI TrashHome -> IO (Env IO)
+mkEnv :: PathI TrashHome -> IO Env
 mkEnv trashHome = do
   pure
     $ MkEnv
-      { trashHome = trashHome,
-        backend = BackendCbor,
-        logEnv = MkLogEnv Nothing ""
+      { coreConfig =
+          MkCoreConfig
+            { trashHome = trashHome,
+              backend = BackendCbor,
+              logging = MkLogEnv Nothing ""
+            }
       }
