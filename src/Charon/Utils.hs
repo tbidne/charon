@@ -463,11 +463,7 @@ noCallstacks =
   ]
 
 displayList :: (Foldable f) => (a -> Text) -> f a -> Text
-displayList toText xs =
-  mconcat
-    [ F.foldMap go xs,
-      "\n"
-    ]
+displayList toText xs = F.foldMap go xs
   where
     go x =
       mconcat
