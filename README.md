@@ -266,33 +266,35 @@ For example: 1 3 5-12 15
 **Usage:**
 
 ```
-Usage: charon list [--color (t[rue]|f[alse]|d[etect])]
-                   [--format (m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))]
-                   [-n|--name-len (max|NAT)] [-o|--orig-len (max|NAT)]
-                   [-s|--sort (name|size)] [-r|--reverse-sort]
+Usage: charon list [--color ARG] [--format FMT] [-n|--name-len (max|NAT)]
+                   [-o|--orig-len (max|NAT)] [-s|--sort (name|size)]
+                   [-r|--reverse-sort]
 
   Lists all trash contents.
 
 
 Available options:
-  --color (t[rue]|f[alse]|d[etect])
-                           Determines if we should color output. Multiline is
-                           unaffected.
+  --color ARG              Coloring options.
 
-  --format (m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))
-                           Formatting options.
+                           - (t|true): On.
 
-                           - multi: Prints each entry across multiple lines.
+                           - (f|false): Off.
 
-                           - single: Compact, prints each entry across a single
-                           lines
+                           - (d|detect): On if supported.
 
-                           - tabular: The default. Prints a table that tries to
-                           intelligently size the table based on available
+  --format FMT             Formatting options.
+
+                           - (m|multi): Prints each entry across multiple lines.
+
+                           - (s|single): Compact, prints each entry across a
+                           single lines
+
+                           - (t|tabular): The default. Prints a table that tries
+                           to intelligently size the table based on available
                            terminal width and filename / original path lengths.
 
-                           - tabular-simple: Simple table that does no resizing.
-                           Prints the table with indices.
+                           - (ts|tabular-simple): Simple table that does no
+                           resizing. Prints the table with indices.
 
   -n,--name-len (max|NAT)  Sets the file name column length to either NAT
                            characters or longest file-name. Only affects the

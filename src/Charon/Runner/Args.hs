@@ -207,8 +207,6 @@ backendParser =
     fdo = Just Pretty.hardline <> toMDoc "- fdo: Compatible with FreeDesktop.org."
     js = Just Pretty.hardline <> toMDoc "- json: Inspectable."
 
-    toMDoc = Chunk.unChunk . Chunk.paragraph
-
 backendDestParser :: Parser Backend
 backendDestParser =
   OA.option (OA.str >>= parseBackend)
@@ -435,7 +433,7 @@ listFormatStyleParser =
     $ OA.option (OA.str >>= parseListFormat)
     $ mconcat
       [ OA.long "format",
-        OA.metavar "(m[ulti]|s[ingle]|t[abular]|(ts|tabular-simple))",
+        OA.metavar "FMT",
         OA.helpDoc helpTxt
       ]
   where
@@ -458,7 +456,7 @@ listFormatStyleParser =
         [ Just Pretty.hardline,
           toMDoc
             $ mconcat
-              [ "- tabular: The default. Prints a table that tries to ",
+              [ "- (t|tabular): The default. Prints a table that tries to ",
                 "intelligently size the table based on available terminal ",
                 "width and filename / original path lengths."
               ]
@@ -468,21 +466,23 @@ listFormatStyleParser =
         [ Just Pretty.hardline,
           toMDoc
             $ mconcat
-              [ "- tabular-simple: Simple table that does no resizing. Prints ",
+              [ "- (ts|tabular-simple): Simple table that does no resizing. Prints ",
                 "the table with indices."
               ]
         ]
     multi =
       mconcat
         [ Just Pretty.hardline,
-          toMDoc "- multi: Prints each entry across multiple lines."
+          toMDoc "- (m|multi): Prints each entry across multiple lines."
         ]
     single =
       mconcat
         [ Just Pretty.hardline,
-          toMDoc "- single: Compact, prints each entry across a single lines"
+          toMDoc "- (s|single): Compact, prints each entry across a single lines"
         ]
-    toMDoc = Chunk.unChunk . Chunk.paragraph
+
+toMDoc :: String -> Maybe Doc
+toMDoc = Chunk.unChunk . Chunk.paragraph
 
 nameTruncParser :: Parser (Maybe ColFormat)
 nameTruncParser = colParser PathData.formatFileNameLenMin fields
@@ -538,11 +538,7 @@ coloringParser =
     $ OA.option readColoring
     $ mconcat
       [ OA.long "color",
-        OA.metavar "(t[rue]|f[alse]|d[etect])",
-        mkHelp
-          $ mconcat
-            [ "Determines if we should color output. Multiline is unaffected."
-            ]
+        OA.helpDoc helpTxt
       ]
   where
     readColoring =
@@ -554,6 +550,34 @@ coloringParser =
         "d" -> pure ColoringDetect
         "detect" -> pure ColoringDetect
         bad -> fail $ "Unexpected --coloring: " ++ bad
+
+    helpTxt =
+      mconcat
+        [ intro,
+          Just Pretty.hardline,
+          true,
+          Just Pretty.hardline,
+          false,
+          Just Pretty.hardline,
+          detect,
+          Just Pretty.hardline
+        ]
+    intro = toMDoc "Coloring options."
+    true =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc "- (t|true): On."
+        ]
+    false =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc "- (f|false): Off."
+        ]
+    detect =
+      mconcat
+        [ Just Pretty.hardline,
+          toMDoc "- (d|detect): On if supported."
+        ]
 
 sortParser :: Parser (Maybe Sort)
 sortParser =
