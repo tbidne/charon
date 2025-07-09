@@ -29,6 +29,7 @@ module Test.Utils
     assertMatches,
 
     -- * Misc
+    getPathStr,
     genPathChar,
     genPathCharIO,
 
@@ -39,12 +40,14 @@ where
 
 import Charon.Prelude
 import Data.Char qualified as Ch
+import Data.Functor.Identity (Identity)
 import Data.HashSet qualified as Set
 import Data.List qualified as L
 import Data.Text qualified as T
 import Effects.FileSystem.PathWriter (createDirectoryLink, createFileLink)
-import Hedgehog (MonadGen)
+import Hedgehog (MonadGen (GenBase))
 import Hedgehog.Gen qualified as Gen
+import Hedgehog.Range qualified as R
 import Test.Tasty (TestName, TestTree)
 import Test.Tasty.Golden (goldenVsFileDiff)
 import Test.Tasty.HUnit (assertFailure)
@@ -290,6 +293,26 @@ showTextMatch (Outfixes start ins end) =
 
 wc :: String
 wc = "**"
+
+getPathStr :: (GenBase m ~ Identity, MonadGen m) => Bool -> m String
+getPathStr =
+  Gen.filter badString
+    . fmap modStr
+    . Gen.string (R.linear 1 100)
+    . genPathChar
+  where
+    strip =
+      T.unpack
+        . T.strip
+        . T.pack
+
+#if WINDOWS
+    badString = not . null
+    modStr = strip
+#else
+    badString = not . null . strip
+    modStr = id
+#endif
 
 -- | Generates a platform-independent char suitable for usage in a path.
 genPathChar :: (MonadGen m) => Bool -> m Char

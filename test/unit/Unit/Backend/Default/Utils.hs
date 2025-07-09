@@ -11,12 +11,9 @@ import Charon.Data.Paths
     PathIndex (TrashEntryOriginalPath, TrashHome),
   )
 import Data.List qualified as L
-import Data.Text qualified as T
 import Effects.FileSystem.PathReader (MonadPathReader (pathIsSymbolicLink))
 import FileSystem.OsPath qualified as OsPath
 import GHC.Real (Integral (mod))
-import Hedgehog.Gen qualified as Gen
-import Hedgehog.Range qualified as Range
 import System.Random qualified as R
 import Test.Utils qualified as TestUtils
 import Unit.Prelude
@@ -78,16 +75,24 @@ getPathTypePreservesBaseFileName =
   testPropertyNamed desc "getPathTypePreservesBaseFileName" $ do
     property $ do
       (MkPathI fileName) <- forAll genPath
-      filePath <- liftIO $ do
-        tmp <- liftIO getTemporaryDirectory
-        let d = tmp </> testDirName
-        createDirectoryIfMissing True d
-        let path = d </> fileName
-        writeBinaryFile path "file"
-        pure path
+
+      let action = do
+            filePath <- liftIO $ do
+              tmp <- liftIO getTemporaryDirectory
+              let d = tmp </> testDirName
+              createDirectoryIfMissing True d
+              let path = d </> fileName
+              writeBinaryFile path "file"
+              pure path
+
+            runRandIO
+              $ Utils.getPathInfo trashHome (MkPathI filePath)
+
       r@(MkPathI uniqueFileName, _, _) <-
-        runRandIO
-          $ Utils.getPathInfo trashHome (MkPathI filePath)
+        -- Catch the exception so we still get annotations.
+        action `catchSync` \ex -> do
+          annotate $ displayException ex
+          failure
 
       annotateShow r
 
@@ -143,16 +148,4 @@ getR3 = do
   pure $ x == 0 `mod` 3
 
 genPath :: (HasCallStack) => Gen (PathI TrashEntryOriginalPath)
-genPath = MkPathI . OsPath.unsafeEncode <$> genString
-
-genString :: Gen String
-genString =
-  Gen.filter badString
-    $ Gen.string (Range.linear 1 100) (TestUtils.genPathChar True)
-  where
-    badString = not . null . strip
-
-    strip =
-      T.unpack
-        . T.strip
-        . T.pack
+genPath = MkPathI . OsPath.unsafeEncode <$> TestUtils.getPathStr True
