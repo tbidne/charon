@@ -14,15 +14,16 @@ import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.UniqueSeq qualified as USeq
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Runner.CharonT (runCharonT)
-import Charon.Runner.Command
-  ( DeleteParams (MkDeleteParams, paths, verbose),
-    Verbose (MkVerbose),
+import Charon.Runner.Command.Delete
+  ( DeleteParams (MkDeleteParams, paths, prompt, verbose),
   )
 import Charon.Runner.Config
   ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
     LogEnv (MkLogEnv),
   )
 import Charon.Runner.Env (Env (MkEnv, coreConfig))
+import Charon.Runner.Phase (Prompt (MkPrompt), Verbose (MkVerbose))
+import Effects.Haskeline qualified as EH
 import FileSystem.OsPath ((</>!))
 
 -- | Index reading benchmarks.
@@ -62,11 +63,12 @@ setup testDir = do
       let params =
             MkDeleteParams
               { paths = USeqNE.unsafefromUniqueSeq uniqueSeq,
+                prompt = MkPrompt False,
                 verbose = MkVerbose False
               }
 
       env <- mkEnv $ MkPathI trashDir
-      runCharonT (Charon.delete params) env
+      EH.runInputTEnv $ runReaderT (runCharonT (Charon.delete params) env)
       where
         trashDir = dir </> [osp|.trash/|]
 

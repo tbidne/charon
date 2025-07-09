@@ -22,6 +22,7 @@ module Charon.Backend.Default.Trash
     PathDataSearchResult (..),
     findPathData,
     getTrashPath,
+    mvPdToTrash,
   )
 where
 
@@ -225,36 +226,60 @@ mvOriginalToTrash
   currTime
   path = addNamespace "mvOriginalToTrash" $ do
     $(logDebug) $ "Path: " <> Paths.toText path
+    -- 1. Derive core path data fields.
     let backend = backendArgs ^. #backend
     (pd, pathType) <- (backendArgs ^. #makePathData) currTime trashHome path
-    $(logDebug) ("Deleting: " <> showt pd <> ", " <> showt pathType)
 
-    let fileName = pd ^. #fileName
-        trashPathI@(MkPathI trashPath) = getTrashPath trashHome fileName
-        MkPathI trashInfoPath = getTrashInfoPath backend trashHome fileName
-
-    -- 2. Write info file
-    --
-    -- Perform this before the actual move to be safe i.e. path is only moved
-    -- if info is already created.
-    encoded <- encodeThrowM pd
-    writeBinaryFile trashInfoPath encoded
-
-    $(logDebug) ("Wrote to file: " <> showt encoded)
-
-    -- 4. Move file to trash
-    let MkPathI opath = pd ^. #originalPath
-        moveFn = PathType.renameFn pathType opath trashPath
-
-    -- 5. If move failed, roll back info file
-    moveFn `catchSync` \ex -> do
-      $(logError) ("Error moving file to trash: " <> Utils.displayExT ex)
-      PW.removeFile trashInfoPath
-      throwM ex
-
-    $(logInfo) ("Moved to trash: " <> showt pd)
-
+    trashPathI <- mvPdToTrash backend trashHome pd pathType
     pure (pd, pathType, trashPathI)
+
+-- | Internal function used by 'mvOriginalToTrash'.
+mvPdToTrash ::
+  ( HasCallStack,
+    Is k1 A_Getter,
+    LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
+    LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
+    MonadCatch m,
+    MonadFileWriter m,
+    MonadLoggerNS m env k2,
+    MonadPathWriter m,
+    Serial pd,
+    Show pd
+  ) =>
+  Backend ->
+  PathI TrashHome ->
+  pd ->
+  PathTypeW ->
+  m (PathI TrashEntryPath)
+mvPdToTrash backend trashHome pd pathType = do
+  $(logDebug) ("Deleting: " <> showt pd <> ", " <> showt pathType)
+
+  let fileName = pd ^. #fileName
+      trashPathI@(MkPathI trashPath) = getTrashPath trashHome fileName
+      MkPathI trashInfoPath = getTrashInfoPath backend trashHome fileName
+
+  -- 2. Write info file
+  --
+  -- Perform this before the actual move to be safe i.e. path is only moved
+  -- if info is already created.
+  encoded <- encodeThrowM pd
+  writeBinaryFile trashInfoPath encoded
+
+  $(logDebug) ("Wrote to file: " <> showt encoded)
+
+  -- 4. Move file to trash
+  let MkPathI opath = pd ^. #originalPath
+      moveFn = PathType.renameFn pathType opath trashPath
+
+  -- 5. If move failed, roll back info file
+  moveFn `catchSync` \ex -> do
+    $(logError) ("Error moving file to trash: " <> Utils.displayExT ex)
+    PW.removeFile trashInfoPath
+    throwM ex
+
+  $(logInfo) ("Moved to trash: " <> showt pd)
+
+  pure trashPathI
 
 -- | Permanently deletes the trash path. Returns 'True' if any deletes fail.
 -- In this case, the error has already been reported, so this is purely for

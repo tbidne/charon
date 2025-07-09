@@ -444,7 +444,7 @@ restoreSome backend mtestDir = askOption $ \(MkAsciiOnly b) -> do
 charonDelete :: UniqueSeqNE (PathI TrashEntryOriginalPath) -> IntIO ()
 charonDelete =
   Charon.delete
-    . (\s -> MkDeleteParams s (MkVerbose True))
+    . (\s -> MkDeleteParams s (MkPrompt False) (MkVerbose True))
 
 charonPermDelete :: UniqueSeqNE (PathI TrashEntryFileName) -> IntIO ()
 charonPermDelete =

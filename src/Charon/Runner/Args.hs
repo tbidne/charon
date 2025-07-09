@@ -38,6 +38,7 @@ import Charon.Runner.Command.Delete
   ( DeleteParams
       ( MkDeleteParams,
         paths,
+        prompt,
         verbose
       ),
   )
@@ -368,10 +369,12 @@ commandParser =
     delParser =
       Delete <$> do
         paths <- pathsParser
+        prompt <- promptParser "Prompts before deleting path(s). Not the default."
         verbose <- verboseParser "Lists deleted paths."
         pure
           $ MkDeleteParams
             { paths,
+              prompt,
               verbose
             }
     permDelParser =

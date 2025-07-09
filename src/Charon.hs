@@ -71,6 +71,7 @@ delete ::
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k,
     MonadPathReader m,
@@ -86,11 +87,12 @@ delete params = addNamespace "delete" $ do
   initalLog
   asks getBackend
     >>= \case
-      BackendCbor -> addNamespace "cbor" $ Cbor.delete verbose paths
-      BackendFdo -> addNamespace "fdo" $ Fdo.delete verbose paths
-      BackendJson -> addNamespace "json" $ Json.delete verbose paths
+      BackendCbor -> addNamespace "cbor" $ Cbor.delete prompt verbose paths
+      BackendFdo -> addNamespace "fdo" $ Fdo.delete prompt verbose paths
+      BackendJson -> addNamespace "json" $ Json.delete prompt verbose paths
   where
     paths = params ^. #paths
+    prompt = params ^. #prompt
     verbose = params ^. #verbose
 
 -- | Permanently deletes the paths from the trash.

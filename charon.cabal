@@ -313,8 +313,9 @@ benchmark benchmarks
     , base
     , charon
     , effects-fs
+    , effects-haskeline
     , env-guard
-    , tasty-bench  >=0.3 && <0.5
+    , tasty-bench        >=0.3 && <0.5
     , test-utils
 
   ghc-options:    -Wno-unused-packages

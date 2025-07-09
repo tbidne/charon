@@ -14,6 +14,7 @@ import Charon.Runner.Command.Delete
   ( DeleteParams
       ( MkDeleteParams,
         paths,
+        prompt,
         verbose
       ),
   )
@@ -65,10 +66,6 @@ data TomlConfig = MkTomlConfig
   deriving stock (Eq, Show)
 
 makeFieldLabelsNoPrefix ''TomlConfig
-
--- Command defaults!!!
--- delete, perm-delete, restore = verbose
--- maybe we can be clever and re-use e.g. restore params?
 
 defaultTomlConfig :: TomlConfig
 defaultTomlConfig =
@@ -129,10 +126,12 @@ instance DecodeTOML TomlConfig where
 
       decodeDeleteConfig :: Decoder (Maybe (DeleteParams ConfigPhaseToml))
       decodeDeleteConfig = flip getFieldOptWith "delete" $ do
+        prompt <- fmap MkPrompt <$> getFieldOptWith tomlDecoder "prompt"
         verbose <- fmap MkVerbose <$> getFieldOptWith tomlDecoder "verbose"
         pure
           $ MkDeleteParams
             { paths = (),
+              prompt,
               verbose
             }
 

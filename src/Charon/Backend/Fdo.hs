@@ -98,6 +98,7 @@ delete ::
     MonadCatch m,
     MonadFileReader m,
     MonadFileWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k,
     MonadPathReader m,
@@ -107,6 +108,7 @@ delete ::
     MonadTerminal m,
     MonadTime m
   ) =>
+  Prompt ->
   Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()

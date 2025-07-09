@@ -19,6 +19,7 @@ module Charon.Runner.Phase
     -- * Misc
     fromRawSet,
     mergePromptDefTrue,
+    mergePromptDefFalse,
     parseStrategy,
 
     -- * Optics
@@ -47,6 +48,8 @@ makeFieldLabelsNoPrefix ''Force
 instance Default Force where
   def = MkForce False
 
+-- Note no Default instance since we not all commands have the same prompt
+-- behavior.
 newtype Prompt = MkPrompt {unPrompt :: Bool}
   deriving stock (Eq, Show)
 
@@ -144,5 +147,15 @@ mergePromptDefTrue argsPrompt = case argsPrompt of
   -- 2. This is the 'def true' part. If it is not specified,
   --    it should be true.
   Without -> MkPrompt True
+  -- 3. Disabled is always false.
+  Disabled -> MkPrompt False
+
+mergePromptDefFalse :: WithDisabled Prompt -> Prompt
+mergePromptDefFalse argsPrompt = case argsPrompt of
+  -- 1. If Prompt is actually specified we should use it.
+  With p -> p
+  -- 2. This is the 'def false' part. If it is not specified,
+  --    it should be false.
+  Without -> MkPrompt False
   -- 3. Disabled is always false.
   Disabled -> MkPrompt False

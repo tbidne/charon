@@ -58,12 +58,16 @@ This section describes the possible commands, along with their specific options.
 **Usage:**
 
 ```
-Usage: charon delete PATHS... [-v|--verbose]
+Usage: charon delete PATHS... [--prompt] [-v|--verbose]
 
   Moves the path(s) to the trash.
 
 
 Available options:
+  --prompt                 Prompts before deleting path(s). Not the default.
+
+  --no-prompt              Disables --prompt.
+
   -v,--verbose             Lists deleted paths.
 
   --no-verbose             Disables --verbose.

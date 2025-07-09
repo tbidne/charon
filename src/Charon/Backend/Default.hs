@@ -39,7 +39,16 @@ import Charon.Data.Index (Index)
 import Charon.Data.Index qualified as Index
 import Charon.Data.Metadata (Metadata (MkMetadata))
 import Charon.Data.Metadata qualified as Metadata
-import Charon.Data.PathData (PathData)
+import Charon.Data.PathData
+  ( PathData
+      ( UnsafePathData,
+        created,
+        fileName,
+        originalPath,
+        pathType,
+        size
+      ),
+  )
 import Charon.Data.PathData.Formatting
   ( Coloring (ColoringDetect),
     PathDataFormat (FormatTabular),
@@ -86,11 +95,15 @@ delete ::
     LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
+    MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m,
@@ -98,6 +111,7 @@ delete ::
     Show pd
   ) =>
   BackendArgs m pd ->
+  Prompt ->
   Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
@@ -112,11 +126,15 @@ deletePostHook ::
     LabelOptic' "fileName" k1 pd (PathI TrashEntryFileName),
     LabelOptic' "originalPath" k1 pd (PathI TrashEntryOriginalPath),
     HasTrashHome env,
+    MonadAsync m,
     MonadCatch m,
     MonadFileWriter m,
+    MonadHaskeline m,
     MonadIORef m,
     MonadLoggerNS m env k2,
+    MonadPathReader m,
     MonadPathWriter m,
+    MonadPosixC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m,
@@ -125,12 +143,14 @@ deletePostHook ::
   ) =>
   BackendArgs m pd ->
   ((pd, PathTypeW, PathI TrashEntryPath) -> m ()) ->
+  Prompt ->
   Verbose ->
   UniqueSeqNE (PathI TrashEntryOriginalPath) ->
   m ()
 deletePostHook
   backendArgs
   postHook
+  prompt
   verbose
   paths = addNamespace "deletePostHook" $ do
     $(logDebug) $ "Paths: " <> USeqNE.displayUSeqNE Paths.toText paths
@@ -140,15 +160,51 @@ deletePostHook
 
     currTime <- MkTimestamp <$> getSystemTime
 
-    let deleteAction = Trash.mvOriginalToTrash backendArgs trashHome currTime
-
     deletedPathsRef <- newIORef Seq.Empty
+
+    let -- Normal delete action
+        deleteAction p = do
+          pd <- Trash.mvOriginalToTrash backendArgs trashHome currTime p
+          modifyIORef' deletedPathsRef (:|> p)
+          postHook pd
+
+        -- Delete action after prompt. Essentially the same thing, but since
+        -- we need the PathData to write the prompt, we use this internal
+        -- mvPdToTrash so we don't derive the PathData twice
+        -- (mvOriginalToTrash creates it too).
+        deleteActionPd pd ty p = do
+          trashPathI <-
+            Trash.mvPdToTrash
+              (backendArgs ^. #backend)
+              trashHome
+              pd
+              ty
+
+          modifyIORef' deletedPathsRef (:|> p)
+          postHook (pd, ty, trashPathI)
 
     -- move paths to trash
     eResult <- trySync $ for_ paths $ \p -> do
-      pd <- deleteAction p
-      modifyIORef' deletedPathsRef (:|> p)
-      postHook pd
+      if prompt ^. #unPrompt
+        then do
+          (pd, pathType) <- (backendArgs ^. #makePathData) currTime trashHome p
+          -- NOTE: We cannot use backendArgs' toCorePathData since that only
+          -- works when the path already exists in the trash.
+          size <- Utils.getPathSize (p ^. #unPathI)
+          let pathData =
+                UnsafePathData
+                  { created = currTime,
+                    fileName = pd ^. #fileName,
+                    originalPath = p,
+                    pathType,
+                    size
+                  }
+          putTextLn $ "\n" <> Utils.renderPretty pathData
+          ans <- Utils.askYesNoQ "\nPermanently delete"
+          if ans
+            then deleteActionPd pd pathType p
+            else pure ()
+        else deleteAction p
 
     deletedPaths <- readIORef deletedPathsRef
 
