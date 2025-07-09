@@ -10,18 +10,29 @@ where
 
 import Charon.Data.Paths (RawPathI (MkRawPathI))
 import Charon.Prelude
-import Charon.Runner.Command
-  ( DeleteParams (MkDeleteParams, paths, verbose),
-    Force (MkForce),
-    PermDeleteParams
+import Charon.Runner.Command.Delete
+  ( DeleteParams
+      ( MkDeleteParams,
+        paths,
+        verbose
+      ),
+  )
+import Charon.Runner.Command.PermDelete
+  ( PermDeleteParams
       ( MkPermDeleteParams,
         prompt,
         strategy,
         verbose
       ),
-    Prompt (MkPrompt),
-    RestoreParams (MkRestoreParams, force, prompt, strategy, verbose),
-    Verbose (MkVerbose),
+  )
+import Charon.Runner.Command.Restore
+  ( RestoreParams
+      ( MkRestoreParams,
+        force,
+        prompt,
+        strategy,
+        verbose
+      ),
   )
 import Charon.Runner.Config
   ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
@@ -29,7 +40,12 @@ import Charon.Runner.Config
   )
 import Charon.Runner.Config qualified as Config
 import Charon.Runner.FileSizeMode (parseFileSizeMode)
-import Charon.Runner.Phase (ConfigPhase (ConfigPhaseToml))
+import Charon.Runner.Phase
+  ( ConfigPhase (ConfigPhaseToml),
+    Force (MkForce),
+    Prompt (MkPrompt),
+    Verbose (MkVerbose),
+  )
 import FileSystem.OsPath qualified as OsPath
 import TOML
   ( DecodeTOML,

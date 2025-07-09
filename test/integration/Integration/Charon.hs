@@ -29,21 +29,21 @@ import Charon.Env (HasBackend, HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Exception (PathNotFound, TrashEntryNotFoundE)
 import Charon.Runner.CharonT (CharonT (MkCharonT))
-import Charon.Runner.Command
-  ( DeleteParams (MkDeleteParams),
-    Force (MkForce),
-    IndicesPathsStrategy (PathsStrategy),
-    PermDeleteParams (MkPermDeleteParams),
-    Prompt (MkPrompt),
-    RestoreParams (MkRestoreParams),
-    Verbose (MkVerbose),
-  )
+import Charon.Runner.Command.Delete (DeleteParams (MkDeleteParams))
+import Charon.Runner.Command.PermDelete (PermDeleteParams (MkPermDeleteParams))
+import Charon.Runner.Command.Restore (RestoreParams (MkRestoreParams))
 import Charon.Runner.Config
   ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
     LogEnv (MkLogEnv),
   )
 import Charon.Runner.Env
   ( Env (MkEnv, coreConfig),
+  )
+import Charon.Runner.Phase
+  ( Force (MkForce),
+    IndicesPathsStrategy (PathsStrategy),
+    Prompt (MkPrompt),
+    Verbose (MkVerbose),
   )
 import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.HashSet qualified as HSet

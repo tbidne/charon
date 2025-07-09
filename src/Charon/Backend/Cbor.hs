@@ -49,7 +49,7 @@ import Charon.Data.Paths qualified as Paths
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Env (HasTrashHome)
 import Charon.Prelude
-import Charon.Runner.Command (Force, Prompt, Verbose)
+import Charon.Runner.Phase (Force, Prompt, Verbose)
 import Effects.FileSystem.PathReader qualified as PR
 import Numeric.Algebra (AMonoid (zero), ASemigroup ((.+.)))
 import System.OsPath qualified as OsP

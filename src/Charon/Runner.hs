@@ -38,7 +38,7 @@ import Charon.Runner.Command
         Restore
       ),
   )
-import Charon.Runner.Command.List (ListCmd)
+import Charon.Runner.Command.List (ListParams)
 import Charon.Runner.Env qualified as Env
 import Charon.Runner.Merged
 import Charon.Runner.Merged qualified as Merged
@@ -176,7 +176,7 @@ printIndex ::
     MonadReader env m,
     MonadTerminal m
   ) =>
-  ListCmd ConfigPhaseMerged ->
+  ListParams ConfigPhaseMerged ->
   m ()
 printIndex listCmd = do
   index <- Charon.getIndex

@@ -63,7 +63,7 @@ import Charon.Exception
     TrashEntryWildcardNotFoundE (MkTrashEntryWildcardNotFoundE),
   )
 import Charon.Prelude
-import Charon.Runner.Command (Force, Prompt)
+import Charon.Runner.Phase (Force, Prompt)
 import Charon.Utils qualified as Utils
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T

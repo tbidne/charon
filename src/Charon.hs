@@ -41,14 +41,14 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasBackend (getBackend), HasTrashHome (getTrashHome))
 import Charon.Exception (BackendDetectE (MkBackendDetectE))
 import Charon.Prelude
-import Charon.Runner.Command
-  ( DeleteParams,
+import Charon.Runner.Command.Delete (DeleteParams)
+import Charon.Runner.Command.PermDelete (PermDeleteParams)
+import Charon.Runner.Command.Restore (RestoreParams)
+import Charon.Runner.Phase
+  ( ConfigPhase (ConfigPhaseMerged),
     IndicesPathsStrategy (IndicesStrategy, PathsStrategy),
-    PermDeleteParams,
     Prompt,
-    RestoreParams,
   )
-import Charon.Runner.Phase (ConfigPhase (ConfigPhaseMerged))
 import Charon.Utils qualified as Utils
 import Data.Foldable1 qualified as F1
 import Data.Sequence qualified as Seq

@@ -41,6 +41,8 @@ common common-lang
     StrictData
     TypeFamilies
 
+  default-language:   GHC2021
+
   if os(windows)
     cpp-options: -DWINDOWS
 
@@ -51,9 +53,9 @@ common common-lang
     cpp-options: -DLINUX
 
 library
-  import:           common-lang
-  other-modules:    Paths_charon
-  autogen-modules:  Paths_charon
+  import:          common-lang
+  other-modules:   Paths_charon
+  autogen-modules: Paths_charon
   exposed-modules:
     Charon
     Charon.Backend.Cbor
@@ -95,7 +97,10 @@ library
     Charon.Runner.Args.TH
     Charon.Runner.CharonT
     Charon.Runner.Command
+    Charon.Runner.Command.Delete
     Charon.Runner.Command.List
+    Charon.Runner.Command.PermDelete
+    Charon.Runner.Command.Restore
     Charon.Runner.Config
     Charon.Runner.Default
     Charon.Runner.Env
@@ -153,12 +158,11 @@ library
   if !os(windows)
     build-depends: effects-unix ^>=0.1
 
-  hs-source-dirs:   src
-  default-language: GHC2021
+  hs-source-dirs:  src
 
 library test-utils
-  import:           common-lang
-  exposed-modules:  Test.Utils
+  import:          common-lang
+  exposed-modules: Test.Utils
   build-depends:
     , base
     , charon
@@ -170,8 +174,7 @@ library test-utils
     , text
     , unordered-containers
 
-  hs-source-dirs:   lib/test-utils
-  default-language: GHC2021
+  hs-source-dirs:  lib/test-utils
 
 executable charon
   import:             common-lang
@@ -185,12 +188,11 @@ executable charon
 
   hs-source-dirs:     app
   ghc-options:        -threaded -with-rtsopts=-N
-  default-language:   GHC2021
 
 test-suite unit
-  import:           common-lang
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
   other-modules:
     Unit.Backend.Cbor.PathData
     Unit.Backend.Default.Utils
@@ -225,14 +227,13 @@ test-suite unit
     , time
     , unordered-containers
 
-  hs-source-dirs:   test/unit
-  ghc-options:      -threaded
-  default-language: GHC2021
+  hs-source-dirs: test/unit
+  ghc-options:    -threaded
 
 test-suite integration
-  import:           common-lang
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
   other-modules:
     Integration.AsciiOnly
     Integration.Charon
@@ -261,13 +262,12 @@ test-suite integration
     , unicode-transforms    ^>=0.4.0
     , unordered-containers
 
-  hs-source-dirs:   test/integration
-  default-language: GHC2021
+  hs-source-dirs: test/integration
 
 test-suite functional
-  import:           common-lang
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
   other-modules:
     Functional.Commands.Convert
     Functional.Commands.Delete
@@ -299,13 +299,12 @@ test-suite functional
     , time
     , unordered-containers
 
-  hs-source-dirs:   test/functional
-  default-language: GHC2021
+  hs-source-dirs: test/functional
 
 benchmark benchmarks
-  import:           common-lang
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  import:         common-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
   other-modules:
     Benchmarks.Prelude
     Benchmarks.ReadIndex
@@ -318,6 +317,5 @@ benchmark benchmarks
     , tasty-bench  >=0.3 && <0.5
     , test-utils
 
-  ghc-options:      -Wno-unused-packages
-  hs-source-dirs:   benchmarks
-  default-language: GHC2021
+  ghc-options:    -Wno-unused-packages
+  hs-source-dirs: benchmarks

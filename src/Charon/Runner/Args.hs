@@ -33,15 +33,36 @@ import Charon.Runner.Command
         PermDelete,
         Restore
       ),
-    DeleteParams (MkDeleteParams, paths, verbose),
-    PermDeleteParams (MkPermDeleteParams, prompt, strategy, verbose),
-    RestoreParams (MkRestoreParams, force, prompt, strategy, verbose),
+  )
+import Charon.Runner.Command.Delete
+  ( DeleteParams
+      ( MkDeleteParams,
+        paths,
+        verbose
+      ),
   )
 import Charon.Runner.Command.List
-  ( ListCmd (MkListCmd),
-    ListFormatPhase1 (MkListFormatPhase1),
+  ( ListFormatPhase1 (MkListFormatPhase1),
     ListFormatStyle,
+    ListParams (MkListParams),
     parseListFormat,
+  )
+import Charon.Runner.Command.PermDelete
+  ( PermDeleteParams
+      ( MkPermDeleteParams,
+        prompt,
+        strategy,
+        verbose
+      ),
+  )
+import Charon.Runner.Command.Restore
+  ( RestoreParams
+      ( MkRestoreParams,
+        force,
+        prompt,
+        strategy,
+        verbose
+      ),
   )
 import Charon.Runner.Config
   ( CoreConfig (MkCoreConfig, backend, logging, trashHome),
@@ -391,7 +412,7 @@ commandParser =
     restorePromptTxt = "Prompts before restoring path(s). This is the default."
     listParser =
       fmap List
-        $ MkListCmd
+        $ MkListParams
         <$> ( MkListFormatPhase1
                 <$> coloringParser
                 <*> listFormatStyleParser

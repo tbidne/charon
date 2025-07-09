@@ -19,18 +19,16 @@ import Charon.Data.UniqueSeqNE ((↤))
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Runner (getConfiguration)
 import Charon.Runner.Command
-  ( Prompt (MkPrompt),
-    _Delete,
+  ( _Delete,
     _Empty,
     _List,
     _Metadata,
-    _PathsStrategy,
     _PermDelete,
     _Restore,
   )
 import Charon.Runner.Command.List
-  ( ListCmd
-      ( MkListCmd,
+  ( ListParams
+      ( MkListParams,
         format,
         revSort,
         sort
@@ -44,6 +42,7 @@ import Charon.Runner.FileSizeMode
       ),
   )
 import Charon.Runner.Merged
+import Charon.Runner.Phase (Prompt (MkPrompt), _PathsStrategy)
 import Effects.FileSystem.PathReader
   ( MonadPathReader (getXdgDirectory),
     XdgDirectory (XdgData),
@@ -154,7 +153,7 @@ list = testCase "Parses list" $ do
   where
     argList = ["list", "-c", "none"]
     defList =
-      MkListCmd
+      MkListParams
         { format = FormatTabular ColoringDetect Nothing Nothing,
           sort = Name,
           revSort = False
@@ -181,7 +180,7 @@ listNonDefaults = testCase "List non-default args" $ do
         "true"
       ]
     defList =
-      MkListCmd
+      MkListParams
         { format =
             FormatTabular
               ColoringOn
@@ -206,7 +205,7 @@ listMultiline = testCase "List multiline" $ do
         "m"
       ]
     defList =
-      MkListCmd
+      MkListParams
         { format = FormatMultiline,
           sort = Name,
           revSort = False
@@ -229,7 +228,7 @@ listSingleline = testCase "List singleline" $ do
         "false"
       ]
     defList =
-      MkListCmd
+      MkListParams
         { format = FormatSingleline ColoringOff,
           sort = OriginalPath,
           revSort = False
@@ -252,7 +251,7 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
         "max"
       ]
     defList =
-      MkListCmd
+      MkListParams
         { format = FormatTabular ColoringDetect (Just $ ColFormatFixed 80) (Just ColFormatMax),
           sort = Name,
           revSort = False

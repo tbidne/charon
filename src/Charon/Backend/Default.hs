@@ -62,10 +62,10 @@ import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Env qualified as Env
 import Charon.Prelude
-import Charon.Runner.Command (Force, Prompt, Verbose)
 import Charon.Runner.Command.List
-  ( ListCmd (MkListCmd, format, revSort, sort),
+  ( ListParams (MkListParams, format, revSort, sort),
   )
+import Charon.Runner.Phase (Force, Prompt, Verbose)
 import Charon.Utils qualified as Utils
 import Data.Bytes qualified as Bytes
 import Data.Sequence qualified as Seq
@@ -520,7 +520,7 @@ emptyTrash backendArgs prompt = addNamespace "emptyTrash" $ do
           void Trash.createTrash
   where
     indexFormat =
-      MkListCmd
+      MkListParams
         { format = FormatTabular ColoringDetect Nothing Nothing,
           sort = Name,
           revSort = False

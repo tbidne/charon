@@ -41,7 +41,7 @@ import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashHome))
 import Charon.Data.Timestamp (Timestamp, fromText)
 import Charon.Env (HasTrashHome (getTrashHome))
-import Charon.Runner.Command.List
+import Charon.Runner.Command.List (ListParams (MkListParams))
 import Charon.Utils qualified as U
 import Data.List qualified as L
 import Data.Text qualified as T
@@ -529,7 +529,7 @@ formatTabularAutoFail = testCase desc $ do
   eformatted <-
     trySync
       $ runConfigIO
-        (Index.formatIndex (MkListCmd formatTabularAuto Name False) idx)
+        (Index.formatIndex (MkListParams formatTabularAuto Name False) idx)
         53
   case eformatted of
     Right result ->
@@ -756,7 +756,7 @@ testGolden
     (unsafeDecode apath)
     $ do
       idx <- mkIdx
-      let fmt = Index.formatIndex' (MkListCmd style sortFn rev) idx
+      let fmt = Index.formatIndex' (MkListParams style sortFn rev) idx
       formatted <- runConfigIO fmt termWidth
       writeActualFile (toBS formatted)
     where

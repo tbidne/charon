@@ -9,8 +9,8 @@ module Charon.Runner.Command.List
     ListFormatPhase1 (..),
 
     -- * Phase 2
-    ListCmd (..),
-    mergeListCommand,
+    ListParams (..),
+    mergeList,
   )
 where
 
@@ -94,8 +94,8 @@ mergeFormat formatPhase1 = case formatPhase1 ^. #style of
     coloring = fromMaybe ColoringDetect (formatPhase1 ^. #coloring)
 
 -- | Arguments for the list command.
-type ListCmd :: ConfigPhase -> Type
-data ListCmd p = MkListCmd
+type ListParams :: ConfigPhase -> Type
+data ListParams p = MkListParams
   { -- | Format style.
     format :: ListFormatPhaseF p,
     -- | How to sort the list.
@@ -104,25 +104,25 @@ data ListCmd p = MkListCmd
     revSort :: ConfigPhaseF p Bool
   }
 
-makeFieldLabelsNoPrefix ''ListCmd
+makeFieldLabelsNoPrefix ''ListParams
 
-deriving stock instance Eq (ListCmd ConfigPhaseArgs)
+deriving stock instance Eq (ListParams ConfigPhaseArgs)
 
-deriving stock instance Show (ListCmd ConfigPhaseArgs)
+deriving stock instance Show (ListParams ConfigPhaseArgs)
 
-deriving stock instance Eq (ListCmd ConfigPhaseMerged)
+deriving stock instance Eq (ListParams ConfigPhaseMerged)
 
-deriving stock instance Show (ListCmd ConfigPhaseMerged)
+deriving stock instance Show (ListParams ConfigPhaseMerged)
 
-mergeListCommand :: ListCmd ConfigPhaseArgs -> ListCmd ConfigPhaseMerged
-mergeListCommand listCfg =
+mergeList :: ListParams ConfigPhaseArgs -> ListParams ConfigPhaseMerged
+mergeList listCfg =
   let sort = case listCfg ^. #sort of
         Just s -> s
         Nothing -> case format of
           FormatSingleline _ -> OriginalPath
           FormatTabularSimple _ -> OriginalPath
           _ -> Name
-   in MkListCmd
+   in MkListParams
         { format,
           sort,
           revSort
