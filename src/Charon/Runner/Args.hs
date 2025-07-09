@@ -442,11 +442,8 @@ listFormatStyleParser =
         [ intro,
           Just Pretty.hardline,
           multi,
-          Just Pretty.hardline,
           single,
-          Just Pretty.hardline,
           tabular,
-          Just Pretty.hardline,
           tabularSimple,
           Just Pretty.hardline
         ]
@@ -478,7 +475,7 @@ listFormatStyleParser =
     single =
       mconcat
         [ Just Pretty.hardline,
-          toMDoc "- (s|single): Compact, prints each entry across a single lines"
+          toMDoc "- (s|single): Compact, prints each entry across a single lines."
         ]
 
 toMDoc :: String -> Maybe Doc
@@ -556,9 +553,7 @@ coloringParser =
         [ intro,
           Just Pretty.hardline,
           true,
-          Just Pretty.hardline,
           false,
-          Just Pretty.hardline,
           detect,
           Just Pretty.hardline
         ]

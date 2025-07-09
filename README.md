@@ -278,22 +278,17 @@ Available options:
   --color ARG              Coloring options.
 
                            - (t|true): On.
-
                            - (f|false): Off.
-
                            - (d|detect): On if supported.
 
   --format FMT             Formatting options.
 
                            - (m|multi): Prints each entry across multiple lines.
-
                            - (s|single): Compact, prints each entry across a
-                           single lines
-
+                           single lines.
                            - (t|tabular): The default. Prints a table that tries
                            to intelligently size the table based on available
                            terminal width and filename / original path lengths.
-
                            - (ts|tabular-simple): Simple table that does no
                            resizing. Prints the table with indices.
 
