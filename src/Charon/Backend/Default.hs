@@ -158,7 +158,7 @@ deletePostHook
               then "\nNo paths deleted."
               else
                 mconcat
-                  [ "Deleted paths:",
+                  [ "\nDeleted paths:",
                     Utils.displayList Paths.renderPathQuote deletedPaths
                   ]
       putTextLn msg
@@ -253,7 +253,7 @@ permDeletePostHook
                 then "\nNo paths permanently deleted."
                 else
                   mconcat
-                    [ "Permanently deleted paths:",
+                    [ "\nPermanently deleted paths:",
                       Utils.displayList Paths.renderPathQuote deletedPaths
                     ]
         putTextLn msg
@@ -453,7 +453,7 @@ restorePostHook
                 then "\nNo paths restored."
                 else
                   mconcat
-                    [ "Restored paths:",
+                    [ "\nRestored paths:",
                       Utils.displayList Paths.renderPathQuote restoredPaths
                     ]
         putTextLn msg

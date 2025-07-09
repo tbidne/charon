@@ -16,6 +16,7 @@
 
 Cannot restore the trash file 'fooBadbar' as one exists at the original location: '<dir>/fooBadbar'
 
+
 Restored paths:
  - '<dir>/1h'
  - '<dir>/2h'
