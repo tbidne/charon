@@ -31,6 +31,7 @@
   - [Transform Commands](#transform-commands)
     - [Convert](#convert)
     - [Merge](#merge)
+- [Installation](#installation)
 - [Building](#building)
   - [Cabal](#cabal)
   - [Nix](#nix)
@@ -403,6 +404,10 @@ Available options:
 $ charon merge -d ~/.local/share/Trash
 ```
 
+# Installation
+
+The [releases](https://github.com/tbidne/charon/releases) page has binaries built for several platforms. If there are no binaries for your platform, it is possible to [build charon](#building) yourself.
+
 # Building
 
 If you have never built a haskell program before, [Cabal](#cabal) is probably the best choice.
@@ -416,9 +421,27 @@ If you have never built a haskell program before, [Cabal](#cabal) is probably th
 
 The easiest way to install these is generally [`ghcup`](https://www.haskell.org/ghcup/).
 
+The current "blessed" version is `ghc-9.10.1`.
+
 ### Build Charon
 
 Once you have `cabal` and `ghc`, `charon` can be built with `cabal build` or installed globally (i.e. `~/.cabal/bin/`) with `cabal install`.
+
+> [!IMPORTANT]
+>
+> Charon requires git information to be available at build time, for the purposes of including some data in the binary (e.g. commit hash). Cabal's vanilla install method interfers with this, though we have a workaround that relies on passing the current directory as an environment variable:
+>
+> ```sh
+> $ export CHARON_HOME=$(pwd); cabal install exe:charon
+> ```
+>
+> Nix does not require such a workaround.
+
+For further reproducibility, an optional freeze file can be used for the "blessed" compiler.
+
+```sh
+cabal build --project-file cabal.ghc<XYZ>.project
+```
 
 ## Nix
 
