@@ -239,7 +239,7 @@ deletesSome getTestEnv =
         assertFdoDirectorySizesM []
         indexMeta <- captureIndexBs testDir
 
-        pure $ concatBs term indexMeta
+        pure $ term <> indexMeta
 
 deleteEmptyError :: IO TestEnv -> TestTree
 deleteEmptyError getTestEnv =

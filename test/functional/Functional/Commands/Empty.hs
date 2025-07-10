@@ -76,7 +76,7 @@ emptyTrash getTestEnv =
 
         -- trash structure assertions
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 emptyTrashTwice :: IO TestEnv -> TestTree
 emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
@@ -124,7 +124,7 @@ emptyPrompt getTestEnv =
 
         -- trash structure assertions
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 missingInfoForcesDelete :: IO TestEnv -> TestTree
 missingInfoForcesDelete getTestEnv =
@@ -171,7 +171,7 @@ missingInfoForcesDelete getTestEnv =
 
         -- trash structure assertions
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 missingPathsForcesDelete :: IO TestEnv -> TestTree
 missingPathsForcesDelete getTestEnv =
@@ -221,7 +221,7 @@ missingPathsForcesDelete getTestEnv =
 
         -- trash structure assertions
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|empty_|]

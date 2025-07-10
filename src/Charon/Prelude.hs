@@ -98,7 +98,7 @@ import Data.Coerce as X (coerce)
 import Data.Either as X (Either (Left, Right), either)
 import Data.Eq as X (Eq ((/=), (==)))
 import Data.Foldable as X
-  ( Foldable (foldMap', foldl', foldr, foldr1, length),
+  ( Foldable (fold, foldMap', foldl', foldr, foldr1, length),
     foldlM,
     for_,
     null,

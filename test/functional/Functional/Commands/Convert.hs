@@ -114,7 +114,7 @@ convertsBackend dest getTestEnv =
         -- but we need to explicitly pass in the backend since it has been
         -- changed.
         bs2 <- captureIndexBackendBs dest testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|convert_|]

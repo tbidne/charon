@@ -75,7 +75,7 @@ restoreOne getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoreMany :: IO TestEnv -> TestTree
 restoreMany getTestEnv =
@@ -142,7 +142,7 @@ restoreMany getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM ["dir4"]
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoreIndices :: IO TestEnv -> TestTree
 restoreIndices getTestEnv =
@@ -199,7 +199,7 @@ restoreIndices getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM ["dir4"]
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoreIndicesExit :: IO TestEnv -> TestTree
 restoreIndicesExit getTestEnv =
@@ -253,7 +253,7 @@ restoreIndicesExit getTestEnv =
         runCharonEnv modEnv restoreArgList
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoreUnknownError :: IO TestEnv -> TestTree
 restoreUnknownError getTestEnv =
@@ -299,7 +299,7 @@ restoreUnknownError getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 restoreCollisionError :: IO TestEnv -> TestTree
 restoreCollisionError getTestEnv =
@@ -338,7 +338,7 @@ restoreCollisionError getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 restoreSimultaneousCollisionError :: IO TestEnv -> TestTree
 restoreSimultaneousCollisionError getTestEnv =
@@ -380,7 +380,7 @@ restoreSimultaneousCollisionError getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 restoresSome :: IO TestEnv -> TestTree
 restoresSome getTestEnv =
@@ -426,7 +426,7 @@ restoresSome getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 restoresWildcards :: IO TestEnv -> TestTree
 restoresWildcards getTestEnv =
@@ -468,7 +468,7 @@ restoresWildcards getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoresSomeWildcards :: IO TestEnv -> TestTree
 restoresSomeWildcards getTestEnv =
@@ -536,7 +536,7 @@ restoresSomeWildcards getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 -- Wildcard literals are not valid in windows paths
 
@@ -589,7 +589,7 @@ restoresLiteralWildcardOnly getTestEnv =
         assertFdoDirectorySizesM [ ]
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 restoresCombinedWildcardLiteral :: IO TestEnv -> TestTree
 restoresCombinedWildcardLiteral getTestEnv =
@@ -636,7 +636,7 @@ restoresCombinedWildcardLiteral getTestEnv =
         assertFdoDirectorySizesM [ ]
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]

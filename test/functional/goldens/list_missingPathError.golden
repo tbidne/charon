@@ -1,1 +1,3 @@
 The file 'missing' was not found in the trash '<dir>/.trash' despite being listed in the index. This can be fixed by manually deleting the info file or deleting everything (i.e. charon empty --no-prompt).
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------

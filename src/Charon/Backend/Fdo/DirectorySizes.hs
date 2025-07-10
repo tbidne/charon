@@ -35,7 +35,6 @@ import Charon.Env (HasTrashHome (getTrashHome))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.ByteString.Char8 qualified as C8
-import Data.Foldable (Foldable (fold))
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.FileSystem.FileReader qualified as FR

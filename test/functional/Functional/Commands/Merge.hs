@@ -90,7 +90,7 @@ mergeSucceeds getTestEnv =
           assertFdoDirectorySizesTestDirM testDir ["sdir1", "sdir2", "ddir1", "ddir2"]
 
         idxResults <- readIORef idxResultsRef
-        pure $ foldl' concatBs "" (L.reverse idxResults)
+        pure $ fold (L.reverse idxResults)
 
 mergeCollisionFails :: IO TestEnv -> TestTree
 mergeCollisionFails getTestEnv =
@@ -178,7 +178,7 @@ mergeCollisionFails getTestEnv =
           assertFdoDirectorySizesM ["ddir1", "dir2"]
 
           idxResults <- readIORef idxResultsRef
-          pure $ foldl' concatBs "" (L.reverse idxResults)
+          pure $ fold (L.reverse idxResults)
 
 pathSrc :: OsPath
 pathSrc = [osp|src|]

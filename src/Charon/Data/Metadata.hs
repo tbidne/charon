@@ -35,7 +35,7 @@ empty :: Metadata
 empty = MkMetadata 0 0 zero zero
 
 instance Display Metadata where
-  displayBuilder stats = vsep strs <+> line
+  displayBuilder stats = vsep strs
     where
       strs =
         [ "Entries:     " <+> displayBuilder (show $ stats ^. #numEntries),

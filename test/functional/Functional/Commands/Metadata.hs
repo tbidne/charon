@@ -70,7 +70,7 @@ metadata getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM ["dir1", "dir2", "dir4"]
 
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 empty :: IO TestEnv -> TestTree
 empty getTestEnv =

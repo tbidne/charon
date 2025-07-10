@@ -74,7 +74,7 @@ deletesOne getTestEnv =
         assertFdoDirectorySizesM []
         bs2 <- captureIndexBs testDir
 
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesMany :: IO TestEnv -> TestTree
 deletesMany getTestEnv =
@@ -135,7 +135,7 @@ deletesMany getTestEnv =
         bs2 <- captureIndexBs testDir
         assertFdoDirectorySizesM ["dir4"]
 
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesIndices :: IO TestEnv -> TestTree
 deletesIndices getTestEnv =
@@ -195,7 +195,7 @@ deletesIndices getTestEnv =
         -- trash structure assertions
         bs2 <- captureIndexBs testDir
         assertFdoDirectorySizesM ["dir4"]
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesIndicesExit :: IO TestEnv -> TestTree
 deletesIndicesExit getTestEnv =
@@ -245,7 +245,7 @@ deletesIndicesExit getTestEnv =
         liftIO $ runCharonEnv modEnv permDelArgList
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deleteUnknownError :: IO TestEnv -> TestTree
 deleteUnknownError getTestEnv =
@@ -291,7 +291,7 @@ deleteUnknownError getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 deletesSome :: IO TestEnv -> TestTree
 deletesSome getTestEnv =
@@ -336,7 +336,7 @@ deletesSome getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 deletesPrompt :: IO TestEnv -> TestTree
 deletesPrompt getTestEnv =
@@ -378,7 +378,7 @@ deletesPrompt getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesWildcards :: IO TestEnv -> TestTree
 deletesWildcards getTestEnv =
@@ -421,7 +421,7 @@ deletesWildcards getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesSomeWildcards :: IO TestEnv -> TestTree
 deletesSomeWildcards getTestEnv =
@@ -487,7 +487,7 @@ deletesSomeWildcards getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` exBs `concatBs` bs2
+        pure $ fold [bs1, exBs, bs2]
 
 -- Wildcard literals are not valid in windows paths
 
@@ -541,7 +541,7 @@ deletesLiteralWildcardOnly getTestEnv =
         assertFdoDirectorySizesM [ ]
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 deletesCombinedWildcardLiteral :: IO TestEnv -> TestTree
 deletesCombinedWildcardLiteral getTestEnv =
@@ -586,7 +586,7 @@ deletesCombinedWildcardLiteral getTestEnv =
         assertFdoDirectorySizesM [ ]
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` bs2
+        pure $ bs1 <> bs2
 
 #else
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
@@ -638,7 +638,7 @@ displaysAllData getTestEnv =
         assertFdoDirectorySizesM []
 
         bs2 <- captureIndexBs testDir
-        pure $ bs1 `concatBs` termBs `concatBs` bs2
+        pure $ fold [bs1, termBs, bs2]
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|perm_delete_|]

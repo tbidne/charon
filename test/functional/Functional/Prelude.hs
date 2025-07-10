@@ -60,7 +60,6 @@ module Functional.Prelude
     FuncEnv.getTestDir,
     (</>!),
     cfp,
-    concatBs,
     terminalToBs,
   )
 where
@@ -70,7 +69,6 @@ import Charon.Backend.Data qualified as Backend
 import Charon.Data.PathType as X (PathTypeW (MkPathTypeW))
 import Charon.Prelude as X
 import Data.ByteString qualified as BS
-import Data.Char qualified as Ch
 import Data.HashSet qualified as HSet
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
@@ -197,8 +195,35 @@ appendTestDir d = over' #testDir (</> unsafeEncodeValid d)
 cfp :: FilePath -> FilePath -> FilePath
 cfp = combineFilePaths
 
+-- Test output, used to enforce output consistency.
+data ByteStringRender
+  = ByteStringOne ByteString
+  | ByteStringMany [ByteString]
+
+instance Semigroup ByteStringRender where
+  x <> ByteStringMany [] = x
+  ByteStringMany [] <> y = y
+  x <> y = ByteStringMany (renderToList x <> renderToList y)
+
+instance Monoid ByteStringRender where
+  mempty = ByteStringMany []
+
+renderToList :: ByteStringRender -> [ByteString]
+renderToList (ByteStringOne x) = [x]
+renderToList (ByteStringMany xs) = xs
+
+-- | Separates each bytestring by a line of hyphens, for more easily
+-- understanding the output.
+renderBs :: ByteStringRender -> ByteString
+renderBs =
+  (<> hyphens)
+    . BS.intercalate hyphens
+    . renderToList
+  where
+    hyphens = BS.replicate 80 45 <> "\n"
+
 data GoldenParams = MkGoldenParams
-  { runner :: IO ByteString,
+  { runner :: IO ByteStringRender,
     -- | Test string description
     testDesc :: TestName,
     -- | Test function name, for creating unique file paths.
@@ -225,7 +250,7 @@ testGoldenParams'
   fileOs
   params = goldenDiffCustom desc goldenPath actualPath $ do
     bs <- params ^. #runner
-    writeActualFile bs
+    writeActualFile $ renderBs bs
     where
       desc = params ^. #testDesc
 
@@ -245,11 +270,10 @@ testGoldenParams'
       writeActualFile :: ByteString -> IO ()
       writeActualFile =
         writeBinaryFileIO (unsafeEncode actualPath)
-          . (<> "\n")
 
       basePath = [ospPathSep|test/functional/goldens|] </> (params ^. #testName)
 
-terminalToBs :: OsPath -> [Text] -> ByteString
+terminalToBs :: OsPath -> [Text] -> ByteStringRender
 terminalToBs testDir = terminalToBs' replaceFn
   where
     testDirTxt = T.pack $ unsafeDecode testDir
@@ -258,34 +282,28 @@ terminalToBs testDir = terminalToBs' replaceFn
       T.replace "\\" "/"
         . T.replace testDirTxt "<dir>"
 
-terminalToBs' :: (Text -> Text) -> [Text] -> ByteString
+terminalToBs' :: (Text -> Text) -> [Text] -> ByteStringRender
 terminalToBs' modTxt =
-  encodeUtf8
-    . T.strip
+  ByteStringOne
+    . encodeUtf8
     . T.unlines
     . fmap modTxt
 
-concatBs :: ByteString -> ByteString -> ByteString
-concatBs x y = strip $ x <> "\n\n" <> y
-  where
-    strip = BS.dropWhile isSpc . BS.dropWhileEnd isSpc
-    isSpc = Ch.isSpace . Ch.chr . fromIntegral
-
-captureIndexBs :: OsPath -> TestM ByteString
+captureIndexBs :: OsPath -> TestM ByteStringRender
 captureIndexBs testDir = do
   indexArgs <- withSrArgsM ["list", "--format", "s"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt
 
-captureIndexBackendBs :: Backend -> OsPath -> TestM ByteString
+captureIndexBackendBs :: Backend -> OsPath -> TestM ByteStringRender
 captureIndexBackendBs backend testDir = do
   indexArgs <- withSrArgsEnvM (set' #backend backend) ["list", "--format", "s"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt
 
-captureMetadataBs :: TestM ByteString
+captureMetadataBs :: TestM ByteStringRender
 captureMetadataBs = do
   metadataArgs <- withSrArgsM ["metadata"]
   metadataTxt <- FuncEnv.captureCharon metadataArgs
@@ -296,10 +314,12 @@ captureCharonTermBsE ::
   (Exception e) =>
   OsPath ->
   [String] ->
-  TestM ByteString
+  TestM ByteStringRender
 captureCharonTermBsE testDir argList = do
   (ex, term) <- liftIO $ FuncEnv.captureCharonTermE @e argList
-  pure $ terminalToBs testDir $ ex : "" : term
+  let bs1 = terminalToBs testDir [ex]
+      bs2 = terminalToBs testDir term
+  pure $ bs1 <> bs2
 
 {- ORMOLU_DISABLE -}
 
