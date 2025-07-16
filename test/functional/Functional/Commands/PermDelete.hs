@@ -24,7 +24,8 @@ tests testEnv =
         deletesPrompt testEnv',
         deletesWildcards testEnv',
         deletesSomeWildcards testEnv',
-        displaysAllData testEnv'
+        displaysAllData testEnv',
+        deletesUnicode testEnv'
       ]
     <> wildcardLiteralTests testEnv'
   where
@@ -639,6 +640,67 @@ displaysAllData getTestEnv =
 
         bs2 <- captureIndexBs testDir
         pure $ fold [bs1, termBs, bs2]
+
+deletesUnicode :: IO TestEnv -> TestTree
+deletesUnicode getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Deletes unicode",
+        testName = testDirPrefix <> [osp|deletesUnicode|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "deletesUnicode" $ do
+        testDir <- getTestDir
+
+        let files =
+              (testDir </>!)
+                <$> [ "ɑÖɣÄ",
+                      "Ä",
+                      "\x4F\x308", -- Ö
+                      ['\xD6', 'a'], -- Ö
+                      "foo",
+                      "barrrr"
+                    ]
+
+        argList <- withSrArgsPathsM ["delete", "-v"] files
+
+        -- setup
+        createFiles files
+        assertPathsExist files
+
+        liftIO $ runCharon argList
+
+        -- file assertions
+        assertPathsDoNotExist files
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs1 <- captureIndexTabularBs testDir
+
+        -- PERMANENT DELETE
+
+        permDelArgList <-
+          withSrArgsM
+            [ "perm-delete",
+              "-v",
+              "--no-prompt",
+              "ɑÖɣÄ",
+              "Ä",
+              "\x4F\x308",
+              ['\xD6', 'a'],
+              "foo",
+              "barrrr"
+            ]
+        liftIO $ runCharon permDelArgList
+
+        -- trash structure assertions
+        bs2 <- captureIndexTabularBs testDir
+        assertFdoDirectorySizesM []
+
+        pure $ bs1 <> bs2
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|perm_delete_|]

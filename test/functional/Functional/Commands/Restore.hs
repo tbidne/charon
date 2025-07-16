@@ -24,7 +24,8 @@ tests testEnv =
         restoreSimultaneousCollisionError testEnv',
         restoresSome testEnv',
         restoresWildcards testEnv',
-        restoresSomeWildcards testEnv'
+        restoresSomeWildcards testEnv',
+        restoresUnicode testEnv'
       ]
     <> wildcardLiteralTests testEnv'
   where
@@ -642,6 +643,69 @@ restoresCombinedWildcardLiteral getTestEnv =
 wildcardLiteralTests :: IO TestEnv -> [TestTree]
 wildcardLiteralTests = const []
 #endif
+
+restoresUnicode :: IO TestEnv -> TestTree
+restoresUnicode getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Restores unicode",
+        testName = testDirPrefix <> [osp|restoresUnicode|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "restoresUnicode" $ do
+        testDir <- getTestDir
+
+        let files =
+              (testDir </>!)
+                <$> [ "ɑÖɣÄ",
+                      "Ä",
+                      "\x4F\x308", -- Ö
+                      ['\xD6', 'a'], -- Ö
+                      "foo",
+                      "barrrr"
+                    ]
+
+        argList <- withSrArgsPathsM ["delete", "-v"] files
+
+        -- setup
+        createFiles files
+        assertPathsExist files
+
+        liftIO $ runCharon argList
+
+        -- file assertions
+        assertPathsDoNotExist files
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        bs1 <- captureIndexTabularBs testDir
+
+        -- RESTORE
+
+        restoreArgList <-
+          withSrArgsM
+            [ "restore",
+              "-v",
+              "--no-prompt",
+              "ɑÖɣÄ",
+              "Ä",
+              "\x4F\x308",
+              ['\xD6', 'a'],
+              "foo",
+              "barrrr"
+            ]
+        liftIO $ runCharon restoreArgList
+
+        assertPathsExist files
+
+        -- trash structure assertions
+        bs2 <- captureIndexTabularBs testDir
+        assertFdoDirectorySizesM []
+
+        pure $ bs1 <> bs2
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|restore_|]

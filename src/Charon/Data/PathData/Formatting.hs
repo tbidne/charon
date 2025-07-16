@@ -51,6 +51,7 @@ module Charon.Data.PathData.Formatting
 where
 
 import Charon.Data.PathData (PathData)
+import Charon.Data.Paths qualified as Paths
 import Charon.Data.Timestamp qualified as Timestamp
 import Charon.Prelude
 import Charon.Utils qualified as U
@@ -204,7 +205,7 @@ formatSingleline' f pd =
     $ mconcat
       [ Timestamp.toTextSpace $ pd ^. #created,
         " ",
-        T.pack $ decodeDisplayEx $ pd ^. #originalPath % #unPathI
+        Paths.toNormalizedText $ pd ^. #originalPath
       ]
 
 formatTabularHeader :: Natural -> Natural -> Text
@@ -272,7 +273,7 @@ formatTabularSimpleRow' f idxLen idx pd =
         sep,
         Timestamp.toTextSpace $ pd ^. #created,
         sep,
-        T.pack $ decodeDisplayEx $ pd ^. #originalPath % #unPathI
+        Paths.toNormalizedText $ pd ^. #originalPath
       ]
 
 -- | For tabular formatting, this is the necessary width for the fixed
@@ -307,9 +308,9 @@ formatTabularRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
 formatTabularRow' f nameLen origLen pd =
   f
     $ mconcat
-      [ fixLen' nameLen (decodeDisplayEx $ pd ^. #fileName % #unPathI),
+      [ fixLen nameLen (Paths.toNormalizedText $ pd ^. #fileName),
         sep,
-        fixLen' origLen (decodeDisplayEx $ pd ^. #originalPath % #unPathI),
+        fixLen origLen (Paths.toNormalizedText $ pd ^. #originalPath),
         sep,
         paddedType (pd ^. (#pathType % #unPathTypeW)),
         sep,
@@ -325,9 +326,6 @@ formatTabularRow' f nameLen origLen pd =
 
 sep :: Text
 sep = " | "
-
-fixLen' :: Natural -> String -> Text
-fixLen' w s = fixLen w (T.pack s)
 
 fixLen :: Natural -> Text -> Text
 fixLen w t

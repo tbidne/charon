@@ -38,7 +38,7 @@ import Charon.Data.PathData.Formatting
   )
 import Charon.Data.PathData.Formatting qualified as Formatting
 import Charon.Data.Paths
-  ( PathI (MkPathI),
+  ( PathI,
     PathIndex (TrashEntryFileName, TrashEntryPath),
   )
 import Charon.Data.Paths qualified as Paths
@@ -54,7 +54,6 @@ import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 import Effects.System.Terminal (getTerminalWidth)
 import Effects.System.Terminal qualified as Term
-import FileSystem.OsPath qualified as OsPath
 import GHC.Real (RealFrac (floor))
 import System.Console.Pretty (Color (Blue, Green, Magenta))
 
@@ -155,7 +154,7 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
 
     -- maxNameLen := longest name
     -- maxOrigLen := orig path
-    (maxNameLen, maxOrigLen) <- foldl' findMaxes (pure maxStart) idx
+    let (maxNameLen, maxOrigLen) = foldl' findMaxes maxStart idx
 
     -- maxLen := maximum terminal width
     maxLen <- getTerminalLen
@@ -212,20 +211,14 @@ formatIndex' listCmd idx = addNamespace "formatIndex" $ case listCmd ^. #format 
     pure $ tabular coloring sortFn nameLen origLen idx
     where
       -- Search the index; find the longest name and orig path
-      findMaxes :: m (Natural, Natural) -> PathDataCore -> m (Natural, Natural)
-      findMaxes acc pd = do
-        (!maxNameSoFar, !maxOrigSoFar) <- acc
-        nameLen <- pathLen $ pd ^. #fileName
-        origLen <- pathLen $ pd ^. #originalPath
-        pure (max maxNameSoFar nameLen, max maxOrigSoFar origLen)
+      findMaxes :: (Natural, Natural) -> PathDataCore -> (Natural, Natural)
+      findMaxes (!maxNameSoFar, !maxOrigSoFar) pd =
+        let nameLen = fromIntegral $ Paths.pathLength $ pd ^. #fileName
+            origLen = fromIntegral $ Paths.pathLength $ pd ^. #originalPath
+         in (max maxNameSoFar nameLen, max maxOrigSoFar origLen)
 
       maxStart :: (Natural, Natural)
       maxStart = (Formatting.formatFileNameLenMin, Formatting.formatOriginalPathLenMin)
-
-      pathLen :: PathI i -> m Natural
-      pathLen (MkPathI p) = do
-        p' <- OsPath.decodeThrowM p
-        pure $ fromIntegral $ length p'
 
       -- Map the format to its strategy
       fmtToStrategy :: Natural -> Maybe ColFormat -> Maybe Natural
