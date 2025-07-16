@@ -37,6 +37,7 @@ module Functional.Prelude
 
     -- *** ByteString
     captureIndexBs,
+    captureIndexTabularBs,
     captureIndexBackendBs,
     captureMetadataBs,
     captureCharonTermBsE,
@@ -292,6 +293,17 @@ terminalToBs' modTxt =
 captureIndexBs :: OsPath -> TestM ByteStringRender
 captureIndexBs testDir = do
   indexArgs <- withSrArgsM ["list", "--format", "s"]
+  indexTxt <- FuncEnv.captureCharon indexArgs
+
+  pure $ terminalToBs testDir indexTxt
+
+captureIndexTabularBs :: OsPath -> TestM ByteStringRender
+captureIndexTabularBs testDir = do
+  -- t:     tabular over tabular-simple because tabular allows specifying lengths.
+  -- -n 15: deterministic header underline length
+  -- -o 3:  do not want any part of the original path, since it is
+  --        non-deterministic (tmp dir).
+  indexArgs <- withSrArgsM ["list", "--format", "t", "-n", "15", "-o", "3"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt

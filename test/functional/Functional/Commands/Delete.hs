@@ -27,7 +27,8 @@ tests testEnv =
         deleteDuplicateFile testEnv',
         deletesSome testEnv',
         deleteEmptyError testEnv',
-        deleteDotsError testEnv'
+        deleteDotsError testEnv',
+        deletesUnicode testEnv
       ]
     ++ pathologicalTests testEnv'
   where
@@ -387,6 +388,45 @@ deletesPathological2 getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         captureIndexBs testDir
+
+deletesUnicode :: IO TestEnv -> TestTree
+deletesUnicode getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Deletes unicode",
+        testName = testDirPrefix <> [osp|deletesUnicode|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "deletesUnicode" $ do
+        testDir <- getTestDir
+
+        let files =
+              (testDir </>!)
+                <$> [ "ɑÖɣÄ",
+                      "Ä",
+                      "\x4F\x308", -- Ö
+                      ['\xD6', 'a'], -- Ö
+                      "foo",
+                      "barrrr"
+                    ]
+
+        argList <- withSrArgsPathsM ["delete", "-v"] files
+
+        -- setup
+        createFiles files
+        assertPathsExist files
+
+        liftIO $ runCharon argList
+
+        -- file assertions
+        assertPathsDoNotExist files
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+        captureIndexTabularBs testDir
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|delete_|]

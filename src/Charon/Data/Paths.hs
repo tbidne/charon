@@ -23,6 +23,7 @@ module Charon.Data.Paths
     isDots,
     toString,
     toText,
+    toNormalizedText,
 
     -- ** General
     -- $general
@@ -49,8 +50,20 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import Effects.FileSystem.PathReader qualified as PR
 import FileSystem.OsPath qualified as OsPath
+import FileSystem.OsString qualified as OsStr
+import FileSystem.UTF8 qualified as UTF8
 import System.OsPath qualified as OsP
-import System.OsString qualified as OsStr
+
+-- | 'PathI' to 'String'. Attempts decoding for nicer display.
+toString :: PathI i -> String
+toString (MkPathI p) = decodeDisplayEx p
+
+-- | 'PathI' to 'Text' via 'toString'.
+toText :: PathI i -> Text
+toText = T.pack . toString
+
+toNormalizedText :: PathI i -> Text
+toNormalizedText = UTF8.normalizeC . toText
 
 -- | Types of filepaths used in Charon.
 data PathIndex
@@ -86,6 +99,9 @@ newtype PathI (i :: PathIndex) = MkPathI
   deriving anyclass (Hashable, NFData)
 
 makeFieldLabelsNoPrefix ''PathI
+
+instance Display (PathI i) where
+  displayBuilder = displayBuilder . toNormalizedText
 
 -- | 'PathI' before any invariant checking e.g. tilde expansion.
 type RawPathI :: PathIndex -> Type
@@ -245,16 +261,8 @@ renderPath = T.pack . decodeLenient . view #unPathI
 renderPathQuote :: PathI i -> Text
 renderPathQuote = (\s -> "'" <> s <> "'") . renderPath
 
--- | 'PathI' to 'String'. Attempts decoding for nicer display.
-toString :: PathI i -> String
-toString (MkPathI p) = decodeDisplayEx p
-
--- | 'PathI' to 'Text' via 'toString'.
-toText :: PathI i -> Text
-toText = T.pack . toString
-
 pathLength :: PathI i -> Int
-pathLength (MkPathI p) = OsStr.length p
+pathLength (MkPathI p) = OsStr.glyphLength p
 
 -- $general
 -- These functions allows for lifting arbitrary 'OsPath' functions onto our

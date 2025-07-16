@@ -22,7 +22,6 @@ import Charon.Data.Paths
 import Charon.Data.Timestamp (Timestamp)
 import Charon.Prelude
 import Charon.Utils qualified as U
-import Data.Text qualified as T
 import GHC.Exts (IsList)
 import GHC.Exts qualified as Exts
 
@@ -53,14 +52,12 @@ instance Display PathData where
     where
       strs = zipWith (flip ($)) headerNames labelFn
       labelFn =
-        [ \x -> x <> ":     " <+> displayBuilder (displayPath $ pd ^. #fileName % #unPathI),
-          \x -> x <> ": " <+> displayBuilder (displayPath $ pd ^. #originalPath % #unPathI),
+        [ \x -> x <> ":     " <+> displayBuilder (pd ^. #fileName),
+          \x -> x <> ": " <+> displayBuilder (pd ^. #originalPath),
           \x -> x <> ":     " <+> displayBuilder (pd ^. #pathType),
           \x -> x <> ":     " <+> displayBuilder (U.normalizedFormat $ pd ^. #size),
           \x -> x <> ":  " <+> displayBuilder (pd ^. #created)
         ]
-
-      displayPath = T.pack . decodeDisplayEx
 
 -- | Header names.
 headerNames :: (IsList a, IsString (Exts.Item a)) => a

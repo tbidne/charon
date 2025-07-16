@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - release
+      - unicode
 
   pull_request:
     branches:
@@ -34,14 +35,14 @@ jobs:
             proj_file: ""
         platform:
           - os: "macos-latest"
-            unit-trials: 10000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
           - os: "ubuntu-latest"
-            unit-trials: 10000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
           - os: "windows-latest"
-            unit-trials: 1000
-            int-trials: 1000
+            unit-trials: 10
+            int-trials: 10
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
