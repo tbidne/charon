@@ -508,6 +508,7 @@ getIndexedPaths actionStr IndicesStrategy idxFn = do
     quitTxt :: Text -> Bool
     quitTxt =
       T.strip >>> T.toLower >>> \case
+        "q" -> True
         ":q" -> True
         "exit" -> True
         "quit" -> True
