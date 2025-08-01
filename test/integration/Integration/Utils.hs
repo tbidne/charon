@@ -29,8 +29,9 @@ import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∉))
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Data.Text qualified as T
+import Data.Text.Normalize (NormalizationMode (NFC))
+import Data.Text.Normalize qualified as TNormalize
 import FileSystem.OsPath qualified as OsPath
-import FileSystem.UTF8 qualified as UTF8
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range (Range)
 import Hedgehog.Range qualified as Range
@@ -106,9 +107,9 @@ fpToNormedFp :: FilePath -> NormedFp
 -- Thankfully these share the same case folding.
 --
 -- REVIEW: Does the order of caseFold and normalization matter (probably...)?
-fpToNormedFp = MkNormedFp . T.toCaseFold . UTF8.normalizeC . T.pack
+fpToNormedFp = MkNormedFp . T.toCaseFold . TNormalize.normalize NFC . T.pack
 #else
-fpToNormedFp = MkNormedFp . UTF8.normalizeC . T.pack
+fpToNormedFp = MkNormedFp . TNormalize.normalize NFC . T.pack
 #endif
 
 normedFpToFp :: NormedFp -> FilePath
