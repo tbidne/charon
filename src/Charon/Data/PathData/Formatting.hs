@@ -205,7 +205,7 @@ formatSingleline' f pd =
     $ mconcat
       [ Timestamp.toTextSpace $ pd ^. #created,
         " ",
-        Paths.toNormalizedText $ pd ^. #originalPath
+        Paths.toText $ pd ^. #originalPath
       ]
 
 formatTabularHeader :: Natural -> Natural -> Text
@@ -273,7 +273,7 @@ formatTabularSimpleRow' f idxLen idx pd =
         sep,
         Timestamp.toTextSpace $ pd ^. #created,
         sep,
-        Paths.toNormalizedText $ pd ^. #originalPath
+        Paths.toText $ pd ^. #originalPath
       ]
 
 -- | For tabular formatting, this is the necessary width for the fixed
@@ -308,9 +308,9 @@ formatTabularRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
 formatTabularRow' f nameLen origLen pd =
   f
     $ mconcat
-      [ fixLen nameLen (Paths.toNormalizedText $ pd ^. #fileName),
+      [ fixLen nameLen (Paths.toText $ pd ^. #fileName),
         sep,
-        fixLen origLen (Paths.toNormalizedText $ pd ^. #originalPath),
+        fixLen origLen (Paths.toText $ pd ^. #originalPath),
         sep,
         paddedType (pd ^. (#pathType % #unPathTypeW)),
         sep,
@@ -329,10 +329,12 @@ sep = " | "
 
 fixLen :: Natural -> Text -> Text
 fixLen w t
-  | w' < T.length t = T.take (w' - 3) t <> "..."
-  | otherwise = t <> T.replicate (w' - T.length t) " "
+  | w' < len t = T.take (w' - 3) t <> "..."
+  | otherwise = t <> T.replicate (w' - len t) " "
   where
     w' = fromIntegral w
+
+    len = Paths.textWidth
 
 formatTypeLen :: Natural
 formatTypeLen = 4

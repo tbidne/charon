@@ -45,7 +45,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/fs-utils.git
-    tag: b8c1b58a17d823571a9d6c3309cdb10fda399198
+    tag: 3a8ab514a0e6c5dcc6d093bd22264ed755a19e80
 
 -- see TODO: [Haskeline override]
 source-repository-package
@@ -103,6 +103,14 @@ source-repository-package
     type: git
     location: https://github.com/tbidne/smart-math.git
     tag: fe5befb66274752b4ce7f6cdde2c947cc9eabffc
+
+source-repository-package
+    type: git
+    location: https://github.com/tbidne/unicode-grapheme.git
+    tag: b5932640ba6831b13dd31d037cca4c17925f8e45
+    subdir:
+      lib/unicode-grapheme
+      lib/unicode-grapheme-common
 
 allow-newer: path:hashable
 allow-newer: cborg:base

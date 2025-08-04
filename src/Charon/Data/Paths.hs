@@ -23,7 +23,6 @@ module Charon.Data.Paths
     isDots,
     toString,
     toText,
-    toNormalizedText,
 
     -- ** General
     -- $general
@@ -40,6 +39,7 @@ module Charon.Data.Paths
     liftPathIF,
     liftPathIF',
     pathLength,
+    textWidth,
   )
 where
 
@@ -50,9 +50,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TEnc
 import Effects.FileSystem.PathReader qualified as PR
 import FileSystem.OsPath qualified as OsPath
-import FileSystem.OsString qualified as OsStr
-import FileSystem.UTF8 qualified as UTF8
 import System.OsPath qualified as OsP
+import Unicode.Grapheme qualified as Grapheme
 
 -- | 'PathI' to 'String'. Attempts decoding for nicer display.
 toString :: PathI i -> String
@@ -61,9 +60,6 @@ toString (MkPathI p) = decodeDisplayEx p
 -- | 'PathI' to 'Text' via 'toString'.
 toText :: PathI i -> Text
 toText = T.pack . toString
-
-toNormalizedText :: PathI i -> Text
-toNormalizedText = UTF8.normalizeC . toText
 
 -- | Types of filepaths used in Charon.
 data PathIndex
@@ -101,7 +97,7 @@ newtype PathI (i :: PathIndex) = MkPathI
 makeFieldLabelsNoPrefix ''PathI
 
 instance Display (PathI i) where
-  displayBuilder = displayBuilder . toNormalizedText
+  displayBuilder = displayBuilder . toText
 
 -- | 'PathI' before any invariant checking e.g. tilde expansion.
 type RawPathI :: PathIndex -> Type
@@ -262,7 +258,14 @@ renderPathQuote :: PathI i -> Text
 renderPathQuote = (\s -> "'" <> s <> "'") . renderPath
 
 pathLength :: PathI i -> Int
-pathLength (MkPathI p) = OsStr.glyphLength p
+pathLength (MkPathI p) =
+  textWidth
+    . T.pack
+    . OsPath.decodeLenient
+    $ p
+
+textWidth :: Text -> Int
+textWidth = Grapheme.runUnicodeFunction Grapheme.textWidth
 
 -- $general
 -- These functions allows for lifting arbitrary 'OsPath' functions onto our
