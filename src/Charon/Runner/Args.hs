@@ -440,7 +440,7 @@ indicesParser = withDisabledParser mainParser "indices"
                 $ mconcat
                   [ "Allows selecting by numeric index instead of trash name. ",
                     "Incompatible with explicit paths. The prompt can be exited ",
-                    "via 'exit', 'quit', or ':q'."
+                    "via 'exit', 'quit', 'q', or ':q'."
                   ]
             ]
         )
