@@ -56,8 +56,8 @@ import Data.Text qualified as T
 import Effects.FileSystem.PathWriter qualified as PW
 import Text.Read qualified as TR
 
--- NOTE: For functions that can encounter multiple exceptions, the first
--- one is rethrown.
+-- NOTE: Functions are "fail-fast" i.e. the first encountered exception
+-- is rethrown, possibly after printing out some information.
 
 -- | @delete trash p@ moves path @p@ to the given trash location @trash@ and
 -- writes an entry in the trash index. If the trash location is not given,
