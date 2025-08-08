@@ -116,6 +116,9 @@ runCmd cmd =
     logEx :: (HasCallStack) => SomeException -> m a
     logEx ex = do
       $(logError) (U.displayExT ex)
+      -- If we are going to die with an exception, print a newline so any
+      -- prior output is separated from the error message, for clarity.
+      putStrLn ""
       throwM ex
 
 -- | Parses CLI 'Args' and optional 'TomlConfig' to produce the user
