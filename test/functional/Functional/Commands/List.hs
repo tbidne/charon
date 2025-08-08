@@ -6,6 +6,7 @@ module Functional.Commands.List
   )
 where
 
+import Charon.Backend.Data (Backend (BackendFdo))
 import Charon.Backend.Default.Exception
   ( TrashDirFilesNotFoundE,
     TrashDirInfoNotFoundE,
@@ -30,7 +31,8 @@ tests testEnv =
       noPathsError testEnv',
       noInfoError testEnv',
       missingPathError testEnv',
-      missingInfoError testEnv'
+      missingInfoError testEnv',
+      badFdoDirectorySizesIsNotFatal testEnv'
     ]
   where
     testEnv' = appendTestDir "list" <$> testEnv
@@ -163,6 +165,44 @@ missingInfoError getTestEnv =
         createFiles [trashDir </> Default.Utils.pathFiles </> [osp|bar|]]
 
         captureCharonTermBsE @TrashEntryInfoNotFoundE testDir argList
+
+badFdoDirectorySizesIsNotFatal :: IO TestEnv -> TestTree
+badFdoDirectorySizesIsNotFatal getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Bad fdo directorysizes is not fatal",
+        testName = testDirPrefix <> [osp|badFdoDirectorySizesIsNotFatal|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      let backend = testEnv ^. #backend
+
+      usingReaderT testEnv $ appendTestDirM "badFdoDirectorySizesIsNotFatal" $ do
+        testDir <- getTestDir
+
+        let dirs = [testDir </> [osp|dir1|]]
+        argList <- withSrArgsPathsM ["delete", "-v"] dirs
+
+        -- setup
+        createDirectories dirs
+        assertPathsExist dirs
+
+        liftIO $ runCharon argList
+
+        -- file assertions
+        assertPathsDoNotExist dirs
+
+        when (backend == BackendFdo) $ do
+          let dirSizesPath = testDir </> [ospPathSep|.trash/directorysizes|]
+          writeBinaryFile dirSizesPath "some nonsense that will crash"
+
+        -- trash structure assertions
+        -- Do not verify assertFdoDirectorySizesM here since we are
+        -- deliberately breaking it.
+        -- assertFdoDirectorySizesM []
+        captureIndexBs testDir
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|list_|]

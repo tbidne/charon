@@ -55,6 +55,7 @@ import Charon.Runner.Env qualified as Env
 import Charon.Runner.Merged (MergedConfig)
 import Charon.Runner.Phase (ConfigPhase (ConfigPhaseEnv))
 import Charon.Utils qualified as Utils
+import Data.ByteString qualified as BS
 import Data.List qualified as L
 import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
@@ -75,7 +76,7 @@ import Effects.Time
 import FileSystem.OsPath (unsafeDecode)
 import GHC.Exts (IsList (toList))
 import System.Environment qualified as SysEnv
-import Test.Tasty.HUnit (assertBool)
+import Test.Tasty.HUnit (assertBool, assertFailure)
 import Test.Tasty.HUnit qualified as HUnit
 
 type TestM a = ReaderT TestEnv IO a
@@ -472,15 +473,22 @@ assertFdoDirectorySizesTestDirM testDir expectedFileNames = do
   backend <- asks (view #backend)
   assertFdoDirectorySizesArgsM backend testDir expectedFileNames
 
+-- Gross, but used in assertFdoDirectorySizesArgsM below. Otherwise we
+-- could create a new type.
+instance {-# OVERLAPS #-} MonadLogger (ReaderT TestEnv IO) where
+  monadLoggerLog _ _ _ _ = pure ()
+
 assertFdoDirectorySizesArgsM :: Backend -> OsPath -> [ByteString] -> TestM ()
 assertFdoDirectorySizesArgsM backend testDir expectedFileNames = do
   case backend of
     BackendFdo -> do
       trashDir <- asks (view #trashDir)
 
-      let directorySizesPath = testDir </> trashDir
+      let trashHome = testDir </> trashDir
+      checkDirSizesTrailingNewline trashHome
 
-      MkDirectorySizes directorySizes <- DirectorySizes.readDirectorySizesTrashHome (MkPathI directorySizesPath)
+      MkDirectorySizes directorySizes <-
+        DirectorySizes.readDirectorySizesTrashHome (MkPathI trashHome)
 
       let directorySizes' = toList directorySizes
           errMsg =
@@ -505,9 +513,10 @@ assertFdoDirectorySizesArgsNoOrderM backend testDir expectedFileNames = do
     BackendFdo -> do
       trashDir <- asks (view #trashDir)
 
-      let directorySizesPath = testDir </> trashDir
+      let trashHome = testDir </> trashDir
+      checkDirSizesTrailingNewline trashHome
 
-      MkDirectorySizes results <- DirectorySizes.readDirectorySizesTrashHome (MkPathI directorySizesPath)
+      MkDirectorySizes results <- DirectorySizes.readDirectorySizesTrashHome (MkPathI trashHome)
 
       let resultsSorted =
             L.sortOn (view #fileName) $ toList results
@@ -528,6 +537,21 @@ assertFdoDirectorySizesArgsNoOrderM backend testDir expectedFileNames = do
         localTimeMillis @=? result ^. #time
         expectedFileName @=? result ^. #fileName
     _ -> pure ()
+
+checkDirSizesTrailingNewline :: OsPath -> ReaderT TestEnv IO ()
+checkDirSizesTrailingNewline trashHome = do
+  dirSizesExists <- doesFileExist directorySizesPath
+  when dirSizesExists $ do
+    contents <- readBinaryFile directorySizesPath
+    liftIO $ case BS.unsnoc contents of
+      Just (_, lastChar) -> do
+        let msg =
+              "directorySizes should have a trailing newline, received: "
+                ++ show lastChar
+        assertBool msg (lastChar == 10)
+      Nothing -> assertFailure "directorysizes empty!"
+  where
+    directorySizesPath = trashHome </> [osp|directorysizes|]
 
 -- | Lifted (@=?).
 (@=?) :: (Eq a, HasCallStack, MonadIO m, Show a) => a -> a -> m ()

@@ -188,7 +188,31 @@ writeDirectorySizesTrashHome ::
 writeDirectorySizesTrashHome trashHome directorySizes = addNamespace "writeDirectorySizesTrashHome" $ do
   let directorySizesPath = trashHomeToDirectorySizes trashHome
 
-  encoded <- encodeThrowM directorySizes
+  -- Previously, we were not appended a newlines to directorysizes, which
+  -- was causing interactions with other fdo-compliant systems to fail.
+  -- For example:
+  --
+  --   1. Deleted some directory w/ charon (so directorysizes exists w/o
+  --      trailing newline).
+  --
+  --      0 1754614788887 dir1
+  --
+  --   2. Deleted another directory w/ KDE dolphin.
+  --
+  --     0 1754614788887 dir10 1754614788887 dir1
+  --     0 1754614788890 dir2
+  --
+  -- Dolphin apparently expectes the fail to have a trailing newline, or it
+  -- becomes corrupted, which causes most charon commands to subsequently
+  -- fail.
+  --
+  -- Interestingly, other fdo files seem fine. That is, info files all have
+  -- a trailing newline despite no special precautions being taken there
+  -- either.
+  --
+  -- It would be nice to come up with a systematic solution i.e. ensure all
+  -- written files have newlines, but for now, we just fix this one.
+  encoded <- (<> "\n") <$> encodeThrowM directorySizes
 
   tmpFile <- Utils.getRandomTmpFile [osp|directorysizes|]
 
@@ -227,10 +251,11 @@ removeEntry entryName = do
 readDirectorySizes ::
   ( HasCallStack,
     HasTrashHome env,
+    MonadCatch m,
     MonadFileReader m,
+    MonadLogger m,
     MonadPathReader m,
-    MonadReader env m,
-    MonadThrow m
+    MonadReader env m
   ) =>
   m DirectorySizes
 readDirectorySizes = asks getTrashHome >>= readDirectorySizesTrashHome
@@ -238,9 +263,10 @@ readDirectorySizes = asks getTrashHome >>= readDirectorySizesTrashHome
 -- | Reads directorysizes.
 readDirectorySizesTrashHome ::
   ( HasCallStack,
+    MonadCatch m,
     MonadFileReader m,
-    MonadPathReader m,
-    MonadThrow m
+    MonadLogger m,
+    MonadPathReader m
   ) =>
   PathI TrashHome ->
   m DirectorySizes
@@ -249,8 +275,15 @@ readDirectorySizesTrashHome path = do
   exists <- doesFileExist directorySizesPath
   if exists
     then do
-      bs <- FR.readBinaryFile directorySizesPath
-      decodeUnitThrowM bs
+      eResult <- trySync $ do
+        bs <- FR.readBinaryFile directorySizesPath
+        decodeUnitThrowM bs
+
+      case eResult of
+        Right x -> pure x
+        Left ex -> do
+          $(logError) $ "Error reading directorysizes: " <> displayExceptiont ex
+          pure mempty
     else pure mempty
 
 getDirectorySizesPath ::
