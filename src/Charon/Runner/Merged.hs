@@ -124,7 +124,7 @@ getGenericDefaultTrashHome ::
     MonadPathReader m
   ) =>
   m (PathI TrashHome)
-getGenericDefaultTrashHome = MkPathI <$> (getXdgData charonPath)
+getGenericDefaultTrashHome = MkPathI <$> getXdgData charonPath
 
 -- | Retrieves the default trash directory for fdo backend.
 getFdoDefaultTrashHome ::
@@ -132,4 +132,4 @@ getFdoDefaultTrashHome ::
     MonadPathReader m
   ) =>
   m (PathI TrashHome)
-getFdoDefaultTrashHome = MkPathI <$> (getXdgData [osp|Trash|])
+getFdoDefaultTrashHome = MkPathI <$> getXdgData [osp|Trash|]

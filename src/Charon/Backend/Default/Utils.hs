@@ -79,7 +79,7 @@ getPathInfo ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m
+    MonadPosixFilesC m
   ) =>
   PathI TrashHome ->
   PathI TrashEntryOriginalPath ->
@@ -295,7 +295,7 @@ pathDataToType ::
     HasCallStack,
     MonadCatch m,
     MonadPathReader m,
-    MonadPosixC m
+    MonadPosixFilesC m
   ) =>
   PathI TrashHome ->
   a ->

@@ -32,13 +32,13 @@ newtype TestIO a = MkTestIO (IO a)
       Monad,
       MonadIO,
       MonadCatch,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadThrow
     )
     via IO
 
 #if !WINDOWS
-deriving newtype instance MonadPosix TestIO
+deriving newtype instance MonadPosixFiles TestIO
 #endif
 
 instance MonadLogger TestIO where
@@ -61,7 +61,7 @@ instance MonadReader TestEnv TestIO where
   local _ m = m
 
 trashHome :: PathI TrashHome
-trashHome = MkPathI $ [ospPathSep|/home/trash|]
+trashHome = MkPathI [ospPathSep|/home/trash|]
 
 props :: TestTree
 props =
@@ -112,14 +112,14 @@ newtype RandIO a = MkRandIO (IO a)
       Monad,
       MonadIO,
       MonadCatch,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadThrow
     )
     via IO
   deriving (MonadLogger, MonadReader TestEnv) via TestIO
 
 #if !WINDOWS
-deriving newtype instance MonadPosix RandIO
+deriving newtype instance MonadPosixFiles RandIO
 #endif
 
 runRandIO :: (MonadIO m, MonadCatch m, MonadTest m) => RandIO a -> m a

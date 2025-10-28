@@ -478,7 +478,7 @@ deletesSomeWildcards getTestEnv =
         -- NOTE: fooBadbar has been mocked in Prelude such that an attempted
         -- delete will fail. This is how this test works.
         permDelArgList <- withSrArgsM ["perm-delete", "-v", "*h*", "foo**bar", "*g*", "--no-prompt"]
-        exBs <- captureCharonTermBsE @TextException testDir permDelArgList
+        exBs <- captureCharonTermBsE @StringException testDir permDelArgList
 
         -- file assertions
         -- 1. Everything still gone from original location

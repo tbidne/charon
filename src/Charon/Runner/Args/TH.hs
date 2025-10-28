@@ -8,7 +8,6 @@ where
 
 import Charon.Prelude
 import Control.Applicative (liftA3)
-import Data.Bifunctor (Bifunctor (first))
 import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as PosixTime

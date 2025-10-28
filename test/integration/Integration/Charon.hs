@@ -95,7 +95,7 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
       MonadIORef,
       MonadPathReader,
       MonadPathWriter,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadReader IntEnv,
       MonadThread,
       MonadThrow,
@@ -104,7 +104,7 @@ newtype IntIO a = MkIntIO (ReaderT IntEnv IO a)
     via (CharonT IntEnv IO)
 
 #if !WINDOWS
-deriving newtype instance MonadPosix IntIO
+deriving newtype instance MonadPosixFiles IntIO
 #endif
 
 instance MonadLogger IntIO where

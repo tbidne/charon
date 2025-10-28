@@ -21,7 +21,7 @@ backendArgs ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   BackendArgs m Cbor.PathData.PathData

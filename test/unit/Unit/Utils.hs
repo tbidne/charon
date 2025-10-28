@@ -16,6 +16,8 @@ tests =
     "Utils"
     [ testMatchesWildcards,
       testStripInfix,
+      percentEncodeCases,
+      percentDecodeCases,
       percentEncodeRoundTrip
     ]
 
@@ -79,16 +81,36 @@ testStripInfix = testCase "stripInfix" $ do
   Nothing @=? Utils.stripInfix "aa" "foobar"
   Nothing @=? Utils.stripInfix "perm-delete" "foobar"
 
+percentEncodeCases :: TestTree
+percentEncodeCases = testCase desc $ do
+  Right "/bar/foo" @=? Utils.percentEncode "/bar/foo"
+  Right "bar/foo%20mer" @=? Utils.percentEncode "bar/foo mer"
+  Right "bar/foo%20mer-_.~" @=? Utils.percentEncode "bar/foo mer-_.~"
+  where
+    desc = "Percent encoding cases"
+
+percentDecodeCases :: TestTree
+percentDecodeCases = testCase desc $ do
+  Right "/bar/foo" @=? Utils.percentDecode "/bar/foo"
+  Right "bar/foo mer" @=? Utils.percentDecode "bar/foo%20mer"
+  Right "bar/foo mer-_.~" @=? Utils.percentDecode "bar/foo%20mer-_.~"
+  where
+    desc = "Percent encoding cases"
+
 percentEncodeRoundTrip :: TestTree
 percentEncodeRoundTrip =
   testPropertyNamed "percentDecode . percentEncode ~ id" "percentEncodeRoundTrip" $ do
     property $ do
       path <- forAll genPath
-      let pathEncoded = Utils.percentEncode path
+      pathEncoded <- case Utils.percentEncode path of
+        Right p -> pure p
+        Left err -> annotate err *> failure
 
       annotateShow pathEncoded
 
-      path === Utils.percentDecode pathEncoded
+      case Utils.percentDecode pathEncoded of
+        Left err -> annotate err *> failure
+        Right decoded -> path === decoded
 
 genPath :: Gen ByteString
 genPath = encodeUtf8 . T.pack <$> genString

@@ -418,14 +418,14 @@ newtype ConfigIO a = MkConfigIO (ReaderT TestEnv IO a)
       MonadCatch,
       MonadIO,
       MonadIORef,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadReader TestEnv,
       MonadThrow
     )
     via ReaderT TestEnv IO
 
 #if !WINDOWS
-deriving newtype instance MonadPosix ConfigIO
+deriving newtype instance MonadPosixFiles ConfigIO
 #endif
 
 instance MonadPathReader ConfigIO where

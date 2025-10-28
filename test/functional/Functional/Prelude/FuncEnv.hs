@@ -140,7 +140,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIO,
       MonadIORef,
       MonadMask,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadThread,
       MonadThrow,
       MonadReader env
@@ -148,7 +148,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
     via (ReaderT env IO)
 
 #if !WINDOWS
-deriving newtype instance MonadPosix (FuncIO env)
+deriving newtype instance MonadPosixFiles (FuncIO env)
 #endif
 
 instance

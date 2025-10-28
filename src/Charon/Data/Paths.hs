@@ -61,6 +61,14 @@ toString (MkPathI p) = decodeDisplayEx p
 toText :: PathI i -> Text
 toText = T.pack . toString
 
+-- TODO: We should really store absolute vs. relative here somehow.
+-- It appears PathIndex refers to merely the "provenance", but doesn't
+-- include abs vs. rel. E.g. We parse user paths as TrashEntryOriginalPath,
+-- which could be rel or abs, then we use makeAbsolute before saving in
+-- the trash. But this is not reflected anywhere in the type system.
+--
+-- Consider using Path over raw OsPath.
+
 -- | Types of filepaths used in Charon.
 data PathIndex
   = -- TRASH DIRECTORY PATHS
@@ -265,7 +273,7 @@ pathLength (MkPathI p) =
     $ p
 
 textWidth :: Text -> Int
-textWidth = Grapheme.runUnicodeFunction Grapheme.textWidth
+textWidth = Grapheme.textWidth
 
 -- $general
 -- These functions allows for lifting arbitrary 'OsPath' functions onto our

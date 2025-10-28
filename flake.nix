@@ -33,22 +33,12 @@
       inputs.nix-hs-utils.follows = "nix-hs-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # TODO: [Haskeline override]
-    #
-    # Remove once new release in nixpkgs.
-    haskeline = {
-      url = "github:haskell/haskeline";
-      flake = false;
-    };
     monad-effects = {
-      url = "github:tbidne/monad-effects/haskeline";
+      url = "github:tbidne/monad-effects";
 
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.nix-hs-utils.follows = "nix-hs-utils";
-
-      # see TODO: [Haskeline override]
-      inputs.haskeline.follows = "haskeline";
 
       inputs.algebra-simple.follows = "algebra-simple";
       inputs.bounds.follows = "bounds";
@@ -111,27 +101,25 @@
       perSystem =
         { pkgs, ... }:
         let
-          ghc-version = "ghc9101";
+          ghc-version = "ghc9122";
           compiler = pkgs.haskell.packages."${ghc-version}".override {
             overrides =
               final: prev:
               {
                 # These are flaky.
                 auto-update = hlib.dontCheck prev.auto-update;
+                unicode-data = hlib.dontCheck prev.unicode-data;
 
-                # see TODO: [Haskeline override]
-                haskeline = hlib.dontCheck (final.callCabal2nix "haskeline" inputs.haskeline { });
+                Cabal-syntax_3_10_3_0 = hlib.doJailbreak prev.Cabal-syntax_3_10_3_0;
+                haskeline = prev.haskeline_0_8_4_0;
 
-                path = hlib.dontCheck prev.path_0_9_6;
-                serialise = hlib.doJailbreak prev.serialise;
-
-                gitrev-typed = (
-                  final.callHackageDirect {
-                    pkg = "gitrev-typed";
-                    ver = "0.1";
-                    sha256 = "sha256-s7LEekR7NLe3CNhD/8uChnh50eGfaArrrtc5hoCtJ1A=";
-                  } { }
-                );
+                # TODO: Remove optparse override and jailbreaks once former
+                # is the default.
+                fourmolu = hlib.doJailbreak prev.fourmolu;
+                hspec-golden = hlib.doJailbreak prev.hspec-golden;
+                ormolu = hlib.doJailbreak prev.ormolu;
+                optparse-applicative = prev.optparse-applicative_0_19_0_0;
+                stylish-haskell = hlib.doJailbreak prev.stylish-haskell;
               }
               // nix-hs-utils.mkLibs inputs final [
                 "algebra-simple"
@@ -158,7 +146,6 @@
               ]
               // nix-hs-utils.mkRelLibs "${inputs.unicode-grapheme}/lib" final [
                 "unicode-grapheme"
-                "unicode-grapheme-common"
               ];
           };
           hlib = pkgs.haskell.lib;
@@ -182,14 +169,6 @@
                     pkgs.git
                   ];
                 });
-
-              # TODO: Once hlint is back to working with our GHC we can
-              # use nix-hs-utils.mkDevTools ++ webDeps.
-              devTools = [
-                (hlib.dontCheck compiler.cabal-fmt)
-                (hlib.dontCheck compiler.haskell-language-server)
-                pkgs.nixfmt-rfc-style
-              ];
             };
         in
         {
@@ -198,8 +177,8 @@
 
           apps = {
             format = nix-hs-utils.format compilerPkgs;
-            #lint = nix-hs-utils.lint compilerPkgs;
-            #lint-refactor = nix-hs-utils.lint-refactor compilerPkgs;
+            lint = nix-hs-utils.lint compilerPkgs;
+            lint-refactor = nix-hs-utils.lint-refactor compilerPkgs;
           };
         };
       systems = [

@@ -27,7 +27,6 @@ import Charon.Data.Timestamp (Timestamp)
 import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Codec.Serialise qualified as Serialise
-import Data.Bifunctor (Bifunctor (first))
 import Data.ByteString.Lazy qualified as BSL
 import FileSystem.OsPath qualified as OsPath
 
@@ -61,7 +60,7 @@ toPathData ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   Timestamp ->

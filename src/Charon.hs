@@ -76,7 +76,7 @@ delete ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -109,7 +109,7 @@ permDelete ::
     MonadIORef m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadLoggerNS m env k,
     MonadReader env m,
     MonadTerminal m,
@@ -145,7 +145,7 @@ getIndex ::
     MonadFileReader m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -169,7 +169,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -198,7 +198,7 @@ restore ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -234,7 +234,7 @@ emptyTrash ::
     MonadLoggerNS m env k,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -260,7 +260,7 @@ convert ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m

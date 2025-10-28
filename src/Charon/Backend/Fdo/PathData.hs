@@ -65,7 +65,7 @@ toPathData ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m
+    MonadPosixFilesC m
   ) =>
   Timestamp ->
   PathI TrashHome ->
@@ -87,23 +87,22 @@ instance Serial PathData where
   type DecodeExtra PathData = PathI TrashEntryFileName
 
   encode :: PathData -> Either String ByteString
-  encode pd =
-    case (encode (pd ^. #originalPath), encode (pd ^. #created)) of
-      (Right opath, Right created) ->
-        Right
-          $ C8.unlines
-            [ "[Trash Info]",
-              "Path=" <> U.percentEncode opath,
-              "DeletionDate=" <> created
-            ]
-      (Left ex, _) -> Left ex
-      (_, Left ex) -> Left ex
+  encode pd = do
+    opath <- encode (pd ^. #originalPath)
+    created <- encode (pd ^. #created)
+    opath' <- U.percentEncode opath
+    Right
+      $ C8.unlines
+        [ "[Trash Info]",
+          "Path=" <> opath',
+          "DeletionDate=" <> created
+        ]
 
   decode :: PathI TrashEntryFileName -> ByteString -> Either String PathData
   decode name bs = do
     mp <- Default.Utils.parseTrashInfoMap expectedKeys bs
 
-    originalPath <- decodeUnit . U.percentDecode =<< Default.Utils.lookup "Path" mp
+    originalPath <- decodeUnit =<< U.percentDecode =<< Default.Utils.lookup "Path" mp
     created <- decodeUnit =<< Default.Utils.lookup "DeletionDate" mp
 
     Right
@@ -121,7 +120,7 @@ toCorePathData ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   PathI TrashHome ->
@@ -150,7 +149,7 @@ toCorePathDataDirectorySizes ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   HashMap ByteString DirectorySizesEntry ->

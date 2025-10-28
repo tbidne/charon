@@ -20,3 +20,9 @@
     within:
       # The warning is spurious as Bifunctor is not polykinded
       - "Integration.Charon"
+- ignore:
+    name: "Use <$>"
+    within: "Charon.Runner.Args.TH"
+- ignore:
+    name: "Redundant ^."
+    within: "Charon.Runner.Merged"

@@ -35,6 +35,7 @@ module Charon.Prelude
     charonPath,
     doesAnyPathExist,
     doesAnyPathNotExist,
+    throwLeft,
     usingReaderT,
   )
 where
@@ -48,7 +49,7 @@ import Control.Category as X (Category ((.)), (>>>))
 import Control.DeepSeq as X (NFData)
 import Control.Exception as X (IOException)
 import Control.Exception.Utils as X
-  ( TextException,
+  ( StringException (MkStringException),
     catchSync,
     catchesSync,
     exitFailure,
@@ -89,7 +90,7 @@ import Control.Monad.Reader as X
     local,
     runReaderT,
   )
-import Data.Bifunctor as X (Bifunctor (bimap))
+import Data.Bifunctor as X (Bifunctor (bimap, first, second))
 import Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import Data.ByteString as X (ByteString)
 import Data.Bytes as X (Bytes (MkBytes), Size (B), _MkBytes)
@@ -219,9 +220,9 @@ import Effects.Logger.Namespace as X
   )
 import Effects.Optparse as X (MonadOptparse (execParser))
 #if !WINDOWS
-import Effects.System.Posix as X (MonadPosix)
+import Effects.System.Posix.Files as X (MonadPosixFiles)
 #endif
-import Effects.System.PosixCompat as X (MonadPosixCompat)
+import Effects.System.PosixCompat.Files as X (MonadPosixCompatFiles)
 import Effects.System.Terminal as X
   ( MonadTerminal (putStr, putStrLn),
     print,
@@ -306,7 +307,7 @@ import Optics.TH as X
     noPrefixFieldLabels,
   )
 import PathSize as X (findLargestPaths)
-import PathSize.Utils as X (MonadPosixC)
+import PathSize.Utils as X (MonadPosixFilesC)
 import System.Exit as X (ExitCode (ExitFailure, ExitSuccess))
 import System.IO as X
   ( FilePath,
@@ -399,3 +400,7 @@ todo = raise# (errorCallWithCallStackException "Prelude.todo: not yet implemente
 
 charonPath :: OsPath
 charonPath = [osp|charon|]
+
+throwLeft :: forall m e a. (Exception e, HasCallStack, MonadThrow m) => Either e a -> m a
+throwLeft (Right x) = pure x
+throwLeft (Left e) = throwM e

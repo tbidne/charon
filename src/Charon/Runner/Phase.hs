@@ -84,7 +84,7 @@ type family SwitchF p a where
 
 type IndicesPathsF :: ConfigPhase -> Type
 type family IndicesPathsF p where
-  IndicesPathsF ConfigPhaseArgs = (WithDisabled (), (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))))
+  IndicesPathsF ConfigPhaseArgs = (WithDisabled (), Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
   IndicesPathsF ConfigPhaseToml = Maybe Bool
   IndicesPathsF ConfigPhaseMerged = IndicesPathsStrategy
 
@@ -121,7 +121,7 @@ parseStrategy ::
   (WithDisabled (), Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))) ->
   m IndicesPathsStrategy
 parseStrategy = \case
-  (With _, Nothing) -> pure $ IndicesStrategy
+  (With _, Nothing) -> pure IndicesStrategy
   (With _, Just _) -> throwText $ mkStratErr "not both."
   (Without, Nothing) -> throwText $ mkStratErr "but none given."
   (Without, Just paths) -> PathsStrategy <$> fromRawSet paths

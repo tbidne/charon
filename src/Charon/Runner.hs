@@ -62,7 +62,7 @@ runCharon ::
     MonadOptparse m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m,
     MonadThread m,
     MonadTime m
@@ -90,7 +90,7 @@ runCmd ::
     MonadMask m,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m
@@ -175,7 +175,7 @@ printIndex ::
     MonadFileReader m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m
   ) =>
@@ -195,7 +195,7 @@ printMetadata ::
     MonadFileReader m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m
   ) =>

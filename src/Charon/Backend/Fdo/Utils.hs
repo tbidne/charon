@@ -19,7 +19,12 @@ percentEncodeFileName ::
   pd ->
   m ByteString
 percentEncodeFileName pd =
-  percentEncode <$> OsPath.decodeThrowM fileName
+  percentEncode =<< OsPath.decodeThrowM fileName
   where
-    percentEncode = Utils.percentEncode . encodeUtf8 . T.pack
+    percentEncode =
+      throwLeft
+        . first MkStringException
+        . Utils.percentEncode
+        . encodeUtf8
+        . T.pack
     MkPathI fileName = view #fileName pd

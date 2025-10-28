@@ -42,7 +42,7 @@ import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 
 -- | Concrete environment type that can be used for running Charon
 -- functions.
-data Env = MkEnv
+newtype Env = MkEnv
   { coreConfig :: CoreConfig ConfigPhaseEnv
   }
 

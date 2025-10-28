@@ -262,11 +262,10 @@ testGoldenParams'
       goldenPath = mkFile [osstr|.golden|]
       actualPath = mkFile [osstr|.actual|]
 
-      mkFile ext =
+      mkFile =
         unsafeDecode
           . (basePath <>)
           . (osSfx <>)
-          $ ext
 
       writeActualFile :: ByteString -> IO ()
       writeActualFile =

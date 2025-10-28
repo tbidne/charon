@@ -100,14 +100,14 @@ newtype IntPure env a = MkIntPure (ReaderT env IO a)
       MonadIORef,
       MonadMask,
       MonadPathReader,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadThrow,
       MonadReader env
     )
     via (ReaderT env IO)
 
 #if !WINDOWS
-deriving newtype instance MonadPosix (IntPure env)
+deriving newtype instance MonadPosixFiles (IntPure env)
 #endif
 
 instance MonadTerminal (IntPure IntPureEnv) where
@@ -202,8 +202,8 @@ captureCharonIntExceptionPure argList = do
 mkIntPureEnv :: MergedConfig -> IORef Text -> IORef [OsPath] -> IntPureEnv
 mkIntPureEnv toml terminalRef deletedPathsRef =
   MkIntPureEnv
-    { backend = toml ^. #coreConfig ^. #backend,
-      trashHome = toml ^. #coreConfig ^. #trashHome,
+    { backend = toml ^. #coreConfig % #backend,
+      trashHome = toml ^. #coreConfig % #trashHome,
       terminalRef,
       deletedPathsRef
     }

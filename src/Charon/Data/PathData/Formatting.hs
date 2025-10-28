@@ -260,10 +260,10 @@ formatTabularSimpleHeader' f idxLen origLen =
     titleLen = T.replicate (fromIntegral totalLen) "-"
 
 formatTabularSimpleRow :: Natural -> Natural -> PathData -> Text
-formatTabularSimpleRow x = formatTabularSimpleRow' id x
+formatTabularSimpleRow = formatTabularSimpleRow' id
 
 formatTabularSimpleRowColor :: Color -> Natural -> Natural -> PathData -> Text
-formatTabularSimpleRowColor c x = formatTabularSimpleRow' (CPretty.color c) x
+formatTabularSimpleRowColor c = formatTabularSimpleRow' (CPretty.color c)
 
 formatTabularSimpleRow' :: (Text -> Text) -> Natural -> Natural -> PathData -> Text
 formatTabularSimpleRow' f idxLen idx pd =

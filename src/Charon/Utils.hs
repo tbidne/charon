@@ -94,7 +94,6 @@ import Data.Bytes.Class.RawNumeric (RawNumeric (Raw))
 import Data.Bytes.Formatting (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes.Formatting.Base (BaseFormatter)
 import Data.Bytes.Size (Sized)
-import Data.Char qualified as Ch
 import Data.Foldable qualified as F
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
@@ -106,9 +105,9 @@ import Data.Time qualified as Time
 import Data.Time.Clock.POSIX qualified as Time.Posix
 import Effects.FileSystem.PathReader qualified as PR
 #if WINDOWS
-import Effects.System.PosixCompat qualified as PXC
+import Effects.System.PosixCompat.Files qualified as PXC
 #else
-import Effects.System.Posix qualified as PX
+import Effects.System.Posix.Files qualified as PX
 import System.OsString.Internal.Types (OsString(OsString))
 #endif
 import Effects.Time (MonadTime (getMonotonicTime))
@@ -126,6 +125,7 @@ import PathSize.Data.Config qualified as PathSize.Config
 import PathSize.Utils qualified
 import System.PosixCompat.Files qualified as PFiles
 import Text.Printf (PrintfArg)
+import URI.ByteString (Absolute)
 import URI.ByteString qualified as URI
 
 -- | Normalizes and formats the bytes.
@@ -228,38 +228,78 @@ breakEqBS bs = (left, right')
       Just (_, rest) -> rest
 
 -- | Percent encoded a bytestring.
-percentEncode :: ByteString -> ByteString
-percentEncode =
-  BSL.toStrict
+percentEncode :: ByteString -> Either String ByteString
+percentEncode bs =
+  -- We previously used uri-bytestring's
+  -- 'urlEncode :: [Word8] -> ByteString -> Builder', but the corresponding
+  -- 'urlDecode' was removed, hence we must use the high-level API.
+  -- We therefore:
+  --
+  --   1. Manually create a URIRef, specifying the scheme ("file").
+  --   2. Serialize this.
+  --   3. Drop the "file:" prefix from the final result, as it is not part
+  --      of the xdg spec.
+  --
+  -- This seems to work, and as a bonus, we do not have to manually
+  -- specify the 'unreserved' characters ("/-_.~"), as they are part of the
+  -- high-level parsers.
+  --
+  -- See NOTE: [Percent decoding]
+  dropFilePrefix
+    . BSL.toStrict
     . Builder.toLazyByteString
-    . URI.urlEncode unreserved
+    . URI.serializeURIRef
+    . toUriRef
+    $ bs
   where
-    -- NOTE: This is the 'mark' set defined by RFC2396 and the '/' character
-    -- with one modification: The mark characters !, *, ', (, ) are excluded.
-    --
-    -- As the successor RFC3986 notes, these characters can be dangerous
-    -- to decode, thus they were in fact moved to the 'reserved' section in
-    -- that RFC.
-    --
-    -- Moreover, KDE Plasma's trash implementation indeed encoded these chars
-    -- as well.
-    --
-    -- Thus we do the same thing here.
-    unreserved =
-      ord8
-        <$> [ '/',
-              '-',
-              '_',
-              '.',
-              '~'
-            ]
+    dropFilePrefix =
+      maybe (Left err) Right . C8.stripPrefix "file:"
 
-    ord8 :: Char -> Word8
-    ord8 = fromIntegral . Ch.ord
+    err =
+      mconcat
+        [ "Error percent-encoding '",
+          C8.unpack bs,
+          "': No 'file:' prefix"
+        ]
+
+    toUriRef :: ByteString -> URI.URIRef Absolute
+    toUriRef uriPath =
+      URI.URI
+        { URI.uriScheme = URI.Scheme "file",
+          URI.uriAuthority = Nothing,
+          URI.uriPath = uriPath,
+          URI.uriQuery = mempty,
+          URI.uriFragment = Nothing
+        }
 
 -- | Percent decodes a bytestring.
-percentDecode :: ByteString -> ByteString
-percentDecode = URI.urlDecode False
+percentDecode :: ByteString -> Either String ByteString
+percentDecode bs =
+  -- NOTE: [Percent decoding]
+  --
+  -- We previously used uri-bytestring's
+  -- 'urlDecode :: Bool -> ByteString -> ByteString', which was a low-level
+  -- function that handled percent encoding, without any of the other stuff
+  -- (e.g. schemes, query params) we did not care about.
+  --
+  -- However, this was removed in version 0.4, hence we are left with the
+  -- higher-level API. This seems to work okay, though because it is a general
+  -- URI parser, we need to specify the scheme ("file" vs. e.g. "http").
+  --
+  -- We do _not_ include the scheme when encoding -- since xdg does not --
+  -- hence we need to manually prepend it here.
+  bimap showErr URI.uriPath
+    . URI.parseURI URI.strictURIParserOptions
+    . ("file:" <>)
+    $ bs
+  where
+    showErr e =
+      mconcat
+        [ "Error percent-decoding '",
+          C8.unpack bs,
+          "': ",
+          show e
+        ]
 
 -- | Filter a sequence monadically.
 filterSeqM :: forall m a. (Monad m) => (a -> m Bool) -> Seq a -> m (Seq a)
@@ -282,7 +322,7 @@ getPathSize ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   OsPath ->
@@ -295,7 +335,7 @@ getPathSizeIgnoreDirSize ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   OsPath ->
@@ -310,7 +350,7 @@ getPathSizeConfig ::
     MonadCatch m,
     MonadLoggerNS m env k,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadTerminal m
   ) =>
   PathSize.Config ->
@@ -341,7 +381,7 @@ getAllFiles ::
   ( HasCallStack,
     MonadCatch m,
     MonadPathReader m,
-    MonadPosixC m
+    MonadPosixFilesC m
   ) =>
   OsPath ->
   m [OsPath]
@@ -396,7 +436,7 @@ getRandomTmpFile prefix = addNamespace "getRandomTmpFile" $ do
 
 getSymLinkSize ::
   ( HasCallStack,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadThrow m
   ) =>
   OsPath ->
@@ -410,7 +450,7 @@ getSymLinkSize =
 getPathType ::
   ( HasCallStack,
     MonadCatch m,
-    MonadPosixC m
+    MonadPosixFilesC m
   ) =>
   OsPath ->
   m PathType
@@ -447,7 +487,7 @@ noCallstacks =
     MkExceptionProxy @RenameDuplicateE,
     MkExceptionProxy @RestoreCollisionE,
     MkExceptionProxy @RootE,
-    MkExceptionProxy @TextException,
+    MkExceptionProxy @StringException,
     -- TildeException comes from fs-utils, for reading paths at the CLI.
     MkExceptionProxy @TildeException,
     -- TildePathE defined here, for anything that slips through.
@@ -463,7 +503,7 @@ noCallstacks =
   ]
 
 displayList :: (Foldable f) => (a -> Text) -> f a -> Text
-displayList toText xs = F.foldMap go xs
+displayList toText = F.foldMap go
   where
     go x =
       mconcat

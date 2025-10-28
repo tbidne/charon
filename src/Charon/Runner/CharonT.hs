@@ -31,7 +31,7 @@ newtype CharonT env m a = MkCharonT (ReaderT env m a)
       MonadMask,
       MonadPathReader,
       MonadPathWriter,
-      MonadPosixCompat,
+      MonadPosixCompatFiles,
       MonadReader env,
       MonadTerminal,
       MonadThread,
@@ -41,7 +41,7 @@ newtype CharonT env m a = MkCharonT (ReaderT env m a)
     via (ReaderT env m)
 
 #if !WINDOWS
-deriving newtype instance (MonadPosix m) => MonadPosix (CharonT env m)
+deriving newtype instance (MonadPosixFiles m) => MonadPosixFiles (CharonT env m)
 #endif
 
 deriving newtype instance (MonadHaskeline m) => MonadHaskeline (CharonT env m)

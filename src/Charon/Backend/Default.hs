@@ -103,7 +103,7 @@ delete ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m,
@@ -134,7 +134,7 @@ deletePostHook ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     MonadTime m,
@@ -201,9 +201,7 @@ deletePostHook
                   }
           putTextLn $ "\n" <> Utils.renderPretty pathData
           ans <- Utils.askYesNoQ "\nPermanently delete"
-          if ans
-            then deleteActionPd pd pathType p
-            else pure ()
+          when ans $ deleteActionPd pd pathType p
         else deleteAction p
 
     deletedPaths <- readIORef deletedPathsRef
@@ -355,7 +353,7 @@ getMetadata ::
     MonadFileReader m,
     MonadLoggerNS m env k2,
     MonadPathReader m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     Serial pd
   ) =>
@@ -530,7 +528,7 @@ emptyTrash ::
     MonadLoggerNS m env k2,
     MonadPathReader m,
     MonadPathWriter m,
-    MonadPosixC m,
+    MonadPosixFilesC m,
     MonadReader env m,
     MonadTerminal m,
     Serial pd

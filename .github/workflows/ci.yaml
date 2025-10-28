@@ -14,8 +14,8 @@ on:
 
 env:
   CABAL_VERS: "3.12"
-  GHC_VERS: "9.10.1"
-  CABAL_PROJ: "cabal.ghc9101.project"
+  GHC_VERS: "9.12.2"
+  CABAL_PROJ: "cabal.ghc9122.project"
   CHARON_VERS: "0.1"
 
 jobs:
@@ -28,10 +28,10 @@ jobs:
             proj_file: ""
           - vers: "9.8.4"
             proj_file: ""
-          - vers: "9.10.1"
-            proj_file: "--project-file cabal.ghc9101.project"
-          - vers: "9.12.2"
+          - vers: "9.10.2"
             proj_file: ""
+          - vers: "9.12.2"
+            proj_file: "--project-file cabal.ghc9122.project"
         platform:
           - os: "macos-latest"
             unit-trials: 10000
@@ -141,6 +141,10 @@ jobs:
         run: |
           nix run .#format
           git diff --exit-code --color=always
+
+      - name: Lint
+        run: |
+          nix run .#lint
   release:
     needs: [cabal, nix, lint]
     if: github.ref == 'refs/heads/release'

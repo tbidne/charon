@@ -1,4 +1,4 @@
-index-state: 2025-06-25T00:59:11Z
+index-state: 2025-10-28T19:25:40Z
 
 packages: .
 
@@ -40,24 +40,18 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/exception-utils.git
-    tag: 02fdf3d44f41019d2f31f7903f432dfc0e91e078
+    tag: 61a9e06a26adcca70d565105a1508a16022435a2
 
 source-repository-package
     type: git
     location: https://github.com/tbidne/fs-utils.git
-    tag: 3a8ab514a0e6c5dcc6d093bd22264ed755a19e80
-
--- see TODO: [Haskeline override]
-source-repository-package
-    type: git
-    location: https://github.com/haskell/haskeline.git
-    tag: b12552d378c32fd3ccb813a959dc29419d47d9b2
+    tag: 26136275027fd827574c5004ebd11b659d7abdab
 
 if !os(windows)
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: a62298759d3320840e27d8074a70c5b713ef74d2
+        tag: bc18a934ac4a665024e0f47fcbf10c841fecbb13
         subdir:
             lib/effects-async
             lib/effects-optparse
@@ -75,7 +69,7 @@ else
     source-repository-package
         type: git
         location: https://github.com/tbidne/monad-effects.git
-        tag: a62298759d3320840e27d8074a70c5b713ef74d2
+        tag: bc18a934ac4a665024e0f47fcbf10c841fecbb13
         subdir:
             lib/effects-async
             lib/effects-optparse
@@ -92,7 +86,7 @@ else
 source-repository-package
     type: git
     location: https://github.com/tbidne/path-size.git
-    tag: ad6bc15f1d6e615d820a68429802973c230f0929
+    tag: 885db1fefabe4eb070b7745e7f818216730aa552
 
 source-repository-package
     type: git
@@ -102,23 +96,11 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/tbidne/smart-math.git
-    tag: fe5befb66274752b4ce7f6cdde2c947cc9eabffc
+    tag: 4e10a4134f825ba825113955bb97be7f7e28ad6e
 
 source-repository-package
     type: git
     location: https://github.com/tbidne/unicode-grapheme.git
-    tag: b5932640ba6831b13dd31d037cca4c17925f8e45
+    tag: 70e96416ac1062c9122aae781f12805444a01ca9
     subdir:
       lib/unicode-grapheme
-      lib/unicode-grapheme-common
-
-allow-newer: path:hashable
-allow-newer: cborg:base
-allow-newer: cborg:ghc-prim
-allow-newer: cborg:deepseq
-allow-newer: optics-th:template-haskell
-allow-newer: serialise:base
-allow-newer: serialise:ghc-prim
-allow-newer: unicode-transforms:base
-allow-newer: unicode-transforms:ghc-prim
-allow-newer: unix-compat:time

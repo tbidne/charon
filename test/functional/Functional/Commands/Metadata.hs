@@ -91,8 +91,7 @@ empty getTestEnv =
         createDirectories [testDir, trashDir, trashDir </>! "info", trashDir </>! "files"]
         createFiles [trashDir </>! "log"]
 
-        bs <- captureMetadataBs
-        pure bs
+        captureMetadataBs
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|metadata_|]
