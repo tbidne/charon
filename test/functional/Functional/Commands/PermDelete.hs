@@ -25,7 +25,8 @@ tests testEnv =
         deletesWildcards testEnv',
         deletesSomeWildcards testEnv',
         displaysAllData testEnv',
-        deletesUnicode testEnv'
+        deletesUnicode testEnv',
+        savesCompletions testEnv'
       ]
     <> wildcardLiteralTests testEnv'
   where
@@ -705,6 +706,60 @@ deletesUnicode getTestEnv =
         assertFdoDirectorySizesM []
 
         pure $ bs1 <> bs2
+
+savesCompletions :: IO TestEnv -> TestTree
+savesCompletions getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Saves completions",
+        testName = testDirPrefix <> [osp|savesCompletions|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "savesCompletions" $ do
+        testDir <- getTestDir
+        let fileDeleteNames = show @Int <$> [1 .. 5]
+            fileDeletePaths = (testDir </>!) <$> fileDeleteNames
+            xdgState = testDir </> [osp|xgd_state|]
+            xdgCharonState = xdgState </> [osp|charon|]
+            modConfigEnv = set' #xdgState xdgState
+
+        delArgList <- withSrArgsPathsM ["delete"] fileDeletePaths
+
+        -- SETUP
+        createFiles fileDeletePaths
+        assertPathsExist fileDeletePaths
+
+        runCharonConfigEnv modConfigEnv delArgList
+
+        -- file assertions
+        assertPathsDoNotExist fileDeletePaths
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- completions assertions
+        delCompletions <- readFileUtf8ThrowM (xdgCharonState </> [osp|completions.txt|])
+        let bs2 = completionsToBs delCompletions
+
+        -- PERMANENT DELETE
+
+        permDelArgList <- withSrArgsM ["perm-delete", "--prompt", "off", "2", "4"]
+        runCharonConfigEnv modConfigEnv permDelArgList
+
+        -- trash structure assertions
+        assertFdoDirectorySizesM []
+
+        bs3 <- captureIndexBs testDir
+
+        -- completions assertions
+        permDelCompletions <- readFileUtf8ThrowM (xdgCharonState </> [osp|completions.txt|])
+        let bs4 = completionsToBs permDelCompletions
+
+        pure $ mconcat [bs1, bs2, bs3, bs4]
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|perm_delete_|]

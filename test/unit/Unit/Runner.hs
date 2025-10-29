@@ -45,7 +45,7 @@ import Charon.Runner.Merged
 import Charon.Runner.Phase (Prompt (MkPrompt), _PathsStrategy)
 import Effects.FileSystem.PathReader
   ( MonadPathReader (getXdgDirectory),
-    XdgDirectory (XdgData),
+    XdgDirectory (XdgData, XdgState),
   )
 import System.Environment qualified as SysEnv
 import Unit.Prelude
@@ -353,7 +353,12 @@ newtype MockIO a = MkMockIO (IO a)
 
 instance MonadPathReader MockIO where
   getXdgDirectory XdgData p = pure $ [osp|xdg_data|] </> p
+  getXdgDirectory XdgState p = pure $ [osp|xdg_state|] </> p
   getXdgDirectory other _ = error $ "unexpected xdg: " ++ show other
+
+  doesFileExist p
+    | p == [ospPathSep|xdg_state/charon/completions.txt|] = pure False
+    | otherwise = error $ "doesFileExist: unexpected path: " <> show p
 
 instance MonadTerminal MockIO
 
@@ -362,7 +367,7 @@ runMockIO (MkMockIO io) = io
 
 runConfig :: [String] -> IO MergedConfig
 runConfig argList = do
-  SysEnv.withArgs argList (runMockIO getConfiguration)
+  view _2 <$> SysEnv.withArgs argList (runMockIO getConfiguration)
 
 defTrashHome :: PathI TrashHome
 defTrashHome = MkPathI [ospPathSep|xdg_data/charon|]

@@ -179,7 +179,7 @@ captureCharonIntExceptionPure argList = do
   cfg <- getConfig
   let env = mkIntPureEnv cfg terminalRef deletedPathsRef
 
-  result <- try @_ @e $ runIntPure (Runner.runCmd $ cfg ^. #command) env
+  result <- try @_ @e $ runIntPure (Runner.runCmd cfg) env
 
   case result of
     Right _ ->
@@ -198,8 +198,8 @@ captureCharonIntExceptionPure argList = do
     argList' = "-c" : "off" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
-mkIntPureEnv :: MergedConfig -> IORef Text -> IORef [OsPath] -> IntPureEnv
-mkIntPureEnv toml terminalRef deletedPathsRef =
+mkIntPureEnv :: (OsPath, MergedConfig) -> IORef Text -> IORef [OsPath] -> IntPureEnv
+mkIntPureEnv (_xdgState, toml) terminalRef deletedPathsRef =
   MkIntPureEnv
     { backend = toml ^. #coreConfig % #backend,
       trashHome = toml ^. #coreConfig % #trashHome,

@@ -153,13 +153,13 @@ data Args = MkArgs
 makeFieldLabelsNoPrefix ''Args
 
 -- | Retrieves CLI args.
-getArgs :: (MonadOptparse m) => m Args
-getArgs = execParser parserInfoArgs
+getArgs :: (MonadOptparse m) => [Text] -> m Args
+getArgs trashEntries = execParser (parserInfoArgs trashEntries)
 
-parserInfoArgs :: ParserInfo Args
-parserInfoArgs =
+parserInfoArgs :: [Text] -> ParserInfo Args
+parserInfoArgs trashEntries =
   ParserInfo
-    { infoParser = argsParser,
+    { infoParser = argsParser trashEntries,
       infoFullDesc = True,
       infoProgDesc = desc,
       infoHeader = Chunk headerTxt,
@@ -179,12 +179,12 @@ parserInfoArgs =
             "full documentation."
           ]
 
-argsParser :: Parser Args
-argsParser = p <**> version <**> OA.helper
+argsParser :: [Text] -> Parser Args
+argsParser trashEntries = p <**> version <**> OA.helper
   where
     p :: Parser Args
     p = do
-      command <- commandParser
+      command <- commandParser trashEntries
 
       backend <- backendParser
       logLevel <- logLevelParser
@@ -280,8 +280,8 @@ configParser =
         then pure TomlNone
         else pure $ TomlPath p
 
-commandParser :: Parser (Command ConfigPhaseArgs)
-commandParser =
+commandParser :: [Text] -> Parser (Command ConfigPhaseArgs)
+commandParser trashEntries =
   OA.hsubparser
     ( mconcat
         [ mkCommand "delete" delParser delTxt,
@@ -386,7 +386,7 @@ commandParser =
         indices <- indicesParser
         prompt <- promptParser "Prompts before deleting path(s). Defaults to 'on'."
         verbose <- verboseParser "Lists deleted paths."
-        paths <- mPathsParser
+        paths <- mPathsParser trashEntries
         pure
           $ MkPermDeleteParams
             { prompt,
@@ -402,7 +402,7 @@ commandParser =
         indices <- indicesParser
         prompt <- promptParser restorePromptTxt
         verbose <- verboseParser "Lists restored paths."
-        paths <- mPathsParser
+        paths <- mPathsParser trashEntries
         pure
           $ MkRestoreParams
             { force,
@@ -641,14 +641,14 @@ logLevelParser =
             ]
       ]
 
-mPathsParser :: Parser (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
-mPathsParser = A.optional (pathsParserHelper False)
+mPathsParser :: [Text] -> Parser (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
+mPathsParser trashEntries = A.optional (pathsParserHelper (Just trashEntries))
 
 pathsParser :: Parser (UniqueSeqNE (RawPathI TrashEntryOriginalPath))
-pathsParser = pathsParserHelper True
+pathsParser = pathsParserHelper Nothing
 
-pathsParserHelper :: Bool -> Parser (UniqueSeqNE (RawPathI i))
-pathsParserHelper addPathCompletions =
+pathsParserHelper :: Maybe [Text] -> Parser (UniqueSeqNE (RawPathI i))
+pathsParserHelper mTrashEntries =
   -- NOTE: _should_ be safe because OA.some only succeeds for non-zero input.
   -- We do this rather than using NonEmpty's some1 because otherwise the CLI
   -- help metavar is duplicated i.e. "PATHS... [PATHS...]".
@@ -663,21 +663,13 @@ pathsParserHelper addPathCompletions =
 
     opts = OA.metavar "PATHS..." <> completions
 
-    -- Completions are conditionally added as we only want local file
-    -- completions for the 'delete' command. For 'perm-delete' and 'restore',
-    -- it does not make sense.
-    --
-    -- TODO: Consider adding completions for perm-delete and restore.
-    -- Basically, on delete we would save the deleted file name in a
-    -- completions file. Perm-delete and restore would delete them from the
-    -- file.
-    --
-    -- Then, on startup, we read this completions file and use it here for
-    -- perm-delete / restore.
-    completions =
-      if addPathCompletions
-        then OA.completer EOC.compgenCwdPathsCompleter
-        else mempty
+    completions = case mTrashEntries of
+      -- No trash entries: This is the 'delete' command, hence we should
+      -- complete with local file paths.
+      Nothing -> OA.completer EOC.compgenCwdPathsCompleter
+      -- Given trash entries: This is 'perm-delete' or 'restore', hence
+      -- should complete with these entries.
+      Just trashEntries -> OA.completeWith (unpackText <$> trashEntries)
 
 logSizeModeParser :: Parser (Maybe FileSizeMode)
 logSizeModeParser =

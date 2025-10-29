@@ -24,11 +24,13 @@ module Functional.Prelude
 
     -- ** Runners
     FuncEnv.runCharon,
+    FuncEnv.runCharonConfigEnv,
     FuncEnv.runCharonEnv,
     FuncEnv.runCharonE,
 
     -- ** Data capture
     FuncEnv.captureCharon,
+    FuncEnv.captureCharonConfigEnv,
     FuncEnv.captureCharonEnv,
     FuncEnv.captureCharonLogs,
     FuncEnv.captureCharonEnvLogs,
@@ -62,6 +64,9 @@ module Functional.Prelude
     (</>!),
     cfp,
     terminalToBs,
+    completionsToBs,
+    textToBs,
+    textLinesToBs,
   )
 where
 
@@ -201,6 +206,9 @@ data ByteStringRender
   = ByteStringOne ByteString
   | ByteStringMany [ByteString]
 
+instance IsString ByteStringRender where
+  fromString = ByteStringOne . fromString
+
 instance Semigroup ByteStringRender where
   x <> ByteStringMany [] = x
   ByteStringMany [] <> y = y
@@ -288,6 +296,15 @@ terminalToBs' modTxt =
     . encodeUtf8
     . T.unlines
     . fmap modTxt
+
+completionsToBs :: Text -> ByteStringRender
+completionsToBs = ByteStringOne . encodeUtf8 . (<> "\n")
+
+textToBs :: Text -> ByteStringRender
+textToBs = ByteStringOne . encodeUtf8
+
+textLinesToBs :: Text -> ByteStringRender
+textLinesToBs = ByteStringMany . fmap encodeUtf8 . T.lines
 
 captureIndexBs :: OsPath -> TestM ByteStringRender
 captureIndexBs testDir = do

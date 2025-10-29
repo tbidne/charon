@@ -33,6 +33,7 @@ module Charon.Prelude
     charonPath,
     doesAnyPathExist,
     doesAnyPathNotExist,
+    getXdgStateCharon,
     throwLeft,
     usingReaderT,
   )
@@ -152,6 +153,7 @@ import Effects.FileSystem.FileReader as X
 import Effects.FileSystem.FileWriter as X
   ( MonadFileWriter (appendBinaryFile, writeBinaryFile),
     encodeUtf8,
+    writeFileUtf8,
   )
 import Effects.FileSystem.HandleWriter as X
   ( MonadHandleWriter
@@ -181,6 +183,7 @@ import Effects.FileSystem.PathReader as X
       ),
     doesSymbolicLinkExist,
     getXdgConfig,
+    getXdgState,
   )
 import Effects.FileSystem.PathWriter as X
   ( MonadPathWriter
@@ -341,6 +344,13 @@ pathCharon = [osp|charon|]
 
 pathDotTrash :: OsPath
 pathDotTrash = [osp|.trash|]
+
+getXdgStateCharon ::
+  ( HasCallStack,
+    MonadPathReader m
+  ) =>
+  m OsPath
+getXdgStateCharon = getXdgState pathCharon
 
 doesAnyPathExist ::
   ( HasCallStack,

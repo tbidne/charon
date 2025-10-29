@@ -17,7 +17,6 @@ import Charon.Data.Paths
       ),
   )
 import Charon.Prelude
-import Effects.FileSystem.PathReader (getXdgState)
 
 -- | Class for retrieving the trash home.
 class HasTrashHome a where
@@ -33,7 +32,7 @@ class HasTrashHome a where
 
 -- | Retrieves the trash log path.
 getTrashLog :: (HasCallStack, MonadPathReader m) => m (PathI TrashLog)
-getTrashLog = MkPathI . (</> [osp|charon.log|]) <$> getXdgState pathCharon
+getTrashLog = MkPathI . (</> [osp|charon.log|]) <$> getXdgStateCharon
 
 -- | Class for retrieving the backend.
 class HasBackend a where

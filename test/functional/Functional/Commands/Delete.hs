@@ -28,7 +28,8 @@ tests testEnv =
         deletesSome testEnv',
         deleteEmptyError testEnv',
         deleteDotsError testEnv',
-        deletesUnicode testEnv
+        deletesUnicode testEnv,
+        savesCompletions testEnv
       ]
     ++ pathologicalTests testEnv'
   where
@@ -427,6 +428,46 @@ deletesUnicode getTestEnv =
         -- trash structure assertions
         assertFdoDirectorySizesM []
         captureIndexTabularBs testDir
+
+savesCompletions :: IO TestEnv -> TestTree
+savesCompletions getTestEnv =
+  testGoldenParams
+    $ MkGoldenParams
+      { runner,
+        testDesc = "Saves completions",
+        testName = testDirPrefix <> [osp|savesCompletions|]
+      }
+  where
+    runner = do
+      testEnv <- getTestEnv
+      usingReaderT testEnv $ appendTestDirM "savesCompletions" $ do
+        testDir <- getTestDir
+        let fileDeleteNames = show @Int <$> [1 .. 5]
+            fileDeletePaths = (testDir </>!) <$> fileDeleteNames
+            xdgState = testDir </> [osp|xgd_state|]
+            xdgCharonState = xdgState </> [osp|charon|]
+            modConfigEnv = set' #xdgState xdgState
+
+        delArgList <- withSrArgsPathsM ["delete"] fileDeletePaths
+
+        -- SETUP
+        createFiles fileDeletePaths
+        assertPathsExist fileDeletePaths
+
+        runCharonConfigEnv modConfigEnv delArgList
+
+        -- file assertions
+        assertPathsDoNotExist fileDeletePaths
+
+        -- trash structure assertions
+        bs1 <- captureIndexBs testDir
+        assertFdoDirectorySizesM []
+
+        -- completions assertions
+        delCompletions <- readFileUtf8ThrowM (xdgCharonState </> [osp|completions.txt|])
+        let bs2 = completionsToBs delCompletions
+
+        pure $ mconcat [bs1, bs2]
 
 testDirPrefix :: OsString
 testDirPrefix = [osstr|delete_|]

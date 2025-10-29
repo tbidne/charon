@@ -37,7 +37,6 @@ import Charon.Runner.Phase
 import Data.Bytes (FloatingFormatter (MkFloatingFormatter))
 import Data.Bytes qualified as Bytes
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (withBinaryFile))
-import Effects.FileSystem.PathReader (getXdgState)
 import Effects.FileSystem.PathWriter (MonadPathWriter (removeFile))
 
 -- | Concrete environment type that can be used for running Charon

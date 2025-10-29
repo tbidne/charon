@@ -7,6 +7,7 @@
 
 module Functional.Prelude.FuncEnv
   ( -- * Types
+    ConfigEnv (..),
     FuncIO (..),
     runFuncIO,
     FuncEnv (..),
@@ -21,11 +22,13 @@ module Functional.Prelude.FuncEnv
 
     -- ** Runners
     runCharon,
+    runCharonConfigEnv,
     runCharonEnv,
     runCharonE,
 
     -- *** Data capture
     captureCharon,
+    captureCharonConfigEnv,
     captureCharonEnv,
     captureCharonLogs,
     captureCharonEnvLogs,
@@ -81,6 +84,8 @@ import Test.Tasty.HUnit qualified as HUnit
 
 type TestM a = ReaderT TestEnv IO a
 
+-- | Test environment. This handles test configuration e.g. temp directory,
+-- backend to test.
 data TestEnv = MkTestEnv
   { backend :: Backend,
     -- The test dir relative to testRoot e.g. delete/deletesMany
@@ -92,6 +97,17 @@ data TestEnv = MkTestEnv
   }
 
 makeFieldLabelsNoPrefix ''TestEnv
+
+-- | Environment for the configuration stage of running the tests. This
+-- preceeds the main 'FuncEnv' step. This was previously not mocked
+-- (real IO), but we now mock it to test the xdg state logi
+-- (writing entry completions).
+data ConfigEnv = MkConfigEnv
+  { xdgState :: OsPath,
+    terminalRef :: IORef Text
+  }
+
+makeFieldLabelsNoPrefix ''ConfigEnv
 
 -- NOTE: Because this is used in FunctionalPrelude, we cannot use that import.
 
@@ -140,6 +156,7 @@ newtype FuncIO env a = MkFuncIO (ReaderT env IO a)
       MonadIO,
       MonadIORef,
       MonadMask,
+      MonadOptparse,
       MonadPosixCompatFiles,
       MonadThread,
       MonadThrow,
@@ -165,10 +182,17 @@ instance
 
 {- ORMOLU_DISABLE -}
 
+instance MonadPathReader (FuncIO ConfigEnv) where
+  doesFileExist = liftIO . doesFileExist
+
+  getXdgDirectory XdgState p = do
+    xdgState <- asks (view #xdgState)
+    pure $ xdgState </> p
+  getXdgDirectory xdg p =
+    error $ "Unexpected xdg '" ++ show xdg ++ "': " ++ show p
+
 instance
-  ( HasTrashHome env
-  ) =>
-  MonadPathReader (FuncIO env)
+  MonadPathReader (FuncIO FuncEnv)
   where
   doesFileExist = liftIO . PR.doesFileExist
   doesDirectoryExist = liftIO . PR.doesDirectoryExist
@@ -282,11 +306,11 @@ runFuncIO (MkFuncIO rdr) = runReaderT rdr
 
 mkFuncEnv ::
   (HasCallStack, MonadIO m) =>
-  MergedConfig ->
+  (OsPath, MergedConfig) ->
   IORef Text ->
   IORef Text ->
   m FuncEnv
-mkFuncEnv cfg logsRef terminalRef = do
+mkFuncEnv (_xdgState, cfg) logsRef terminalRef = do
   charStream <- liftIO $ newIORef altAnswers
 
   env <- liftIO $ Env.withEnv cfg pure
@@ -305,6 +329,9 @@ mkFuncEnv cfg logsRef terminalRef = do
 runCharon :: (MonadIO m) => [String] -> m ()
 runCharon = void . captureCharon
 
+runCharonConfigEnv :: (MonadIO m) => (ConfigEnv -> ConfigEnv) -> [String] -> m ()
+runCharonConfigEnv modEnv = void . captureCharonConfigEnv modEnv
+
 runCharonEnv :: (MonadIO m) => (FuncEnv -> FuncEnv) -> [String] -> m ()
 runCharonEnv modEnv = void . captureCharonEnv modEnv
 
@@ -312,9 +339,12 @@ runCharonEnv modEnv = void . captureCharonEnv modEnv
 captureCharon :: (MonadIO m) => [String] -> m [Text]
 captureCharon = fmap (view _1) . captureCharonLogs
 
+captureCharonConfigEnv :: (MonadIO m) => (ConfigEnv -> ConfigEnv) -> [String] -> m [Text]
+captureCharonConfigEnv modEnv = fmap (view _1) . captureCharonEnvLogs modEnv id
+
 -- | Runs charon and captures terminal output.
 captureCharonEnv :: (MonadIO m) => (FuncEnv -> FuncEnv) -> [String] -> m [Text]
-captureCharonEnv modEnv = fmap (view _1) . captureCharonEnvLogs modEnv
+captureCharonEnv modEnv = fmap (view _1) . captureCharonEnvLogs id modEnv
 
 -- | Runs charon and captures (terminal output, logs).
 captureCharonLogs ::
@@ -322,25 +352,27 @@ captureCharonLogs ::
   -- Args.
   [String] ->
   m ([Text], [Text])
-captureCharonLogs = captureCharonEnvLogs id
+captureCharonLogs = captureCharonEnvLogs id id
 
 -- | Runs charon and captures (terminal output, logs).
 captureCharonEnvLogs ::
   (MonadIO m) =>
   -- | Env modifier
+  (ConfigEnv -> ConfigEnv) ->
+  -- | Env modifier
   (FuncEnv -> FuncEnv) ->
   -- Args.
   [String] ->
   m ([Text], [Text])
-captureCharonEnvLogs modEnv argList = liftIO $ do
+captureCharonEnvLogs modConfigEnv modFuncEnv argList = liftIO $ do
   terminalRef <- newIORef ""
   logsRef <- newIORef ""
 
   cfg <- getConfig
-  env <- modEnv <$> mkFuncEnv cfg logsRef terminalRef
+  env <- modFuncEnv <$> mkFuncEnv cfg logsRef terminalRef
 
   catchesSync
-    (runFuncIO (Runner.runCmd $ cfg ^. #command) env)
+    (runFuncIO (Runner.runCmd cfg) env)
     (handleEx terminalRef logsRef)
     [ -- Restore and Perm Delete can throw ExitSuccess. We do not want to
       -- error in these cases.
@@ -355,7 +387,7 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
   pure (terminal, logs)
   where
     argList' = "-c" : "off" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+    getConfig = getConfiguration modConfigEnv argList'
 
     handleEx terminalRef logsRef ex = do
       putStrLn "TERMINAL"
@@ -417,7 +449,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
       env <- mkFuncEnv cfg logsRef terminalRef
 
       let runCatch = do
-            result <- try @_ @e $ runFuncIO (Runner.runCmd $ cfg ^. #command) env
+            result <- try @_ @e $ runFuncIO (Runner.runCmd cfg) env
 
             case result of
               Right _ ->
@@ -439,7 +471,19 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
           throwM ex
   where
     argList' = "-c" : "off" : argList
-    getConfig = SysEnv.withArgs argList' Runner.getConfiguration
+    getConfig = getConfiguration id argList'
+
+getConfiguration :: (ConfigEnv -> ConfigEnv) -> [String] -> IO (OsPath, MergedConfig)
+getConfiguration modEnv args = do
+  terminalRef <- newIORef ""
+  let configEnv =
+        modEnv
+          $ MkConfigEnv
+            { xdgState = [osp|tmp|],
+              terminalRef
+            }
+
+  SysEnv.withArgs args $ runFuncIO Runner.getConfiguration configEnv
 
 -- | Returns the full test dir for the given environment i.e.
 --
