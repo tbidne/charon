@@ -38,7 +38,7 @@ import Charon.Runner.Phase
         ConfigPhaseMerged,
         ConfigPhaseToml
       ),
-    Prompt (MkPrompt),
+    Prompt,
     SwitchF,
     mergePromptDefTrue,
   )
@@ -80,7 +80,7 @@ deriving stock instance Show (Command ConfigPhaseMerged)
 
 -- Basic idea for how args and toml switches are combined.
 --
--- - On the CLI, '--foo' is true and '--no-foo' is false.
+-- - On the CLI, '--foo on' is true and '--foo off' is false.
 -- - On the TOML, 'foo = true' is true and 'foo = false' is false.
 -- - CLI and TOML are merged s.t. if the CLI is specified _at all_, it
 --   overrides the TOML
@@ -111,9 +111,7 @@ mergeCommand deleteParams permDeleteParams restoreParams = \case
   PermDelete params -> do
     merged <- mergePermDelete params permDeleteParams
     pure $ PermDelete merged
-  Empty prompt -> do
-    let merged = prompt $> MkPrompt True
-    pure $ Empty $ mergePromptDefTrue merged
+  Empty prompt -> pure $ Empty $ mergePromptDefTrue prompt
   Restore params -> do
     merged <- mergeRestore params restoreParams
     pure $ Restore merged

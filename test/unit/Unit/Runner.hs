@@ -83,7 +83,7 @@ delete = testCase "Parses delete" $ do
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just expectedUSeq @=? cfg ^? (#command % _Delete % #paths)
   where
-    argList = ["delete", "foo", "bar", "-c", "none"]
+    argList = ["delete", "foo", "bar", "-c", "off"]
     expectedUSeq =
       MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
@@ -96,20 +96,20 @@ permDelete = testCase "Parses perm delete" $ do
   Just (MkPrompt True) @=? cfg ^? (#command % _PermDelete % #prompt)
   Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
-    argList = ["perm-delete", "foo", "bar", "-c", "none"]
+    argList = ["perm-delete", "foo", "bar", "-c", "off"]
     expectedUSeq =
       MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
 
 permDeleteNoPrompt :: TestTree
-permDeleteNoPrompt = testCase "Parses perm delete with --no-prompt" $ do
+permDeleteNoPrompt = testCase "Parses perm delete with --prompt off" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just (MkPrompt False) @=? cfg ^? (#command % _PermDelete % #prompt)
   Just expectedUSeq @=? cfg ^? (#command % _PermDelete % #strategy % _PathsStrategy)
   where
-    argList = ["perm-delete", "--no-prompt", "foo", "bar", "-c", "none"]
+    argList = ["perm-delete", "--prompt", "off", "foo", "bar", "-c", "off"]
     expectedUSeq =
       MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
@@ -121,16 +121,16 @@ emptyTrash = testCase "Parses empty" $ do
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just True @=? cfg ^? #command % _Empty % #unPrompt
   where
-    argList = ["empty", "-c", "none"]
+    argList = ["empty", "-c", "off"]
 
 emptyTrashNoPrompt :: TestTree
-emptyTrashNoPrompt = testCase "Parses empty with --no-prompt" $ do
+emptyTrashNoPrompt = testCase "Parses empty with --prompt off" $ do
   cfg <- runConfig argList
 
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just False @=? cfg ^? #command % _Empty % #unPrompt
   where
-    argList = ["empty", "--no-prompt", "-c", "none"]
+    argList = ["empty", "--prompt", "off", "-c", "off"]
 
 restore :: TestTree
 restore = testCase "Parses restore" $ do
@@ -139,7 +139,7 @@ restore = testCase "Parses restore" $ do
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just expectedUSeq @=? cfg ^? (#command % _Restore % #strategy % _PathsStrategy)
   where
-    argList = ["restore", "foo", "bar", "-c", "none"]
+    argList = ["restore", "foo", "bar", "-c", "off"]
     expectedUSeq =
       MkPathI
         ↤ UniqueSeqNE.fromNonEmpty ([osp|foo|] :| [[osp|bar|]])
@@ -151,7 +151,7 @@ list = testCase "Parses list" $ do
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just defList @=? cfg ^? #command % _List
   where
-    argList = ["list", "-c", "none"]
+    argList = ["list", "-c", "off"]
     defList =
       MkListParams
         { format = FormatTabular ColoringDetect Nothing Nothing,
@@ -168,7 +168,7 @@ listNonDefaults = testCase "List non-default args" $ do
   where
     argList =
       [ "-c",
-        "none",
+        "off",
         "list",
         "--format",
         "tabular",
@@ -177,7 +177,7 @@ listNonDefaults = testCase "List non-default args" $ do
         "--orig-len",
         "100",
         "--color",
-        "true"
+        "on"
       ]
     defList =
       MkListParams
@@ -199,7 +199,7 @@ listMultiline = testCase "List multiline" $ do
   where
     argList =
       [ "-c",
-        "none",
+        "off",
         "list",
         "--format",
         "multi"
@@ -220,12 +220,12 @@ listSingleline = testCase "List singleline" $ do
   where
     argList =
       [ "-c",
-        "none",
+        "off",
         "list",
         "--format",
         "single",
         "--color",
-        "false"
+        "off"
       ]
     defList =
       MkListParams
@@ -243,7 +243,7 @@ listNonDefaultsNoFormat = testCase "List overrides args w/o format specified" $ 
   where
     argList =
       [ "-c",
-        "none",
+        "off",
         "list",
         "--name-len",
         "80",
@@ -264,7 +264,7 @@ metadata = testCase "Parses metadata" $ do
   defTrashHome @=? cfg ^. (#coreConfig % #trashHome)
   Just () @=? cfg ^? #command % _Metadata
   where
-    argList = ["metadata", "-c", "none"]
+    argList = ["metadata", "-c", "off"]
 
 tomlTests :: TestTree
 tomlTests =
@@ -321,7 +321,7 @@ argsDisablesTomlLogging = testCase "Args disables Toml logging" $ do
       [ "-c",
         "examples/config.toml",
         "--log-level",
-        "none",
+        "off",
         "delete",
         "foo"
       ]
@@ -335,7 +335,7 @@ defaultConfig = testCase "Default config" $ do
   where
     argList =
       [ "-c",
-        "none",
+        "off",
         "delete",
         "foo"
       ]

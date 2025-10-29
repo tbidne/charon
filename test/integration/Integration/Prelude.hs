@@ -196,7 +196,7 @@ captureCharonIntExceptionPure argList = do
           showt deletedPaths
         )
   where
-    argList' = "-c" : "none" : argList
+    argList' = "-c" : "off" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
 mkIntPureEnv :: MergedConfig -> IORef Text -> IORef [OsPath] -> IntPureEnv

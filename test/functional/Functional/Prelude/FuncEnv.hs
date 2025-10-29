@@ -354,7 +354,7 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
 
   pure (terminal, logs)
   where
-    argList' = "-c" : "none" : argList
+    argList' = "-c" : "off" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
     handleEx terminalRef logsRef ex = do
@@ -438,7 +438,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
           Utils.putLine
           throwM ex
   where
-    argList' = "-c" : "none" : argList
+    argList' = "-c" : "off" : argList
     getConfig = SysEnv.withArgs argList' Runner.getConfiguration
 
 -- | Returns the full test dir for the given environment i.e.

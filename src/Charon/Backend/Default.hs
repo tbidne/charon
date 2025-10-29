@@ -566,7 +566,7 @@ emptyTrash backendArgs prompt = addNamespace "emptyTrash" $ do
               $(logDebug) "Not deleting contents."
               Utils.putLine
         else do
-          $(logDebug) "--no-prompt on; deleting entire trash."
+          $(logDebug) "--prompt off; deleting entire trash."
           removeDirectoryRecursive th
           void Trash.createTrash
   where

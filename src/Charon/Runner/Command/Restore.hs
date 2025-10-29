@@ -8,17 +8,17 @@ module Charon.Runner.Command.Restore
 where
 
 import Charon.Prelude
+import Charon.Runner.Default (fromDefault, (<|.|>))
 import Charon.Runner.Phase
   ( ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged, ConfigPhaseToml),
-    Force (MkForce),
+    Force,
     IndicesPathsF,
-    Prompt (MkPrompt),
+    Prompt,
     SwitchF,
-    Verbose (MkVerbose),
+    Verbose,
     mergePromptDefTrue,
     parseStrategy,
   )
-import Charon.Runner.WithDisabled (fromBool, fromDefault, (<.>?), (<>?))
 
 data RestoreParams s = MkRestoreParams
   { force :: SwitchF s Force,
@@ -61,21 +61,18 @@ mergeRestore args = \case
           verbose = fromDefault argsVerbose
         }
   Just toml -> do
-    strategy <- parseStrategy (over' _1 (<> tomlStrategy) argsStrategy)
+    strategy <- parseStrategy (over' _1 (<|> tomlStrategy) argsStrategy)
     pure
       $ MkRestoreParams
-        { force = argsForce <.>? toml ^. #force,
-          prompt = mergePromptDefTrue $ argsPrompt <>? toml ^. #prompt,
+        { force = argsForce <|.|> toml ^. #force,
+          prompt = mergePromptDefTrue $ argsPrompt <|> toml ^. #prompt,
           strategy,
-          verbose = argsVerbose <.>? toml ^. #verbose
+          verbose = argsVerbose <|.|> toml ^. #verbose
         }
     where
-      tomlStrategy =
-        fromBool
-          . fromMaybe False
-          $ (toml ^. #strategy)
+      tomlStrategy = toml ^. #strategy
   where
-    argsForce = args ^. #force $> MkForce True
+    argsForce = args ^. #force
     argsStrategy = args ^. #strategy
-    argsPrompt = args ^. #prompt $> MkPrompt True
-    argsVerbose = args ^. #verbose $> MkVerbose True
+    argsPrompt = args ^. #prompt
+    argsVerbose = args ^. #verbose

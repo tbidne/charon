@@ -14,15 +14,15 @@ import Charon.Data.Paths
   )
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Prelude
+import Charon.Runner.Default (fromDefault, (<|.|>))
 import Charon.Runner.Phase
   ( ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged, ConfigPhaseToml),
-    Prompt (MkPrompt),
+    Prompt,
     SwitchF,
-    Verbose (MkVerbose),
+    Verbose,
     fromRawSet,
     mergePromptDefFalse,
   )
-import Charon.Runner.WithDisabled (fromDefault, (<.>?), (<>?))
 
 type DeletePathsF :: ConfigPhase -> Type
 type family DeletePathsF p where
@@ -73,10 +73,10 @@ mergeDelete args = \case
     pure
       $ MkDeleteParams
         { paths,
-          prompt = mergePromptDefFalse $ argsPrompt <>? toml ^. #prompt,
-          verbose = argsVerbose <.>? toml ^. #verbose
+          prompt = mergePromptDefFalse $ argsPrompt <|> toml ^. #prompt,
+          verbose = argsVerbose <|.|> toml ^. #verbose
         }
   where
     argsPaths = args ^. #paths
-    argsPrompt = args ^. #prompt $> MkPrompt True
-    argsVerbose = args ^. #verbose $> MkVerbose True
+    argsPrompt = args ^. #prompt
+    argsVerbose = args ^. #verbose

@@ -68,7 +68,7 @@ emptyTrash getTestEnv =
 
         -- EMPTY
 
-        emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
+        emptyArgList <- withSrArgsM ["empty", "--prompt", "off"]
         runCharon emptyArgList
 
         -- file assertions
@@ -82,7 +82,7 @@ emptyTrashTwice :: IO TestEnv -> TestTree
 emptyTrashTwice getTestEnv = testCase "Calling empty twice does not error" $ do
   testEnv <- getTestEnv
   usingReaderT testEnv $ appendTestDirM "emptyTrashTwice" $ do
-    emptyArgs <- withSrArgsM ["empty", "--no-prompt"]
+    emptyArgs <- withSrArgsM ["empty", "--prompt", "off"]
     runCharon emptyArgs
     runCharon emptyArgs
 
@@ -131,7 +131,7 @@ missingInfoForcesDelete getTestEnv =
   testGoldenParams
     $ MkGoldenParams
       { runner,
-        testDesc = "empty --no-prompt overwrites bad directory (no info.)",
+        testDesc = "empty --prompt off overwrites bad directory (no info.)",
         testName = testDirPrefix <> [osp|missingInfoForcesDelete|]
       }
   where
@@ -164,7 +164,7 @@ missingInfoForcesDelete getTestEnv =
         -- delete info dir, leaving trash dir in bad state
         clearDirectory (trashDir </> Default.Utils.pathInfo)
 
-        emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
+        emptyArgList <- withSrArgsM ["empty", "--prompt", "off"]
         runCharon emptyArgList
 
         assertPathsExist $ fmap (trashDir </>) [Default.Utils.pathInfo, Default.Utils.pathFiles]
@@ -178,7 +178,7 @@ missingPathsForcesDelete getTestEnv =
   testGoldenParams
     $ MkGoldenParams
       { runner,
-        testDesc = "empty --no-prompt overwrites bad directory (no paths/)",
+        testDesc = "empty --prompt off overwrites bad directory (no paths/)",
         testName = testDirPrefix <> [osp|missingPathsForcesDelete|]
       }
   where
@@ -212,7 +212,7 @@ missingPathsForcesDelete getTestEnv =
         -- delete info dir, leaving trash dir in bad state
         clearDirectory (trashDir </> Default.Utils.pathFiles)
 
-        emptyArgList <- withSrArgsM ["empty", "--no-prompt"]
+        emptyArgList <- withSrArgsM ["empty", "--prompt", "off"]
         runCharon emptyArgList
 
         -- file assertions

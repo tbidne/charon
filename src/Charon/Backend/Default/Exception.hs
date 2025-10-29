@@ -27,7 +27,7 @@ instance Exception TrashDirFilesNotFoundE where
       [ "The trash files directory was not found at '",
         decodeDisplayEx files,
         "' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. charon empty --no-prompt)."
+        "manually creating the directory or resetting everything (i.e. charon empty --prompt off)."
       ]
     where
       files = th </> pathFiles
@@ -42,7 +42,7 @@ instance Exception TrashDirInfoNotFoundE where
       [ "The trash info directory was not found at '",
         decodeDisplayEx info,
         "' despite the trash home existing. This can be fixed by ",
-        "manually creating the directory or resetting everything (i.e. charon empty --no-prompt)."
+        "manually creating the directory or resetting everything (i.e. charon empty --prompt off)."
       ]
     where
       info = th </> pathInfo

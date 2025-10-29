@@ -38,7 +38,6 @@ import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Prelude
 import Charon.Runner.Default (Default (def))
-import Charon.Runner.WithDisabled (WithDisabled (Disabled, With, Without))
 
 newtype Force = MkForce {unForce :: Bool}
   deriving stock (Eq, Show)
@@ -78,13 +77,13 @@ type family ConfigPhaseF p a where
 
 type SwitchF :: ConfigPhase -> Type -> Type
 type family SwitchF p a where
-  SwitchF ConfigPhaseArgs _ = WithDisabled ()
+  SwitchF ConfigPhaseArgs a = Maybe a
   SwitchF ConfigPhaseToml a = Maybe a
   SwitchF ConfigPhaseMerged a = a
 
 type IndicesPathsF :: ConfigPhase -> Type
 type family IndicesPathsF p where
-  IndicesPathsF ConfigPhaseArgs = (WithDisabled (), Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
+  IndicesPathsF ConfigPhaseArgs = (Maybe Bool, Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
   IndicesPathsF ConfigPhaseToml = Maybe Bool
   IndicesPathsF ConfigPhaseMerged = IndicesPathsStrategy
 
@@ -118,15 +117,18 @@ parseStrategy ::
     MonadPathReader m,
     MonadTerminal m
   ) =>
-  (WithDisabled (), Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))) ->
+  (Maybe Bool, Maybe (UniqueSeqNE (RawPathI TrashEntryFileName))) ->
   m IndicesPathsStrategy
 parseStrategy = \case
-  (With _, Nothing) -> pure IndicesStrategy
-  (With _, Just _) -> throwText $ mkStratErr "not both."
-  (Without, Nothing) -> throwText $ mkStratErr "but none given."
-  (Without, Just paths) -> PathsStrategy <$> fromRawSet paths
-  (Disabled, Nothing) -> throwText $ mkStratErr "but none given."
-  (Disabled, Just paths) -> PathsStrategy <$> fromRawSet paths
+  -- Indices strategy explicitly on
+  (Just True, Nothing) -> pure IndicesStrategy
+  (Just True, Just _) -> throwText $ mkStratErr "not both."
+  -- Indices strategy explicitly off
+  (Just False, Nothing) -> throwText $ mkStratErr "but none given."
+  (Just False, Just paths) -> PathsStrategy <$> fromRawSet paths
+  -- Indices strategy not specified
+  (Nothing, Nothing) -> throwText $ mkStratErr "but none given."
+  (Nothing, Just paths) -> PathsStrategy <$> fromRawSet paths
   where
     mkStratErr m =
       mconcat
@@ -140,22 +142,18 @@ parseStrategy = \case
 -- Note that we cannot use the usual 'x <.>? y' to invoke a hypothetical
 -- Default instance for Prompt (True), because it will be this default
 -- (True) for Disabled, but we want False.
-mergePromptDefTrue :: WithDisabled Prompt -> Prompt
+mergePromptDefTrue :: Maybe Prompt -> Prompt
 mergePromptDefTrue argsPrompt = case argsPrompt of
   -- 1. If Prompt is actually specified we should use it.
-  With p -> p
+  Just p -> p
   -- 2. This is the 'def true' part. If it is not specified,
   --    it should be true.
-  Without -> MkPrompt True
-  -- 3. Disabled is always false.
-  Disabled -> MkPrompt False
+  Nothing -> MkPrompt True
 
-mergePromptDefFalse :: WithDisabled Prompt -> Prompt
+mergePromptDefFalse :: Maybe Prompt -> Prompt
 mergePromptDefFalse argsPrompt = case argsPrompt of
   -- 1. If Prompt is actually specified we should use it.
-  With p -> p
+  Just p -> p
   -- 2. This is the 'def false' part. If it is not specified,
   --    it should be false.
-  Without -> MkPrompt False
-  -- 3. Disabled is always false.
-  Disabled -> MkPrompt False
+  Nothing -> MkPrompt False

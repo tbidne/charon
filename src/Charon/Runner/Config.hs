@@ -109,7 +109,7 @@ deriving stock instance
 
 readLogLevel :: (MonadFail m) => Text -> m LogLevelConfig
 readLogLevel = \case
-  "none" -> pure LogLevelOff
+  "off" -> pure LogLevelOff
   "debug" -> pure $ LogLevelOn LevelDebug
   "info" -> pure $ LogLevelOn LevelInfo
   "warn" -> pure $ LogLevelOn LevelWarn
@@ -126,4 +126,4 @@ readLogLevel = \case
 
 -- | String description of possible log levels parsed by 'readLogLevel'.
 logLevelStrings :: String
-logLevelStrings = "(debug|info|warn|error|fatal|none)"
+logLevelStrings = "(debug | info | warn | error | fatal | off)"

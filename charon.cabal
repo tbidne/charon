@@ -108,7 +108,6 @@ library
     Charon.Runner.Merged
     Charon.Runner.Phase
     Charon.Runner.Toml
-    Charon.Runner.WithDisabled
     Charon.Utils
 
   build-depends:

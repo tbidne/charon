@@ -73,17 +73,21 @@ import Charon.Runner.Config
   )
 import Charon.Runner.Config qualified as Config
 import Charon.Runner.FileSizeMode (FileSizeMode, parseFileSizeMode)
-import Charon.Runner.Phase (ConfigPhase (ConfigPhaseArgs))
-import Charon.Runner.WithDisabled (WithDisabled (Disabled, With, Without))
+import Charon.Runner.Phase
+  ( ConfigPhase (ConfigPhaseArgs),
+    Force (MkForce),
+    Prompt (MkPrompt),
+    Verbose (MkVerbose),
+  )
 import Control.Applicative qualified as A
 import Data.List qualified as L
+import Data.Text qualified as T
 import Data.Version (showVersion)
 import Effects.Optparse (osPath)
 import Effects.Optparse.Completer qualified as EOC
 import FileSystem.OsString qualified as OsString
 import Options.Applicative
   ( CommandFields,
-    FlagFields,
     InfoMod,
     Mod,
     OptionFields,
@@ -211,7 +215,7 @@ backendParser =
     $ mconcat
       [ OA.long "backend",
         OA.short 'b',
-        OA.metavar "(cbor|fdo|json)",
+        OA.metavar "(cbor | fdo | json)",
         OA.completeWith ["cbor", "fdo", "json"],
         helpTxt
       ]
@@ -235,7 +239,7 @@ backendDestParser =
     $ mconcat
       [ OA.long "dest",
         OA.short 'd',
-        OA.metavar "(cbor|fdo|json)",
+        OA.metavar "(cbor | fdo | json)",
         OA.completeWith ["cbor", "fdo", "json"],
         mkHelp helpTxt
       ]
@@ -254,22 +258,22 @@ configParser =
       [ OA.value TomlDefault,
         OA.long "config",
         OA.short 'c',
-        OA.metavar "(none|PATH)",
-        OA.completeWith ["none"],
+        OA.metavar "(PATH | off)",
+        OA.completeWith ["off"],
         OA.completer EOC.compgenCwdPathsCompleter,
         mkHelp helpTxt
       ]
   where
     helpTxt =
       mconcat
-        [ "Path to the toml config file. Can be the string 'none' -- in which ",
+        [ "Path to the toml config file. Can be the string 'off' -- in which ",
           "case no toml config is used -- or a path to the config file. If ",
           "not specified then we look in the XDG config directory ",
           "e.g. ~/.config/charon/config.toml"
         ]
     readTomlPath = do
       p <- osPath
-      if p == [osp|none|]
+      if p == [osp|off|]
         then pure TomlNone
         else pure $ TomlPath p
 
@@ -280,13 +284,13 @@ commandParser =
         [ mkCommand "delete" delParser delTxt,
           mkCommand "perm-delete" permDelParser permDelTxt,
           mkCommand "empty" emptyParser emptyTxt,
-          OA.commandGroup "Delete Commands"
+          OA.commandGroup "Delete commands:"
         ]
     )
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "restore" restoreParser restoreTxt,
-            OA.commandGroup "Restore Commands",
+            OA.commandGroup "Restore commands:",
             OA.hidden
           ]
       )
@@ -294,7 +298,7 @@ commandParser =
       ( mconcat
           [ mkCommand "list" listParser listTxt,
             mkCommand "metadata" metadataParser metadataTxt,
-            OA.commandGroup "Information Commands",
+            OA.commandGroup "Information commands:",
             OA.hidden
           ]
       )
@@ -302,7 +306,7 @@ commandParser =
       ( mconcat
           [ mkCommand "convert" convertParser convertTxt,
             mkCommand "merge" mergeParser mergeTxt,
-            OA.commandGroup "Transform Commands",
+            OA.commandGroup "Transform commands:",
             OA.hidden
           ]
       )
@@ -361,7 +365,7 @@ commandParser =
     mkExample :: [String] -> Chunk Doc
     mkExample =
       Chunk.vcatChunks
-        . fmap (fmap (Pretty.indent 2) . Chunk.stringChunk)
+        . fmap (fmap (Pretty.indent 2) . Chunk.paragraph)
 
     delParser =
       Delete <$> do
@@ -407,7 +411,7 @@ commandParser =
       mconcat
         [ "Forcibly overwrites restored path(s). Otherwise, ",
           "collisions with existing paths will either throw an error ",
-          "(with --no-prompt) or prompt the user to decide."
+          "(with --prompt off) or prompt the user to decide."
         ]
     restorePromptTxt = "Prompts before restoring path(s). This is the default."
     listParser =
@@ -425,28 +429,17 @@ commandParser =
     convertParser = Convert <$> backendDestParser
     mergeParser = Merge <$> trashDestParser
 
-indicesParser :: Parser (WithDisabled ())
-indicesParser = withDisabledParser mainParser "indices"
+indicesParser :: Parser (Maybe Bool)
+indicesParser = switchParserOpts opts id "indices" helpTxt
   where
-    switchParser =
-      OA.switch
-        ( mconcat
-            [ OA.short 'i',
-              OA.long "indices",
-              mkHelp
-                $ mconcat
-                  [ "Allows selecting by numeric index instead of trash name. ",
-                    "Incompatible with explicit paths. The prompt can be exited ",
-                    "via 'exit', 'quit', 'q', or ':q'."
-                  ]
-            ]
-        )
-    mainParser = do
-      b <- switchParser
-      pure
-        $ if b
-          then Just ()
-          else Nothing
+    helpTxt =
+      mconcat
+        [ "Allows selecting by numeric index instead of trash name. ",
+          "Incompatible with explicit paths. The prompt can be exited ",
+          "via 'exit', 'quit', 'q', or ':q'."
+        ]
+
+    opts = OA.short 'i'
 
 listFormatStyleParser :: Parser (Maybe ListFormatStyle)
 listFormatStyleParser =
@@ -492,7 +485,7 @@ nameTruncParser = colParser PathData.formatFileNameLenMin fields
       mconcat
         [ OA.long "name-len",
           OA.short 'n',
-          OA.metavar "(max|NAT)",
+          OA.metavar "(max | NAT)",
           OA.completeWith ["max"],
           mkHelp
             $ mconcat
@@ -508,7 +501,7 @@ origTruncParser = colParser PathData.formatOriginalPathLenMin fields
       mconcat
         [ OA.long "orig-len",
           OA.short 'o',
-          OA.metavar "(max|NAT)",
+          OA.metavar "(max | NAT)",
           OA.completeWith ["max"],
           mkHelp
             $ mconcat
@@ -541,22 +534,22 @@ coloringParser =
     $ OA.option readColoring
     $ mconcat
       [ OA.long "color",
-        OA.completeWith ["detect", "false", "true"],
+        OA.completeWith ["detect", "on", "off"],
         helpTxt
       ]
   where
     readColoring =
       OA.str >>= \case
-        "true" -> pure ColoringOn
-        "false" -> pure ColoringOff
+        "on" -> pure ColoringOn
+        "off" -> pure ColoringOff
         "detect" -> pure ColoringDetect
         bad -> fail $ "Unexpected --coloring: " ++ bad
 
     helpTxt =
       itemize
         [ "Coloring options.",
-          "true: On.",
-          "false: Off.",
+          "on",
+          "off",
           "detect: On if supported."
         ]
 
@@ -568,7 +561,7 @@ sortParser =
     $ mconcat
       [ OA.long "sort",
         OA.short 's',
-        OA.metavar "(name|size)",
+        OA.metavar "(name | size)",
         OA.completeWith ["name", "size"],
         mkHelp "How to sort the list. Defaults to name."
       ]
@@ -585,57 +578,16 @@ reverseSortParser =
   where
     helpTxt = "Sorts in the reverse order."
 
-forceParser :: String -> Parser (WithDisabled ())
-forceParser helpTxt = withDisabledParser mainParser "force"
-  where
-    switchParser =
-      OA.switch
-        ( mconcat
-            [ OA.long "force",
-              mkHelp helpTxt
-            ]
-        )
-    mainParser = do
-      b <- switchParser
-      pure
-        $ if b
-          then Just ()
-          else Nothing
+forceParser :: String -> Parser (Maybe Force)
+forceParser = switchParser MkForce "force"
 
-promptParser :: String -> Parser (WithDisabled ())
-promptParser helpTxt = withDisabledParser mainParser "prompt"
-  where
-    switchParser =
-      OA.switch
-        ( mconcat
-            [ OA.long "prompt",
-              mkHelp helpTxt
-            ]
-        )
-    mainParser = do
-      b <- switchParser
-      pure
-        $ if b
-          then Just ()
-          else Nothing
+promptParser :: String -> Parser (Maybe Prompt)
+promptParser = switchParser MkPrompt "prompt"
 
-verboseParser :: String -> Parser (WithDisabled ())
-verboseParser helpTxt = withDisabledParser mainParser "verbose"
+verboseParser :: String -> Parser (Maybe Verbose)
+verboseParser = switchParserOpts opts MkVerbose "verbose"
   where
-    switchParser =
-      OA.switch
-        ( mconcat
-            [ OA.long "verbose",
-              OA.short 'v',
-              mkHelp helpTxt
-            ]
-        )
-    mainParser = do
-      b <- switchParser
-      pure
-        $ if b
-          then Just ()
-          else Nothing
+    opts = OA.short 'v'
 
 trashParser :: Parser (Maybe (RawPathI TrashHome))
 trashParser =
@@ -678,10 +630,10 @@ logLevelParser =
     $ mconcat
       [ OA.long "log-level",
         OA.metavar Config.logLevelStrings,
-        OA.completeWith ["debu", "info", "warn", "error", "fatal", "none"],
+        OA.completeWith ["debug", "info", "warn", "error", "fatal", "off"],
         mkHelp
           $ mconcat
-            [ "The file level in which to log. Defaults to none. Logs are ",
+            [ "The file level in which to log. Defaults to off. Logs are ",
               "written to the XDG state directory e.g. ~/.local/state/charon."
             ]
       ]
@@ -712,7 +664,7 @@ logSizeModeParser =
           [ OA.long "log-size-mode",
             mkHelp helpTxt,
             OA.completeWith ["delete", "warn"],
-            OA.metavar "(warn SIZE|delete SIZE)"
+            OA.metavar "(warn SIZE | delete SIZE)"
           ]
       )
   where
@@ -773,6 +725,12 @@ mkHelp =
     . Chunk.unChunk
     . Chunk.paragraph
 
+mkHelpNoLine :: String -> OA.Mod f a
+mkHelpNoLine =
+  OA.helpDoc
+    . Chunk.unChunk
+    . Chunk.paragraph
+
 mkCmdDescStr :: String -> InfoMod a
 mkCmdDescStr = mkCmdDesc . Chunk.paragraph
 
@@ -792,47 +750,53 @@ mkCmdDescNoLine =
   OA.progDescDoc
     . Chunk.unChunk
 
--- | Adds a '--no-x' switch to the parser.
-withDisabledParser ::
-  -- | Main parser.
-  Parser (Maybe a) ->
-  -- | Name for this option, to be used in disabled switch name.
-  String ->
-  Parser (WithDisabled a)
-withDisabledParser mainParser name =
-  withDisabledParserOpts opts mainParser name
-  where
-    helpTxt = "Disables --" ++ name ++ "."
-    opts = mkHelp helpTxt
+switchParser :: (Bool -> a) -> String -> String -> Parser (Maybe a)
+switchParser = switchParserHelper mkHelp mempty
 
--- | Like 'withDisabledParser', except it also takes an arg for the disabled
--- switch options.
-withDisabledParserOpts ::
-  -- | Disabled switch options.
-  Mod FlagFields Bool ->
-  -- | Main parser
-  Parser (Maybe a) ->
-  -- | Name for this option, to be used in disabled switch name.
+switchParserOpts :: Mod OA.OptionFields Bool -> (Bool -> a) -> String -> String -> Parser (Maybe a)
+switchParserOpts = switchParserHelper mkHelp
+
+switchParserNoLine :: (Bool -> a) -> String -> String -> Parser (Maybe a)
+switchParserNoLine = switchParserHelper mkHelpNoLine mempty
+
+switchParserHelper ::
+  -- | Help function, determines final newlines behavior.
+  (String -> Mod OA.OptionFields Bool) ->
+  -- | Additional options.
+  Mod OA.OptionFields Bool ->
+  -- | Type constructor.
+  (Bool -> a) ->
+  -- | Option name.
   String ->
-  Parser (WithDisabled a)
-withDisabledParserOpts disabledOpts mainParser name = do
-  mx <- mainParser
-  y <- noParser
-  pure
-    $ if y
-      then Disabled
-      else maybe Without With mx
+  -- | Help text.
+  String ->
+  Parser (Maybe a)
+switchParserHelper mkHelpFn opts cons name helpTxt = fmap cons <$> mainParser
   where
-    noParser =
-      OA.flag
-        False
-        True
-        ( mconcat
-            [ OA.long $ "no-" ++ name,
-              OA.hidden,
-              disabledOpts
-            ]
-        )
+    mainParser =
+      OA.optional
+        $ OA.option
+          readBool
+          ( mconcat
+              [ opts,
+                OA.long name,
+                OA.metavar "(on | off)",
+                OA.completeWith ["on", "off"],
+                mkHelpFn helpTxt
+              ]
+          )
+
+    readBool =
+      OA.str @Text >>= \case
+        "on" -> pure True
+        "off" -> pure False
+        other ->
+          fail
+            $ mconcat
+              [ "Expected (on | off), received: '",
+                T.unpack other,
+                "'"
+              ]
 
 itemize :: NonEmpty String -> Mod OptionFields a
 itemize =

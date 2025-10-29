@@ -426,7 +426,7 @@ restoreTrashToOriginal
       -- user to confirm. The overwrite(Ask|Force|Throw) functions handle
       -- collisions and call the actual restore function.
 
-      -- 1. No --no-prompt. Ask before restoring paths.
+      -- 1. No --prompt. Ask before restoring paths.
       restorePrompt pd = do
         let pdStr = Utils.renderPretty pd
 
@@ -443,7 +443,7 @@ restoreTrashToOriginal
               -- 2.2. No --force: Ask for overwrites.
               overwriteAsk pd
 
-      -- 2. --no-prompt: Do not prompt before restoring, or before overwrites.
+      -- 2. --prompt off: Do not prompt before restoring, or before overwrites.
       restoreNoPrompt pd = do
         if force ^. #unForce
           then

@@ -183,7 +183,7 @@ badFdoDirectorySizesIsNotFatal getTestEnv =
         testDir <- getTestDir
 
         let dirs = [testDir </> [osp|dir1|]]
-        argList <- withSrArgsPathsM ["delete", "-v"] dirs
+        argList <- withSrArgsPathsM ["delete", "-v", "on"] dirs
 
         -- setup
         createDirectories dirs
