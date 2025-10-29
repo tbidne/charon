@@ -41,12 +41,7 @@ import Charon.Runner.Config
   )
 import Charon.Runner.Config qualified as Config
 import Charon.Runner.FileSizeMode (parseFileSizeMode)
-import Charon.Runner.Phase
-  ( ConfigPhase (ConfigPhaseToml),
-    Force (MkForce),
-    Prompt (MkPrompt),
-    Verbose (MkVerbose),
-  )
+import Charon.Runner.Phase (ConfigPhase (ConfigPhaseToml), parseSwitch)
 import FileSystem.OsPath qualified as OsPath
 import TOML
   ( DecodeTOML,
@@ -126,8 +121,8 @@ instance DecodeTOML TomlConfig where
 
       decodeDeleteConfig :: Decoder (Maybe (DeleteParams ConfigPhaseToml))
       decodeDeleteConfig = flip getFieldOptWith "delete" $ do
-        prompt <- fmap MkPrompt <$> getFieldOptWith tomlDecoder "prompt"
-        verbose <- fmap MkVerbose <$> getFieldOptWith tomlDecoder "verbose"
+        prompt <- decodePrompt
+        verbose <- decodeVerbose
         pure
           $ MkDeleteParams
             { paths = (),
@@ -137,9 +132,9 @@ instance DecodeTOML TomlConfig where
 
       decodePermDeleteConfig :: Decoder (Maybe (PermDeleteParams ConfigPhaseToml))
       decodePermDeleteConfig = flip getFieldOptWith "perm-delete" $ do
-        strategy <- getFieldOptWith @Bool tomlDecoder "indices"
-        prompt <- fmap MkPrompt <$> getFieldOptWith tomlDecoder "prompt"
-        verbose <- fmap MkVerbose <$> getFieldOptWith tomlDecoder "verbose"
+        strategy <- decodeIndices
+        prompt <- decodePrompt
+        verbose <- decodeVerbose
         pure
           $ MkPermDeleteParams
             { prompt,
@@ -149,10 +144,10 @@ instance DecodeTOML TomlConfig where
 
       decodeRestoreConfig :: Decoder (Maybe (RestoreParams ConfigPhaseToml))
       decodeRestoreConfig = flip getFieldOptWith "restore" $ do
-        force <- fmap MkForce <$> getFieldOptWith tomlDecoder "force"
-        strategy <- getFieldOptWith @Bool tomlDecoder "indices"
-        prompt <- fmap MkPrompt <$> getFieldOptWith tomlDecoder "prompt"
-        verbose <- fmap MkVerbose <$> getFieldOptWith tomlDecoder "verbose"
+        force <- decodeForce
+        strategy <- decodeIndices
+        prompt <- decodePrompt
+        verbose <- decodeVerbose
         pure
           $ MkRestoreParams
             { force,
@@ -160,3 +155,8 @@ instance DecodeTOML TomlConfig where
               strategy,
               verbose
             }
+
+      decodeForce = getFieldOptWith tomlDecoder "force"
+      decodeIndices = getFieldOptWith (tomlDecoder >>= parseSwitch) "indices"
+      decodePrompt = getFieldOptWith tomlDecoder "prompt"
+      decodeVerbose = getFieldOptWith tomlDecoder "verbose"

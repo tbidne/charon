@@ -13,6 +13,8 @@ module Charon.Prelude
     showt,
     displayExceptiont,
     decodeDisplayExT,
+    packText,
+    unpackText,
 
     -- * Display Utils
     (<+>),
@@ -328,6 +330,12 @@ bsToStr = either displayException T.unpack . decodeUtf8
 
 bsToStrLenient :: ByteString -> String
 bsToStrLenient = T.unpack . decodeUtf8Lenient
+
+packText :: String -> Text
+packText = T.pack
+
+unpackText :: Text -> String
+unpackText = T.unpack
 
 -- Vendoring optics-extra Data.Text.Strict.Optics
 

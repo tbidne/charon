@@ -79,9 +79,9 @@ import Charon.Runner.Phase
     Prompt (MkPrompt),
     Verbose (MkVerbose),
   )
+import Charon.Runner.Phase qualified as Phase
 import Control.Applicative qualified as A
 import Data.List qualified as L
-import Data.Text qualified as T
 import Data.Version (showVersion)
 import Effects.Optparse (osPath)
 import Effects.Optparse.Completer qualified as EOC
@@ -370,7 +370,7 @@ commandParser =
     delParser =
       Delete <$> do
         paths <- pathsParser
-        prompt <- promptParser "Prompts before deleting path(s). Not the default."
+        prompt <- promptParser "Prompts before deleting path(s). Defaults to 'off'."
         verbose <- verboseParser "Lists deleted paths."
         pure
           $ MkDeleteParams
@@ -380,8 +380,8 @@ commandParser =
             }
     permDelParser =
       PermDelete <$> do
-        prompt <- promptParser "Prompts before deleting path(s). This is the default."
         indices <- indicesParser
+        prompt <- promptParser "Prompts before deleting path(s). Defaults to 'on'."
         verbose <- verboseParser "Lists deleted paths."
         paths <- mPathsParser
         pure
@@ -392,7 +392,7 @@ commandParser =
             }
     emptyParser =
       Empty
-        <$> promptParser "Prompts before emptying the trash. This is the default."
+        <$> promptParser "Prompts before emptying the trash. Defaults to 'on'."
     restoreParser =
       Restore <$> do
         force <- forceParser restoreForceTxt
@@ -413,7 +413,7 @@ commandParser =
           "collisions with existing paths will either throw an error ",
           "(with --prompt off) or prompt the user to decide."
         ]
-    restorePromptTxt = "Prompts before restoring path(s). This is the default."
+    restorePromptTxt = "Prompts before restoring path(s). Defaults to 'on'."
     listParser =
       fmap List
         $ MkListParams
@@ -776,7 +776,7 @@ switchParserHelper mkHelpFn opts cons name helpTxt = fmap cons <$> mainParser
     mainParser =
       OA.optional
         $ OA.option
-          readBool
+          (OA.str >>= Phase.parseSwitch)
           ( mconcat
               [ opts,
                 OA.long name,
@@ -785,18 +785,6 @@ switchParserHelper mkHelpFn opts cons name helpTxt = fmap cons <$> mainParser
                 mkHelpFn helpTxt
               ]
           )
-
-    readBool =
-      OA.str @Text >>= \case
-        "on" -> pure True
-        "off" -> pure False
-        other ->
-          fail
-            $ mconcat
-              [ "Expected (on | off), received: '",
-                T.unpack other,
-                "'"
-              ]
 
 itemize :: NonEmpty String -> Mod OptionFields a
 itemize =

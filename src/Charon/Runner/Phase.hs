@@ -21,6 +21,7 @@ module Charon.Runner.Phase
     mergePromptDefTrue,
     mergePromptDefFalse,
     parseStrategy,
+    parseSwitch,
 
     -- * Optics
     _IndicesStrategy,
@@ -38,6 +39,19 @@ import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as USeqNE
 import Charon.Prelude
 import Charon.Runner.Default (Default (def))
+import TOML (DecodeTOML (tomlDecoder))
+
+parseSwitch :: (MonadFail m) => Text -> m Bool
+parseSwitch = \case
+  "on" -> pure True
+  "off" -> pure False
+  other ->
+    fail
+      $ mconcat
+        [ "Expected (on | off), received: '",
+          unpackText other,
+          "'"
+        ]
 
 newtype Force = MkForce {unForce :: Bool}
   deriving stock (Eq, Show)
@@ -47,12 +61,18 @@ makeFieldLabelsNoPrefix ''Force
 instance Default Force where
   def = MkForce False
 
+instance DecodeTOML Force where
+  tomlDecoder = MkForce <$> (tomlDecoder >>= parseSwitch)
+
 -- Note no Default instance since we not all commands have the same prompt
 -- behavior.
 newtype Prompt = MkPrompt {unPrompt :: Bool}
   deriving stock (Eq, Show)
 
 makeFieldLabelsNoPrefix ''Prompt
+
+instance DecodeTOML Prompt where
+  tomlDecoder = MkPrompt <$> (tomlDecoder >>= parseSwitch)
 
 newtype Verbose = MkVerbose {unVerbose :: Bool}
   deriving stock (Eq, Show)
@@ -61,6 +81,9 @@ makeFieldLabelsNoPrefix ''Verbose
 
 instance Default Verbose where
   def = MkVerbose False
+
+instance DecodeTOML Verbose where
+  tomlDecoder = MkVerbose <$> (tomlDecoder >>= parseSwitch)
 
 data ConfigPhase
   = ConfigPhaseArgs

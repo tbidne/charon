@@ -1,10 +1,12 @@
 # Uses the FreeDesktop.org backend i.e. changes how the trash data is
 # represented to match the FDO spec. This can be used to integrate charon
 # with an FDO-compliant trash implementation.
+#
+# Other options are "cbor" and "json".
 backend = "fdo"
 
-# File log level. Can be one of none, fatal, error, warn, info, or debug.
-# Defaults to none.
+# File log level. Can be one of "debug", "info", "warn", "error", "fatal", or
+# "off". Defaults to "off".
 log-level = "info"
 
 # Sets a threshold upon which we either delete or warn when the log file size
@@ -13,17 +15,33 @@ log-level = "info"
 log-size-mode = "warn 10 mb"
 
 # Path to the trash home. Overridden by the CLI -t option. Defaults to
-# XDG data ~/.local/share/charon. The 'fdo' backend defaults to
+# XDG data ~/.local/share/charon. The "fdo" backend defaults to
 # ~/.local/share/Trash.
 trash-home = "./tmp"
 
 # Config for various commands, rather than specifying on the CLI every time.
 [delete]
-verbose = true
+# Prompts before deleting path(s). Can be "on" or "off" (the default).
+prompt = "off"
+# Lists deleted paths. Can be "on" or "off" (the default).
+verbose = "on"
 
 [perm-delete]
-indices = true
+# Allows selecting by numeric index instead of trash name. Incompatible with
+# explicit paths. The prompt can be exited via "exit", "quit", "q", or ":q".
+# Defaults to "off".
+indices = "on"
+# Prompts before deleting path(s). Can be "on" (the default) or "off".
+prompt = "off"
+# Lists deleted paths. Can be "on" or "off" (the default).
+verbose = "off"
 
 [restore]
-indices = true
-prompt = false
+# Allows selecting by numeric index instead of trash name. Incompatible with
+# explicit paths. The prompt can be exited via "exit", "quit", "q", or ":q".
+# Defaults to "off".
+indices = "on"
+# Prompts before restoring path(s). Defaults to "on".
+prompt = "off"
+# Lists restored paths. Can be "on" or "off" (the default).
+verbose = "off"
