@@ -50,7 +50,7 @@ emptySucceeds getTestEnv =
       testEnv <- getTestEnv
       usingReaderT testEnv $ appendTestDirM "emptySucceeds" $ do
         testDir <- getTestDir
-        argList <- withSrArgsM ["list", "--format", "m"]
+        argList <- withSrArgsM ["list", "--format", "multi"]
 
         result <- captureCharon argList
 
@@ -71,7 +71,7 @@ noPathsError getTestEnv =
         testDir <- getTestDir
 
         let trashDir = testDir </> pathDotTrash
-        argList <- withSrArgsM ["list", "--format", "m"]
+        argList <- withSrArgsM ["list", "--format", "multi"]
 
         -- setup
         clearDirectory testDir
@@ -95,7 +95,7 @@ noInfoError getTestEnv =
         testDir <- getTestDir
 
         let trashDir = testDir </> pathDotTrash
-        argList <- withSrArgsM ["list", "--format", "m"]
+        argList <- withSrArgsM ["list", "--format", "multi"]
 
         -- setup
         clearDirectory testDir
@@ -136,7 +136,7 @@ missingPathError getTestEnv =
         -- We specifically want the "missing.trashinfo has no corresponding missing" error.
         createFiles [trashDir </> Default.Utils.pathFiles </> [osp|blah|]]
 
-        listArgList <- withSrArgsM ["list", "--format", "m"]
+        listArgList <- withSrArgsM ["list", "--format", "multi"]
 
         captureCharonTermBsE @TrashEntryFileNotFoundE testDir listArgList
 
@@ -155,7 +155,7 @@ missingInfoError getTestEnv =
         testDir <- getTestDir
 
         let trashDir = testDir </> pathDotTrash
-        argList <- withSrArgsM ["list", "--format", "m"]
+        argList <- withSrArgsM ["list", "--format", "multi"]
 
         -- setup
         clearDirectory testDir

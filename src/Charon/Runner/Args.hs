@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -78,6 +79,7 @@ import Control.Applicative qualified as A
 import Data.List qualified as L
 import Data.Version (showVersion)
 import Effects.Optparse (osPath)
+import Effects.Optparse.Completer qualified as EOC
 import FileSystem.OsString qualified as OsString
 import Options.Applicative
   ( CommandFields,
@@ -210,24 +212,22 @@ backendParser =
       [ OA.long "backend",
         OA.short 'b',
         OA.metavar "(cbor|fdo|json)",
-        OA.helpDoc helpTxt
+        OA.completeWith ["cbor", "fdo", "json"],
+        helpTxt
       ]
   where
     helpTxt =
-      mconcat
+      itemize
         [ intro,
-          Just Pretty.hardline,
           cbor,
           fdo,
-          js,
-          Just Pretty.hardline
+          js
         ]
 
-    intro =
-      toMDoc "Backend to use with charon. This option affects how path metadata is stored. Options are: "
-    cbor = Just Pretty.hardline <> toMDoc "- cbor: Space efficient, not inspectable."
-    fdo = Just Pretty.hardline <> toMDoc "- fdo: Compatible with FreeDesktop.org."
-    js = Just Pretty.hardline <> toMDoc "- json: Inspectable."
+    intro = "Backend to use with charon. This option affects how path metadata is stored. Options are: "
+    cbor = "cbor: Space efficient, not inspectable."
+    fdo = "fdo: Compatible with FreeDesktop.org."
+    js = "json: Inspectable."
 
 backendDestParser :: Parser Backend
 backendDestParser =
@@ -236,6 +236,7 @@ backendDestParser =
       [ OA.long "dest",
         OA.short 'd',
         OA.metavar "(cbor|fdo|json)",
+        OA.completeWith ["cbor", "fdo", "json"],
         mkHelp helpTxt
       ]
   where
@@ -254,6 +255,8 @@ configParser =
         OA.long "config",
         OA.short 'c',
         OA.metavar "(none|PATH)",
+        OA.completeWith ["none"],
+        OA.completer EOC.compgenCwdPathsCompleter,
         mkHelp helpTxt
       ]
   where
@@ -275,18 +278,14 @@ commandParser =
   OA.hsubparser
     ( mconcat
         [ mkCommand "delete" delParser delTxt,
-          mkCommand "d" delParser (mkCmdDescStr "Alias for delete."),
           mkCommand "perm-delete" permDelParser permDelTxt,
-          mkCommand "x" permDelParser (mkCmdDescStr "Alias for perm-delete."),
           mkCommand "empty" emptyParser emptyTxt,
-          mkCommand "e" emptyParser (mkCmdDescStr "Alias for empty."),
           OA.commandGroup "Delete Commands"
         ]
     )
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "restore" restoreParser restoreTxt,
-            mkCommand "r" restoreParser (mkCmdDescStr "Alias for restore."),
             OA.commandGroup "Restore Commands",
             OA.hidden
           ]
@@ -294,9 +293,7 @@ commandParser =
     <|> OA.hsubparser
       ( mconcat
           [ mkCommand "list" listParser listTxt,
-            mkCommand "l" listParser (mkCmdDescStr "Alias for list."),
             mkCommand "metadata" metadataParser metadataTxt,
-            mkCommand "m" metadataParser (mkCmdDescStr "Alias for metadata."),
             OA.commandGroup "Information Commands",
             OA.hidden
           ]
@@ -333,9 +330,9 @@ commandParser =
                 "$ charon perm-delete --indices"
               ]
           ]
-    emptyTxt = mkCmdDescStr "Empties the trash."
+    emptyTxt = mkCmdDescStrNoLine "Empties the trash."
     restoreTxt =
-      mkCmdDesc
+      mkCmdDescNoLine
         $ Chunk.vsepChunks
           [ Chunk.paragraph
               $ mconcat
@@ -357,9 +354,9 @@ commandParser =
               ]
           ]
     listTxt = mkCmdDescStr "Lists all trash contents."
-    metadataTxt = mkCmdDescStr "Prints trash metadata."
+    metadataTxt = mkCmdDescStrNoLine "Prints trash metadata."
     convertTxt = mkCmdDescStr "Converts the backend."
-    mergeTxt = mkCmdDescNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
+    mergeTxt = mkCmdDescStrNoLine "Merges src (implicit or -t) trash home into dest. Collisions will throw an error."
 
     mkExample :: [String] -> Chunk Doc
     mkExample =
@@ -458,49 +455,32 @@ listFormatStyleParser =
     $ mconcat
       [ OA.long "format",
         OA.metavar "FMT",
-        OA.helpDoc helpTxt
+        OA.completeWith ["multi", "single", "tabular", "tabular-simple"],
+        helpTxt
       ]
   where
     helpTxt =
-      mconcat
+      itemize
         [ intro,
-          Just Pretty.hardline,
           multi,
           single,
           tabular,
-          tabularSimple,
-          Just Pretty.hardline
+          tabularSimple
         ]
-    intro = toMDoc "Formatting options."
+    intro = "Formatting options."
     tabular =
       mconcat
-        [ Just Pretty.hardline,
-          toMDoc
-            $ mconcat
-              [ "- (t|tabular): The default. Prints a table that tries to ",
-                "intelligently size the table based on available terminal ",
-                "width and filename / original path lengths."
-              ]
+        [ "tabular: The default. Prints a table that tries to ",
+          "intelligently size the table based on available terminal ",
+          "width and filename / original path lengths."
         ]
     tabularSimple =
       mconcat
-        [ Just Pretty.hardline,
-          toMDoc
-            $ mconcat
-              [ "- (ts|tabular-simple): Simple table that does no resizing. Prints ",
-                "the table with indices."
-              ]
+        [ "tabular-simple: Simple table that does no resizing. Prints ",
+          "the table with indices."
         ]
-    multi =
-      mconcat
-        [ Just Pretty.hardline,
-          toMDoc "- (m|multi): Prints each entry across multiple lines."
-        ]
-    single =
-      mconcat
-        [ Just Pretty.hardline,
-          toMDoc "- (s|single): Compact, prints each entry across a single lines."
-        ]
+    multi = "multi: Prints each entry across multiple lines."
+    single = "single: Compact, prints each entry across a single lines."
 
 toMDoc :: String -> Maybe Doc
 toMDoc = Chunk.unChunk . Chunk.paragraph
@@ -513,6 +493,7 @@ nameTruncParser = colParser PathData.formatFileNameLenMin fields
         [ OA.long "name-len",
           OA.short 'n',
           OA.metavar "(max|NAT)",
+          OA.completeWith ["max"],
           mkHelp
             $ mconcat
               [ "Sets the file name column length to either NAT characters or ",
@@ -528,6 +509,7 @@ origTruncParser = colParser PathData.formatOriginalPathLenMin fields
         [ OA.long "orig-len",
           OA.short 'o',
           OA.metavar "(max|NAT)",
+          OA.completeWith ["max"],
           mkHelp
             $ mconcat
               [ "Sets the original-path column length to either NAT characters or ",
@@ -559,43 +541,23 @@ coloringParser =
     $ OA.option readColoring
     $ mconcat
       [ OA.long "color",
-        OA.helpDoc helpTxt
+        OA.completeWith ["detect", "false", "true"],
+        helpTxt
       ]
   where
     readColoring =
       OA.str >>= \case
-        "t" -> pure ColoringOn
         "true" -> pure ColoringOn
-        "f" -> pure ColoringOff
         "false" -> pure ColoringOff
-        "d" -> pure ColoringDetect
         "detect" -> pure ColoringDetect
         bad -> fail $ "Unexpected --coloring: " ++ bad
 
     helpTxt =
-      mconcat
-        [ intro,
-          Just Pretty.hardline,
-          true,
-          false,
-          detect,
-          Just Pretty.hardline
-        ]
-    intro = toMDoc "Coloring options."
-    true =
-      mconcat
-        [ Just Pretty.hardline,
-          toMDoc "- (t|true): On."
-        ]
-    false =
-      mconcat
-        [ Just Pretty.hardline,
-          toMDoc "- (f|false): Off."
-        ]
-    detect =
-      mconcat
-        [ Just Pretty.hardline,
-          toMDoc "- (d|detect): On if supported."
+      itemize
+        [ "Coloring options.",
+          "true: On.",
+          "false: Off.",
+          "detect: On if supported."
         ]
 
 sortParser :: Parser (Maybe Sort)
@@ -607,6 +569,7 @@ sortParser =
       [ OA.long "sort",
         OA.short 's',
         OA.metavar "(name|size)",
+        OA.completeWith ["name", "size"],
         mkHelp "How to sort the list. Defaults to name."
       ]
 
@@ -683,6 +646,7 @@ trashParser =
       [ OA.long "trash-home",
         OA.short 't',
         OA.metavar "PATH",
+        OA.completer EOC.compgenCwdPathsCompleter,
         mkHelp helpTxt
       ]
   where
@@ -701,6 +665,7 @@ trashDestParser =
       [ OA.long "dest",
         OA.short 'd',
         OA.metavar "PATH",
+        OA.completer EOC.compgenCwdPathsCompleter,
         mkHelp helpTxt
       ]
   where
@@ -713,6 +678,7 @@ logLevelParser =
     $ mconcat
       [ OA.long "log-level",
         OA.metavar Config.logLevelStrings,
+        OA.completeWith ["debu", "info", "warn", "error", "fatal", "none"],
         mkHelp
           $ mconcat
             [ "The file level in which to log. Defaults to none. Logs are ",
@@ -745,6 +711,7 @@ logSizeModeParser =
       ( mconcat
           [ OA.long "log-size-mode",
             mkHelp helpTxt,
+            OA.completeWith ["delete", "warn"],
             OA.metavar "(warn SIZE|delete SIZE)"
           ]
       )
@@ -809,6 +776,9 @@ mkHelp =
 mkCmdDescStr :: String -> InfoMod a
 mkCmdDescStr = mkCmdDesc . Chunk.paragraph
 
+mkCmdDescStrNoLine :: String -> InfoMod a
+mkCmdDescStrNoLine = mkCmdDescNoLine . Chunk.paragraph
+
 mkCmdDesc :: Chunk Doc -> InfoMod a
 mkCmdDesc =
   OA.progDescDoc
@@ -817,11 +787,10 @@ mkCmdDesc =
 
 -- For the last command, so we do not append two lines (there is an automatic
 -- one at the end).
-mkCmdDescNoLine :: String -> InfoMod a
+mkCmdDescNoLine :: Chunk Doc -> InfoMod a
 mkCmdDescNoLine =
   OA.progDescDoc
     . Chunk.unChunk
-    . Chunk.paragraph
 
 -- | Adds a '--no-x' switch to the parser.
 withDisabledParser ::
@@ -864,3 +833,34 @@ withDisabledParserOpts disabledOpts mainParser name = do
               disabledOpts
             ]
         )
+
+itemize :: NonEmpty String -> Mod OptionFields a
+itemize =
+  OA.helpDoc
+    . Chunk.unChunk
+    . fmap (<> Pretty.line)
+    . itemizeHelper
+
+-- | 'itemize' that does not append a trailing newline. Useful for the last
+-- option in a group, as groups already start a newline.
+itemizeNoLine :: NonEmpty String -> Mod OptionFields a
+itemizeNoLine =
+  OA.helpDoc
+    . Chunk.unChunk
+    . itemizeHelper
+
+itemizeHelper :: NonEmpty String -> Chunk Doc
+itemizeHelper (intro :| ds) =
+  Chunk.vcatChunks
+    ( Chunk.paragraph intro
+        : toChunk Pretty.softline
+        : (toItem <$> ds)
+    )
+  where
+    toItem d =
+      fmap (Pretty.nest 2)
+        . Chunk.paragraph
+        $ ("- " <> d)
+
+toChunk :: a -> Chunk a
+toChunk = Chunk . Just

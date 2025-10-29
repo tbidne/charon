@@ -171,7 +171,7 @@ listNonDefaults = testCase "List non-default args" $ do
         "none",
         "list",
         "--format",
-        "t",
+        "tabular",
         "--name-len",
         "80",
         "--orig-len",
@@ -202,7 +202,7 @@ listMultiline = testCase "List multiline" $ do
         "none",
         "list",
         "--format",
-        "m"
+        "multi"
       ]
     defList =
       MkListParams
@@ -223,7 +223,7 @@ listSingleline = testCase "List singleline" $ do
         "none",
         "list",
         "--format",
-        "s",
+        "single",
         "--color",
         "false"
       ]

@@ -41,13 +41,9 @@ data ListFormatStyle
 
 parseListFormat :: (MonadFail m) => Text -> m ListFormatStyle
 parseListFormat "multi" = pure ListFormatStyleMultiline
-parseListFormat "m" = pure ListFormatStyleMultiline
 parseListFormat "tabular" = pure ListFormatStyleTabular
-parseListFormat "t" = pure ListFormatStyleTabular
 parseListFormat "tabular-simple" = pure ListFormatStyleTabularSimple
-parseListFormat "ts" = pure ListFormatStyleTabularSimple
 parseListFormat "single" = pure ListFormatStyleSingleline
-parseListFormat "s" = pure ListFormatStyleSingleline
 parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
 
 -- | Holds all configuration data for list formatting i.e. style and

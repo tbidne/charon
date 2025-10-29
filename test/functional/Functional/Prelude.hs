@@ -291,7 +291,7 @@ terminalToBs' modTxt =
 
 captureIndexBs :: OsPath -> TestM ByteStringRender
 captureIndexBs testDir = do
-  indexArgs <- withSrArgsM ["list", "--format", "s"]
+  indexArgs <- withSrArgsM ["list", "--format", "single"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt
@@ -302,14 +302,14 @@ captureIndexTabularBs testDir = do
   -- -n 15: deterministic header underline length
   -- -o 3:  do not want any part of the original path, since it is
   --        non-deterministic (tmp dir).
-  indexArgs <- withSrArgsM ["list", "--format", "t", "-n", "15", "-o", "3"]
+  indexArgs <- withSrArgsM ["list", "--format", "tabular", "-n", "15", "-o", "3"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt
 
 captureIndexBackendBs :: Backend -> OsPath -> TestM ByteStringRender
 captureIndexBackendBs backend testDir = do
-  indexArgs <- withSrArgsEnvM (set' #backend backend) ["list", "--format", "s"]
+  indexArgs <- withSrArgsEnvM (set' #backend backend) ["list", "--format", "single"]
   indexTxt <- FuncEnv.captureCharon indexArgs
 
   pure $ terminalToBs testDir indexTxt
