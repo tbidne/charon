@@ -5,7 +5,6 @@ module Unit.Utils
 where
 
 import Charon.Utils qualified as Utils
-import Data.Text qualified as T
 import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 import Unit.Prelude
@@ -113,7 +112,7 @@ percentEncodeRoundTrip =
         Right decoded -> path === decoded
 
 genPath :: Gen ByteString
-genPath = encodeUtf8 . T.pack <$> genString
+genPath = encodeUtf8 . packText <$> genString
 
 genString :: Gen String
 genString = Gen.string (Range.linear 1 100) genPathChar

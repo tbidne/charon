@@ -25,10 +25,6 @@ module Charon.Prelude
     -- * Debug
     todo,
 
-    -- * Optics
-    packed,
-    unpacked,
-
     -- ** Path literals
     pathDotTrash,
     pathCharon,
@@ -320,32 +316,22 @@ import System.IO as X
 import Text.Show as X (Show (show))
 
 showt :: (Show a) => a -> Text
-showt = T.pack . show
+showt = packText . show
 
 displayExceptiont :: (Exception e) => e -> Text
-displayExceptiont = T.pack . displayException
+displayExceptiont = packText . displayException
 
 bsToStr :: ByteString -> String
-bsToStr = either displayException T.unpack . decodeUtf8
+bsToStr = either displayException unpackText . decodeUtf8
 
 bsToStrLenient :: ByteString -> String
-bsToStrLenient = T.unpack . decodeUtf8Lenient
+bsToStrLenient = unpackText . decodeUtf8Lenient
 
 packText :: String -> Text
 packText = T.pack
 
 unpackText :: Text -> String
 unpackText = T.unpack
-
--- Vendoring optics-extra Data.Text.Strict.Optics
-
-packed :: Iso' String Text
-packed = iso T.pack T.unpack
-{-# INLINE packed #-}
-
-unpacked :: Iso' Text String
-unpacked = iso T.unpack T.pack
-{-# INLINE unpacked #-}
 
 usingReaderT :: b -> ReaderT b m a -> m a
 usingReaderT = flip runReaderT

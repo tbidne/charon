@@ -25,7 +25,6 @@ import Charon.Runner.Phase
   ( ConfigPhase (ConfigPhaseArgs, ConfigPhaseMerged),
     ConfigPhaseF,
   )
-import Data.Text qualified as T
 
 --------------------------------------------------------------------------------
 ----------------------------------- PHASE 1 ------------------------------------
@@ -44,7 +43,7 @@ parseListFormat "multi" = pure ListFormatStyleMultiline
 parseListFormat "tabular" = pure ListFormatStyleTabular
 parseListFormat "tabular-simple" = pure ListFormatStyleTabularSimple
 parseListFormat "single" = pure ListFormatStyleSingleline
-parseListFormat other = fail $ "Unrecognized format: " <> T.unpack other
+parseListFormat other = fail $ "Unrecognized format: " <> unpackText other
 
 -- | Holds all configuration data for list formatting i.e. style and
 -- truncation params.

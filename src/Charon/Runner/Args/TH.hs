@@ -8,7 +8,6 @@ where
 
 import Charon.Prelude
 import Control.Applicative (liftA3)
-import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as PosixTime
 import Data.Time.Format qualified as Fmt
@@ -96,12 +95,12 @@ gitDataFromEnvQ = do
                 ", received ",
                 showt strLen,
                 ": ",
-                T.pack (FS.OsString.decodeLenient str)
+                packText (FS.OsString.decodeLenient str)
               ]
       | hasInvalidChar str =
           Left
             $ "Invalid char in hash: "
-            <> T.pack (FS.OsString.decodeLenient str)
+            <> packText (FS.OsString.decodeLenient str)
       | otherwise = Right str
       where
         strLen = OsString.length str

@@ -25,7 +25,6 @@ import Charon.Prelude as X
 import Charon.Runner qualified as Runner
 import Charon.Runner.Merged (MergedConfig)
 import Control.Monad.Reader (ReaderT (ReaderT))
-import Data.Text qualified as T
 import Data.Time (LocalTime (LocalTime), ZonedTime (ZonedTime))
 import Data.Time.LocalTime (midday, utc)
 import Effects.FileSystem.HandleWriter (MonadHandleWriter (hSetBuffering))
@@ -111,7 +110,7 @@ deriving newtype instance MonadPosixFiles (IntPure env)
 #endif
 
 instance MonadTerminal (IntPure IntPureEnv) where
-  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
+  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> packText s)
   getTerminalSize =
     pure
       $ Window
@@ -191,7 +190,7 @@ captureCharonIntExceptionPure argList = do
       deletedPaths <- readIORef deletedPathsRef
 
       pure
-        ( T.pack (displayException ex),
+        ( packText (displayException ex),
           terminal,
           showt deletedPaths
         )

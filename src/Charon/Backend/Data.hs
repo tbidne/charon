@@ -13,7 +13,6 @@ where
 
 import Charon.Prelude
 import Charon.Runner.Default
-import Data.Text qualified as T
 import TOML (DecodeTOML (tomlDecoder))
 
 -- | Type of backend.
@@ -41,7 +40,7 @@ parseBackend other =
   fail
     $ mconcat
       [ "Could not parse backend: '",
-        T.unpack other,
+        unpackText other,
         "'. Expected 'cbor' or 'fdo'."
       ]
 

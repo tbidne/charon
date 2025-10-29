@@ -16,7 +16,6 @@ import Charon.Prelude
 import Codec.Serialise (Serialise)
 import Codec.Serialise qualified as Serialise
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Text qualified as T
 import Data.Time (Day (ModifiedJulianDay), TimeOfDay (TimeOfDay))
 import Data.Time.Format qualified as Format
 import Data.Time.LocalTime (LocalTime (LocalTime))
@@ -67,16 +66,16 @@ instance Serial Timestamp where
   encode = pure . encodeUtf8 . toText
   decode _ bs = case decodeUtf8 bs of
     Left err -> Left $ displayException err
-    Right timeStr -> case parseLocalTime (T.unpack timeStr) of
-      Nothing -> Left $ "Could not read time: " <> T.unpack timeStr
+    Right timeStr -> case parseLocalTime (unpackText timeStr) of
+      Nothing -> Left $ "Could not read time: " <> unpackText timeStr
       Just t -> Right $ MkTimestamp t
 
 -- | Formats the time.
 toText :: Timestamp -> Text
-toText = T.pack . formatLocalTime . view #unTimestamp
+toText = packText . formatLocalTime . view #unTimestamp
 
 fromText :: (MonadFail f) => Text -> f Timestamp
-fromText = fmap MkTimestamp . parseLocalTime . T.unpack
+fromText = fmap MkTimestamp . parseLocalTime . unpackText
 
 formatLocalTime :: LocalTime -> String
 formatLocalTime = Format.formatTime Format.defaultTimeLocale localTimeFormat
@@ -94,7 +93,7 @@ localTimeFormat = "%0Y-%m-%dT%H:%M:%S"
 -- | Like 'toText' except adds a space between date and time. Used for
 -- pretty-printing.
 toTextSpace :: Timestamp -> Text
-toTextSpace = T.pack . formatLocalTimeSpace . view #unTimestamp
+toTextSpace = packText . formatLocalTimeSpace . view #unTimestamp
 
 -- | Like 'toText' except adds a space between date and time. Used for
 -- pretty-printing.

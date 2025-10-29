@@ -126,7 +126,7 @@ insertSeq' seqIns y (seq, set)
   | otherwise = (seq, set)
 
 displayUSeqNEShow :: (Show a) => UniqueSeqNE a -> Text
-displayUSeqNEShow = displayUSeqNE (T.pack . show)
+displayUSeqNEShow = displayUSeqNE showt
 
 displayUSeqNE :: (a -> Text) -> UniqueSeqNE a -> Text
 displayUSeqNE toText =

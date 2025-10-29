@@ -213,7 +213,7 @@ assertMatches expectations results = case matches expectations results of
           "\n\n*** Full expectations ***\n\n",
           unlineMatches expectations,
           "\n*** Full results ***\n\n",
-          T.unpack (T.unlines results)
+          unpackText (T.unlines results)
         ]
 
 -- | Tests text for matches. Otherwise triggers an HUnit failure.
@@ -226,7 +226,7 @@ assertMatch expectation result =
       [ "\n\n*** Expectation ***\n\n",
         showTextMatch expectation,
         "\n\n*** Result ***\n\n",
-        T.unpack result
+        unpackText result
       ]
 
 -- | If the texts do not match, returns an error string. Otherwise
@@ -251,7 +251,7 @@ isMatch (s :| es) (r :| rs) =
           [ "Expected: '",
             showTextMatch s,
             "'\nReceived: '",
-            T.unpack (T.strip r),
+            unpackText (T.strip r),
             "'"
           ]
 
@@ -277,18 +277,18 @@ unlineMatches [] = ""
 unlineMatches (t : ts) = showTextMatch t <> "\n" <> unlineMatches ts
 
 showTextMatch :: TextMatch -> String
-showTextMatch (Exact e) = T.unpack e
-showTextMatch (Prefix e) = T.unpack e <> wc
-showTextMatch (Infix e) = wc <> T.unpack e <> wc
-showTextMatch (Suffix e) = wc <> T.unpack e
-showTextMatch (Outfix e1 e2) = T.unpack e1 <> wc <> T.unpack e2
+showTextMatch (Exact e) = unpackText e
+showTextMatch (Prefix e) = unpackText e <> wc
+showTextMatch (Infix e) = wc <> unpackText e <> wc
+showTextMatch (Suffix e) = wc <> unpackText e
+showTextMatch (Outfix e1 e2) = unpackText e1 <> wc <> unpackText e2
 showTextMatch (Outfixes start ins end) =
   mconcat
-    [ T.unpack start,
+    [ unpackText start,
       wc,
-      foldl' (\acc t -> acc <> wc <> T.unpack t) "" ins,
+      foldl' (\acc t -> acc <> wc <> unpackText t) "" ins,
       wc,
-      T.unpack end
+      unpackText end
     ]
 
 wc :: String
@@ -302,9 +302,9 @@ getPathStr =
     . genPathChar
   where
     strip =
-      T.unpack
+      unpackText
         . T.strip
-        . T.pack
+        . packText
 
 #if WINDOWS
     badString = not . null

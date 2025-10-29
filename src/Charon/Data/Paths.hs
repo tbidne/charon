@@ -59,7 +59,7 @@ toString (MkPathI p) = decodeDisplayEx p
 
 -- | 'PathI' to 'Text' via 'toString'.
 toText :: PathI i -> Text
-toText = T.pack . toString
+toText = packText . toString
 
 -- TODO: We should really store absolute vs. relative here somehow.
 -- It appears PathIndex refers to merely the "provenance", but doesn't
@@ -140,7 +140,7 @@ instance Serial (PathI i) where
   type DecodeExtra (PathI i) = ()
 
   encode =
-    bimap displayException (encodeUtf8 . T.pack)
+    bimap displayException (encodeUtf8 . packText)
       . OsPath.decode
       . view #unPathI
 
@@ -149,7 +149,7 @@ instance Serial (PathI i) where
     Right t ->
       bimap displayException MkPathI
         . encodeValid
-        . T.unpack
+        . unpackText
         $ t
 
 -- | Modifies the index.
@@ -232,14 +232,14 @@ isRoot' :: (MonadThrow m) => OsPath -> m Bool
 #if WINDOWS
 isRoot' p = do
   fp <- OsPath.decodeThrowM p
-  pure $ f . T.unpack . T.strip . T.pack $ fp
+  pure $ f . unpackText . T.strip . packText $ fp
   where
     f (_ : ':' : rest) = null rest || rest == "\\" || rest == "\\\\"
     f _ = False
 #else
 isRoot' p = do
   fp <- OsPath.decodeThrowM p
-  pure $ (== "/") . T.strip . T.pack $ fp
+  pure $ (== "/") . T.strip . packText $ fp
 #endif
 
 -- | Returns true if the path __ends__ in nothing but dots e.g.
@@ -248,7 +248,7 @@ isDots :: (MonadThrow m) => PathI i -> m Bool
 isDots (MkPathI p) = do
   let p' = OsP.takeFileName p
   fp <- OsPath.decodeThrowM p'
-  pure $ isDots' . T.unpack . T.strip . T.pack $ fp
+  pure $ isDots' . unpackText . T.strip . packText $ fp
   where
     isDots' fp = L.all (== '.') fp && not (null fp)
 
@@ -260,7 +260,7 @@ showPaths :: [PathI a] -> String
 showPaths = L.intercalate ", " . fmap (show . view #unPathI)
 
 renderPath :: PathI i -> Text
-renderPath = T.pack . decodeLenient . view #unPathI
+renderPath = packText . decodeLenient . view #unPathI
 
 renderPathQuote :: PathI i -> Text
 renderPathQuote = (\s -> "'" <> s <> "'") . renderPath
@@ -268,7 +268,7 @@ renderPathQuote = (\s -> "'" <> s <> "'") . renderPath
 pathLength :: PathI i -> Int
 pathLength (MkPathI p) =
   textWidth
-    . T.pack
+    . packText
     . OsPath.decodeLenient
     $ p
 

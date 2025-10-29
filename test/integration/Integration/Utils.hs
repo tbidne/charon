@@ -28,7 +28,9 @@ where
 import Charon.Data.PathType (PathTypeW (MkPathTypeW))
 import Charon.Data.UniqueSeqNE (UniqueSeqNE, (∉))
 import Charon.Data.UniqueSeqNE qualified as USeqNE
+#if OSX
 import Data.Text qualified as T
+#endif
 import Data.Text.Normalize (NormalizationMode (NFC))
 import Data.Text.Normalize qualified as TNormalize
 import FileSystem.OsPath qualified as OsPath
@@ -107,13 +109,13 @@ fpToNormedFp :: FilePath -> NormedFp
 -- Thankfully these share the same case folding.
 --
 -- REVIEW: Does the order of caseFold and normalization matter (probably...)?
-fpToNormedFp = MkNormedFp . T.toCaseFold . TNormalize.normalize NFC . T.pack
+fpToNormedFp = MkNormedFp . T.toCaseFold . TNormalize.normalize NFC . packText
 #else
-fpToNormedFp = MkNormedFp . TNormalize.normalize NFC . T.pack
+fpToNormedFp = MkNormedFp . TNormalize.normalize NFC . packText
 #endif
 
 normedFpToFp :: NormedFp -> FilePath
-normedFpToFp = T.unpack . view #unNormedFilePath
+normedFpToFp = unpackText . view #unNormedFilePath
 
 -- | Holds all generated path data used for our int tests.
 data PathIntData = MkPathIntData

@@ -365,14 +365,14 @@ getPathSizeConfig config path = addNamespace "getPathSizeConfig" $ do
         -- We received a value but had some errors.
         putStrLn "Encountered errors retrieving size."
         for_ errs $ \e -> do
-          let errMsg = T.pack $ displayException e
+          let errMsg = packText $ displayException e
           putTextLn errMsg
           $(logWarn) errMsg
         pure $ fromℤ n
       PathSizeFailure errs -> do
         putStrLn "Encountered errors retrieving size. Defaulting to 0. See logs."
         for_ errs $ \e -> do
-          let errMsg = T.pack $ displayException e
+          let errMsg = packText $ displayException e
           putTextLn errMsg
           $(logWarn) errMsg
         pure 0
@@ -472,7 +472,7 @@ displayEx ex =
     else displayException ex
 
 displayExT :: (Exception e) => e -> Text
-displayExT = T.pack . displayEx
+displayExT = packText . displayEx
 
 -- see NOTE: [Callstacks]
 noCallstacks :: [ExceptionProxy]
@@ -533,7 +533,7 @@ askYesNoQ s =
                 T.singleton ans
               ]
   where
-    msg = T.unpack $ s <> " (y/n)? "
+    msg = unpackText $ s <> " (y/n)? "
 
 getStrippedLine ::
   ( HasCallStack,
@@ -542,6 +542,6 @@ getStrippedLine ::
   ) =>
   Text -> m Text
 getStrippedLine prompt =
-  getInputLine (T.unpack prompt) >>= \case
+  getInputLine (unpackText prompt) >>= \case
     Nothing -> throwText "Received empty response."
-    Just s -> pure $ T.strip $ T.pack s
+    Just s -> pure $ T.strip $ packText s

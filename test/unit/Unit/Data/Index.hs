@@ -537,7 +537,7 @@ formatTabularAutoFail = testCase desc $ do
         $ "Expected exception, received result: "
         <> show result
     Left ex ->
-      assertBool (T.unpack $ U.displayExT ex) (expected `T.isPrefixOf` U.displayExT ex)
+      assertBool (unpackText $ U.displayExT ex) (expected `T.isPrefixOf` U.displayExT ex)
   where
     desc = "Auto tabular throws error for small terminal width"
     expected =

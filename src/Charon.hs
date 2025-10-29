@@ -280,10 +280,10 @@ convert dest = addNamespace "convert" $ do
               [ "--backend == requested conversion type: " <> Backend.Data.backendName dest,
                 ". Nothing to do."
               ]
-      $(logInfo) $ T.pack msg
+      $(logInfo) $ packText msg
       putStrLn msg
     else do
-      $(logDebug) $ "Current backend: " <> T.pack (Backend.Data.backendName src)
+      $(logDebug) $ "Current backend: " <> packText (Backend.Data.backendName src)
 
       -- 1. Get Rosetta
       rosetta <- case src of
@@ -314,7 +314,7 @@ convert dest = addNamespace "convert" $ do
                   [ "Exception moving old trash dir:\n",
                     displayException ex
                   ]
-          $(logError) $ T.pack msg
+          $(logError) $ packText msg
           putStrLn msg
           -- cleanup: remove newTrashTmp
           removeDirectoryRecursive newTrashTmpRaw
@@ -328,7 +328,7 @@ convert dest = addNamespace "convert" $ do
                   [ "Exception moving new trash dir:\n",
                     displayException ex
                   ]
-          $(logError) $ T.pack msg
+          $(logError) $ packText msg
           putStrLn msg
           -- cleanup: remove newTrashTmp, move oldTrashTmpRaw back
           removeDirectoryRecursive newTrashTmpRaw
@@ -380,7 +380,7 @@ merge dest = addNamespace "merge" $ do
                 decodeDisplayEx $ dest' ^. #unPathI,
                 ". Nothing to do."
               ]
-      $(logInfo) $ T.pack msg
+      $(logInfo) $ packText msg
       putStrLn msg
     else do
       $(logDebug) $ "Dest path: " <> Paths.toText dest
@@ -501,7 +501,7 @@ getIndexedPaths actionStr IndicesStrategy idxFn = do
         _ -> throwText $ "Expected number or range, received: " <> t
 
     readNumOrDie :: Text -> m Int
-    readNumOrDie t = case TR.readMaybe (T.unpack t) of
+    readNumOrDie t = case TR.readMaybe (unpackText t) of
       Nothing -> throwText $ "Failed reading int: " <> t
       Just n -> pure n
 

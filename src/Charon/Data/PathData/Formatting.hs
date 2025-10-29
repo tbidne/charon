@@ -371,7 +371,7 @@ readSort "created" = pure Created
 readSort "name" = pure Name
 readSort "original" = pure OriginalPath
 readSort "size" = pure Size
-readSort other = fail $ "Unrecognized sort: " <> T.unpack other
+readSort other = fail $ "Unrecognized sort: " <> unpackText other
 
 sortFn :: Bool -> Sort -> PathData -> PathData -> Ordering
 sortFn b = \case

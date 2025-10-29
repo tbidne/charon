@@ -49,7 +49,6 @@ import Control.Monad.Reader (ReaderT (ReaderT))
 import Data.HashSet qualified as HSet
 import Data.List qualified as L
 import Data.Sequence.NonEmpty qualified as NESeq
-import Data.Text qualified as T
 import Effects.Logger.Namespace (defaultLogFormatter)
 import Effects.Logger.Namespace qualified as Logger
 import GHC.IsList (IsList (toList))
@@ -118,7 +117,7 @@ instance MonadLogger IntIO where
 instance MonadTerminal IntIO where
   putStr s =
     asks (view #termLogsRef)
-      >>= \ref -> modifyIORef' ref ((:) . T.pack $ s)
+      >>= \ref -> modifyIORef' ref ((:) . packText $ s)
 
 instance MonadHaskeline IntIO
 
@@ -144,9 +143,9 @@ usingIntIO env rdr = do
       termLogs <- liftIO $ readIORef (env ^. #termLogsRef)
       logs <- liftIO $ readIORef (env ^. #logsRef)
       annotate "TERMINAL LOGS"
-      for_ termLogs (annotate . T.unpack)
+      for_ termLogs (annotate . unpackText)
       annotate "FILE LOGS"
-      for_ (L.reverse logs) (annotate . T.unpack)
+      for_ (L.reverse logs) (annotate . unpackText)
 
 -- | Use this for when we are expecting an exception and want to specifically
 -- handle it in the test

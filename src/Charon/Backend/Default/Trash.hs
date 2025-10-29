@@ -569,13 +569,13 @@ findManyPathData
     index <- fmap (view _1) . view #unIndex <$> Default.Index.readIndexTrashHome backendArgs trashHome
     $(logDebug) $ "Index: " <> showt index
 
-    pathNameText <- T.pack <$> OsPath.decodeThrowM (pathName ^. #unPathI)
+    pathNameText <- packText <$> OsPath.decodeThrowM (pathName ^. #unPathI)
 
     Utils.filterSeqM (pdMatchesWildcard pathNameText) index
     where
       pdMatchesWildcard pathNameText' pd = do
         fp <- OsPath.decodeThrowM (pd ^. (#fileName % #unPathI))
-        let fpTxt = T.pack fp
+        let fpTxt = packText fp
             matches = Utils.matchesWildcards pathNameText' fpTxt
 
         when matches
@@ -616,7 +616,7 @@ findPathData
     $(logDebug) $ "Searching for: " <> Paths.toText pathName
 
     pathNameStr <- OsPath.decodeThrowM pathName'
-    let pathNameTxt = T.pack pathNameStr
+    let pathNameTxt = packText pathNameStr
 
     if
       -- 1. Found a (n unescaped) wildcard; findMany (findMany handles the case
@@ -636,7 +636,7 @@ findPathData
                 "'. Treating as the literal *."
               ]
           let literal = T.replace "\\*" "*" pathNameTxt
-          literalPath <- OsPath.encodeValidThrowM $ T.unpack literal
+          literalPath <- OsPath.encodeValidThrowM $ unpackText literal
           findOnePathData trashHome (MkPathI literalPath) backendArgs <&> \case
             Nothing -> SearchSingleFailure pathName
             Just pd -> SearchSuccess (pd :<|| Seq.empty)

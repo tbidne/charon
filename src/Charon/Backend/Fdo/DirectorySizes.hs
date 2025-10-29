@@ -36,7 +36,6 @@ import Charon.Prelude
 import Charon.Utils qualified as Utils
 import Data.ByteString.Char8 qualified as C8
 import Data.Sequence qualified as Seq
-import Data.Text qualified as T
 import Effects.FileSystem.FileReader qualified as FR
 import Effects.FileSystem.FileWriter qualified as FW
 import Effects.FileSystem.PathWriter qualified as PW
@@ -72,7 +71,7 @@ instance Serial DirectorySizesEntry where
           entry ^. #fileName
         ]
       toBs :: (Show a) => a -> ByteString
-      toBs = encodeUtf8 . T.pack . show
+      toBs = encodeUtf8 . showt
 
   decode _ bs = do
     (sizeBs, timeBs, fileNameBs) <- case C8.split ' ' bs of
@@ -90,7 +89,7 @@ instance Serial DirectorySizesEntry where
         }
     where
       fromBs :: (Read a) => ByteString -> Either String a
-      fromBs = TR.readEither <=< (bimap displayException T.unpack . decodeUtf8)
+      fromBs = TR.readEither <=< (bimap displayException unpackText . decodeUtf8)
 
 -- | Represents the directorysizes contents.
 newtype DirectorySizes = MkDirectorySizes

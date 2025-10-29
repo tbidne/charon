@@ -6,7 +6,6 @@ where
 import Charon.Data.Paths (PathI (MkPathI), PathIndex (TrashEntryFileName))
 import Charon.Prelude
 import Charon.Utils qualified as Utils
-import Data.Text qualified as T
 import FileSystem.OsPath qualified as OsPath
 
 percentEncodeFileName ::
@@ -26,5 +25,5 @@ percentEncodeFileName pd =
         . first MkStringException
         . Utils.percentEncode
         . encodeUtf8
-        . T.pack
+        . packText
     MkPathI fileName = view #fileName pd

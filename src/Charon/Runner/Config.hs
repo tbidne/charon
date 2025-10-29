@@ -19,7 +19,14 @@ import Charon.Data.Paths (PathI, PathIndex (TrashHome), RawPathI)
 import Charon.Prelude
 import Charon.Runner.FileSizeMode (FileSizeMode)
 import Charon.Runner.Phase
-import Data.Text qualified as T
+  ( ConfigPhase
+      ( ConfigPhaseArgs,
+        ConfigPhaseEnv,
+        ConfigPhaseMerged,
+        ConfigPhaseToml
+      ),
+    ConfigPhaseF,
+  )
 
 type TrashHomeF :: ConfigPhase -> Type
 type family TrashHomeF p where
@@ -121,7 +128,7 @@ readLogLevel = \case
         [ "Expected log-level ",
           logLevelStrings,
           ", received: ",
-          T.unpack other
+          unpackText other
         ]
 
 -- | String description of possible log levels parsed by 'readLogLevel'.

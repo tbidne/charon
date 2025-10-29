@@ -210,7 +210,7 @@ instance MonadPathWriter (FuncIO env) where
 
   removeFile x
     -- This is for X.deletesSomeWildcards test
-    | (T.isSuffixOf "fooBadbar" $ T.pack $ unsafeDecode x) =
+    | (T.isSuffixOf "fooBadbar" $ packText $ unsafeDecode x) =
         throwString "Mock: cannot delete fooBadbar"
     | otherwise = liftIO $ PW.removeFile x
 
@@ -220,7 +220,7 @@ instance
   ) =>
   MonadTerminal (FuncIO env)
   where
-  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack s)
+  putStr s = asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> packText s)
 
   getTerminalSize =
     pure
@@ -242,14 +242,14 @@ instance
   MonadHaskeline (FuncIO env)
   where
   getInputChar prompt = do
-    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack prompt)
+    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> packText prompt)
     charStream <- asks (view #charStream)
     c :> cs <- readIORef charStream
     writeIORef charStream cs
     pure $ Just c
 
   getInputLine prompt = do
-    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> T.pack prompt)
+    asks (view #terminalRef) >>= \ref -> modifyIORef' ref (<> packText prompt)
     Just <$> asks (view #strLine)
 
 instance MonadTime (FuncIO env) where
@@ -359,9 +359,9 @@ captureCharonEnvLogs modEnv argList = liftIO $ do
 
     handleEx terminalRef logsRef ex = do
       putStrLn "TERMINAL"
-      readIORef terminalRef >>= putStrLn . T.unpack
+      readIORef terminalRef >>= putStrLn . unpackText
       putStrLn "\n\nLOGS"
-      readIORef logsRef >>= putStrLn . T.unpack
+      readIORef logsRef >>= putStrLn . unpackText
       Utils.putLine
       throwM ex
 
@@ -412,7 +412,7 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
   logsRef <- newIORef ""
 
   try @_ @e getConfig >>= \case
-    Left ex -> pure (T.pack (displayException ex), [], [])
+    Left ex -> pure (packText (displayException ex), [], [])
     Right cfg -> do
       env <- mkFuncEnv cfg logsRef terminalRef
 
@@ -426,15 +426,15 @@ captureCharonExceptionTerminalLogs argList = liftIO $ do
               Left ex -> do
                 term <- T.lines <$> readIORef terminalRef
                 logs <- T.lines <$> readIORef logsRef
-                pure (T.pack (displayException ex), term, logs)
+                pure (packText (displayException ex), term, logs)
 
       runCatch
         `catchSync` \ex -> do
           -- Handle any uncaught exceptions
           putStrLn "TERMINAL"
-          readIORef terminalRef >>= putStrLn . T.unpack
+          readIORef terminalRef >>= putStrLn . unpackText
           putStrLn "\n\nLOGS"
-          readIORef logsRef >>= putStrLn . T.unpack
+          readIORef logsRef >>= putStrLn . unpackText
           Utils.putLine
           throwM ex
   where

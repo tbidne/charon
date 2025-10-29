@@ -276,7 +276,7 @@ testGoldenParams'
 terminalToBs :: OsPath -> [Text] -> ByteStringRender
 terminalToBs testDir = terminalToBs' replaceFn
   where
-    testDirTxt = T.pack $ unsafeDecode testDir
+    testDirTxt = packText $ unsafeDecode testDir
 
     replaceFn =
       T.replace "\\" "/"

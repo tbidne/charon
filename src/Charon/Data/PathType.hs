@@ -12,13 +12,11 @@ module Charon.Data.PathType
   )
 where
 
--- import Charon.Class.Serial (Serial (DecodeExtra, decode, encode))
 import Charon.Prelude
 import Codec.Serialise (Serialise (encode))
 import Codec.Serialise qualified as Serialise
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.Aeson qualified as Asn
-import Data.Text qualified as T
 import Effects.FileSystem.PathWriter
   ( CopyDirConfig (MkCopyDirConfig),
     MonadPathWriter (removeFile),
@@ -58,7 +56,7 @@ instance FromJSON PathTypeW where
     "d" -> pure $ MkPathTypeW PathTypeDirectory
     "l" -> pure $ MkPathTypeW PathTypeSymbolicLink
     "o" -> pure $ MkPathTypeW PathTypeOther
-    other -> fail $ "Expected one of (f|d|l|o), received: " <> T.unpack other
+    other -> fail $ "Expected one of (f|d|l|o), received: " <> unpackText other
 
 instance Serialise PathTypeW where
   encode (MkPathTypeW PathTypeFile) = Serialise.encode @Char 'f'

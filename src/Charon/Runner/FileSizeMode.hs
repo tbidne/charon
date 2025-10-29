@@ -32,10 +32,10 @@ parseFileSizeMode txt = do
   cons <- case m of
     "warn" -> pure FileSizeModeWarn
     "delete" -> pure FileSizeModeDelete
-    bad -> fail $ "Unrecognized size-mode: " <> T.unpack bad
+    bad -> fail $ "Unrecognized size-mode: " <> unpackText bad
   case parseByteText byteTxt of
     Right b -> pure $ cons b
-    Left err -> fail $ "Could not parse size-mode size: " <> T.unpack err
+    Left err -> fail $ "Could not parse size-mode size: " <> unpackText err
 
 parseByteText :: Text -> Either Text (Bytes B Natural)
 parseByteText txt =

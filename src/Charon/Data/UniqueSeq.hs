@@ -67,7 +67,7 @@ fromSet set = UnsafeUniqueSeq seq set
     seq = foldr (flip (:|>)) Seq.empty set
 
 displayUSeqShow :: (Show a) => UniqueSeq a -> Text
-displayUSeqShow = displayUSeq (T.pack . show)
+displayUSeqShow = displayUSeq showt
 
 displayUSeq :: (a -> Text) -> UniqueSeq a -> Text
 displayUSeq toText =
