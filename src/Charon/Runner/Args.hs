@@ -18,7 +18,10 @@ import Charon.Data.PathData.Formatting
     Coloring (ColoringDetect, ColoringOff, ColoringOn),
   )
 import Charon.Data.PathData.Formatting qualified as PathData
-import Charon.Data.Paths (PathIndex (TrashHome), RawPathI (MkRawPathI))
+import Charon.Data.Paths
+  ( PathIndex (TrashEntryFileName, TrashEntryOriginalPath, TrashHome),
+    RawPathI (MkRawPathI),
+  )
 import Charon.Data.UniqueSeqNE (UniqueSeqNE)
 import Charon.Data.UniqueSeqNE qualified as UniqueSeqNE
 import Charon.Prelude
@@ -638,11 +641,14 @@ logLevelParser =
             ]
       ]
 
-mPathsParser :: Parser (Maybe (UniqueSeqNE (RawPathI i)))
-mPathsParser = A.optional pathsParser
+mPathsParser :: Parser (Maybe (UniqueSeqNE (RawPathI TrashEntryFileName)))
+mPathsParser = A.optional (pathsParserHelper False)
 
-pathsParser :: Parser (UniqueSeqNE (RawPathI i))
-pathsParser =
+pathsParser :: Parser (UniqueSeqNE (RawPathI TrashEntryOriginalPath))
+pathsParser = pathsParserHelper True
+
+pathsParserHelper :: Bool -> Parser (UniqueSeqNE (RawPathI i))
+pathsParserHelper addPathCompletions =
   -- NOTE: _should_ be safe because OA.some only succeeds for non-zero input.
   -- We do this rather than using NonEmpty's some1 because otherwise the CLI
   -- help metavar is duplicated i.e. "PATHS... [PATHS...]".
@@ -651,9 +657,27 @@ pathsParser =
   -- want path validation here. The reason is that we want to allow users to
   -- pass paths containing wildcards (*) for easier matching, but these are
   -- not valid windows paths, hence will fail any validation checks.
-  UniqueSeqNE.fromNonEmpty
-    . unsafeNE
-    <$> OA.some (OA.argument (fmap MkRawPathI osPath) (OA.metavar "PATHS..."))
+  UniqueSeqNE.fromNonEmpty . unsafeNE <$> OA.some p
+  where
+    p = OA.argument (fmap MkRawPathI osPath) opts
+
+    opts = OA.metavar "PATHS..." <> completions
+
+    -- Completions are conditionally added as we only want local file
+    -- completions for the 'delete' command. For 'perm-delete' and 'restore',
+    -- it does not make sense.
+    --
+    -- TODO: Consider adding completions for perm-delete and restore.
+    -- Basically, on delete we would save the deleted file name in a
+    -- completions file. Perm-delete and restore would delete them from the
+    -- file.
+    --
+    -- Then, on startup, we read this completions file and use it here for
+    -- perm-delete / restore.
+    completions =
+      if addPathCompletions
+        then OA.completer EOC.compgenCwdPathsCompleter
+        else mempty
 
 logSizeModeParser :: Parser (Maybe FileSizeMode)
 logSizeModeParser =
